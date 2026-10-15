@@ -28,7 +28,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "hypothesis", "ruff"]
+dev = ["pytest", "hypothesis", "ruff", "httpx2"]  # httpx2: HTTP mocks in tests/test_llm_client.py
 tpe = ["optuna"]
 
 [project.scripts]
@@ -47,3 +47,4 @@ addopts = "-q"
 
 [tool.ruff]
 line-length = 110
+src = ["src", "tests"]  # tests/ helper modules (e.g. sim_fingers) sort as first-party

@@ -6,9 +6,13 @@
 .venv/
 __pycache__/
 *.pyc
+.hypothesis/
+# tool and simulator logs
+MUJOCO_LOG.TXT
 # outputs
 runs/
 outputs/
 *.mp4
+!data/demo/**/*.mp4
 node_modules/
 .next/

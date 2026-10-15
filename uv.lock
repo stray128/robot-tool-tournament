@@ -841,6 +841,7 @@ dependencies = [
 
 [package.optional-dependencies]
 dev = [
+    { name = "httpx2" },
     { name = "hypothesis" },
     { name = "pytest" },
     { name = "ruff" },
@@ -853,6 +854,7 @@ tpe = [
 requires-dist = [
     { name = "boto3" },
     { name = "fastapi" },
+    { name = "httpx2", marker = "extra == 'dev'" },
     { name = "hypothesis", marker = "extra == 'dev'" },
     { name = "imageio" },
     { name = "imageio-ffmpeg" },
