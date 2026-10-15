@@ -11,7 +11,7 @@ import trimesh
 from rtt.cli import main
 from rtt.llm.probe import DEFAULT_DOC
 
-CASES = ("straight", "concave", "hooked", "too_high", "low_friction", "too_wide")
+CASES = ("straight", "concave", "hooked", "stock", "too_high", "low_friction", "too_wide")
 
 
 def test_m1_gate_passes_and_writes_one_replay_per_case(tmp_path: Path, capsys) -> None:
@@ -34,7 +34,7 @@ def test_m1_gate_passes_and_writes_one_replay_per_case(tmp_path: Path, capsys) -
 def test_m1_table_without_files(tmp_path: Path, capsys) -> None:
     assert main(["m1", "--no-files", "--out", str(tmp_path)]) == 0
     out = capsys.readouterr().out
-    assert "G1 PASSED: 6/6 cases as expected" in out
+    assert "G1 PASSED: 7/7 cases as expected" in out
     for name in CASES:
         assert f"\n{name} " in out
     assert not any(tmp_path.iterdir())

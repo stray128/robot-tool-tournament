@@ -3,7 +3,9 @@
 Every case runs at controller setting k = 0.5 on one box, 90 x 40 x 120 mm
 (object-frame x, y, z; the jaw closes along y), 0.30 kg at 700 kg/m^3. Its 40 mm
 grip width is inside the design validator's widest training object (45 mm), so
-every valid finger opens around it.
+every valid finger opens around it. The box is taller than every entrant reaches
+with the palm 10 mm clear of its top, so k = 0.5 puts the tips halfway up each
+finger's reachable band (e.g. 85 mm above the table for the 80 mm straight finger).
 
 Fingers come from the real design pipeline: each manual entrant in
 ``configs/entrants.yaml`` is validated against the simulator's own gripper
@@ -12,12 +14,13 @@ Fingers come from the real design pipeline: each manual entrant in
 
 Cases:
 
-* One per entrant (``straight``, ``concave``, ``hooked``): lift and hold, so success.
+* One per entrant (``straight``, ``concave``, ``hooked``, ``stock``): lift and hold, so success.
 * ``too_high`` (straight entrant): the tips close 30 mm above the box -> ``missed_grasp``.
 * ``low_friction`` (straight entrant): mu = 0.05, so the friction capacity
-  2 * mu * F/2 = 2.0 N is below the box's 2.97 N weight -> ``slip_during_lift``.
+  2 * mu * F/2 = 2.5 N (2.75 N with +10 % jitter) is below the box's 2.97 N weight
+  -> ``slip_during_lift``.
 * ``too_wide`` (straight entrant): the same box turned so its 90 mm side spans the
-  80 mm opening -> ``missed_grasp``.
+  84 mm opening -> ``missed_grasp``.
 
 The gate passes when every entrant is valid, every case ends as expected (outcome
 and failure mode), and the box rests on the table, not on a finger, before the
@@ -37,6 +40,7 @@ from rtt.design.generate import generate_finger
 from rtt.design.schema import FingerDesign, load_entrants
 from rtt.design.types import FingerGeometry
 from rtt.design.validate import ValidationResult, validate
+from rtt.sim.controller import plan_grasp
 from rtt.sim.episode import EpisodeResult, run_episode
 from rtt.sim.objects import ObjectSpec, Placement, height
 from rtt.sim.render import render_mp4
@@ -49,8 +53,9 @@ DEFAULT_ENTRANTS = REPO_ROOT / "configs" / "entrants.yaml"
 DEFAULT_OUT = REPO_ROOT / "data" / "demo" / "m1"
 
 G1_SETTING = 1  # controller setting k = 0.5
-G1_BOX = ObjectSpec("box", (0.09, 0.04, 0.12))
-G1_WIDE_BOX = ObjectSpec("box", (0.04, 0.09, 0.12))  # G1_BOX turned: 90 mm across the jaw
+G1_DENSITY = 700.0  # kg/m^3: the gate's box keeps its own material when the task default changes
+G1_BOX = ObjectSpec("box", (0.09, 0.04, 0.12), G1_DENSITY)
+G1_WIDE_BOX = ObjectSpec("box", (0.04, 0.09, 0.12), G1_DENSITY)  # G1_BOX turned: 90 mm across the jaw
 BASELINE_ENTRANT = "straight"
 TOO_HIGH_CLEARANCE = 0.03  # m above the object's top
 LOW_FRICTION = 0.05
@@ -254,9 +259,9 @@ def g1_cases(task: TaskConfig | None = None, entrants: Mapping[str, Entrant] | N
     if BASELINE_ENTRANT not in entrants:
         raise ValueError(f"the G1 failure cases need an entrant named {BASELINE_ENTRANT!r}")
     base = entrants[BASELINE_ENTRANT].finger
-    k = task.controller.grasp_height_fracs[G1_SETTING]
     h = height(G1_BOX)
-    weight = math.prod(G1_BOX.size) * task.physics.object_density * GRAVITY
+    nominal_tip = plan_grasp(base, G1_BOX, Placement(), G1_SETTING, task).tip_height
+    weight = math.prod(G1_BOX.size) * G1_DENSITY * GRAVITY
     capacity = 2.0 * LOW_FRICTION * task.gripper.grip_force / 2.0
     cases = [
         GateCase(
@@ -270,7 +275,11 @@ def g1_cases(task: TaskConfig | None = None, entrants: Mapping[str, Entrant] | N
             entrant=BASELINE_ENTRANT,
             finger=base,
             obj=G1_BOX,
-            task=task.with_overrides(controller={"grasp_z_offset": h + TOO_HIGH_CLEARANCE - k * h}),
+            task=task.with_overrides(
+                controller={
+                    "grasp_z_offset": task.controller.grasp_z_offset + h + TOO_HIGH_CLEARANCE - nominal_tip
+                }
+            ),
             expect_success=False,
             expect_mode="missed_grasp",
             description=f"the tips close {1000 * TOO_HIGH_CLEARANCE:g} mm above the box top",

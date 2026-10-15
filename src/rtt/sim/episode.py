@@ -1,9 +1,14 @@
 """One grasp episode on the CPU MuJoCo backend.
 
-``run_episode`` builds the scene for a finger design and object, applies the
-seed's jitter (object pose +-2 mm / +-3 deg and friction +-10 %, drawn from a
-deterministic PCG64 stream), runs the controller, the physics checks and the
-lift tracker, and returns an :class:`EpisodeResult`.
+``run_episode`` builds the scene for a finger design and object, places the
+object at the placement's true pose (its pose error plus the seed's jitter:
+object pose +-2 mm / +-3 deg and friction +-10 %, drawn from a deterministic
+PCG64 stream), runs the controller, the physics checks and the lift tracker,
+and returns an :class:`EpisodeResult`.
+
+An optional :class:`~rtt.sim.perturb.Shake` or :class:`~rtt.sim.perturb.Push`
+disturbs the hold; the episode then only succeeds if the object is still lifted
+``post_perturb_hold`` seconds after the disturbance ends.
 
 The episode ends as soon as the outcome is decided (success confirmed, a
 physics flag raised, or the object provably below the success height after the
@@ -13,6 +18,7 @@ simulated for the replay only; they never change the outcome or metrics.
 
 from __future__ import annotations
 
+import dataclasses
 import math
 import time
 from dataclasses import dataclass, field
@@ -25,6 +31,7 @@ from rtt.design.types import FingerGeometry
 from rtt.sim import objects as objs
 from rtt.sim.checks import PhysicsChecks, contact_summary
 from rtt.sim.controller import GraspController, Phase, grasp_fraction, plan_grasp
+from rtt.sim.perturb import Perturbation, Push, Shake
 from rtt.sim.replay import Replay, ReplayRecorder
 from rtt.sim.scene import build_model, finger_mass_properties
 from rtt.sim.score import FailureMode, LiftTracker, classify
@@ -40,6 +47,25 @@ _PHASE_METRICS = (
     "press_down_left",
     "press_down_right",
 )
+
+
+def _object_meta(obj: objs.AnyObject) -> dict[str, Any]:
+    meta: dict[str, Any] = {"kind": obj.kind, "size": list(obj.size)}
+    if isinstance(obj, objs.MeshObject):
+        meta.update(
+            name=obj.name,
+            source_sha256=obj.source_sha256,
+            pose_index=obj.pose_index,
+            decomposition=obj.decomposition,
+            geometry_sha256=obj.geometry_sha256,
+        )
+    return meta
+
+
+def _perturbation_meta(perturbation: Perturbation | None) -> dict[str, Any] | None:
+    if perturbation is None:
+        return None
+    return {"type": type(perturbation).__name__.lower(), **dataclasses.asdict(perturbation)}
 
 
 def _ratio(period: float, base: float, name: str) -> int:
@@ -106,12 +132,13 @@ class EpisodeResult:
 
 def run_episode(
     finger_geom: FingerGeometry,
-    object_spec: objs.ObjectSpec,
+    object_spec: objs.AnyObject,
     placement: objs.Placement,
     controller_setting: int,
     seed: int,
     record: bool = True,
     task: TaskConfig | None = None,
+    perturbation: Perturbation | None = None,
 ) -> EpisodeResult:
     """Simulate one grasp attempt and score it."""
     wall0 = time.perf_counter()
@@ -122,11 +149,13 @@ def run_episode(
 
     jitter = sample_jitter(seed, task.jitter)
     mu = task.physics.friction * jitter.mu_scale
-    model.geom_friction[ids.object_geom, 0] = mu
+    model.geom_friction[ids.object_geoms, 0] = mu
 
     plan = plan_grasp(finger_geom, object_spec, placement, controller_setting, task)
-    controller = GraspController(plan)
-    actual = objs.Placement(placement.x + jitter.dx, placement.y + jitter.dy, placement.yaw + jitter.dyaw)
+    shake = perturbation if isinstance(perturbation, Shake) else None
+    push = perturbation if isinstance(perturbation, Push) else None
+    controller = GraspController(plan, shake=shake)
+    actual = placement.actual(jitter.dx, jitter.dy, jitter.dyaw)
     obj_pos, obj_quat = objs.rest_pose(object_spec, actual, task.physics.table_top_z)
     data.qpos[ids.palm_qpos] = plan.palm_start
     data.qpos[ids.finger_qpos] = 0.0
@@ -137,6 +166,19 @@ def run_episode(
 
     checks = PhysicsChecks(model=model, ids=ids, task=task)
     tracker = LiftTracker(cfg=sc)
+    cp = task.controller.control_period
+    perturb_end = math.nan
+    push_ticks = range(0)
+    push_wrench = np.zeros(6)
+    if perturbation is not None:
+        start = plan.t_hold + perturbation.delay
+        duration = perturbation.duration
+        perturb_end = start + duration
+        tracker.min_success_time = perturb_end + task.robustness.post_perturb_hold
+        if push is not None:
+            first = round(start / cp)
+            push_ticks = range(first, first + max(1, round(duration / cp)))
+            push_wrench = push.wrench(plan.yaw)
     recorder = ReplayRecorder(model, ids, task.replay.fps) if record else None
     obj_mass = float(model.body_mass[ids.object_body])
     weight = obj_mass * float(np.linalg.norm(model.opt.gravity))
@@ -150,10 +192,11 @@ def run_episode(
         metrics[f"{prefix}_table_support"] = cs.object_env_normal / weight
         metrics[f"{prefix}_finger_force"] = sum(cs.object_finger_normal)
 
-    steps_per_tick = _ratio(task.controller.control_period, model.opt.timestep, "control_period")
-    ticks_per_check = _ratio(sc.check_period, task.controller.control_period, "check_period")
-    max_ticks = round(sc.max_time / task.controller.control_period)
-    tail_ticks = round(sc.record_tail / task.controller.control_period) if record else 0
+    steps_per_tick = _ratio(cp, model.opt.timestep, "control_period")
+    ticks_per_check = _ratio(sc.check_period, cp, "check_period")
+    max_ticks = round(sc.max_time / cp)
+    tail_ticks = round(sc.record_tail / cp) if record else 0
+    xfrc = data.xfrc_applied[ids.object_body]
     grasped = False
     stage = Phase.SETTLE  # last phase whose entry bookkeeping has run
     decided_tick: int | None = None
@@ -162,6 +205,8 @@ def run_episode(
         if recorder is not None:
             recorder.maybe_record(data)
         data.ctrl[:] = controller.command(data.time)
+        if push_ticks:
+            xfrc[:] = push_wrench if tick in push_ticks else 0.0
         mujoco.mj_step(model, data, nstep=steps_per_tick)
         tick += 1
         if decided_tick is not None:
@@ -215,14 +260,23 @@ def run_episode(
         finger_mass=finger_mass,
         grasp_fraction=grasp_fraction(controller_setting, task),
         tip_height=plan.tip_height,
+        reach_floor=plan.reach_floor,
+        palm_gap=plan.palm_gap,
+        err_x=placement.err_x,
+        err_y=placement.err_y,
+        err_yaw_deg=math.degrees(placement.err_yaw),
+        perturb_end=perturb_end,
         z0=tracker.z0 if tracker.z0 is not None else float("nan"),
         final_lift=tracker.lift,
         success_time=tracker.success_at if tracker.success_at is not None else float("nan"),
         grasped=float(grasped),
         gripper_env_force_max=checks.gripper_env_force_max,
         penetration_max=checks.penetration_max,
+        jaw_penetration_max=checks.jaw_penetration_max,
         object_speed_max=checks.object_speed_max,
         close_xy_drift_max=checks.close_xy_drift_max,
+        palm_object_force_max=checks.palm_object_force_max,
+        carry_palm_force_max=checks.carry_palm_force_max,
     )
 
     replay = qpos = None
@@ -233,8 +287,9 @@ def run_episode(
                 "failure_mode": mode,
                 "seed": seed,
                 "controller_setting": controller_setting,
-                "object": {"kind": object_spec.kind, "size": list(object_spec.size)},
-                "placement": {"x": placement.x, "y": placement.y, "yaw": placement.yaw},
+                "object": _object_meta(object_spec),
+                "placement": dataclasses.asdict(placement),
+                "perturbation": _perturbation_meta(perturbation),
                 "task": task.name,
                 "flags": [e.flag for e in checks.events],
             }

@@ -143,8 +143,8 @@ def test_llm_tool_schema_is_flat_and_strict() -> None:
 def test_task_defaults() -> None:
     task = load_task()
     assert task == GripperTask()
-    assert task.stroke_mm == 40.0
-    assert task.max_opening_mm == task.closed_gap_mm + 80.0
+    assert task.stroke_mm == 42.0
+    assert task.max_opening_mm == task.closed_gap_mm + 84.0
     assert task.required_open_gap_mm == task.widest_training_object_mm + 5.0
     assert task.envelope == ToolEnvelope()
 
@@ -169,7 +169,7 @@ def test_task_rejects_bad_values(data: dict[str, float]) -> None:
 
 
 def test_task_accepts_a_wider_stroke() -> None:
-    """The stroke is a calibration input (e.g. an 85 mm span), not capped at 40 mm."""
+    """The stroke is a calibration input (e.g. an 85 mm span), not capped at the default."""
     assert GripperTask(stroke_mm=42.5).max_opening_mm == pytest.approx(85.0)
 
 
@@ -182,11 +182,12 @@ def test_load_task_rejects_a_missing_section(tmp_path: Path) -> None:
 
 def test_load_entrants() -> None:
     entrants = load_entrants(ENTRANTS)
-    assert [e.name for e in entrants] == ["straight", "concave", "hooked"]
-    straight, concave, hooked = entrants
+    assert [e.name for e in entrants] == ["straight", "concave", "hooked", "stock"]
+    straight, concave, hooked, stock = entrants
     assert (straight.inner_face, straight.bend_angle_deg, straight.tip_profile) == ("flat", 0.0, "blunt")
     assert (concave.inner_face, concave.inner_face_depth_mm) == ("concave_arc", 4.0)
     assert (hooked.tip_profile, hooked.tip_size_mm, hooked.bend_angle_deg) == ("hook", 8.0, 15.0)
+    assert (stock.finger_length_mm, stock.taper_ratio, stock.tip_profile) == (62.5, 0.5, "rounded")
 
 
 # --- distance ------------------------------------------------------------------------

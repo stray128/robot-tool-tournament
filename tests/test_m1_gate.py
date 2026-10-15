@@ -34,8 +34,9 @@ from rtt.sim.task import DEFAULT_TASK_PATH, TaskConfig, load_task
 from sim_fingers import straight_finger
 
 TASK = load_task()
-# 60 mm across the jaw: wider than a 20 deg inward-bent finger's 53 mm tip opening.
+# 60 mm across the jaw: wider than a 20 deg inward-bent finger's 57 mm tip opening.
 WIDE_TOP_BOX = ObjectSpec("box", (0.06, 0.06, 0.12))
+ENTRANTS = ("straight", "concave", "hooked", "stock")
 
 
 @pytest.fixture(scope="module")
@@ -96,7 +97,7 @@ def test_fixture_finger_follows_contract() -> None:
     finger = straight_finger()
     assert len(finger.boxes) == BOXES_PER_FINGER
     assert finger_tip_depth(finger) == pytest.approx(0.08)
-    assert open_gap(finger, TASK) == pytest.approx(0.08)  # inner faces 80 mm apart when open
+    assert open_gap(finger, TASK) == pytest.approx(0.084)  # inner faces 84 mm apart when open
 
 
 def test_mirror_box_reflects_every_corner() -> None:
@@ -144,10 +145,15 @@ def test_scene_structure() -> None:
 
     assert act("palm_z").tolist() == [-150.0, 150.0]
     assert act("palm_yaw").tolist() == [-15.0, 15.0]
-    assert act("grip").tolist() == [-40.0, 40.0]
+    assert act("grip").tolist() == [-50.0, 50.0]
     for name in ("finger_left", "finger_right"):
         j = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, name)
-        assert model.jnt_range[j].tolist() == pytest.approx([0.0, 0.04])
+        assert model.jnt_range[j].tolist() == pytest.approx([0.0, 0.042])
+    # palm = the gripper frame (47.6 x 128 x 24 mm); finger roots on its underside
+    assert model.geom_size[mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "palm")] == pytest.approx(
+        [0.024, 0.064, 0.012]
+    )
+    assert model.body_pos[ids.finger_left_body] == pytest.approx([0.0, 0.042, -0.012])
     assert model.neq == 1 and model.eq_type[0] == mujoco.mjtEq.mjEQ_JOINT
     assert model.nmocap == 0
     # 14 boxes per finger, right finger mirrored, explicit PLA inertia on both
@@ -165,6 +171,7 @@ def test_scene_structure() -> None:
     assert model.opt.integrator == mujoco.mjtIntegrator.mjINT_IMPLICITFAST
     assert model.opt.cone == mujoco.mjtCone.mjCONE_ELLIPTIC
     assert model.opt.impratio == pytest.approx(10.0)
+    assert model.opt.timestep == pytest.approx(0.002)
     assert set(model.geom_condim.tolist()) == {4}
 
 
@@ -186,10 +193,13 @@ def test_left_and_right_fingers_are_mirror_images_in_the_world() -> None:
 
 
 def test_grasp_plan_places_finger_tips_at_k_times_object_height() -> None:
+    """A finger longer than the object plus the palm clearance grasps at k x object height."""
     finger = straight_finger()
-    obj = ObjectSpec("cylinder", (0.025, 0.09))
+    obj = ObjectSpec("cylinder", (0.025, 0.06))
+    assert finger_tip_depth(finger) > height(obj) + TASK.controller.palm_clearance
     for k, frac in enumerate(TASK.controller.grasp_height_fracs):
         plan = plan_grasp(finger, obj, Placement(0.05, -0.02, 0.4), k, TASK)
+        assert plan.reach_floor == 0.0
         assert plan.tip_height == pytest.approx(frac * height(obj))
         palm_to_tip = TASK.gripper.palm_half_size[2] + finger_tip_depth(finger)
         assert plan.grasp_z - palm_to_tip == pytest.approx(frac * height(obj))
@@ -226,7 +236,7 @@ def test_millimetre_inputs_are_rejected() -> None:
 # --------------------------------------------------------------------------- gate G1
 
 
-@pytest.mark.parametrize("entrant", ["straight", "concave", "hooked"])
+@pytest.mark.parametrize("entrant", ENTRANTS)
 @pytest.mark.parametrize("seed", [0, 1, 2])
 def test_g1_entrant_box_grasp_succeeds(cases: dict[str, GateCase], entrant: str, seed: int) -> None:
     res = run_case(cases[entrant], seed=seed)
@@ -235,8 +245,13 @@ def test_g1_entrant_box_grasp_succeeds(cases: dict[str, GateCase], entrant: str,
     assert res.flags == ()
     assert res.max_lift >= TASK.score.success_lift
     assert res.hold_time >= TASK.score.success_hold
-    assert res.metrics["penetration_max"] < 0.001
+    # 2 ms timestep: about 1.1 mm at mu 0.8, up to 1.8 mm at the calibrated mu 0.3 (G3,
+    # docs/TASK.md); the penetration flag fires at 2 mm
+    assert res.metrics["penetration_max"] < 0.0019
     assert res.metrics["object_speed_max"] < 0.5
+    # the palm stays clear of the box: the controller keeps a 10 mm gap and nothing touches it
+    assert res.metrics["palm_gap"] >= TASK.controller.palm_clearance - 1e-9
+    assert res.metrics["palm_object_force_max"] == 0.0
 
 
 @pytest.mark.parametrize(
@@ -253,8 +268,8 @@ def test_g1_deliberate_failures_fail(cases: dict[str, GateCase], name: str, mode
 
 
 def test_g1_cases_are_what_they_claim(cases: dict[str, GateCase]) -> None:
-    assert list(cases) == ["straight", "concave", "hooked", "too_high", "low_friction", "too_wide"]
-    for name in ("straight", "concave", "hooked"):
+    assert list(cases) == [*ENTRANTS, "too_high", "low_friction", "too_wide"]
+    for name in ENTRANTS:
         assert cases[name].expect_success and cases[name].obj == G1_BOX
         # every entrant opens wide enough for the box, with the validator's 5 mm margin
         assert open_gap(cases[name].finger, TASK) >= G1_BOX.size[1] + 0.005

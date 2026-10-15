@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import dataclasses
 import functools
+import hashlib
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -27,13 +29,13 @@ DEFAULT_TASK_PATH = Path(__file__).resolve().parents[3] / "configs" / "task_v1.y
 class PhysicsConfig:
     """MuJoCo solver and contact settings shared by every episode."""
 
-    timestep: float = 0.001
+    timestep: float = 0.002  # 2 ms: matches 1 ms on 99.5 % of a 200-episode parity set (docs/BENCH.md)
     integrator: str = "implicitfast"
     cone: str = "elliptic"
     impratio: float = 10.0
     condim: int = 4
-    friction: float = 0.8
-    torsional_friction: float = 0.005
+    friction: float = 0.3
+    torsional_friction: float = 0.001
     rolling_friction: float = 0.0001
     contact_solref: tuple[float, float] = (0.004, 1.0)
     contact_solimp: tuple[float, float, float, float, float] = (0.95, 0.99, 0.001, 0.5, 2.0)
@@ -42,22 +44,29 @@ class PhysicsConfig:
     ls_iterations: int = 50
     native_ccd: bool = False  # False: libccd MPR for convex pairs (cylinder-box); see task_v1.yaml
     multi_ccd: bool = True  # multiple contact points per convex pair
-    object_density: float = 700.0
+    object_density: float = 1200.0
     table_top_z: float = 0.0
     table_half_size: tuple[float, float, float] = (0.4, 0.4, 0.375)
 
 
 @dataclass(frozen=True)
 class GripperConfig:
-    """Floating palm and parallel-jaw finger drive (identical for every entrant)."""
+    """Floating palm and parallel-jaw finger drive (identical for every entrant).
 
-    palm_half_size: tuple[float, float, float] = (0.03, 0.065, 0.015)
+    Dimensions follow an open-source rack-and-pinion parallel gripper (two moving
+    jaws, 84 mm maximum opening); ``configs/task_v1.yaml`` records the sources and
+    assumptions behind each value.
+    """
+
+    # Palm = the gripper frame: 47.6 (x) x 128 (y, closing axis) x 24 (z) mm. Its
+    # underside is the finger mounting plane (the frame's front face).
+    palm_half_size: tuple[float, float, float] = (0.024, 0.064, 0.012)
     palm_mass: float = 0.4
     # Lateral offset of each finger root from the palm centre when fully open.
-    # A finger whose inner face sits at local y = 0 leaves a 2 * 0.04 = 80 mm gap.
-    open_half_gap: float = 0.04
-    stroke: float = 0.04  # per finger: closure q in [0, stroke], 0 = fully open
-    grip_force: float = 40.0  # grip actuator force limit F (N), acts on the mean-closure tendon
+    # A finger whose inner face sits at local y = 0 leaves a 2 * 0.042 = 84 mm gap.
+    open_half_gap: float = 0.042
+    stroke: float = 0.042  # per finger: closure q in [0, stroke], 0 = fully open; closed gap 0
+    grip_force: float = 50.0  # grip actuator force limit F (N), acts on the mean-closure tendon
     grip_kp: float = 4000.0
     grip_kv: float = 100.0  # overdamped: unobstructed fingers close at <= ~0.4 m/s
     grip_overdrive: float = 0.01  # closing target beyond full stroke so the force saturates at F
@@ -81,10 +90,14 @@ class GripperConfig:
 class ControllerConfig:
     """Open-loop, time-based grasp state machine (identical for every entrant)."""
 
-    # Controller settings k: finger-tip height above the table as a fraction of object height.
+    # Controller settings k: finger-tip height as a fraction of the reachable band, from the
+    # lowest palm-clear tip height (0 for long fingers) up to the object's top.
     grasp_height_fracs: tuple[float, ...] = (0.3, 0.5, 0.7)
     grasp_z_offset: float = 0.0  # extra tip height (m); used by failure tests, 0 in evaluation
     min_tip_clearance: float = 0.003
+    # The palm underside (the finger roots) stays at least this far above the object's
+    # top at the grasp pose, so short fingers grasp tall objects higher up.
+    palm_clearance: float = 0.01
     approach_offset: float = 0.08
     approach_clearance: float = 0.02  # tips start at least this far above the object top
     settle_time: float = 0.3
@@ -106,6 +119,9 @@ class ScoreConfig:
     max_time: float = 12.0
     check_period: float = 0.01  # s between checks and success samples; multiple of control_period
     finger_table_force_max: float = 5.0
+    # Palm-object contact while the object is carried (LIFT and HOLD) above this normal
+    # force raises ``palm_contact``: only the fingers may hold the object.
+    palm_contact_force_max: float = 0.2
     penetration_max: float = 0.002
     speed_cap: float = 5.0
     eject_dist: float = 0.025
@@ -129,6 +145,40 @@ class JitterConfig:
 
 
 @dataclass(frozen=True)
+class RobustnessConfig:
+    """Robustness-certificate tests (see :mod:`rtt.sim.certify`); jitter is off in every test.
+
+    * Placement error: the object sits ``e`` mm from where the controller aims, along the
+      gripper's x (finger width) or y (closing) axis, for every ``e`` in
+      ``0, +-placement_errors_mm``.
+    * Shake: after the palm stops at the lift height and ``perturb_delay`` has passed,
+      it oscillates sinusoidally along one gripper axis with ``shake_amplitude`` (m) at
+      ``shake_frequency`` (Hz) for ``shake_cycles`` cycles; the first and last
+      ``shake_ramp_cycles`` cycles ramp the amplitude with a raised-cosine window.
+    * Push: at the same moment a horizontal force ``push_impulse / push_duration`` acts on
+      the object for ``push_duration`` s along a gripper axis; with ``push_at_top`` it
+      acts at the height of the object's top (so it also twists the object in the grasp),
+      otherwise through its centre of mass.
+
+    A perturbed test succeeds only if the object is still held (lifted >= ``success_lift``)
+    ``post_perturb_hold`` s after the perturbation ends, on top of the usual criterion.
+    """
+
+    placement_errors_mm: tuple[float, ...] = (1.0, 2.0, 3.0)
+    shake_axes: tuple[str, ...] = ("x", "y", "z")
+    shake_amplitude: float = 0.01
+    shake_frequency: float = 5.0
+    shake_cycles: int = 5
+    shake_ramp_cycles: float = 0.5
+    push_axes: tuple[str, ...] = ("x", "y")
+    push_impulse: float = 0.5
+    push_duration: float = 0.02
+    push_at_top: bool = True
+    perturb_delay: float = 0.2
+    post_perturb_hold: float = 1.0
+
+
+@dataclass(frozen=True)
 class ReplayConfig:
     fps: int = 30
 
@@ -141,6 +191,7 @@ class TaskConfig:
     controller: ControllerConfig = field(default_factory=ControllerConfig)
     score: ScoreConfig = field(default_factory=ScoreConfig)
     jitter: JitterConfig = field(default_factory=JitterConfig)
+    robustness: RobustnessConfig = field(default_factory=RobustnessConfig)
     replay: ReplayConfig = field(default_factory=ReplayConfig)
 
     def with_overrides(self, **sections: dict[str, Any]) -> TaskConfig:
@@ -172,6 +223,7 @@ def task_from_dict(raw: dict[str, Any]) -> TaskConfig:
         "controller": ControllerConfig,
         "score": ScoreConfig,
         "jitter": JitterConfig,
+        "robustness": RobustnessConfig,
         "replay": ReplayConfig,
     }
     unknown = set(raw) - set(sections) - {"name"}
@@ -196,6 +248,12 @@ def load_task(path: str | Path | None = None) -> TaskConfig:
 def default_task() -> TaskConfig:
     """The repository's default task (``configs/task_v1.yaml``), loaded once per process."""
     return load_task()
+
+
+def task_digest(task: TaskConfig) -> str:
+    """Stable 12-hex-digit fingerprint of every value in ``task`` (for result provenance)."""
+    payload = json.dumps(dataclasses.asdict(task), sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(payload.encode()).hexdigest()[:12]
 
 
 def gripper_task_for(task: TaskConfig, **overrides: Any) -> GripperTask:

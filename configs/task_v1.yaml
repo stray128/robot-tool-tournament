@@ -11,10 +11,19 @@
 #   (0.006-0.01) let rods roll out of a high (k = 0.7) grasp during the hold
 #   (1-4 of 48 sanity grasps failed at 2 ms).
 # - timestep: both 2 ms and 1 ms pass G1 (32 seeds x 4 cases + 96 random
-#   placements, zero spurious failures). 1 ms is the default because it halves
+#   placements, zero spurious failures). 1 ms was the default because it halves
 #   contact penetration (max 0.66 vs 1.12 mm on sanity grasps; 0.68 vs 1.66 mm on
 #   a 20 deg bent finger) and raised 30 % fewer penetration flags on bent and
-#   hooked stress fingers. 2 ms runs ~1.75x more episodes/s; revisit at G3.
+#   hooked stress fingers. 2 ms runs ~1.75x more episodes/s.
+# - timestep re-evaluated 2026-10-15 after the gripper retarget (docs/BENCH.md;
+#   python -m rtt.sim.bench parity): on the fixed 200-episode random parity set
+#   (50 designs, random sizes/placements/pose errors, random k) 2 ms agreed with 1 ms
+#   on 199/200 success flags (99.5 %) and 196/200 failure modes; gate G1 passed at
+#   both over seeds 0-7 (56/56 cases each); penetration flags 2 vs 2, p99 penetration
+#   1.9 mm at both; 2 ms ran 1.7x more episodes/s. The adoption rule (>= 99 %
+#   identical outcomes) is met, so timestep is now 2 ms. Finger-finger overlap is no
+#   longer a penetration flag (checks.py): fingers closing on nothing met at ~2.7 mm
+#   overlap at 2 ms and were relabelled by phase.
 # - Joint-limit solref 0.004 keeps open fingers on their stops (the default
 #   0.02 let them sag 2.5 mm past the limit). Palm yaw is in radians
 #   (MjSpec compiles angles as degrees unless told otherwise).
@@ -35,16 +44,26 @@
 #   At k = 0.5 over seeds 0-23 the straight, concave and hooked entrants succeeded 24/24;
 #   too_high and too_wide gave missed_grasp 24/24 and mu = 0.05 slip_during_lift 24/24,
 #   with no physics flags and at most 1.6 mm penetration. Values here are unchanged.
+# - Gripper retarget (2026-10-15): 84 mm opening, F = 50 N, the 47.6 x 128 x 24 mm
+#   palm, and grasp heights within each finger's palm-clear reachable band. G1 now has
+#   4 entrants (+ stock); at 2 ms over seeds 0-7 all 56 cases ended as expected, with
+#   the k = 0.5 tips 85 mm up the 120 mm box for 80 mm fingers and 94 mm for the
+#   62.5 mm stock finger (10 mm palm clearance), and no palm contact.
+# - G3 calibration (2026-10-15, docs/TASK.md): mu 0.8 -> 0.3, torsional friction 0.005 ->
+#   0.001 m, default object density 700 -> 1200 kg/m^3, with the parts suite in
+#   configs/suites/train_v1.yaml. At mu 0.8 every entrant and 59/64 random designs scored
+#   100 % on the old suite; friction capacity (mu F = 40 N) held any object in the opening.
+#   The G1 box keeps 700 kg/m^3 (rtt.sim.m1.G1_DENSITY), so the gate is unchanged.
 name: task_v1
 
 physics:
-  timestep: 0.001
+  timestep: 0.002
   integrator: implicitfast
   cone: elliptic
   impratio: 10.0
   condim: 4
-  friction: 0.8                 # sliding mu; the object geom has priority, so its mu governs its contacts
-  torsional_friction: 0.005
+  friction: 0.3                 # sliding mu (G3, 2026-10-15): bare PETG-CF pads, low end of 0.3-0.5 [A]; the object geom has priority
+  torsional_friction: 0.001     # m (G3): mu x ~3 mm effective patch radius; 0.005 let any finger resist any twist
   rolling_friction: 0.0001
   contact_solref: [0.004, 1.0]
   contact_solimp: [0.95, 0.99, 0.001, 0.5, 2.0]
@@ -53,16 +72,35 @@ physics:
   ls_iterations: 50
   native_ccd: false             # libccd MPR for convex pairs; native GJK/EPA + multi-CCD gave wrong edge normals
   multi_ccd: true               # several contact points per convex pair (a cylinder stands on 4-5, not 1)
-  object_density: 700.0         # kg/m^3
+  object_density: 1200.0        # kg/m^3 (G3): solid plastic parts; a suite size may set its own material
   table_top_z: 0.0
   table_half_size: [0.4, 0.4, 0.375]
 
 gripper:
-  palm_half_size: [0.03, 0.065, 0.015]
+  # Open-source parallel gripper match (2026-10-15; Addendum A move 3). Rack and pinion,
+  # two moving jaws on rods, 18-tooth m0.8 pinion (pitch radius 7.2 mm) on a 12 V
+  # serial-bus servo. Sources: the gripper's CAD/URDF at a pinned commit (attribution
+  # in README); [S] sourced, [D] measured/derived, [A] assumed.
+  # - Opening: CAD hard stops give 42.0 mm travel per jaw and a 0 mm closed gap, i.e.
+  #   an 84 mm maximum opening [D]. The docs say 85 mm and the URDF limit gives 83 mm;
+  #   84 mm is the physical stop. stroke = open_half_gap = 0.042.
+  # - Grip force F = 50 N, i.e. F/2 = 25 N squeeze per jaw [D + A]: stall torque
+  #   (22-30 kg cm) through the 7.2 mm pinion at ~59 % efficiency gives 88-120 N per jaw,
+  #   but the stock torque limit is 50 % and the servo's overload protection drops to
+  #   ~25 % within a 2 s hold, i.e. 22-31 N per jaw sustained. 90-120 N is the
+  #   unprotected 50 % regime (a robustness sweep point, not the default).
+  # - Palm = the gripper frame, 47.6 (x) x 128 (y) x 24 (z) mm [D]; its underside is
+  #   the frame's front face, where the fingers' roots mount (finger length is measured
+  #   from there; the stock finger is 62.5 mm below it).
+  # - Not modelled: the sim uses one mu (0.3, physics.friction) for pad and object, the
+  #   low end of bare PETG-CF's 0.3-0.5 [A]; the stock finger touches only on its 22 mm pad, the box
+  #   approximation along its full length; jaw no-load speed is ~34 mm/s [D], the
+  #   close ramp below commands ~52 mm/s (the force limit, not speed, governs contact).
+  palm_half_size: [0.024, 0.064, 0.012]
   palm_mass: 0.4
-  open_half_gap: 0.04           # finger root offset at full open: 80 mm gap for a face at local y = 0
-  stroke: 0.04                  # per finger; closure q = 0 open .. 0.04 closed
-  grip_force: 40.0              # F: grip actuator force limit on the mean-closure tendon (F/2 squeeze per finger)
+  open_half_gap: 0.042          # finger root offset at full open: 84 mm gap for a face at local y = 0
+  stroke: 0.042                 # per finger; closure q = 0 open .. 0.042 closed (closed gap 0)
+  grip_force: 50.0              # F: grip actuator force limit on the mean-closure tendon (F/2 squeeze per finger)
   grip_kp: 4000.0
   grip_kv: 100.0                # overdamped: an unobstructed jaw snaps shut at <= ~0.4 m/s
   grip_overdrive: 0.01          # close target past full stroke, so the servo always saturates at F
@@ -82,9 +120,13 @@ gripper:
   equality_solref: [0.004, 1.0]
 
 controller:
-  grasp_height_fracs: [0.3, 0.5, 0.7]   # controller settings k: finger-tip height / object height
+  # Controller settings k: finger-tip height as a fraction of the reachable band
+  # [max(0, h + palm_clearance - finger reach), h] of an object of height h; for fingers
+  # longer than h + palm_clearance this is simply k x h.
+  grasp_height_fracs: [0.3, 0.5, 0.7]
   grasp_z_offset: 0.0
   min_tip_clearance: 0.003
+  palm_clearance: 0.01          # palm underside >= 10 mm above the object's top at the grasp pose
   approach_offset: 0.08
   approach_clearance: 0.02
   settle_time: 0.3
@@ -94,7 +136,7 @@ controller:
   lift_height: 0.15
   lift_time: 1.5
   open_target: -0.002
-  control_period: 0.002         # 500 Hz
+  control_period: 0.002         # 500 Hz (one physics step at the 2 ms timestep)
 
 score:
   success_lift: 0.10
@@ -102,6 +144,7 @@ score:
   max_time: 12.0
   check_period: 0.01
   finger_table_force_max: 5.0   # N, palm or finger against table/floor
+  palm_contact_force_max: 0.2   # N, palm against the object during LIFT/HOLD -> palm_contact flag
   penetration_max: 0.002
   speed_cap: 5.0
   eject_dist: 0.025
@@ -116,6 +159,24 @@ jitter:
   pos: 0.002                    # +-2 mm object x/y
   yaw_deg: 3.0                  # +-3 deg object yaw
   mu_frac: 0.10                 # +-10 % object friction
+
+robustness:                     # certificate tests (rtt.sim.certify); jitter is off in all of them
+  # Magnitudes chosen 2026-10-15 on the 4 entrants x 6 training objects x k 0/1 (48 grasps,
+  # 1 ms; docs/BENCH.md): shakes from 10 mm @ 3 Hz to 20 mm @ 6 Hz (up to 2.9 g) failed at most
+  # 2/48 (1 fails undisturbed; mu 0.8 and F 50 N hold far more), while a push at the object's
+  # top failed 7-11/48 at 0.6 N s and 1-2/48 at 0.3 N s.
+  placement_errors_mm: [1.0, 2.0, 3.0]   # object offset from the aimed pose: 0, +-1, +-2, +-3 mm along x and y
+  shake_axes: [x, y, z]         # gripper frame: x finger width, y closing axis, z up
+  shake_amplitude: 0.01         # m, commanded palm displacement amplitude
+  shake_frequency: 5.0          # Hz: peak commanded acceleration (2 pi f)^2 A = 9.9 m/s^2 (~1 g)
+  shake_cycles: 5               # 1.0 s of shaking
+  shake_ramp_cycles: 0.5        # raised-cosine amplitude ramp at both ends
+  push_axes: [x, y]             # horizontal push direction in the gripper frame
+  push_impulse: 0.5             # N s (a 25 N force for 20 ms; 1.7 m/s for a free 0.3 kg object)
+  push_duration: 0.02           # s
+  push_at_top: true             # acts at the object's top, twisting it in the grasp
+  perturb_delay: 0.2            # s after the palm reaches the lift height
+  post_perturb_hold: 1.0        # s the object must stay lifted after the perturbation ends
 
 replay:
   fps: 30

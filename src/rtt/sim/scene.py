@@ -10,11 +10,11 @@ Gripper model (identical for every entrant except the finger boxes):
   carried object is not.
 * ``finger_left`` / ``finger_right``: children of the palm on slide joints of
   the same names. The joint value ``q`` is the closure of that finger,
-  ``q = 0`` fully open and ``q = stroke`` (40 mm) fully closed. The left finger
+  ``q = 0`` fully open and ``q = stroke`` (42 mm in task_v1) fully closed. The left finger
   root sits at palm-local ``y = open_half_gap - q``, the right one is mirrored.
   A joint equality keeps ``q_left == q_right`` (self-centring jaw).
 * ``grip``: a fixed tendon ``0.5 q_left + 0.5 q_right`` (mean closure) driven by
-  a position servo whose force is clipped to ``+-F`` (``F = 40 N``). In a static
+  a position servo whose force is clipped to ``+-F`` (``F = 50 N`` in task_v1). In a static
   squeeze each finger therefore presses on the object with ``F / 2``.
 
 Finger collision geoms are the 14 boxes of a :class:`~rtt.design.types.FingerGeometry`
@@ -24,8 +24,14 @@ explicitly, so a batched executor can override them per world.
 
 Contacts: every pair collides except palm-finger (MuJoCo filters parent-child
 pairs). Palm-object and finger-finger contacts are real; gripper-table contacts
-are simulated and flagged by checks.py. The object geom has ``priority=1`` so
-its friction (the jittered mu) governs all of its contacts.
+are simulated and flagged by checks.py, and so is the palm touching a carried
+object. The object geoms have ``priority=1`` so their friction (the jittered mu)
+governs all of their contacts.
+
+Objects: a primitive :class:`~rtt.sim.objects.ObjectSpec` is one geom whose mass
+follows from its density. A :class:`~rtt.sim.objects.MeshObject` is one convex mesh
+geom per piece, with the body's mass, centre of mass and inertia set explicitly from
+the solid mesh (volume x density).
 
 The table top is the plane ``z = table_top_z`` (0 by default); world frame is
 Z-up; all angles are radians.
@@ -179,7 +185,8 @@ class SceneIds:
     object_dof: int  # start of the object's 6-dof velocity block
     palm_actuators: np.ndarray  # actuator ids for x, y, z, yaw
     grip_actuator: int
-    object_geom: int
+    object_geom: int  # the object's first (for primitives: only) geom
+    object_geoms: np.ndarray  # every geom of the object body
     geom_group: np.ndarray  # (ngeom,) GROUP_* label per geom
     replay_bodies: np.ndarray  # body ids in REPLAY_BODIES order
 
@@ -209,6 +216,7 @@ class SceneIds:
             elif b == obj:
                 group[g] = GROUP_OBJECT
         free = joint("object_free")
+        object_geoms = np.flatnonzero(model.geom_bodyid == obj)
         return SceneIds(
             palm_body=palm,
             finger_left_body=left,
@@ -222,7 +230,8 @@ class SceneIds:
             object_dof=int(model.jnt_dofadr[free]),
             palm_actuators=np.array([actuator(n) for n in PALM_JOINTS]),
             grip_actuator=actuator(GRIP_ACTUATOR),
-            object_geom=mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, BODY_OBJECT),
+            object_geom=int(object_geoms[0]),
+            object_geoms=object_geoms,
             geom_group=group,
             replay_bodies=np.array([palm, left, right, obj]),
         )
@@ -318,7 +327,39 @@ def check_finger_units(finger: FingerGeometry) -> None:
         )
 
 
-def build_spec(finger: FingerGeometry, obj: objs.ObjectSpec, task: TaskConfig) -> mujoco.MjSpec:
+def _add_object(spec: mujoco.MjSpec, obj: objs.AnyObject, density: float) -> None:
+    """The object: a free body; ``priority=1`` makes its friction govern all of its contacts."""
+    body = spec.worldbody.add_body(name=BODY_OBJECT)
+    body.add_freejoint(name="object_free")
+    if isinstance(obj, objs.MeshObject):
+        body.explicitinertial = True
+        body.mass = obj.volume * density
+        body.ipos = list(obj.com)
+        body.fullinertia = [v * density for v in obj.unit_inertia]
+        for i, (verts, faces) in enumerate(zip(obj.parts, obj.faces, strict=True)):
+            mesh_name = f"{BODY_OBJECT}_part{i:02d}"
+            spec.add_mesh(name=mesh_name, uservert=verts.ravel().tolist(), userface=faces.ravel().tolist())
+            body.add_geom(
+                name=BODY_OBJECT if i == 0 else f"{BODY_OBJECT}_{i:02d}",
+                type=mujoco.mjtGeom.mjGEOM_MESH,
+                meshname=mesh_name,
+                priority=1,
+                rgba=list(OBJECT_RGBA),
+            )
+        return
+    gtype, gsize, gquat = objs.geom_params(obj)
+    body.add_geom(
+        name=BODY_OBJECT,
+        type=gtype,
+        size=gsize,
+        quat=list(gquat),
+        density=density,
+        priority=1,
+        rgba=list(OBJECT_RGBA),
+    )
+
+
+def build_spec(finger: FingerGeometry, obj: objs.AnyObject, task: TaskConfig) -> mujoco.MjSpec:
     """Author the full scene for one finger design and one object."""
     check_finger_units(finger)
     phys, g = task.physics, task.gripper
@@ -413,20 +454,7 @@ def build_spec(finger: FingerGeometry, obj: objs.ObjectSpec, task: TaskConfig) -
         solref=list(g.equality_solref),
     )
 
-    # Object: a free body; priority 1 makes its friction govern all of its contacts.
-    gtype, gsize, gquat = objs.geom_params(obj)
-    density = obj.density if obj.density is not None else phys.object_density
-    body = world.add_body(name=BODY_OBJECT)
-    body.add_freejoint(name="object_free")
-    body.add_geom(
-        name=BODY_OBJECT,
-        type=gtype,
-        size=gsize,
-        quat=list(gquat),
-        density=density,
-        priority=1,
-        rgba=list(OBJECT_RGBA),
-    )
+    _add_object(spec, obj, obj.density if obj.density is not None else phys.object_density)
 
     xy = (-PALM_XY_LIMIT, PALM_XY_LIMIT)
     _add_position_actuator(spec, "palm_x", "palm_x", g.xy_kp, g.xy_kv, g.xy_force, xy)
@@ -451,7 +479,7 @@ def build_spec(finger: FingerGeometry, obj: objs.ObjectSpec, task: TaskConfig) -
 
 
 def build_model(
-    finger: FingerGeometry, obj: objs.ObjectSpec, task: TaskConfig
+    finger: FingerGeometry, obj: objs.AnyObject, task: TaskConfig
 ) -> tuple[mujoco.MjModel, SceneIds]:
     """Compile the scene and resolve the ids the episode loop needs."""
     model = build_spec(finger, obj, task).compile()

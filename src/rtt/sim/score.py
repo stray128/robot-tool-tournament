@@ -19,6 +19,9 @@ before a confirmed success count):
    the missed grasp.
 3. A flag raised during LIFT -> ``slip_during_lift``, during HOLD ->
    ``unstable_hold`` (gripper/environment contacts -> ``finger_env_collision``).
+   This includes ``palm_contact`` (the palm pressing on the carried object): the
+   object moved up out of the finger grasp into the palm, so a palm-supported lift
+   never counts as a success; the flag itself stays in the episode's flags.
 4. Grasped but the object never reached ``success_lift`` -> ``slip_during_lift``.
 5. Reached ``success_lift`` but never held it for ``success_hold`` -> ``unstable_hold``.
 """
@@ -64,6 +67,9 @@ class LiftTracker:
     max_lift: float = 0.0
     hold_time: float = 0.0  # longest continuous stretch above the success height
     success_at: float | None = None
+    # Success is only confirmed at or after this time (a perturbation test sets it to the
+    # end of the perturbation plus a settling hold).
+    min_success_time: float = 0.0
     _above_since: float | None = None
 
     def set_reference(self, z0: float) -> None:
@@ -79,7 +85,12 @@ class LiftTracker:
                 self._above_since = t
             held = t - self._above_since
             self.hold_time = max(self.hold_time, held)
-            if self.success_at is None and held >= self.cfg.success_hold and t <= self.cfg.max_time:
+            if (
+                self.success_at is None
+                and held >= self.cfg.success_hold
+                and t >= self.min_success_time
+                and t <= self.cfg.max_time
+            ):
                 self.success_at = t
         else:
             self._above_since = None

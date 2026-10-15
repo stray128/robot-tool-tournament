@@ -1,0 +1,87 @@
+{
+ "schema": "rtt-web-jobs",
+ "version": 1,
+ "jobs": [
+  {
+   "id": "local-m1-gate",
+   "source": "demo-m1",
+   "name": "Milestone 1 gate",
+   "purpose": "Ran the milestone 1 gate at import; the demo bouts' replays and the scorer's numbers come from this run.",
+   "kind": "local",
+   "executor": "cpu",
+   "platform": null,
+   "preset": null,
+   "region": null,
+   "status": "completed",
+   "started_at": "2026-10-15T13:34:34.179Z",
+   "ended_at": "2026-10-15T13:34:36.034Z",
+   "wall_s": 1.85,
+   "cost_usd": null,
+   "episodes": 7,
+   "sim_steps": 20495,
+   "bouts": [
+    "m1-entrants",
+    "m1-failures"
+   ]
+  },
+  {
+   "id": "local-slice-20261015-a",
+   "source": "export:slice-20261015-a",
+   "name": "Vertical slice",
+   "purpose": "One Nemotron round end to end: 8 starting designs, 4 proposed designs (3 kept from the model), 576 training episodes, 5 recorded replays.",
+   "kind": "local",
+   "executor": "cpu",
+   "platform": null,
+   "preset": null,
+   "region": null,
+   "status": "completed",
+   "started_at": "2026-10-15T13:33:28.264Z",
+   "ended_at": "2026-10-15T13:34:08.910Z",
+   "wall_s": 40.647,
+   "cost_usd": null,
+   "episodes": 581,
+   "sim_steps": null,
+   "bouts": [
+    "slice-20261015-a"
+   ]
+  },
+  {
+   "id": "aijob-e00xx86cr7b6ycwkwm",
+   "source": "export:search-20261015-134158-search",
+   "name": "Search: random arm",
+   "purpose": "1 run x 40 designs on the training suite",
+   "kind": "nebius",
+   "executor": "cpu",
+   "platform": "gpu-h100-sxm",
+   "preset": "1gpu-16vcpu-200gb",
+   "region": "eu-north1",
+   "status": "completed",
+   "started_at": "2026-10-15T13:44:04.301372+00:00",
+   "ended_at": "2026-10-15T13:44:25.944291+00:00",
+   "wall_s": 145.651,
+   "cost_usd": 0.1821,
+   "episodes": 1920,
+   "sim_steps": null,
+   "bouts": []
+  },
+  {
+   "id": "aijob-e00p6shj7m77w4dfnd",
+   "source": "export:search-20261015-134451-search",
+   "name": "Search: nemotron arm",
+   "purpose": "1 run x 40 designs on the training suite; 16 model calls",
+   "kind": "nebius",
+   "executor": "cpu",
+   "platform": "gpu-h100-sxm",
+   "preset": "1gpu-16vcpu-200gb",
+   "region": "eu-north1",
+   "status": "completed",
+   "started_at": "2026-10-15T13:46:50.217766+00:00",
+   "ended_at": "2026-10-15T13:49:11.977029+00:00",
+   "wall_s": 258.346,
+   "cost_usd": 0.3229,
+   "episodes": 1920,
+   "sim_steps": null,
+   "bouts": []
+  }
+ ]
+}

@@ -1,0 +1,36 @@
+# Build context for docker/Dockerfile.sim. The image needs src/, configs/, jobs/, scripts/,
+# the lock files and the small committed demo data; nothing else.
+
+# secrets: never in an image layer
+.env
+.env.*
+!.env.example
+secrets/
+
+# version control and local environments
+.git
+.gitignore
+.venv/
+**/__pycache__/
+**/*.pyc
+.hypothesis/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# outputs and logs
+runs/
+outputs/
+MUJOCO_LOG.TXT
+*.log
+
+# data: only the small demo set ships
+data/*
+!data/demo/
+
+# not used by the simulation image
+web/
+node_modules/
+.next/
+tests/
+docker/

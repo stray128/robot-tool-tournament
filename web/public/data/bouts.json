@@ -1,0 +1,643 @@
+{
+ "schema": "rtt-web-bouts",
+ "version": 1,
+ "bouts": [
+  {
+   "id": "m1-entrants",
+   "source": "demo-m1",
+   "kind": "gate",
+   "title": "Four baseline fingers, one box",
+   "summary": "Each hand-designed entrant tries to lift a 90 x 40 x 120 mm box and hold it for 2 s. Same gripper, same controller, same 50 N grip: only the fingers differ.",
+   "featured": false,
+   "recorded_at": "2026-10-15T13:34:34.179Z",
+   "task": {
+    "name": "task_v1",
+    "phases": [
+     {
+      "name": "settle",
+      "start_s": 0,
+      "end_s": 0.3
+     },
+     {
+      "name": "descend",
+      "start_s": 0.3,
+      "end_s": 1.3
+     },
+     {
+      "name": "close",
+      "start_s": 1.3,
+      "end_s": 2.6
+     },
+     {
+      "name": "lift",
+      "start_s": 2.6,
+      "end_s": 4.1
+     },
+     {
+      "name": "hold",
+      "start_s": 4.1,
+      "end_s": null
+     }
+    ],
+    "success_lift_m": 0.1,
+    "success_hold_s": 2,
+    "record_tail_s": 0.5,
+    "max_time_s": 12,
+    "grip_force_n": 50,
+    "max_opening_mm": 84
+   },
+   "compute": {
+    "kind": "local",
+    "executor": "cpu",
+    "engine": "MuJoCo 3.15.0",
+    "host": "Developer laptop",
+    "wall_s": 1.058,
+    "sim_steps": 12080,
+    "note": "Recorded at import, in the same run as the scorer's numbers. Scored runs execute on Nebius Serverless Jobs."
+   },
+   "lanes": [
+    {
+     "id": "straight",
+     "replay": "replays/m1/straight",
+     "label": "Straight",
+     "condition": "the straight entrant lifts and holds the box",
+     "entrant": "straight",
+     "design_id": "462150ca1475",
+     "object": {
+      "kind": "box",
+      "size_mm": [
+       90,
+       40,
+       120
+      ]
+     },
+     "controller_setting": 1,
+     "grasp_height_frac": 0.5,
+     "seed": 0,
+     "n_frames": 182,
+     "duration_s": 6.0333,
+     "outcome": {
+      "success": true,
+      "failure_mode": null,
+      "max_lift_mm": 149.2,
+      "hold_s": 2.01,
+      "flags": [],
+      "source": "scorer",
+      "wall_s": 0.258,
+      "sim_steps": 3020
+     },
+     "design_provenance": {
+      "kind": "manual",
+      "note": "Hand-designed baseline entrant"
+     }
+    },
+    {
+     "id": "concave",
+     "replay": "replays/m1/concave",
+     "label": "Concave",
+     "condition": "the concave entrant lifts and holds the box",
+     "entrant": "concave",
+     "design_id": "9a0624079454",
+     "object": {
+      "kind": "box",
+      "size_mm": [
+       90,
+       40,
+       120
+      ]
+     },
+     "controller_setting": 1,
+     "grasp_height_frac": 0.5,
+     "seed": 0,
+     "n_frames": 182,
+     "duration_s": 6.0333,
+     "outcome": {
+      "success": true,
+      "failure_mode": null,
+      "max_lift_mm": 149.2,
+      "hold_s": 2.01,
+      "flags": [],
+      "source": "scorer",
+      "wall_s": 0.288,
+      "sim_steps": 3020
+     },
+     "design_provenance": {
+      "kind": "manual",
+      "note": "Hand-designed baseline entrant"
+     }
+    },
+    {
+     "id": "hooked",
+     "replay": "replays/m1/hooked",
+     "label": "Hooked",
+     "condition": "the hooked entrant lifts and holds the box",
+     "entrant": "hooked",
+     "design_id": "732d575caf85",
+     "object": {
+      "kind": "box",
+      "size_mm": [
+       90,
+       40,
+       120
+      ]
+     },
+     "controller_setting": 1,
+     "grasp_height_frac": 0.5,
+     "seed": 0,
+     "n_frames": 182,
+     "duration_s": 6.0333,
+     "outcome": {
+      "success": true,
+      "failure_mode": null,
+      "max_lift_mm": 149.1,
+      "hold_s": 2.01,
+      "flags": [],
+      "source": "scorer",
+      "wall_s": 0.243,
+      "sim_steps": 3020
+     },
+     "design_provenance": {
+      "kind": "manual",
+      "note": "Hand-designed baseline entrant"
+     }
+    },
+    {
+     "id": "stock",
+     "replay": "replays/m1/stock",
+     "label": "Stock",
+     "condition": "the stock entrant lifts and holds the box",
+     "entrant": "stock",
+     "design_id": "be6496fa15e2",
+     "object": {
+      "kind": "box",
+      "size_mm": [
+       90,
+       40,
+       120
+      ]
+     },
+     "controller_setting": 1,
+     "grasp_height_frac": 0.5,
+     "seed": 0,
+     "n_frames": 182,
+     "duration_s": 6.0333,
+     "outcome": {
+      "success": true,
+      "failure_mode": null,
+      "max_lift_mm": 149.1,
+      "hold_s": 2.01,
+      "flags": [],
+      "source": "scorer",
+      "wall_s": 0.269,
+      "sim_steps": 3020
+     },
+     "design_provenance": {
+      "kind": "manual",
+      "note": "Hand-designed baseline entrant"
+     }
+    }
+   ]
+  },
+  {
+   "id": "m1-failures",
+   "source": "demo-m1",
+   "kind": "gate",
+   "title": "One good grasp and three planted failures",
+   "summary": "Before any search runs, the judge has to tell a grasp from a miss. The same straight fingers are set up to fail in three different ways, and each failure has to get its own label.",
+   "featured": true,
+   "recorded_at": "2026-10-15T13:34:34.179Z",
+   "task": {
+    "name": "task_v1",
+    "phases": [
+     {
+      "name": "settle",
+      "start_s": 0,
+      "end_s": 0.3
+     },
+     {
+      "name": "descend",
+      "start_s": 0.3,
+      "end_s": 1.3
+     },
+     {
+      "name": "close",
+      "start_s": 1.3,
+      "end_s": 2.6
+     },
+     {
+      "name": "lift",
+      "start_s": 2.6,
+      "end_s": 4.1
+     },
+     {
+      "name": "hold",
+      "start_s": 4.1,
+      "end_s": null
+     }
+    ],
+    "success_lift_m": 0.1,
+    "success_hold_s": 2,
+    "record_tail_s": 0.5,
+    "max_time_s": 12,
+    "grip_force_n": 50,
+    "max_opening_mm": 84
+   },
+   "compute": {
+    "kind": "local",
+    "executor": "cpu",
+    "engine": "MuJoCo 3.15.0",
+    "host": "Developer laptop",
+    "wall_s": 1.029,
+    "sim_steps": 11435,
+    "note": "Recorded at import, in the same run as the scorer's numbers. Scored runs execute on Nebius Serverless Jobs."
+   },
+   "lanes": [
+    {
+     "id": "straight",
+     "replay": "replays/m1/straight",
+     "label": "Baseline grasp",
+     "condition": "the straight entrant lifts and holds the box",
+     "entrant": "straight",
+     "design_id": "462150ca1475",
+     "object": {
+      "kind": "box",
+      "size_mm": [
+       90,
+       40,
+       120
+      ]
+     },
+     "controller_setting": 1,
+     "grasp_height_frac": 0.5,
+     "seed": 0,
+     "n_frames": 182,
+     "duration_s": 6.0333,
+     "outcome": {
+      "success": true,
+      "failure_mode": null,
+      "max_lift_mm": 149.2,
+      "hold_s": 2.01,
+      "flags": [],
+      "source": "scorer",
+      "wall_s": 0.258,
+      "sim_steps": 3020
+     },
+     "design_provenance": {
+      "kind": "manual",
+      "note": "Hand-designed baseline entrant"
+     }
+    },
+    {
+     "id": "too-high",
+     "replay": "replays/m1/too_high",
+     "label": "Closes too high",
+     "condition": "the tips close 30 mm above the box top",
+     "entrant": "straight",
+     "design_id": "462150ca1475",
+     "object": {
+      "kind": "box",
+      "size_mm": [
+       90,
+       40,
+       120
+      ]
+     },
+     "controller_setting": 1,
+     "grasp_height_frac": 0.5,
+     "seed": 0,
+     "n_frames": 169,
+     "duration_s": 5.6,
+     "outcome": {
+      "success": false,
+      "failure_mode": "missed_grasp",
+      "max_lift_mm": 0,
+      "hold_s": 0,
+      "flags": [],
+      "source": "scorer",
+      "wall_s": 0.244,
+      "sim_steps": 2805
+     },
+     "design_provenance": {
+      "kind": "manual",
+      "note": "Hand-designed baseline entrant"
+     }
+    },
+    {
+     "id": "low-friction",
+     "replay": "replays/m1/low_friction",
+     "label": "Slippery box",
+     "condition": "mu = 0.05: friction capacity 2.5 N < weight 2.97 N",
+     "entrant": "straight",
+     "design_id": "462150ca1475",
+     "object": {
+      "kind": "box",
+      "size_mm": [
+       90,
+       40,
+       120
+      ]
+     },
+     "controller_setting": 1,
+     "grasp_height_frac": 0.5,
+     "seed": 0,
+     "n_frames": 169,
+     "duration_s": 5.6,
+     "outcome": {
+      "success": false,
+      "failure_mode": "slip_during_lift",
+      "max_lift_mm": 0,
+      "hold_s": 0,
+      "flags": [],
+      "source": "scorer",
+      "wall_s": 0.258,
+      "sim_steps": 2805
+     },
+     "design_provenance": {
+      "kind": "manual",
+      "note": "Hand-designed baseline entrant"
+     }
+    },
+    {
+     "id": "too-wide",
+     "replay": "replays/m1/too_wide",
+     "label": "Box turned wide",
+     "condition": "the box's 90 mm side spans the jaw, wider than its opening",
+     "entrant": "straight",
+     "design_id": "462150ca1475",
+     "object": {
+      "kind": "box",
+      "size_mm": [
+       40,
+       90,
+       120
+      ]
+     },
+     "controller_setting": 1,
+     "grasp_height_frac": 0.5,
+     "seed": 0,
+     "n_frames": 169,
+     "duration_s": 5.6,
+     "outcome": {
+      "success": false,
+      "failure_mode": "missed_grasp",
+      "max_lift_mm": 0,
+      "hold_s": 0,
+      "flags": [],
+      "source": "scorer",
+      "wall_s": 0.269,
+      "sim_steps": 2805
+     },
+     "design_provenance": {
+      "kind": "manual",
+      "note": "Hand-designed baseline entrant"
+     }
+    }
+   ]
+  },
+  {
+   "id": "slice-20261015-a",
+   "source": "export:slice-20261015-a",
+   "kind": "training",
+   "title": "Nemotron's first 4 proposals against the stock finger",
+   "summary": "Nemotron 3 Super read the results of 8 starting designs on 16 training grasps and proposed 4 new fingers; 3 of 4 passed the checks (2 model calls, 14,257 prompt and 3,473 completion tokens, $0.0074). The remaining slot failed the validator or the diversity check twice and was filled at random, as the protocol requires. Each lane is a design's own best grasp height on the training condition where their outcomes differ most: wire rod lying flat, radius 3 mm, length 120 mm, at (-30, 40) mm, yaw -60 deg, sitting (6, 6) mm and 15 deg away from where the controller aims.",
+   "featured": false,
+   "recorded_at": "2026-10-15T13:34:08.910Z",
+   "task": {
+    "name": "task_v1",
+    "phases": [
+     {
+      "name": "settle",
+      "start_s": 0,
+      "end_s": 0.3
+     },
+     {
+      "name": "descend",
+      "start_s": 0.3,
+      "end_s": 1.3
+     },
+     {
+      "name": "close",
+      "start_s": 1.3,
+      "end_s": 2.6
+     },
+     {
+      "name": "lift",
+      "start_s": 2.6,
+      "end_s": 4.1
+     },
+     {
+      "name": "hold",
+      "start_s": 4.1,
+      "end_s": null
+     }
+    ],
+    "success_lift_m": 0.1,
+    "success_hold_s": 2.0,
+    "record_tail_s": 0.5,
+    "max_time_s": 12.0,
+    "grip_force_n": 50.0,
+    "max_opening_mm": 84.0
+   },
+   "compute": {
+    "kind": "local",
+    "executor": "cpu",
+    "engine": "MuJoCo 3.15.0",
+    "host": "Developer laptop",
+    "wall_s": 1.601,
+    "sim_steps": 14445,
+    "note": "Local run on a developer laptop, not a Nebius job. Designs proposed live by Nemotron on Nebius Token Factory."
+   },
+   "lanes": [
+    {
+     "id": "baseline-stock",
+     "replay": "replays/slice-20261015-a/baseline-stock",
+     "label": "Baseline: stock finger",
+     "condition": "wire rod lying flat, radius 3 mm, length 120 mm, at (-30, 40) mm, yaw -60 deg, sitting (6, 6) mm and 15 deg away from where the controller aims",
+     "entrant": "stock",
+     "design_id": "be6496fa15e2",
+     "object": {
+      "kind": "capsule",
+      "size_mm": [
+       6.0,
+       120.0
+      ]
+     },
+     "controller_setting": 0,
+     "grasp_height_frac": 0.3,
+     "seed": 916265984186942507,
+     "n_frames": 169,
+     "duration_s": 5.6,
+     "outcome": {
+      "success": false,
+      "failure_mode": "missed_grasp",
+      "max_lift_mm": 0.0,
+      "hold_s": 0.0,
+      "flags": [],
+      "source": "scorer",
+      "wall_s": 0.31,
+      "sim_steps": 2805
+     },
+     "design_provenance": {
+      "kind": "manual",
+      "note": "Hand-designed baseline entrant"
+     }
+    },
+    {
+     "id": "mutate-1",
+     "replay": "replays/slice-20261015-a/mutate-1",
+     "label": "Nemotron mutate 1",
+     "condition": "wire rod lying flat, radius 3 mm, length 120 mm, at (-30, 40) mm, yaw -60 deg, sitting (6, 6) mm and 15 deg away from where the controller aims",
+     "entrant": "d09",
+     "design_id": "6cabaab30201",
+     "object": {
+      "kind": "capsule",
+      "size_mm": [
+       6.0,
+       120.0
+      ]
+     },
+     "controller_setting": 0,
+     "grasp_height_frac": 0.3,
+     "seed": 916265984186942507,
+     "n_frames": 181,
+     "duration_s": 6.0,
+     "outcome": {
+      "success": true,
+      "failure_mode": null,
+      "max_lift_mm": 150.1,
+      "hold_s": 2.01,
+      "flags": [],
+      "source": "scorer",
+      "wall_s": 0.266,
+      "sim_steps": 3015
+     },
+     "design_provenance": {
+      "kind": "llm",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "provider": "nebius-tokenfactory",
+      "tokens_in": 7482,
+      "tokens_out": 2318,
+      "latency_s": 11.719,
+      "cost_usd": 0.004331,
+      "round": 1
+     }
+    },
+    {
+     "id": "mutate-2",
+     "replay": "replays/slice-20261015-a/mutate-2",
+     "label": "Random fallback (mutate 2)",
+     "condition": "wire rod lying flat, radius 3 mm, length 120 mm, at (-30, 40) mm, yaw -60 deg, sitting (6, 6) mm and 15 deg away from where the controller aims",
+     "entrant": "d10",
+     "design_id": "345e1754c578",
+     "object": {
+      "kind": "capsule",
+      "size_mm": [
+       6.0,
+       120.0
+      ]
+     },
+     "controller_setting": 1,
+     "grasp_height_frac": 0.5,
+     "seed": 916265984186942507,
+     "n_frames": 169,
+     "duration_s": 5.6,
+     "outcome": {
+      "success": false,
+      "failure_mode": "slip_during_lift",
+      "max_lift_mm": 51.9,
+      "hold_s": 0.0,
+      "flags": [],
+      "source": "scorer",
+      "wall_s": 0.296,
+      "sim_steps": 2805
+     },
+     "design_provenance": {
+      "kind": "random",
+      "sampler": "scrambled Sobol (validator-filtered)",
+      "seed": 17
+     }
+    },
+    {
+     "id": "crossover",
+     "replay": "replays/slice-20261015-a/crossover",
+     "label": "Nemotron crossover",
+     "condition": "wire rod lying flat, radius 3 mm, length 120 mm, at (-30, 40) mm, yaw -60 deg, sitting (6, 6) mm and 15 deg away from where the controller aims",
+     "entrant": "d11",
+     "design_id": "984dba39aaf8",
+     "object": {
+      "kind": "capsule",
+      "size_mm": [
+       6.0,
+       120.0
+      ]
+     },
+     "controller_setting": 0,
+     "grasp_height_frac": 0.3,
+     "seed": 916265984186942507,
+     "n_frames": 169,
+     "duration_s": 5.6,
+     "outcome": {
+      "success": false,
+      "failure_mode": "missed_grasp",
+      "max_lift_mm": 0.0,
+      "hold_s": 0.0,
+      "flags": [],
+      "source": "scorer",
+      "wall_s": 0.46,
+      "sim_steps": 2805
+     },
+     "design_provenance": {
+      "kind": "llm",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "provider": "nebius-tokenfactory",
+      "tokens_in": 6775,
+      "tokens_out": 1155,
+      "latency_s": 6.942,
+      "cost_usd": 0.003072,
+      "round": 1
+     }
+    },
+    {
+     "id": "explore",
+     "replay": "replays/slice-20261015-a/explore",
+     "label": "Nemotron explore",
+     "condition": "wire rod lying flat, radius 3 mm, length 120 mm, at (-30, 40) mm, yaw -60 deg, sitting (6, 6) mm and 15 deg away from where the controller aims",
+     "entrant": "d12",
+     "design_id": "4c964e0339d5",
+     "object": {
+      "kind": "capsule",
+      "size_mm": [
+       6.0,
+       120.0
+      ]
+     },
+     "controller_setting": 0,
+     "grasp_height_frac": 0.3,
+     "seed": 916265984186942507,
+     "n_frames": 181,
+     "duration_s": 6.0,
+     "outcome": {
+      "success": true,
+      "failure_mode": null,
+      "max_lift_mm": 150.0,
+      "hold_s": 2.01,
+      "flags": [],
+      "source": "scorer",
+      "wall_s": 0.269,
+      "sim_steps": 3015
+     },
+     "design_provenance": {
+      "kind": "llm",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "provider": "nebius-tokenfactory",
+      "tokens_in": 6775,
+      "tokens_out": 1155,
+      "latency_s": 6.942,
+      "cost_usd": 0.003072,
+      "round": 1
+     }
+    }
+   ]
+  }
+ ]
+}

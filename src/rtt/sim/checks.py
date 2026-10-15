@@ -6,12 +6,22 @@ how flags map onto failure modes.
 
 * ``gripper_env_force``: palm/finger contact with the table or floor whose
   normal force exceeds ``finger_table_force_max``.
-* ``penetration``: any contact deeper than ``penetration_max``.
+* ``penetration``: any contact deeper than ``penetration_max``, except between the two
+  fingers. The fingers are one position-servoed mechanism; when a grasp fails they
+  close on nothing and meet at the jaw's 0 mm closed gap, where the soft contact lets
+  them overlap ~2.7 mm at the 2 ms timestep. That overlap cannot touch the object and
+  only relabelled such failures by phase (e.g. a missed grasp as ``ejected_on_close``),
+  so it is tracked as ``jaw_penetration_max`` instead of flagged.
 * ``speed_cap``: object linear speed above ``speed_cap`` (numerical blow-up).
 * ``ejection``: during CLOSE the object moves more than ``eject_dist``
   horizontally from where it was when closing started, or faster than
   ``eject_speed``.
 * ``off_table``: the object's centre drops more than ``off_table_drop`` below the table top.
+* ``palm_contact``: while the object is carried (LIFT and HOLD) the palm presses on it
+  with a normal force above ``palm_contact_force_max``. Only the fingers may hold the
+  object; a part wedged between the finger tips and the palm is not a finger grasp.
+  The controller keeps the palm clear of the object's top (see controller.py), so this
+  flag means the object was pushed or rotated up into the palm.
 
 Contact normal forces come from ``mj_contactForce``, which is correct for both
 friction-cone types (the raw ``efc_force`` rows are pyramid edges, not the
@@ -41,6 +51,7 @@ FLAG_PENETRATION = "penetration"
 FLAG_SPEED_CAP = "speed_cap"
 FLAG_EJECTION = "ejection"
 FLAG_OFF_TABLE = "off_table"
+FLAG_PALM_CONTACT = "palm_contact"
 
 
 @dataclass(frozen=True)
@@ -122,18 +133,25 @@ class PhysicsChecks:
     events: list[CheckEvent] = field(default_factory=list)
     gripper_env_force_max: float = 0.0
     penetration_max: float = 0.0
+    jaw_penetration_max: float = 0.0  # finger-finger overlap (diagnostic, never flagged)
     object_speed_max: float = 0.0
     close_xy_drift_max: float = 0.0
+    palm_object_force_max: float = 0.0  # any phase (diagnostic)
+    carry_palm_force_max: float = 0.0  # LIFT and HOLD only (what the palm_contact flag tests)
     _flagged: set[str] = field(default_factory=set, repr=False)
     _close_ref_xy: np.ndarray | None = field(default=None, repr=False)
     _is_gripper: np.ndarray = field(init=False, repr=False)
     _is_env: np.ndarray = field(init=False, repr=False)
+    _is_palm: np.ndarray = field(init=False, repr=False)
+    _is_object: np.ndarray = field(init=False, repr=False)
     _wrench: np.ndarray = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         groups = self.ids.geom_group
         self._is_gripper = np.isin(groups, (GROUP_PALM, GROUP_FINGER_LEFT, GROUP_FINGER_RIGHT))
         self._is_env = groups == GROUP_ENV
+        self._is_palm = groups == GROUP_PALM
+        self._is_object = groups == GROUP_OBJECT
         self._wrench = np.zeros(6)
 
     @property
@@ -147,6 +165,13 @@ class PhysicsChecks:
                 CheckEvent(flag=flag, t=t, phase=phase, detail=detail, gripper_env=gripper_env)
             )
 
+    def _normal_force(self, data: mujoco.MjData, contacts: np.ndarray) -> float:
+        total = 0.0
+        for i in contacts:
+            mujoco.mj_contactForce(self.model, data, int(i), self._wrench)
+            total += float(self._wrench[0])
+        return total
+
     def update(self, data: mujoco.MjData, t: float, phase: Phase) -> None:
         """Run all checks on the current state."""
         score = self.task.score
@@ -157,31 +182,44 @@ class PhysicsChecks:
             efc = con.efc_address
             active = efc >= 0
             if active.any():
-                depth = -con.dist[active]
-                deepest = int(np.argmax(depth))
-                self.penetration_max = max(self.penetration_max, float(depth[deepest]))
-                if depth[deepest] > score.penetration_max:
-                    g1, g2 = (int(g) for g in geom[active][deepest])
-                    names = "/".join(
-                        mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, g) or "?" for g in (g1, g2)
-                    )
-                    env_pair = bool(
-                        (self._is_gripper[g1] and self._is_env[g2])
-                        or (self._is_env[g1] and self._is_gripper[g2])
-                    )
-                    self._flag(FLAG_PENETRATION, t, phase, names, gripper_env=env_pair)
                 g = geom[active]
+                depth = -con.dist[active]
+                jaw = self._is_gripper[g[:, 0]] & self._is_gripper[g[:, 1]]
+                if jaw.any():
+                    self.jaw_penetration_max = max(self.jaw_penetration_max, float(depth[jaw].max()))
+                if not jaw.all():
+                    others = np.flatnonzero(~jaw)
+                    deepest = int(others[np.argmax(depth[others])])
+                    self.penetration_max = max(self.penetration_max, float(depth[deepest]))
+                    if depth[deepest] > score.penetration_max:
+                        g1, g2 = (int(v) for v in g[deepest])
+                        names = "/".join(
+                            mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, v) or "?"
+                            for v in (g1, g2)
+                        )
+                        env_pair = bool(
+                            (self._is_gripper[g1] and self._is_env[g2])
+                            or (self._is_env[g1] and self._is_gripper[g2])
+                        )
+                        self._flag(FLAG_PENETRATION, t, phase, names, gripper_env=env_pair)
                 pair = (self._is_gripper[g[:, 0]] & self._is_env[g[:, 1]]) | (
                     self._is_env[g[:, 0]] & self._is_gripper[g[:, 1]]
                 )
                 if pair.any():
-                    force = 0.0
-                    for i in np.flatnonzero(active)[pair]:
-                        mujoco.mj_contactForce(self.model, data, int(i), self._wrench)
-                        force += float(self._wrench[0])
+                    force = self._normal_force(data, np.flatnonzero(active)[pair])
                     self.gripper_env_force_max = max(self.gripper_env_force_max, force)
                     if force > score.finger_table_force_max:
                         self._flag(FLAG_GRIPPER_ENV, t, phase, f"{force:.1f} N", gripper_env=True)
+                palm = (self._is_palm[g[:, 0]] & self._is_object[g[:, 1]]) | (
+                    self._is_object[g[:, 0]] & self._is_palm[g[:, 1]]
+                )
+                if palm.any():
+                    force = self._normal_force(data, np.flatnonzero(active)[palm])
+                    self.palm_object_force_max = max(self.palm_object_force_max, force)
+                    if phase >= Phase.LIFT:
+                        self.carry_palm_force_max = max(self.carry_palm_force_max, force)
+                        if force > score.palm_contact_force_max:
+                            self._flag(FLAG_PALM_CONTACT, t, phase, f"{force:.2f} N")
 
         dof = self.ids.object_dof
         speed = float(np.linalg.norm(data.qvel[dof : dof + 3]))

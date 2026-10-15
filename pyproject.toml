@@ -14,6 +14,8 @@ dependencies = [
     "pydantic==2.14.1",
     "trimesh==5.1.1",
     "manifold3d",
+    "coacd==1.0.14",  # convex decomposition of uploaded / scanned object meshes (rtt.sim.mesh)
+    "networkx==3.7",  # needed by trimesh.poses.compute_stable_poses
     "openai==3.31.0",
     "python-dotenv==1.2.4",
     "pyyaml",

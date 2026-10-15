@@ -10,13 +10,22 @@ Phases (start times are fixed per task, identical for every entrant)::
     LIFT     palm rises by ``lift_height`` (minimum-jerk)
     HOLD     palm holds still until the episode ends
 
-The controller targets the *nominal* placement: pose jitter applied to the
-object is unknown to it, as perception error would be.
+The controller targets the *nominal* placement: the placement's pose error and
+the seed's jitter are unknown to it, as perception error would be.
 
 Grasp height (controller setting ``k``): the finger tips, i.e. the lowest point
-of the finger geometry, are placed ``k * object_height`` above the table
-(clamped to a small clearance). The approach pose is ``approach_offset`` higher,
-and never lower than ``approach_clearance`` above the object's top.
+of the finger geometry, go to a fraction ``k`` of the *reachable band* of tip
+heights. The band runs from the lowest tip height that keeps the palm underside
+(the finger roots) ``palm_clearance`` above the object's top,
+``max(0, h + palm_clearance - reach)`` for a finger reaching ``reach`` below its
+root, up to the object's top ``h``. A finger longer than ``h + palm_clearance``
+therefore grasps at ``k * h``; a shorter one grasps higher up the object instead of
+driving the palm into it. Tips never go below ``min_tip_clearance``. The approach
+pose is ``approach_offset`` higher, and never lower than ``approach_clearance``
+above the object's top.
+
+During HOLD an optional :class:`~rtt.sim.perturb.Shake` moves the palm target
+sinusoidally around the hold pose (robustness tests).
 """
 
 from __future__ import annotations
@@ -29,6 +38,7 @@ import numpy as np
 
 from rtt.design.types import FingerGeometry
 from rtt.sim import objects as objs
+from rtt.sim.perturb import Shake, axis_vector
 from rtt.sim.scene import PALM_XY_LIMIT, finger_tip_depth
 from rtt.sim.task import TaskConfig
 
@@ -58,6 +68,8 @@ class GraspPlan:
     grasp_z: float
     lift_z: float
     tip_height: float  # finger-tip height above the table at the grasp pose
+    reach_floor: float  # lowest palm-clear tip height (bottom of the reachable band)
+    palm_gap: float  # palm underside to object top at the grasp pose (m)
     t_descend: float
     t_close: float
     t_lift: float
@@ -72,6 +84,11 @@ class GraspPlan:
         return np.array([self.x, self.y, self.approach_z, self.yaw])
 
 
+def reach_floor(reach: float, obj_height: float, task: TaskConfig) -> float:
+    """Lowest tip height that keeps the palm ``palm_clearance`` above an object's top."""
+    return max(0.0, obj_height + task.controller.palm_clearance - reach)
+
+
 def grasp_fraction(setting: int, task: TaskConfig) -> float:
     fracs = task.controller.grasp_height_fracs
     if not 0 <= setting < len(fracs):
@@ -81,7 +98,7 @@ def grasp_fraction(setting: int, task: TaskConfig) -> float:
 
 def plan_grasp(
     finger: FingerGeometry,
-    obj: objs.ObjectSpec,
+    obj: objs.AnyObject,
     placement: objs.Placement,
     setting: int,
     task: TaskConfig,
@@ -99,9 +116,12 @@ def plan_grasp(
     c, g = task.controller, task.gripper
     table = task.physics.table_top_z
     h = objs.height(obj)
-    root_below_palm = g.palm_half_size[2] + finger_tip_depth(finger)  # palm origin to finger tip
+    reach = finger_tip_depth(finger)
+    root_below_palm = g.palm_half_size[2] + reach  # palm origin to finger tip
 
-    tip = max(c.min_tip_clearance, grasp_fraction(setting, task) * h + c.grasp_z_offset)
+    floor = reach_floor(reach, h, task)
+    band_tip = floor + grasp_fraction(setting, task) * (h - floor)
+    tip = max(c.min_tip_clearance, band_tip + c.grasp_z_offset)
     approach_tip = max(tip + c.approach_offset, h + c.approach_clearance)
     grasp_z = table + tip + root_below_palm
     approach_z = table + approach_tip + root_below_palm
@@ -118,6 +138,8 @@ def plan_grasp(
         grasp_z=grasp_z,
         lift_z=grasp_z + c.lift_height,
         tip_height=tip,
+        reach_floor=floor,
+        palm_gap=tip + reach - h,
         t_descend=t_descend,
         t_close=t_close,
         t_lift=t_lift,
@@ -131,9 +153,16 @@ def plan_grasp(
 class GraspController:
     """Maps simulation time to actuator targets ``[x, y, z, yaw, grip]``."""
 
-    def __init__(self, plan: GraspPlan) -> None:
+    def __init__(self, plan: GraspPlan, shake: Shake | None = None) -> None:
         self.plan = plan
+        self.shake = shake
         self._ctrl = np.array([plan.x, plan.y, plan.approach_z, plan.yaw, plan.open_target])
+        self._shake_dir = axis_vector(shake.axis, plan.yaw) if shake is not None else np.zeros(3)
+
+    @property
+    def shake_start(self) -> float:
+        """Time the shake starts (inf without a shake)."""
+        return self.plan.t_hold + self.shake.delay if self.shake is not None else math.inf
 
     def phase(self, t: float) -> Phase:
         p = self.plan
@@ -164,4 +193,9 @@ class GraspController:
         """Actuator targets at time ``t`` (the returned array is reused between calls)."""
         self._ctrl[2] = self.palm_z(t)
         self._ctrl[4] = self.grip(t)
+        if self.shake is not None:
+            offset = self.shake.displacement(t - self.shake_start) * self._shake_dir
+            self._ctrl[0] = self.plan.x + offset[0]
+            self._ctrl[1] = self.plan.y + offset[1]
+            self._ctrl[2] += offset[2]
         return self._ctrl

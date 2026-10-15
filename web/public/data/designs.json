@@ -1,0 +1,648 @@
+{
+ "schema": "rtt-web-designs",
+ "version": 1,
+ "params": {
+  "finger_length_mm": {
+   "description": "Length of the finger from its root at the palm to the tip end, in mm; for a bent finger it is measured along the outside of the bend (the back face for an inward bend, the contact face for an outward bend). Longer fingers reach lower on tall objects but are heavier and put a longer lever arm on the grasp.",
+   "min": 40,
+   "max": 120
+  },
+  "finger_thickness_mm": {
+   "description": "Thickness of the finger at the root in the closing direction (from the inner contact face to the back face), in mm. Thicker fingers are stiffer and heavier; thickness also limits how deep the inner-face groove can be.",
+   "min": 4,
+   "max": 16
+  },
+  "finger_width_mm": {
+   "description": "Width of the finger at the root, perpendicular to both the closing direction and the finger length, in mm. Wider fingers give a larger contact patch and resist object rotation, at the cost of mass.",
+   "min": 10,
+   "max": 30
+  },
+  "bend_angle_deg": {
+   "description": "Angle of a single bend in the finger, in degrees. Positive values bend the part after the bend inward, toward the other finger (the tips close in like pincers); negative values splay the tips outward; 0 is a straight finger. Inward bends narrow the opening at the tips.",
+   "min": -15,
+   "max": 45
+  },
+  "bend_start_frac": {
+   "description": "Where the bend sits, as a fraction of finger_length_mm measured from the root (0.2 = near the palm, 0.9 = near the tip). Everything beyond this point is rotated by bend_angle_deg.",
+   "min": 0.2,
+   "max": 0.9
+  },
+  "inner_face": {
+   "description": "Shape of the inner contact face across the finger width. 'flat': a plain flat pad. 'concave_arc': a channel recessed into the face between two raised lips (approximates a concave arc; cradles round objects on two lines). 'v_groove': a V-shaped groove whose two sloped flanks centre cylinders and rods.",
+   "options": [
+    "flat",
+    "concave_arc",
+    "v_groove"
+   ]
+  },
+  "inner_face_depth_mm": {
+   "description": "Depth of the concave_arc channel or v_groove below the face, in mm. Must be 0 for a flat face and at most half of finger_thickness_mm otherwise; a v_groove also needs depth <= 0.35 x finger_width_mm. Scales down with the taper toward the tip.",
+   "min": 0,
+   "max": 8
+  },
+  "tip_profile": {
+   "description": "Shape of the finger tip. 'blunt': a square end (tip_size_mm adds a solid end cap that closes any groove at the tip). 'rounded': both tip corners cut back into a blunt roof (tip_size_mm = how far the rounding reaches back). 'chamfer': a 45-degree lead-in bevel on the inner corner of the tip that guides objects into the grasp (tip_size_mm = bevel size). 'hook': a lip at the tip that sticks out inward, toward the other finger, by tip_size_mm, to catch under or behind objects.",
+   "options": [
+    "blunt",
+    "rounded",
+    "chamfer",
+    "hook"
+   ]
+  },
+  "tip_size_mm": {
+   "description": "Size of the tip feature in mm (see tip_profile). For a hook it is how far the lip protrudes inward and must be <= finger_thickness_mm + 6. Rounded and chamfer sizes are capped at half the tip thickness and half the length after the bend.",
+   "min": 0,
+   "max": 15
+  },
+  "taper_ratio": {
+   "description": "Ratio of tip to root cross-section (thickness and width both scale linearly along the length, in 4 steps). 1.0 = no taper; 0.5 = the tip is half as thick and half as wide as the root. Tapering saves mass and lets the tip slip into narrow gaps, but thin tips can violate the 3 mm minimum section.",
+   "min": 0.5,
+   "max": 1
+  }
+ },
+ "designs": [
+  {
+   "id": "462150ca1475",
+   "source": "demo-m1",
+   "name": "straight",
+   "origin": "manual",
+   "rationale": "Plain parallel-jaw finger with a flat pad; the reference baseline.",
+   "params": {
+    "finger_length_mm": 80,
+    "finger_thickness_mm": 10,
+    "finger_width_mm": 20,
+    "bend_angle_deg": 0,
+    "bend_start_frac": 0.5,
+    "inner_face": "flat",
+    "inner_face_depth_mm": 0,
+    "tip_profile": "blunt",
+    "tip_size_mm": 0,
+    "taper_ratio": 1
+   },
+   "valid": true,
+   "errors": [],
+   "warnings": [],
+   "mass_printed_g": 19.9,
+   "mass_sim_g": 19.84,
+   "bbox_mm": [
+    20.02,
+    10.02,
+    80.02
+   ],
+   "watertight": true,
+   "n_boxes": 14,
+   "files": {
+    "stl_left": "designs/462150ca1475/finger-left.stl",
+    "stl_right": "designs/462150ca1475/finger-right.stl",
+    "glb": "designs/462150ca1475/gripper.glb"
+   },
+   "provenance": {
+    "kind": "manual",
+    "note": null
+   },
+   "bouts": [
+    "m1-entrants",
+    "m1-failures"
+   ],
+   "certificate": {
+    "status": "pending",
+    "issued_at": null,
+    "checks": [
+     {
+      "name": "Placement error 0 mm",
+      "condition": "Object at the aimed pose",
+      "success_rate": null,
+      "episodes": 0
+     },
+     {
+      "name": "Placement error 1 mm",
+      "condition": "Object offset by 1 mm from the aimed pose, along x and along y",
+      "success_rate": null,
+      "episodes": 0
+     },
+     {
+      "name": "Placement error 2 mm",
+      "condition": "Object offset by 2 mm from the aimed pose, along x and along y",
+      "success_rate": null,
+      "episodes": 0
+     },
+     {
+      "name": "Placement error 3 mm",
+      "condition": "Object offset by 3 mm from the aimed pose, along x and along y",
+      "success_rate": null,
+      "episodes": 0
+     },
+     {
+      "name": "Shake during hold",
+      "condition": "Palm shakes 10 mm at 5 Hz for 5 cycles, along x, y, z",
+      "success_rate": null,
+      "episodes": 0
+     },
+     {
+      "name": "Lateral push",
+      "condition": "A 0.5 N s push on the object over 20 ms, along x and y",
+      "success_rate": null,
+      "episodes": 0
+     }
+    ]
+   }
+  },
+  {
+   "id": "9a0624079454",
+   "source": "demo-m1",
+   "name": "concave",
+   "origin": "manual",
+   "rationale": "A 4 mm recessed channel between two lips cradles cylinders and rods on two contact lines.",
+   "params": {
+    "finger_length_mm": 80,
+    "finger_thickness_mm": 10,
+    "finger_width_mm": 20,
+    "bend_angle_deg": 0,
+    "bend_start_frac": 0.5,
+    "inner_face": "concave_arc",
+    "inner_face_depth_mm": 4,
+    "tip_profile": "blunt",
+    "tip_size_mm": 0,
+    "taper_ratio": 1
+   },
+   "valid": true,
+   "errors": [],
+   "warnings": [],
+   "mass_printed_g": 15.15,
+   "mass_sim_g": 15.08,
+   "bbox_mm": [
+    20.02,
+    10.02,
+    80.02
+   ],
+   "watertight": true,
+   "n_boxes": 14,
+   "files": {
+    "stl_left": "designs/9a0624079454/finger-left.stl",
+    "stl_right": "designs/9a0624079454/finger-right.stl",
+    "glb": "designs/9a0624079454/gripper.glb"
+   },
+   "provenance": {
+    "kind": "manual",
+    "note": null
+   },
+   "bouts": [
+    "m1-entrants"
+   ],
+   "certificate": {
+    "status": "pending",
+    "issued_at": null,
+    "checks": [
+     {
+      "name": "Placement error 0 mm",
+      "condition": "Object at the aimed pose",
+      "success_rate": null,
+      "episodes": 0
+     },
+     {
+      "name": "Placement error 1 mm",
+      "condition": "Object offset by 1 mm from the aimed pose, along x and along y",
+      "success_rate": null,
+      "episodes": 0
+     },
+     {
+      "name": "Placement error 2 mm",
+      "condition": "Object offset by 2 mm from the aimed pose, along x and along y",
+      "success_rate": null,
+      "episodes": 0
+     },
+     {
+      "name": "Placement error 3 mm",
+      "condition": "Object offset by 3 mm from the aimed pose, along x and along y",
+      "success_rate": null,
+      "episodes": 0
+     },
+     {
+      "name": "Shake during hold",
+      "condition": "Palm shakes 10 mm at 5 Hz for 5 cycles, along x, y, z",
+      "success_rate": null,
+      "episodes": 0
+     },
+     {
+      "name": "Lateral push",
+      "condition": "A 0.5 N s push on the object over 20 ms, along x and y",
+      "success_rate": null,
+      "episodes": 0
+     }
+    ]
+   }
+  },
+  {
+   "id": "732d575caf85",
+   "source": "demo-m1",
+   "name": "hooked",
+   "origin": "manual",
+   "rationale": "A 15 degree inward bend near the tip plus an 8 mm hook lip catches under objects during the lift.",
+   "params": {
+    "finger_length_mm": 80,
+    "finger_thickness_mm": 10,
+    "finger_width_mm": 20,
+    "bend_angle_deg": 15,
+    "bend_start_frac": 0.7,
+    "inner_face": "flat",
+    "inner_face_depth_mm": 0,
+    "tip_profile": "hook",
+    "tip_size_mm": 8,
+    "taper_ratio": 1
+   },
+   "valid": true,
+   "errors": [],
+   "warnings": [
+    "the fingers meet 13.6 mm before the end of their stroke, so objects narrower than 27.2 mm cannot be squeezed"
+   ],
+   "mass_printed_g": 20.57,
+   "mass_sim_g": 20.83,
+   "bbox_mm": [
+    20.02,
+    23.62,
+    79.2
+   ],
+   "watertight": true,
+   "n_boxes": 14,
+   "files": {
+    "stl_left": "designs/732d575caf85/finger-left.stl",
+    "stl_right": "designs/732d575caf85/finger-right.stl",
+    "glb": "designs/732d575caf85/gripper.glb"
+   },
+   "provenance": {
+    "kind": "manual",
+    "note": null
+   },
+   "bouts": [
+    "m1-entrants"
+   ],
+   "certificate": {
+    "status": "pending",
+    "issued_at": null,
+    "checks": [
+     {
+      "name": "Placement error 0 mm",
+      "condition": "Object at the aimed pose",
+      "success_rate": null,
+      "episodes": 0
+     },
+     {
+      "name": "Placement error 1 mm",
+      "condition": "Object offset by 1 mm from the aimed pose, along x and along y",
+      "success_rate": null,
+      "episodes": 0
+     },
+     {
+      "name": "Placement error 2 mm",
+      "condition": "Object offset by 2 mm from the aimed pose, along x and along y",
+      "success_rate": null,
+      "episodes": 0
+     },
+     {
+      "name": "Placement error 3 mm",
+      "condition": "Object offset by 3 mm from the aimed pose, along x and along y",
+      "success_rate": null,
+      "episodes": 0
+     },
+     {
+      "name": "Shake during hold",
+      "condition": "Palm shakes 10 mm at 5 Hz for 5 cycles, along x, y, z",
+      "success_rate": null,
+      "episodes": 0
+     },
+     {
+      "name": "Lateral push",
+      "condition": "A 0.5 N s push on the object over 20 ms, along x and y",
+      "success_rate": null,
+      "episodes": 0
+     }
+    ]
+   }
+  },
+  {
+   "id": "be6496fa15e2",
+   "source": "demo-m1",
+   "name": "stock",
+   "origin": "manual",
+   "rationale": "The gripper's stock finger, box-approximated; a flat tapered pad with a rounded tip.",
+   "params": {
+    "finger_length_mm": 62.5,
+    "finger_thickness_mm": 8,
+    "finger_width_mm": 30,
+    "bend_angle_deg": 0,
+    "bend_start_frac": 0.5,
+    "inner_face": "flat",
+    "inner_face_depth_mm": 0,
+    "tip_profile": "rounded",
+    "tip_size_mm": 1,
+    "taper_ratio": 0.5
+   },
+   "valid": true,
+   "errors": [],
+   "warnings": [],
+   "mass_printed_g": 10.85,
+   "mass_sim_g": 10.85,
+   "bbox_mm": [
+    28.14,
+    7.52,
+    62.52
+   ],
+   "watertight": true,
+   "n_boxes": 14,
+   "files": {
+    "stl_left": "designs/be6496fa15e2/finger-left.stl",
+    "stl_right": "designs/be6496fa15e2/finger-right.stl",
+    "glb": "designs/be6496fa15e2/gripper.glb"
+   },
+   "provenance": {
+    "kind": "manual",
+    "note": null
+   },
+   "bouts": [
+    "m1-entrants"
+   ],
+   "certificate": {
+    "status": "pending",
+    "issued_at": null,
+    "checks": [
+     {
+      "name": "Placement error 0 mm",
+      "condition": "Object at the aimed pose",
+      "success_rate": null,
+      "episodes": 0
+     },
+     {
+      "name": "Placement error 1 mm",
+      "condition": "Object offset by 1 mm from the aimed pose, along x and along y",
+      "success_rate": null,
+      "episodes": 0
+     },
+     {
+      "name": "Placement error 2 mm",
+      "condition": "Object offset by 2 mm from the aimed pose, along x and along y",
+      "success_rate": null,
+      "episodes": 0
+     },
+     {
+      "name": "Placement error 3 mm",
+      "condition": "Object offset by 3 mm from the aimed pose, along x and along y",
+      "success_rate": null,
+      "episodes": 0
+     },
+     {
+      "name": "Shake during hold",
+      "condition": "Palm shakes 10 mm at 5 Hz for 5 cycles, along x, y, z",
+      "success_rate": null,
+      "episodes": 0
+     },
+     {
+      "name": "Lateral push",
+      "condition": "A 0.5 N s push on the object over 20 ms, along x and y",
+      "success_rate": null,
+      "episodes": 0
+     }
+    ]
+   }
+  },
+  {
+   "id": "6cabaab30201",
+   "source": "export:slice-20261015-a",
+   "name": "nemotron d09",
+   "origin": "nemotron",
+   "rationale": "Switch to a v_groove to create two lips that better capture thin rods while keeping the same overall size.",
+   "params": {
+    "finger_length_mm": 80.0,
+    "finger_thickness_mm": 10.0,
+    "finger_width_mm": 20.0,
+    "bend_angle_deg": 0.0,
+    "bend_start_frac": 0.5,
+    "inner_face": "v_groove",
+    "inner_face_depth_mm": 2.0,
+    "tip_profile": "blunt",
+    "tip_size_mm": 0.0,
+    "taper_ratio": 1.0
+   },
+   "valid": true,
+   "errors": [],
+   "warnings": [],
+   "mass_printed_g": 17.84,
+   "mass_sim_g": 19.69,
+   "bbox_mm": [
+    20.02,
+    9.94,
+    80.02
+   ],
+   "watertight": true,
+   "n_boxes": 14,
+   "files": {
+    "stl_left": "designs/6cabaab30201/finger-left.stl",
+    "stl_right": "designs/6cabaab30201/finger-right.stl",
+    "glb": "designs/6cabaab30201/gripper.glb"
+   },
+   "provenance": {
+    "kind": "llm",
+    "model": "nvidia/nemotron-3-super-120b-a12b",
+    "provider": "nebius-tokenfactory",
+    "tokens_in": 7482,
+    "tokens_out": 2318,
+    "latency_s": 11.719,
+    "cost_usd": 0.004331,
+    "round": 1
+   },
+   "bouts": [
+    "slice-20261015-a"
+   ],
+   "certificate": null
+  },
+  {
+   "id": "345e1754c578",
+   "source": "export:slice-20261015-a",
+   "name": "random d10",
+   "origin": "random",
+   "rationale": "Random fallback: the model's proposal for this slot was rejected (invalid).",
+   "params": {
+    "finger_length_mm": 66.691530123353,
+    "finger_thickness_mm": 12.932095307856798,
+    "finger_width_mm": 10.03893818706274,
+    "bend_angle_deg": -4.8811970092356205,
+    "bend_start_frac": 0.6630277826450766,
+    "inner_face": "flat",
+    "inner_face_depth_mm": 0.0,
+    "tip_profile": "blunt",
+    "tip_size_mm": 2.9706609109416604,
+    "taper_ratio": 0.7285983497276902
+   },
+   "valid": true,
+   "errors": [],
+   "warnings": [],
+   "mass_printed_g": 8.09,
+   "mass_sim_g": 8.1,
+   "bbox_mm": [
+    9.61,
+    12.37,
+    66.63
+   ],
+   "watertight": true,
+   "n_boxes": 14,
+   "files": {
+    "stl_left": "designs/345e1754c578/finger-left.stl",
+    "stl_right": "designs/345e1754c578/finger-right.stl",
+    "glb": "designs/345e1754c578/gripper.glb"
+   },
+   "provenance": {
+    "kind": "random",
+    "sampler": "scrambled Sobol (validator-filtered)",
+    "seed": 17
+   },
+   "bouts": [
+    "slice-20261015-a"
+   ],
+   "certificate": null
+  },
+  {
+   "id": "984dba39aaf8",
+   "source": "export:slice-20261015-a",
+   "name": "nemotron d11",
+   "origin": "nemotron",
+   "rationale": "Merge d02's successful concave arc with d04's wider flat tip and taper to increase contact patch while retaining rod/cylinder performance.",
+   "params": {
+    "finger_length_mm": 62.5,
+    "finger_thickness_mm": 10.0,
+    "finger_width_mm": 25.0,
+    "bend_angle_deg": 0.0,
+    "bend_start_frac": 0.5,
+    "inner_face": "concave_arc",
+    "inner_face_depth_mm": 4.0,
+    "tip_profile": "rounded",
+    "tip_size_mm": 1.0,
+    "taper_ratio": 0.5
+   },
+   "valid": true,
+   "errors": [],
+   "warnings": [],
+   "mass_printed_g": 8.64,
+   "mass_sim_g": 8.63,
+   "bbox_mm": [
+    23.46,
+    9.39,
+    62.52
+   ],
+   "watertight": true,
+   "n_boxes": 14,
+   "files": {
+    "stl_left": "designs/984dba39aaf8/finger-left.stl",
+    "stl_right": "designs/984dba39aaf8/finger-right.stl",
+    "glb": "designs/984dba39aaf8/gripper.glb"
+   },
+   "provenance": {
+    "kind": "llm",
+    "model": "nvidia/nemotron-3-super-120b-a12b",
+    "provider": "nebius-tokenfactory",
+    "tokens_in": 6775,
+    "tokens_out": 1155,
+    "latency_s": 6.942,
+    "cost_usd": 0.003072,
+    "round": 1
+   },
+   "bouts": [
+    "slice-20261015-a"
+   ],
+   "certificate": null
+  },
+  {
+   "id": "4c964e0339d5",
+   "source": "export:slice-20261015-a",
+   "name": "nemotron d12",
+   "origin": "nemotron",
+   "rationale": "Use a narrow v_groove (depth 2 mm) combined with a 6 mm hook tip to trap thin rods while the groove still offers lateral restraint for boxes.",
+   "params": {
+    "finger_length_mm": 80.0,
+    "finger_thickness_mm": 10.0,
+    "finger_width_mm": 20.0,
+    "bend_angle_deg": 0.0,
+    "bend_start_frac": 0.5,
+    "inner_face": "v_groove",
+    "inner_face_depth_mm": 2.0,
+    "tip_profile": "hook",
+    "tip_size_mm": 6.0,
+    "taper_ratio": 1.0
+   },
+   "valid": true,
+   "errors": [],
+   "warnings": [
+    "the fingers meet 6.0 mm before the end of their stroke, so objects narrower than 12.0 mm cannot be squeezed"
+   ],
+   "mass_printed_g": 18.72,
+   "mass_sim_g": 20.44,
+   "bbox_mm": [
+    20.02,
+    16.02,
+    80.02
+   ],
+   "watertight": true,
+   "n_boxes": 14,
+   "files": {
+    "stl_left": "designs/4c964e0339d5/finger-left.stl",
+    "stl_right": "designs/4c964e0339d5/finger-right.stl",
+    "glb": "designs/4c964e0339d5/gripper.glb"
+   },
+   "provenance": {
+    "kind": "llm",
+    "model": "nvidia/nemotron-3-super-120b-a12b",
+    "provider": "nebius-tokenfactory",
+    "tokens_in": 6775,
+    "tokens_out": 1155,
+    "latency_s": 6.942,
+    "cost_usd": 0.003072,
+    "round": 1
+   },
+   "bouts": [
+    "slice-20261015-a"
+   ],
+   "certificate": null
+  },
+  {
+   "id": "b2344fcc0186",
+   "source": "export:search-20261015-134158-search",
+   "name": "random run 0 top-1",
+   "origin": "random",
+   "rationale": "Frozen top-1 of random run 0 (seed 101): 94% training success at grasp height 0.3.",
+   "params": {
+    "finger_length_mm": 78.5688879340887,
+    "finger_thickness_mm": 14.827995270490646,
+    "finger_width_mm": 15.088680256158113,
+    "bend_angle_deg": -1.2707249075174332,
+    "bend_start_frac": 0.2923579731024802,
+    "inner_face": "flat",
+    "inner_face_depth_mm": 0.0,
+    "tip_profile": "hook",
+    "tip_size_mm": 0.35182235296815634,
+    "taper_ratio": 0.6128654289059341
+   },
+   "valid": true,
+   "errors": [],
+   "warnings": [],
+   "mass_printed_g": 14.6,
+   "mass_sim_g": 14.57,
+   "bbox_mm": [
+    14.68,
+    14.43,
+    78.58
+   ],
+   "watertight": true,
+   "n_boxes": 14,
+   "files": {
+    "stl_left": "designs/b2344fcc0186/finger-left.stl",
+    "stl_right": "designs/b2344fcc0186/finger-right.stl",
+    "glb": "designs/b2344fcc0186/gripper.glb"
+   },
+   "provenance": {
+    "kind": "random",
+    "sampler": "scrambled Sobol (validator-filtered)",
+    "seed": 101
+   },
+   "bouts": [],
+   "certificate": null
+  }
+ ]
+}

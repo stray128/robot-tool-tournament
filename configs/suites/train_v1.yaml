@@ -1,0 +1,78 @@
+# Training suite v1: 16 parts-handling conditions over 3 object families (box, cylinder, rod).
+# Load with rtt.sim.conditions.training_suite(); every candidate design sees the same
+# conditions and the same jitter seeds (common random numbers).
+#
+# Calibrated at gate G3 on 2026-10-15 (docs/TASK.md, docs/BENCH.md; `rtt calibrate`). The
+# first version (3 families x 2 sizes x 2 placements of light plastic objects, centred or
+# 3 mm off) was saturated: every entrant and 59/64 random designs scored 100 %, so the score
+# did not respond to finger geometry. Screening ~250 candidate conditions on a separate
+# design panel showed what does: thin parts lying flat (the finger must reach under the
+# part's equator: tip shape, bend and taper decide) and heavy parts grasped off-centre (a
+# part can only be grasped beside a feature; contact-patch size and the grasp height
+# decide). Grasp height trades between the two (rods want the lowest setting, off-centre
+# blocks a higher one), so one controller setting must serve both.
+#
+# Sizes are metres. The jaw closes along the object-frame y axis:
+#   box      [x, y, z] full extents; y spans the jaw
+#   cylinder [radius, height], standing
+#   rod      [radius, length], a capsule lying along x
+# The widest object across the jaw is 50 mm, so the design validator requires a 55 mm
+# opening at full open (rtt.sim.conditions.Suite.gripper_task); the gripper opens 84 mm.
+# Materials: plastic 1200 kg/m^3 (printed or moulded parts), aluminium 2700 kg/m^3
+# (machined stock). Masses: box large 0.53 kg, long 0.91 kg, bar 0.39 kg, slab 0.78 kg;
+# cylinder large 0.26 kg, thin 0.014 kg; rod wire 0.009 kg, peg 0.056 kg, shaft 0.28 kg.
+#
+# Placements: x, y (m) and yaw (deg) are where the controller aims; err_* is how far the
+# real object sits from that pose in the gripper frame (x finger width, y closing axis),
+# unknown to the controller. "sloppy" is a coarse pose estimate (6 mm, 15 deg); "handleNN"
+# grasps the part NN mm from its centre along its length. Seed jitter (+-2 mm, +-3 deg,
+# +-10 % mu) applies on top.
+name: train_v1
+base_seed: 20261017              # public: derives each condition's jitter seeds
+jitter_seeds_per_condition: 1    # 16 conditions x 3 controller settings = 48 episodes per design
+
+materials:
+  plastic: 1200.0
+  aluminium: 2700.0
+
+families:
+  box:
+    large: {size: [0.080, 0.050, 0.110], material: plastic}
+    long: {size: [0.140, 0.040, 0.060], material: aluminium}
+    bar: {size: [0.160, 0.030, 0.030], material: aluminium}
+    slab: {size: [0.120, 0.030, 0.080], material: aluminium}
+  cylinder:
+    large: {size: [0.025, 0.110], material: plastic}
+    thin: {size: [0.006, 0.100], material: plastic}
+  rod:
+    wire: {size: [0.003, 0.120], material: aluminium}
+    peg: {size: [0.007, 0.140], material: aluminium}
+    shaft: {size: [0.014, 0.180], material: aluminium}
+
+placements:
+  centred: {}
+  sloppy: {x: -0.03, y: 0.04, yaw_deg: -60.0, err_x_mm: 6.0, err_y_mm: 6.0, err_yaw_deg: 15.0}
+  handle20: {err_x_mm: 20.0}
+  handle30: {err_x_mm: 30.0}
+  handle35: {err_x_mm: 35.0}
+  handle40: {err_x_mm: 40.0}
+  handle45: {err_x_mm: 45.0}
+  handle50: {err_x_mm: 50.0}
+
+conditions:
+  - box/large/sloppy
+  - box/long/handle20
+  - box/long/handle35
+  - box/long/handle50
+  - box/bar/handle50
+  - box/slab/handle30
+  - box/slab/handle40
+  - box/slab/handle45
+  - cylinder/large/sloppy
+  - cylinder/thin/sloppy
+  - rod/wire/sloppy
+  - rod/peg/centred
+  - rod/peg/handle20
+  - rod/shaft/handle20
+  - rod/shaft/handle35
+  - rod/shaft/handle50

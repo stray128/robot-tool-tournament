@@ -28,9 +28,9 @@
      "name": "palm",
      "type": "box",
      "half_size": [
-      0.03,
-      0.065,
-      0.015
+      0.024,
+      0.064,
+      0.012
      ],
      "pos": [
       0.0,
@@ -875,7 +875,7 @@
    ]
   }
  ],
- "n_frames": 168,
+ "n_frames": 169,
  "n_bodies": 4,
  "meta": {
   "success": false,
@@ -893,8 +893,12 @@
   "placement": {
    "x": 0.0,
    "y": 0.0,
-   "yaw": 0.0
+   "yaw": 0.0,
+   "err_x": 0.0,
+   "err_y": 0.0,
+   "err_yaw": 0.0
   },
+  "perturbation": null,
   "task": "task_v1",
   "flags": [],
   "case": "too_wide",

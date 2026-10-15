@@ -13,7 +13,9 @@ A replay is two files sharing a stem:
 
 Box geoms are described by ``half_size``; cylinders by ``radius`` and
 ``half_height`` (axis = geom local Z); capsules by ``radius`` and
-``half_length`` of the cylindrical part (axis = geom local Z).
+``half_length`` of the cylindrical part (axis = geom local Z); convex mesh
+pieces (mesh objects) by flat ``vertices`` (x, y, z triples, geom frame) and
+``faces`` (vertex-index triples, counter-clockwise seen from outside).
 """
 
 from __future__ import annotations
@@ -64,6 +66,15 @@ def _geom_entry(model: mujoco.MjModel, g: int) -> dict[str, Any]:
         entry.update(type="cylinder", radius=round(float(size[0]), 6), half_height=round(float(size[1]), 6))
     elif gtype == mujoco.mjtGeom.mjGEOM_CAPSULE:
         entry.update(type="capsule", radius=round(float(size[0]), 6), half_length=round(float(size[1]), 6))
+    elif gtype == mujoco.mjtGeom.mjGEOM_MESH:
+        mesh = int(model.geom_dataid[g])
+        va, vn = int(model.mesh_vertadr[mesh]), int(model.mesh_vertnum[mesh])
+        fa, fn = int(model.mesh_faceadr[mesh]), int(model.mesh_facenum[mesh])
+        entry.update(
+            type="mesh",
+            vertices=_round(model.mesh_vert[va : va + vn].ravel()),
+            faces=[int(i) for i in model.mesh_face[fa : fa + fn].ravel()],
+        )
     elif gtype == mujoco.mjtGeom.mjGEOM_PLANE:
         entry.update(type="plane", half_size=_round(size[:2]))
     else:

@@ -249,11 +249,13 @@ class GripperTask:
     on its local plane ``y = 0``; at full open the left finger's root sits at palm
     ``y = closed_gap_mm / 2 + stroke_mm`` and at full close at
     ``y = closed_gap_mm / 2``; the right finger is the mirror image. The defaults
-    (0 mm closed gap, 40 mm stroke) give an 80 mm opening between flat faces.
+    (0 mm closed gap, 42 mm stroke) give the 84 mm opening of the simulator's gripper
+    (``configs/task_v1.yaml``); :func:`rtt.sim.task.gripper_task_for` derives both
+    from the task file and ``tests/test_integration.py`` keeps them equal.
     """
 
-    stroke_mm: float = 40.0
-    """Slide travel of each finger (40 mm per finger gives the default 80 mm opening)."""
+    stroke_mm: float = 42.0
+    """Slide travel of each finger (42 mm per finger gives the default 84 mm opening)."""
     closed_gap_mm: float = 0.0
     """Distance between the two root inner faces at full close."""
     finger_contact: bool = True

@@ -1,0 +1,81 @@
+# syntax=docker/dockerfile:1
+#
+# Simulation image for Nebius Serverless AI Jobs.
+#
+# One image serves both executors: CPU MuJoCo and MuJoCo Warp on the GPU. Warp links NVRTC
+# statically and talks to the host driver, so the small CUDA "base" variant (no toolkit
+# libraries) is enough. Rendering is headless: EGL on the NVIDIA driver when the job's
+# runtime injects the graphics libraries, otherwise Mesa's software EGL; OSMesa is installed
+# for `MUJOCO_GL=osmesa`.
+#
+# Build from the repository root (jobs/nebius/build_image.sh wraps this):
+#   docker build -f docker/Dockerfile.sim --build-arg GIT_SHA=$(git rev-parse HEAD) -t rtt-sim:dev .
+# Smoke test on a CPU-only host:
+#   docker run --rm rtt-sim:dev m1 --no-files
+
+ARG CUDA_BASE=nvidia/cuda:13.1.1-base-ubuntu24.04
+ARG UV_IMAGE=ghcr.io/astral-sh/uv:0.12.21
+
+FROM ${UV_IMAGE} AS uv
+
+FROM ${CUDA_BASE}
+
+# Python 3.12 from Ubuntu 24.04 is the same interpreter the development venv uses, plus
+# the GL/EGL loaders (glvnd), Mesa EGL + llvmpipe (software fallback) and OSMesa.
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      ca-certificates \
+      python3.12 \
+      libegl1 libopengl0 libgl1 libegl-mesa0 libgl1-mesa-dri libosmesa6 \
+ && rm -rf /var/lib/apt/lists/*
+
+# uv is mounted for the two sync steps only, so its binary never ships in the image.
+ENV UV_PYTHON=/usr/bin/python3.12 \
+    UV_PYTHON_DOWNLOADS=never \
+    UV_PROJECT_ENVIRONMENT=/app/.venv \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
+
+WORKDIR /app
+
+# Dependencies first (cached until uv.lock changes), then the project itself. No extras:
+# the dev tools stay out of the image. The project is installed editable so that
+# rtt.cli resolves configs/ relative to /app.
+COPY pyproject.toml uv.lock .python-version README.md LICENSE ./
+RUN --mount=from=uv,source=/uv,target=/usr/local/bin/uv \
+    --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-install-project --no-dev
+
+# The build args are declared here, after the system and dependency layers: a RUN step
+# after an ARG is keyed on its value, so declaring them earlier would rebuild (and
+# re-push) those layers on every commit.
+ARG GIT_SHA=unknown
+ARG GIT_DIRTY=unknown
+# <sha> or <sha>-dirty (the convention of rtt.store.manifest.git_sha, which reads it
+# from RTT_GIT_SHA because the image has no .git)
+ARG GIT_REV=
+
+LABEL org.opencontainers.image.title="rtt-sim" \
+      org.opencontainers.image.description="Robot Tool Tournament simulation runner" \
+      org.opencontainers.image.licenses="Apache-2.0" \
+      org.opencontainers.image.revision="${GIT_SHA}"
+
+COPY . .
+RUN --mount=from=uv,source=/uv,target=/usr/local/bin/uv \
+    --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev \
+ && printf '{"git_sha": "%s", "git_dirty": "%s", "uv_lock_sha256": "%s"}\n' \
+      "${GIT_SHA}" "${GIT_DIRTY}" "$(sha256sum uv.lock | cut -d' ' -f1)" > /app/BUILD_INFO.json
+
+# MUJOCO_GL=egl renders in-process; PYOPENGL_PLATFORM must agree. The "graphics" driver
+# capability asks the NVIDIA runtime to inject libEGL_nvidia alongside CUDA.
+ENV PATH=/app/.venv/bin:${PATH} \
+    RTT_GIT_SHA=${GIT_REV} \
+    MUJOCO_GL=egl \
+    PYOPENGL_PLATFORM=egl \
+    NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics \
+    PYTHONUNBUFFERED=1
+
+ENTRYPOINT ["rtt"]
+CMD ["--help"]

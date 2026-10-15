@@ -96,7 +96,7 @@ INVALID_CASES: list[tuple[str, dict[str, object], GripperTask, str]] = [
         "opening_too_narrow",
         {"bend_angle_deg": 30.0, "bend_start_frac": 0.4},
         TASK,
-        "opening at full open is only 34.7 mm",
+        "opening at full open is only 38.7 mm",  # 84 mm opening - 2 x 22.7 mm inward reach
     ),
     (
         "over_mass_budget",
@@ -200,7 +200,9 @@ def test_task_constants_change_the_verdict() -> None:
     assert any("fingers meet 13.6 mm before the end of their stroke" in w for w in result.warnings)
     assert not is_valid(hooked, GripperTask(finger_contact=False))
     assert is_valid(hooked, GripperTask(finger_contact=False, closed_gap_mm=30.0))
-    assert not is_valid(hooked, GripperTask(widest_training_object_mm=50.0))
+    # the hook leaves a 56.8 mm gap at the 84 mm opening: enough for 50 mm + 5 mm, not for 54 mm + 5 mm
+    assert is_valid(hooked, GripperTask(widest_training_object_mm=50.0))
+    assert not is_valid(hooked, GripperTask(widest_training_object_mm=54.0))
 
 
 def test_metrics_report_the_checked_quantities() -> None:

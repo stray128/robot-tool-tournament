@@ -23,7 +23,7 @@ from pathlib import Path
 import numpy as np
 
 from rtt.design.types import FingerGeometry
-from rtt.sim.objects import ObjectSpec
+from rtt.sim.objects import AnyObject
 from rtt.sim.task import TaskConfig
 
 BACKENDS: tuple[str, ...] = ("egl", "osmesa")
@@ -42,7 +42,7 @@ class CameraView:
 @dataclass(frozen=True)
 class RenderJob:
     finger: FingerGeometry
-    obj: ObjectSpec
+    obj: AnyObject
     task: TaskConfig
     qpos: np.ndarray  # (n_frames, nq)
     path: str
@@ -115,7 +115,7 @@ def _render_in_subprocess(job: RenderJob, backend: str) -> tuple[bool, str]:
 
 def render_mp4(
     finger: FingerGeometry,
-    obj: ObjectSpec,
+    obj: AnyObject,
     task: TaskConfig,
     qpos: np.ndarray,
     path: str | Path,
