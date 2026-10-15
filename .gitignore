@@ -1,0 +1,14 @@
+# secrets
+.env
+.env.*
+!.env.example
+# python
+.venv/
+__pycache__/
+*.pyc
+# outputs
+runs/
+outputs/
+*.mp4
+node_modules/
+.next/
