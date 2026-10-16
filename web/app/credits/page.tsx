@@ -198,8 +198,8 @@ export default function CreditsPage() {
           <p>
             Used for held-out test objects and props, through the MuJoCo models by Kevin Zakka (
             <Ext href="https://github.com/kevinzakka/mujoco_scanned_objects">kevinzakka/mujoco_scanned_objects</Ext>, commit
-            6ff8d275, MIT). Modified: re-posed to a stable resting pose, split into convex pieces for simulation, simplified,
-            re-encoded as GLB with WebP textures.
+            6ff8d275, MIT). Modified: re-posed to a stable resting pose and split into convex pieces for simulation; for
+            display, simplified and re-encoded as GLB with WebP textures.
           </p>
           <p>Scans whose textures show a brand mark are drawn untextured.</p>
         </Credit>
