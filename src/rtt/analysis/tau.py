@@ -22,7 +22,7 @@ the test is the one-sided exact permutation test of the restricted mean of ``T``
 2. The pool is every Sobol-64 calibration score plus every non-entrant design score of
    the three random pilots (their round-0 Sobol fill and their arm designs).
 3. Bootstrap ``n_boot`` = 20,000 random runs of B: the round-0 entrants' scores plus
-   B - 4 = 36 scores drawn with replacement from the pool (seed 20261017). A run's
+   B - 4 = 36 scores drawn with replacement from the pool (seed 20261021). A run's
    best-at-B is its maximum.
 4. ``tau_raw`` is the median of the bootstrapped best-at-B. tau is ``tau_raw`` rounded to
    the 1/48 grid, halves up.
@@ -190,7 +190,7 @@ class TauRuleV2:
     n_random_pilots: int = 3
     grid: float = GRID_V2
     n_boot: int = 20_000
-    boot_seed: int = 20261017
+    boot_seed: int = 20261021
     margin_steps: int = 2
     n_calibration: int = 64
 

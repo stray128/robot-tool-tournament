@@ -66,9 +66,11 @@ __all__ = [
 
 CALIBRATION_SCHEMA_V2: Final = "rtt.calibration/2"
 #: Public seed of the v2 screening sample (not a run seed, not a gate seed, not a secret).
-SCREENING_SEED_V2: Final = 20261019
+SCREENING_SEED_V2: Final = 20261020
 #: Seeds used before the freeze that a screening sample must not reuse (see seeds_pilot.yaml).
-DEV_SEEDS: Final[frozenset[int]] = frozenset({17, 101, 102, 103, *range(201, 221), 20261015, 20261018})
+DEV_SEEDS: Final[frozenset[int]] = frozenset(
+    {17, 101, 102, 103, *range(201, 221), 20261015, 20261017, 20261018, 20261019}
+)
 MAX_ITERATIONS: Final = 3
 MAX_TOLERANCE_CHANGES: Final = 1
 #: Criteria whose miss may be declared instead of failing over to F1.

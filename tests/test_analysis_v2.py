@@ -498,7 +498,7 @@ def test_calibration_log_closes_on_pass_and_keeps_one_sample(tmp_path: Path) -> 
     other = CalibrationLog.open(tmp_path / "log2.json")
     other.record(_report([0] * 22 + [20] * 22 + [24] * 16 + [30] * 4))
     moved = _report(GOOD_SOBOL, iteration=2)
-    moved.screening_seed = 20261020
+    moved.screening_seed = 20261030
     with pytest.raises(ValueError, match="same screening sample"):
         other.record(moved, changes={"task:mu": (0.3, 0.32)})
 

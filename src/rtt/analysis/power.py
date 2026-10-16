@@ -83,7 +83,7 @@ class RRuleV2:
     alpha: float = 0.05
     fallback: int = 12
     nsim: int = 4000
-    seed: int = 20261017
+    seed: int = 20261022
     budget: int = 40
     round0_size: int = 8
 
@@ -240,7 +240,7 @@ def null_calibration(
     alpha: float = 0.05,
     budget: int = 40,
     round0_size: int = 8,
-    seed: int = 20261021,
+    seed: int = 20261023,
 ) -> dict[str, Any]:
     """GV6: p-values under the null (both arms at ``q``) are uniform and the test holds its size."""
     from scipy import stats
@@ -299,7 +299,7 @@ def planted_effect(
     alpha: float = 0.05,
     budget: int = 40,
     round0_size: int = 8,
-    seed: int = 20261022,
+    seed: int = 20261024,
 ) -> dict[str, Any]:
     """GV6: synthetic runs with a planted speed-up; the analysis must recover the planted effect.
 
