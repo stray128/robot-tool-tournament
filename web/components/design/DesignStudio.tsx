@@ -1,14 +1,14 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useId, useMemo, useState } from "react";
 import * as THREE from "three";
 
 import { assetPoints, loadLane } from "@/components/replay/lanes";
 import { createPlaybackStore } from "@/components/replay/playback";
+import { ReplayCredits } from "@/components/replay/ReplayCredits";
 import StudioReplayCanvas, { type StudioOptions } from "@/components/replay/StudioReplayCanvas";
 import { useThemeColors } from "@/components/replay/useThemeColors";
-import { clayAssets, isThirdParty, type LoadedAsset } from "@/lib/assets";
+import { clayAssets, type LoadedAsset } from "@/lib/assets";
 import { dataUrl } from "@/lib/paths";
 import { geomPoints, isParkedGeom, isV2, replayCaption, rotate, type Bounds, type Replay } from "@/lib/replay";
 import type { PhaseSpan } from "@/lib/types";
@@ -196,7 +196,6 @@ export default function DesignStudio({ entries, phases, title }: { entries: Desi
     [mode, ready?.clay, cut],
   );
   const orbit = useMemo(() => ({ autoRotate: turntable }), [turntable]);
-  const thirdParty = ready && isV2(ready.replay.header) && Object.values(ready.replay.header.assets).some(isThirdParty);
 
   if (!entry) return null;
   return (
@@ -289,14 +288,7 @@ export default function DesignStudio({ entries, phases, title }: { entries: Desi
             />
           </div>
         ) : null}
-        {thirdParty ? (
-          <p className="text-xs">
-            Drawn on an open-source parallel gripper.{" "}
-            <Link className="link" href="/credits/">
-              Credits
-            </Link>
-          </p>
-        ) : null}
+        {ready && isV2(ready.replay.header) ? <ReplayCredits assets={ready.replay.header.assets} /> : null}
       </figcaption>
     </figure>
   );

@@ -1,14 +1,14 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { prefersReducedMotion, useClock } from "@/components/replay/clock";
 import { assetPoints, loadLane } from "@/components/replay/lanes";
 import { createPlaybackStore, type ViewName } from "@/components/replay/playback";
+import { ReplayCredits } from "@/components/replay/ReplayCredits";
 import StudioReplayCanvas from "@/components/replay/StudioReplayCanvas";
 import { useThemeColors } from "@/components/replay/useThemeColors";
-import { clayAssets, isThirdParty, replayPayload, type LoadedAsset } from "@/lib/assets";
+import { clayAssets, replayPayload, type LoadedAsset } from "@/lib/assets";
 import { dataUrl } from "@/lib/paths";
 import { isV2, replayCaption, type Bounds, type Replay } from "@/lib/replay";
 import type { PhaseSpan } from "@/lib/types";
@@ -99,7 +99,6 @@ export default function HeroReplay({ stem, phases, title, view = "iso" }: HeroRe
     ready && isV2(ready.replay.header) && ready.replay.bytes
       ? replayPayload(ready.replay.header, ready.replay.bytes.header).total
       : null;
-  const thirdParty = ready && isV2(ready.replay.header) && Object.values(ready.replay.header.assets).some(isThirdParty);
 
   return (
     <figure ref={root} className="flex flex-col" data-hero data-payload-bytes={payload ?? undefined}>
@@ -146,12 +145,9 @@ export default function HeroReplay({ stem, phases, title, view = "iso" }: HeroRe
           </button>
         ) : null}
       </div>
-      {thirdParty ? (
-        <figcaption className="mt-1 text-xs text-ink-3">
-          Drawn on an open-source parallel gripper.{" "}
-          <Link href="/credits/" className="link">
-            Credits
-          </Link>
+      {ready && isV2(ready.replay.header) ? (
+        <figcaption className="mt-1">
+          <ReplayCredits assets={ready.replay.header.assets} />
         </figcaption>
       ) : null}
     </figure>

@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { clayAssets, isThirdParty, type LoadedAsset } from "@/lib/assets";
+import { clayAssets, type LoadedAsset } from "@/lib/assets";
 import { capitalizeFirst, formatLift } from "@/lib/format";
 import { FAILURE_EXPLANATIONS, FAILURE_LABELS } from "@/lib/labels";
 import { dataUrl } from "@/lib/paths";
@@ -14,6 +14,7 @@ import type { Bout, Lane, PhaseSpan } from "@/lib/types";
 import { prefersReducedMotion, useClock } from "./clock";
 import { assetPoints, loadLane } from "./lanes";
 import { createPlaybackStore, PlaybackContext, usePlayback, usePlaybackStore } from "./playback";
+import { ReplayCredits } from "./ReplayCredits";
 import { Transport } from "./Transport";
 import { useThemeColors } from "./useThemeColors";
 
@@ -152,8 +153,6 @@ function LaneView({
   const studio = state.status === "ready" && (state.assets !== null || look === "studio");
   const clay = state.status === "ready" ? state.clay : NO_CLAY;
   const options = useMemo(() => ({ xray, collision, clay, cut: null }), [xray, collision, clay]);
-  const thirdParty =
-    state.status === "ready" && isV2(state.replay.header) && Object.values(state.replay.header.assets).some(isThirdParty);
   const outcome = lane.outcome.success
     ? `held for ${lane.outcome.hold_s.toFixed(1)} s`
     : lane.outcome.failure_mode
@@ -212,14 +211,7 @@ function LaneView({
             </Link>
           </>
         ) : null}
-        {thirdParty ? (
-          <span className="block text-xs text-ink-3">
-            Drawn on an open-source parallel gripper.{" "}
-            <Link href="/credits/" className="link">
-              Credits
-            </Link>
-          </span>
-        ) : null}
+        {state.status === "ready" && isV2(state.replay.header) ? <ReplayCredits assets={state.replay.header.assets} /> : null}
       </figcaption>
     </figure>
   );

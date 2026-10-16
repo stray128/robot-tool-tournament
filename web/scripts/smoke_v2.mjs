@@ -13,7 +13,8 @@
  *     collision toggles work, and the v2 lane's download stays within the hero payload
  *     budget (300 000 bytes);
  *   - design pages show the studio views (x-ray, cutaway, turntable) without errors;
- *   - /credits/ lists the third-party credits;
+ *   - a v2 lane that draws third-party models links their short credits to the credits page;
+ *   - /credits/ lists the third-party credits and has the anchors short credits point at;
  *   - no page has console errors or horizontal scroll at 1280 and 375 px.
  * The default fixture is tests/fixtures/replay_v2 (Apache-2.0 geometry made from a
  * recorded v1 episode). Screenshots go to --shots (default web/.smoke/v2).
@@ -175,6 +176,10 @@ for (const vp of [
     if (header.overlays?.channels.includes("offset_mm") && !m.text.includes("Offset")) problems.push("no offset readout");
     if (counted.bytes > HERO_BUDGET) problems.push(`v2 lane payload ${counted.bytes} B > ${HERO_BUDGET}`);
     if (!counted.files.some((f) => f.endsWith(".glb"))) problems.push("no GLB was requested");
+    const thirdParty = Object.values(header.assets).some((a) => a.license !== "Apache-2.0");
+    if (thirdParty && !(await page.locator('[data-credits] a[href*="/credits/#"]').count())) {
+      problems.push("third-party models drawn without a credit link");
+    }
     // The swapped lane, wherever it sits in the bout.
     const lane = page.locator(`figure[data-lane="${values.lane}"]`).first();
     if ((await lane.count()) === 0) problems.push(`no lane figure for ${values.lane}`);
@@ -242,6 +247,10 @@ for (const vp of [
     const problems = [];
     for (const needle of ["Google Scanned Objects", "CC BY 4.0", "MuJoCo", "three.js", "CERN-OHL-P-2.0", "Nemotron"]) {
       if (!m.text.includes(needle)) problems.push(`credits page lacks "${needle}"`);
+    }
+    // Short credits in manifests and replays point at these anchors.
+    for (const anchor of ["gripper", "gso"]) {
+      if (!(await page.locator(`#${anchor}`).count())) problems.push(`credits page has no #${anchor} anchor`);
     }
     if (m.scrollWidth > m.innerWidth) problems.push(`horizontal scroll ${m.scrollWidth} > ${m.innerWidth}`);
     await page.screenshot({ path: path.join(values.shots, `${vp.name}-credits.png`), fullPage: true });
