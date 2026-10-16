@@ -19,17 +19,35 @@ writes ``<run_dir>/print_pack/`` plus ``<run_dir>/print_pack.zip`` containing:
 
 The zip is deterministic (sorted names, fixed timestamps), so the same run always
 gives the same bytes apart from ``created_at`` fields.
+
+**Print pack v2** (:func:`make_print_pack_v2`) packs one freeform jaw pair compiled for one
+part (:class:`rtt.design.freeform.types.FingerPair`):
+
+* ``left.stl``, ``right.stl``: each jaw's printed solid, binary, millimetres, watertight,
+  turned for printing: root plane on the bed, tip up, so the extruded pad faces print as
+  vertical walls (no supports) and the pad profile lies in the layer plane. The right jaw
+  is its own part (built against the mirrored part), never the left one mirrored.
+* ``left.glb``, ``right.glb``: the same jaws for viewing, in their jaw (body) frames.
+* ``mount_left.stl``, ``mount_right.stl``: the jaw fused with the carriage block for the
+  gripper's guide rods (:mod:`rtt.part.mount`), upright on the block.
+* ``recipe.json``, ``certificate.html`` (when given), ``ATTRIBUTION.txt``,
+  ``manifest.json`` (every file's bytes and sha256, the jaw-frame STL hashes checked
+  against ``JawGeometry.print_mesh_sha``, masses, ids) and ``README.txt``.
 """
 
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import re
 import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Final
+
+import numpy as np
+import trimesh
 
 from rtt.design.export import export_stl
 from rtt.design.generate import generate_finger
@@ -42,7 +60,7 @@ from rtt.search.select import FrozenDesign
 from rtt.sim.task import default_task
 from rtt.store.manifest import write_json_atomic
 
-__all__ = ["PACK_FILES", "collect_run", "make_print_pack"]
+__all__ = ["PACK_FILES", "PACK_V2_FILES", "collect_run", "make_print_pack", "make_print_pack_v2"]
 
 PACK_FILES: Final = (
     "README.txt",
@@ -56,6 +74,7 @@ PACK_FILES: Final = (
 )
 _ZIP_TIME: Final = (1980, 1, 1, 0, 0, 0)
 _SAFE_ARM: Final = re.compile(r"[a-z0-9_]{1,32}")
+_SAFE_FOLDER: Final = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,120}")
 
 _README: Final = """Print pack: fingers for {part}
 ==============================================
@@ -327,3 +346,246 @@ def make_print_pack(
     }
     write_json_atomic(pack / "manifest.json", pack_manifest)
     return _write_zip(pack, base / "print_pack.zip")
+
+
+# --------------------------------------------------------------------------- print pack v2
+
+PACK_V2_FILES: Final = (
+    "ATTRIBUTION.txt",
+    "README.txt",
+    "left.glb",
+    "left.stl",
+    "manifest.json",
+    "mount_left.stl",
+    "mount_right.stl",
+    "recipe.json",
+    "right.glb",
+    "right.stl",
+)
+
+_README_V2: Final = """Print pack: {design} for {part}
+==============================================
+
+{disclaimer}
+
+Files
+-----
+left.stl, right.stl
+    The two jaws in millimetres, already turned for printing: root plane on the bed,
+    tip up. The pad faces print as vertical walls, so no supports are needed. The right
+    jaw is its own part; do not mirror the left one.
+mount_left.stl, mount_right.stl
+    The same jaws fused with a carriage block for the gripper's two guide rods (bores
+    {bore} mm at {spacing} mm centres), upright on the block. Print these to replace the
+    stock jaws; print left/right.stl to bolt onto your own carriages instead.
+left.glb, right.glb
+    The jaws for any 3D viewer, in the gripper's frame (metres, Z up).
+recipe.json, manifest.json
+    The design recipe and the checksums of every file.
+
+Printing
+--------
+PLA or PETG, 0.2 mm layers, 4 perimeters, 40 % infill or more. The simulation assumed
+solid PLA jaws ({mass_left} g left, {mass_right} g right) and a friction coefficient of
+{mu} between jaw and part.
+
+Credits: see ATTRIBUTION.txt.
+"""
+
+_ATTRIBUTION_V2: Final = """Attribution
+===========
+
+Generated files in this pack (STL, GLB, JSON): CC0-1.0. The generator is Apache-2.0
+(Robot Tool Tournament).
+
+The carriage block's interface dimensions were measured from the published hardware
+sources of an open-source parallel gripper: {credit} (simulation files CC BY 4.0;
+hardware sources CERN-OHL-P-2.0). The block is a new model drawn from those dimensions;
+no file from that project is included in this pack.
+"""
+
+
+# the pack's GLBs are generated files like its STLs, so they carry the pack's licence (CC0-1.0)
+_PACK_GLB_CREDIT: Final = "Robot Tool Tournament print pack, generated jaw (CC0-1.0)"
+
+
+def _print_upright(mesh_mm: trimesh.Trimesh) -> trimesh.Trimesh:
+    """Root plane on the bed, tip up: a 180 degree turn about x (a rotation, never a mirror)."""
+    out = mesh_mm.copy()
+    rot = np.eye(4)
+    rot[1, 1] = rot[2, 2] = -1.0
+    out.apply_transform(rot)
+    lo, hi = out.bounds
+    out.apply_translation([-(lo[0] + hi[0]) / 2.0, -(lo[1] + hi[1]) / 2.0, -lo[2]])
+    return out
+
+
+def _mount(jaw_mm: trimesh.Trimesh, side: str, iface: ClampInterface) -> trimesh.Trimesh:
+    """The jaw (jaw frame, mm) fused with the carriage block, turned upright on the block."""
+    from manifold3d import Manifold, OpType
+
+    from rtt.design.freeform.types import CARRIAGE_INNER_Y
+    from rtt.part.mount import _block, manifold_from_trimesh  # the v1 carriage block model
+
+    block = _block(iface).translate((0.0, 1000.0 * CARRIAGE_INNER_Y, 0.0))
+    if side == "right":  # the same block turned 180 degrees about z, as the stock right jaw
+        block = block.rotate((0.0, 0.0, 180.0))
+    lo, hi = jaw_mm.bounds
+    if lo[0] < -iface.block_width_mm / 2.0 or hi[0] > iface.block_width_mm / 2.0:
+        raise ValueError(f"the {side} jaw is wider than the carriage block")
+    solid = Manifold.batch_boolean([block, manifold_from_trimesh(jaw_mm)], OpType.Add)
+    mesh = solid.to_mesh()
+    fused = trimesh.Trimesh(
+        np.asarray(mesh.vert_properties, dtype=np.float64)[:, :3], np.asarray(mesh.tri_verts), process=True
+    )
+    out = fused.copy()
+    lo, hi = out.bounds
+    out.apply_translation([-(lo[0] + hi[0]) / 2.0, -(lo[1] + hi[1]) / 2.0, -lo[2]])  # block down
+    rot = np.eye(4)
+    rot[1, 1] = rot[2, 2] = -1.0
+    out.apply_transform(rot)  # tip up, block on the bed
+    lo, hi = out.bounds
+    out.apply_translation([0.0, 0.0, -lo[2]])
+    return out
+
+
+def make_print_pack_v2(
+    pair: Any,
+    left_stl: bytes,
+    right_stl: bytes,
+    out_dir: str | Path,
+    *,
+    recipe: dict[str, Any],
+    part: dict[str, Any] | None = None,
+    certificate_html: str | None = None,
+    clamp: ClampInterface | None = None,
+    name: str | None = None,
+) -> Path:
+    """Build the v2 print pack for one jaw pair (module docstring); returns the zip's path.
+
+    ``left_stl`` and ``right_stl`` are the generator's binary STLs (millimetres, jaw frame);
+    their sha256 must equal the pair's ``print_mesh_sha``, so the pack ships exactly the
+    solids whose mass the simulator used. Each jaw, and each jaw fused with its carriage
+    block, must be one closed solid. The stock entrant is refused: its blade is the
+    open-source gripper's own part (CC BY 4.0), not a generated CC0-1.0 jaw.
+    """
+    from rtt.design.freeform.types import FingerPair
+    from rtt.render import glb
+    from rtt.render import materials as mat
+    from rtt.render.gripper import load_lock, stock_blade_shas
+
+    if not isinstance(pair, FingerPair):
+        raise TypeError("pair must be a rtt.design.freeform.FingerPair")
+    stock = set(stock_blade_shas().values())
+    if pair.left.print_mesh_sha in stock or pair.right.print_mesh_sha in stock:
+        raise ValueError(
+            "the stock blade is the open-source gripper's own part (CC BY 4.0), not a generated "
+            "jaw; this pack's files are CC0-1.0, so it is not packed here"
+        )
+    iface = clamp or ClampInterface()
+    meshes, mounts = {}, {}
+    for side, data, jaw in (("left", left_stl, pair.left), ("right", right_stl, pair.right)):
+        if hashlib.sha256(data).hexdigest() != jaw.print_mesh_sha:
+            raise ValueError(f"{side}.stl does not match the pair's print_mesh_sha")
+        mesh = trimesh.load(io.BytesIO(data), file_type="stl", force="mesh", process=True)
+        mesh.merge_vertices()
+        if not (mesh.is_watertight and mesh.is_volume):
+            raise ValueError(f"{side}.stl is not a closed, consistently oriented solid")
+        if mesh.body_count != 1:
+            raise ValueError(f"{side}.stl has {mesh.body_count} separate solids; a jaw prints as one")
+        mount = _mount(mesh, side, iface)
+        if not mount.is_watertight:
+            raise ValueError(f"the {side} mount jaw is not watertight")
+        if mount.body_count != 1:
+            raise ValueError(
+                f"the {side} jaw does not reach its carriage block (the mount is {mount.body_count} solids)"
+            )
+        meshes[side], mounts[side] = mesh, mount
+    base = Path(out_dir)
+    folder = name or f"print_pack_{pair.design_id[:12]}_{pair.part_id}"
+    if not _SAFE_FOLDER.fullmatch(folder):
+        raise ValueError(f"pack name {folder!r} must be letters, digits, '_', '.' or '-'")
+    pack = base / folder
+    if pack.is_symlink():
+        raise ValueError(f"{pack} is a symbolic link; refusing to write the print pack through it")
+    pack.mkdir(parents=True, exist_ok=True)
+    for stale in pack.iterdir():
+        if stale.is_file() or stale.is_symlink():
+            stale.unlink()
+
+    files_meta: dict[str, dict[str, Any]] = {}
+    for side, mesh in meshes.items():
+        upright = _print_upright(mesh)
+        (pack / f"{side}.stl").write_bytes(upright.export(file_type="stl"))
+        (pack / f"mount_{side}.stl").write_bytes(mounts[side].export(file_type="stl"))
+        jaw_m = mesh.copy()
+        jaw_m.apply_scale(1e-3)
+        (pack / f"{side}.glb").write_bytes(
+            glb.glb_bytes(
+                [glb.mesh_from_trimesh(jaw_m, mat.FINGER_DESIGNED, name=f"{side}_jaw")],
+                copyright=_PACK_GLB_CREDIT,
+                extras={"license": "CC0-1.0", "role": f"finger_{side}", "design_id": pair.design_id},
+            )
+        )
+        files_meta[f"{side}.stl"] = {
+            "units": "mm",
+            "orientation": "print (root plane on the bed, tip up)",
+            "watertight": True,
+            "jaw_frame_sha256": pair.left.print_mesh_sha if side == "left" else pair.right.print_mesh_sha,
+        }
+        files_meta[f"mount_{side}.stl"] = {"units": "mm", "orientation": "print (carriage block on the bed)"}
+        files_meta[f"{side}.glb"] = {"units": "m", "frame": "jaw body frame, Z up"}
+    write_json_atomic(pack / "recipe.json", recipe)
+    if certificate_html is not None:
+        (pack / "certificate.html").write_text(certificate_html, encoding="utf-8")
+    lock = load_lock()
+    (pack / "ATTRIBUTION.txt").write_text(
+        _ATTRIBUTION_V2.format(credit=f"{lock['attribution']} (commit {lock['commit'][:8]})"),
+        encoding="utf-8",
+    )
+    (pack / "README.txt").write_text(
+        _README_V2.format(
+            design=pair.design_id[:12],
+            part=pair.part_id,
+            disclaimer=DISCLAIMER,
+            bore=f"{iface.rod_bore_d_mm:g}",
+            spacing=f"{iface.rod_spacing_mm:g}",
+            mass_left=f"{1000.0 * pair.left.mass:.1f}",
+            mass_right=f"{1000.0 * pair.right.mass:.1f}",
+            mu=f"{default_task().physics.friction:g}",
+        ),
+        encoding="utf-8",
+    )
+    files = {}
+    for path in sorted(p for p in pack.iterdir() if p.is_file()):
+        files[path.name] = {
+            "bytes": path.stat().st_size,
+            "sha256": _sha256(path),
+            **files_meta.get(path.name, {}),
+        }
+    write_json_atomic(
+        pack / "manifest.json",
+        {
+            "format": "rtt-print-pack",
+            "version": 2,
+            "created_at": datetime.now(UTC).isoformat(timespec="seconds"),
+            "disclaimer": DISCLAIMER,
+            "license": "Generated files: CC0-1.0. Generator: Apache-2.0.",
+            "design": {
+                "design_id": pair.design_id,
+                "geometry_hash": pair.geometry_hash,
+                "q_seat_mm": round(1000.0 * pair.q_seat, 4),
+                "tip_height_mm": round(1000.0 * pair.tip_height, 4),
+                "finger_length_mm": round(1000.0 * pair.finger_length, 4),
+                "mass_g": {
+                    "left": round(1000.0 * pair.left.mass, 3),
+                    "right": round(1000.0 * pair.right.mass, 3),
+                },
+                "pieces": {"left": pair.left.n_pieces, "right": pair.right.n_pieces},
+            },
+            "part": {"part_id": pair.part_id, **(part or {})},
+            "clamp_interface": iface.describe(),
+            "files": files,
+        },
+    )
+    return _write_zip(pack, base / f"{folder}.zip")

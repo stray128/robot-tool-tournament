@@ -9,24 +9,48 @@ from the expected one (when given) raises instead of publishing a misleading rep
 Each replay is written as ``<stem>.bin`` + ``<stem>.json``
 (:func:`rtt.sim.replay.write_replay`) with extra ``meta``: the design id and
 parameters, the condition id and description, and whatever the caller adds.
+
+:func:`lift_to_v2` turns a recorded version 1 replay into a version 2 replay drawn from GLB
+assets: the open-source gripper's frame and carriages, each finger's own asset (its v1 boxes
+fused into one solid, or the stock blade's CAD) and the object. The v1 geoms stay as the
+collision overlay. This is how v1 bouts (the F1 fallback) get the v2 look.
+
+:func:`lift_freeform_to_v2` does the same for a freeform episode of the v2 scene: each jaw of
+the simulated :class:`~rtt.design.freeform.FingerPair` gets its own GLB (its print mesh, or
+the union of its convex pieces), the part its own (:func:`part_asset`, or a scan visual from
+:func:`scan_asset`), and the episode's per-frame readouts go into the overlay sidecar.
 """
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any, Final
 
 from rtt.design.generate import generate_finger
 from rtt.design.schema import FingerDesign
 from rtt.sim.conditions import Condition
 from rtt.sim.episode import EpisodeResult
 from rtt.sim.exec_cpu import CpuExecutor, EpisodeJob
-from rtt.sim.replay import write_replay
+from rtt.sim.replay import Replay, write_replay
 from rtt.sim.task import TaskConfig, default_task
 
-__all__ = ["RecordedReplay", "ReplayMismatchError", "ReplayRequest", "record_replays"]
+if TYPE_CHECKING:
+    from rtt.render.glb import AssetStore
+    from rtt.render.materials import Look
+
+__all__ = [
+    "RecordedReplay",
+    "ReplayMismatchError",
+    "ReplayRequest",
+    "lift_freeform_to_v2",
+    "lift_to_v2",
+    "part_asset",
+    "record_replays",
+    "scan_asset",
+]
 
 
 class ReplayMismatchError(RuntimeError):
@@ -166,3 +190,351 @@ def record_replays(
             )
         )
     return recorded
+
+
+# --------------------------------------------------------------------------- v1 -> v2 look
+
+_SLUG_BAD = re.compile(r"[^A-Za-z0-9_.-]+")
+
+
+def _slug(text: str) -> str:
+    out = _SLUG_BAD.sub("-", text).strip("-.") or "part"
+    return out if out[0].isalnum() else f"p{out}"
+
+
+def _part_id(meta: dict[str, Any]) -> str:
+    obj = meta.get("object") or {}
+    if obj.get("name"):
+        return _slug(str(obj["name"]))
+    size = "x".join(f"{1000.0 * float(v):g}" for v in obj.get("size", []))
+    return _slug(f"{obj.get('kind', 'object')}-{size}" if size else str(obj.get("kind", "object")))
+
+
+def _own_asset(store: AssetStore, mesh: Any, role: str, look: Look, label: str, **entry: Any) -> str:
+    """Write one mesh as a GLB asset (our own Apache-2.0 geometry unless ``entry`` says otherwise)."""
+    from rtt.render import glb
+
+    license = entry.pop("license", glb.OURS_LICENSE)
+    attribution = entry.pop("attribution", glb.OURS_ATTRIBUTION)
+    extras = {"license": license, "role": role}
+    if entry.get("changes"):
+        extras["changes"] = list(entry["changes"])
+    data = glb.glb_bytes([glb.mesh_from_trimesh(mesh, look, name=role)], copyright=attribution, extras=extras)
+    return store.add(data, role=role, license=license, attribution=attribution, label=label, **entry)
+
+
+def _finish_v2(
+    replay: Replay,
+    store: AssetStore,
+    visuals: Mapping[str, Sequence[dict[str, Any]]],
+    v2_meta: dict[str, Any],
+    *,
+    run_id: str,
+    code_version: str,
+    product_mode: bool,
+    keep_geoms: bool,
+    provenance_extra: Mapping[str, Any],
+    overlays: Any = None,
+    channels: Sequence[str] = (),
+) -> Replay:
+    from rtt.sim import replay as rp
+
+    header = replay.header
+    meta = dict(header.get("meta") or {})
+    used = {v["asset"] for vs in visuals.values() for v in vs}
+    extra = {"seed": meta.get("seed"), "condition": meta.get("condition_id"), **provenance_extra}
+    prov = rp.provenance(run_id=run_id, code_version=code_version, product_mode=product_mode, **extra)
+    v1 = {**header, "n_frames": replay.n_frames}
+    if overlays is not None:
+        v1["overlay_channels"] = list(channels)
+    lifted = rp.upgrade_header(
+        v1,
+        visuals=visuals,
+        assets=store.subset(used),
+        meta=v2_meta,
+        provenance=prov,
+        keep_geoms=keep_geoms,
+    )
+    errs = rp.check_header(lifted, replay.frames, overlays)
+    if errs:
+        raise ValueError("lifted header is invalid: " + "; ".join(errs))
+    return Replay(frames=replay.frames.copy(), header=lifted, overlays=overlays)
+
+
+def _check_v1_bodies(replay: Replay) -> dict[str, list[dict[str, Any]]]:
+    from rtt.sim import replay as rp
+
+    if replay.version != rp.VERSION_V1:
+        raise ValueError("a v2 lift takes a version 1 replay (the recorder's output)")
+    names = [b["name"] for b in replay.header["bodies"]]
+    if names != ["palm", "finger_left", "finger_right", "object"]:
+        raise ValueError(f"unexpected replay bodies {names}")
+    return {b["name"]: b.get("geoms", []) for b in replay.header["bodies"]}
+
+
+def lift_to_v2(
+    replay: Replay,
+    store: AssetStore,
+    *,
+    run_id: str,
+    code_version: str,
+    product_mode: bool = False,
+    design_space: str = "v1",
+    design_id: str | None = None,
+    geometry_id: str | None = None,
+    part_id: str | None = None,
+    stock_blade: bool = False,
+    finger_look: Look | None = None,
+    object_look: Look | None = None,
+    keep_geoms: bool = True,
+    **provenance_extra: Any,
+) -> Replay:
+    """A version 2 copy of a version 1 replay, drawn from assets written into ``store``.
+
+    Poses are copied unchanged. ``stock_blade=True`` draws the stock blade's CAD on both
+    jaws (for the box-approximated v1 stock entrant; the boxes remain the collision overlay).
+    ``design_id`` defaults to the replay's ``meta.design_id``; ``part_id`` to the object's
+    name, or its kind and size in mm.
+    """
+    from rtt.render import glb
+    from rtt.render import materials as mat
+    from rtt.render.gripper import add_gripper_assets
+    from rtt.sim import replay as rp
+
+    geoms = _check_v1_bodies(replay)
+    grip = add_gripper_assets(store)
+    meta = dict(replay.header.get("meta") or {})
+
+    def own(body: str, role: str, look: Look, label: str) -> str:
+        return _own_asset(store, glb.mesh_from_geoms(geoms[body]), role, look, label)
+
+    visuals: dict[str, list[dict[str, Any]]] = {"palm": [rp.visual(grip.frame)]}
+    for side in ("left", "right"):
+        body = f"finger_{side}"
+        finger = (
+            grip.blade(side)
+            if stock_blade
+            else own(body, body, finger_look or mat.FINGER_DESIGNED, f"v1 finger, {side} jaw")
+        )
+        visuals[body] = [rp.visual(grip.carriage(side)), rp.visual(finger)]
+    visuals["object"] = [
+        rp.visual(own("object", "object", object_look or mat.PART_LOOKS["aluminium_anodised"], "v1 object"))
+    ]
+    v2_meta = {
+        "design_space": design_space,
+        "design_id": str(design_id or meta.get("design_id") or "unknown"),
+        "geometry_id": geometry_id,
+        "part_id": _slug(part_id) if part_id else _part_id(meta),
+    }
+    if stock_blade:
+        v2_meta["finger_visual"] = "stock blade CAD over the v1 box approximation"
+    return _finish_v2(
+        replay,
+        store,
+        visuals,
+        v2_meta,
+        run_id=run_id,
+        code_version=code_version,
+        product_mode=product_mode,
+        keep_geoms=keep_geoms,
+        provenance_extra=provenance_extra,
+        overlays=replay.overlays,
+        channels=replay.header.get("overlay_channels", ()),
+    )
+
+
+# --------------------------------------------------------------------------- freeform (v2) episodes
+
+MAX_JAW_EXTENT_M: Final = 0.25  # a jaw is at most 110 mm long and 40 mm wide; mm meshes fail this
+
+GSO_PIECES_CHANGES: Final = (
+    "convex decomposition for collision (CoACD 0.02, seed 0), drawn untextured",
+    "re-posed into the object frame",
+    "re-encoded as GLB",
+)
+
+
+def _overlay_array(overlays: Any, n_frames: int) -> tuple[Any, tuple[str, ...]]:
+    """S's per-channel readouts (``{channel: (n,) array}``) as a float16 ``(n, c)`` array in
+    :data:`rtt.sim.replay.OVERLAY_CHANNELS` order, plus the channel names."""
+    import numpy as np
+
+    from rtt.sim.replay import OVERLAY_CHANNELS
+
+    if overlays is None:
+        return None, ()
+    unknown = set(overlays) - set(OVERLAY_CHANNELS)
+    if unknown:
+        raise ValueError(f"unknown overlay channels {sorted(unknown)}; known: {OVERLAY_CHANNELS}")
+    channels = tuple(c for c in OVERLAY_CHANNELS if c in overlays)
+    cols = []
+    for c in channels:
+        col = np.asarray(overlays[c], dtype=np.float64).reshape(-1)
+        if len(col) != n_frames:
+            raise ValueError(f"overlay channel {c} has {len(col)} values for {n_frames} replay frames")
+        cols.append(col)
+    return np.stack(cols, axis=1).astype(np.float16), channels
+
+
+def part_asset(store: AssetStore, part: Any, *, look: Look | None = None, label: str | None = None) -> str:
+    """The GLB asset of a part (:class:`rtt.parts.types.PartSpec`): the union of its collision
+    pieces in its material's look. A scan (family ``gso``) drawn this way is clay and carries
+    the Google Scanned Objects credit; procedural parts are our own (Apache-2.0)."""
+    from rtt.render import glb
+    from rtt.render.materials import look_from_material
+
+    mesh = glb.mesh_from_pieces(part.pieces)
+    if part.family == "gso":
+        from rtt.render.materials import PART_LOOKS
+
+        return _own_asset(
+            store,
+            mesh,
+            "object",
+            look or PART_LOOKS["clay"],
+            label or f"{part.name} (scan, clay)",
+            license="CC-BY-4.0",
+            attribution=glb.GSO_ATTRIBUTION,
+            changes=list(GSO_PIECES_CHANGES),
+            brand_visible=False,
+        )
+    return _own_asset(store, mesh, "object", look or look_from_material(part.material), label or part.name)
+
+
+def scan_asset(
+    store: AssetStore,
+    visual: Any,
+    fields: Mapping[str, Any],
+    *,
+    textured: bool,
+    look: Look | None = None,
+    label: str | None = None,
+) -> str:
+    """The GLB asset of a scan's visual mesh (``rtt.sim.gso_visual.ScanVisual``, in the object
+    frame of its collision pieces). ``fields`` are the licence-side entry fields from
+    ``rtt.sim.gso_visual.scan_asset_fields`` (``license``, ``changes``, ``brand_visible``,
+    ``source``); the credit line is the short Google Scanned Objects credit."""
+    from rtt.render import glb
+    from rtt.render.materials import PART_LOOKS
+
+    extras = {"license": fields["license"], "role": "object", "changes": list(fields["changes"])}
+    mesh = glb.scan_mesh(visual, look or PART_LOOKS["clay"], textured=textured, name="scan")
+    data = glb.glb_bytes([mesh], copyright=glb.GSO_ATTRIBUTION, extras=extras)
+    return store.add(
+        data,
+        role="object",
+        license=fields["license"],
+        attribution=glb.GSO_ATTRIBUTION,
+        changes=list(fields["changes"]),
+        label=label or f"{visual.name} (scan{'' if textured else ', clay'})",
+        source=fields.get("source"),
+        brand_visible=bool(fields.get("brand_visible", textured)),
+    )
+
+
+def lift_freeform_to_v2(
+    replay: Replay,
+    store: AssetStore,
+    pair: Any,
+    *,
+    run_id: str,
+    code_version: str,
+    part: Any = None,
+    overlays: Any = None,
+    jaw_meshes: tuple[Any, Any] | None = None,
+    object_asset: str | None = None,
+    product_mode: bool = False,
+    geometry_id: str | None = None,
+    finger_look: Look | None = None,
+    keep_geoms: bool = True,
+    **provenance_extra: Any,
+) -> Replay:
+    """A replay v2 of a freeform episode (the v2 scene's recording), each jaw its own asset.
+
+    * ``replay``: the recorder's version 1 replay (bodies palm, both jaws, object);
+      ``pair``: the :class:`rtt.design.freeform.FingerPair` that was simulated.
+    * Jaws: ``jaw_meshes`` (left, right trimeshes in their jaw frames, metres; for example the
+      generator's print meshes) when given, else the union of each jaw's convex pieces, which
+      is exactly the collision solid. A stock pair (``print_mesh_sha`` equal to the stock
+      blade's) is drawn with the blade CAD. The right jaw is never a mirrored left jaw.
+    * Object: ``object_asset`` (an asset already in ``store``, for example a screened
+      textured scan from :func:`scan_asset`), else :func:`part_asset` of ``part``, else the
+      union of the replay's object geoms.
+    * ``overlays``: the episode's per-frame readouts (``EpisodeResultV2.overlays``), written to
+      the ``.ovl.bin`` sidecar as float16.
+    * ``meta``: ``design_space`` from the recorded meta (default ``freeform-v2``),
+      ``design_id`` and ``part_id`` from the pair, ``geometry_id`` the design-level hash
+      (argument, else the recorded meta's, else null). The pair's own hash stays in
+      ``meta.geometry_hash``.
+    """
+    import numpy as np
+    import trimesh
+
+    from rtt.design.freeform.types import DESIGN_SPACE
+    from rtt.render import glb
+    from rtt.render import materials as mat
+    from rtt.render.gripper import add_gripper_assets, stock_blade_shas
+    from rtt.sim import replay as rp
+
+    geoms = _check_v1_bodies(replay)
+    meta = dict(replay.header.get("meta") or {})
+    grip = add_gripper_assets(store)
+    stock = stock_blade_shas()
+    is_stock = all(getattr(pair, s).print_mesh_sha == stock[s] for s in ("left", "right"))
+    visuals: dict[str, list[dict[str, Any]]] = {"palm": [rp.visual(grip.frame)]}
+    for i, side in enumerate(("left", "right")):
+        jaw = getattr(pair, side)
+        if is_stock:
+            finger = grip.blade(side)
+        else:
+            mesh = jaw_meshes[i] if jaw_meshes is not None else glb.mesh_from_pieces(jaw.pieces)
+            if not isinstance(mesh, trimesh.Trimesh):
+                raise TypeError("jaw_meshes must be two trimesh.Trimesh (metres, jaw frames)")
+            reach = float(np.abs(mesh.bounds).max())
+            if reach > MAX_JAW_EXTENT_M:
+                raise ValueError(
+                    f"the {side} jaw mesh reaches {reach:g} from its frame origin; jaw_meshes are in "
+                    "metres (scale a millimetre print STL by 1e-3)"
+                )
+            finger = _own_asset(
+                store,
+                mesh,
+                f"finger_{side}",
+                finger_look or mat.FINGER_DESIGNED,
+                f"{pair.part_id}, {side} jaw, design {pair.design_id[:12]}",
+            )
+        visuals[f"finger_{side}"] = [rp.visual(grip.carriage(side)), rp.visual(finger)]
+    if object_asset is not None:
+        if object_asset not in store.entries:
+            raise ValueError(f"object asset {object_asset} is not in the store")
+        obj = object_asset
+    elif part is not None:
+        obj = part_asset(store, part)
+    else:
+        obj = _own_asset(
+            store, glb.mesh_from_geoms(geoms["object"]), "object", mat.PART_LOOKS["clay"], str(pair.part_id)
+        )
+    visuals["object"] = [rp.visual(obj)]
+    ovl, channels = _overlay_array(overlays, replay.n_frames)
+    v2_meta = {
+        "design_space": str(meta.get("design_space") or DESIGN_SPACE),
+        "design_id": str(pair.design_id),
+        "geometry_id": geometry_id if geometry_id is not None else meta.get("geometry_id"),
+        "part_id": _slug(str(pair.part_id)),
+        "geometry_hash": str(pair.geometry_hash),
+    }
+    if is_stock:
+        v2_meta["finger_visual"] = "stock blade CAD (collision: its committed convex hulls)"
+    return _finish_v2(
+        replay,
+        store,
+        visuals,
+        v2_meta,
+        run_id=run_id,
+        code_version=code_version,
+        product_mode=product_mode,
+        keep_geoms=keep_geoms,
+        provenance_extra=provenance_extra,
+        overlays=ovl,
+        channels=channels,
+    )

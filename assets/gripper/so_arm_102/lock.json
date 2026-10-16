@@ -1,0 +1,41 @@
+{
+  "format": "rtt-asset-lock",
+  "version": 1,
+  "name": "so_arm_102",
+  "description": "Open-source parallel gripper: simulation meshes of the follower gripper (frame and both clamps), pre-assembled, millimetres, jaws closed.",
+  "repository": "https://github.com/roboninecom/SO-ARM-102",
+  "raw_base": "https://raw.githubusercontent.com/roboninecom/SO-ARM-102",
+  "commit": "190eb162c9e59d7f6dceab850ea1b5c6a4539c14",
+  "license": "CC-BY-4.0",
+  "attribution": "Robonine, SO-ARM 102, https://github.com/roboninecom/SO-ARM-102, CC BY 4.0",
+  "files": {
+    "meshes/link5_1.stl": {
+      "path": "simulation/urdf/meshes/link5_1.stl",
+      "sha256": "3041844df75a779802f55d50bcbfcb42edaa4fdf7702ee612c06ecb958eebb9d",
+      "bytes": 315984,
+      "license": "CC-BY-4.0",
+      "role": "gripper_frame"
+    },
+    "meshes/clamp1_1.stl": {
+      "path": "simulation/urdf/meshes/clamp1_1.stl",
+      "sha256": "a0276124d4a92276256883e4b4e09e820107ea2ad1ec86369ef979194073ada5",
+      "bytes": 67684,
+      "license": "CC-BY-4.0",
+      "role": "clamp_left"
+    },
+    "meshes/clamp2_1.stl": {
+      "path": "simulation/urdf/meshes/clamp2_1.stl",
+      "sha256": "fb0b0db6def0e54da5a4a7dd06d089050db311c130f24013a9a98839497e3dc6",
+      "bytes": 67684,
+      "license": "CC-BY-4.0",
+      "role": "clamp_right"
+    },
+    "LICENSE-CC-BY-4.0.txt": {
+      "path": "DOCS-LICENSE.txt",
+      "sha256": "9ba9550ad48438d0836ddab3da480b3b69ffa0aac7b7878b5a0039e7ab429411",
+      "bytes": 18657,
+      "license": "CC-BY-4.0",
+      "role": "license"
+    }
+  }
+}
