@@ -153,29 +153,34 @@ def _hull_triangles(pieces: list[np.ndarray]) -> np.ndarray:
 def pad_zone_hausdorff(build: Any, rng: np.random.Generator, side: str = "left") -> tuple[float, float]:
     """(print -> collision, collision -> print) largest distances in the pad zone, metres.
 
-    The pad zone is the pad band (above the chamfer or hook), across the jaw, from the pad
-    face to 3 mm behind it: the part of the jaw that can touch the part.
+    The pad zone is the pad band across the jaw, from the jaw's front surface (the pad face,
+    its chamfer bevel or the hook) to 3 mm behind the pad face: the part of the jaw that can
+    touch the part. Only the outermost 0.2 mm at the jaw's two side edges is left out.
     """
     jaw = build.left if side == "left" else build.right
     flip = np.array([1.0, -1.0, 1.0]) if side == "right" else np.ones(3)
     spec = build.plan.spec
     xk, yk = jaw.xk, jaw.yk_local
+    hk = jaw.hook_local
     z0 = -build.pair.finger_length
-    lo = z0 + (spec.tip_size + 5e-4 if spec.tip != "blunt" else 1e-4)
-    if spec.tip == "hook":
-        lo = z0 + min(spec.tip_size, 0.004) + spec.tip_size + 5e-4
-    hi = z0 + spec.pad_height - 1e-4
+    chamfer = spec.tip_size if spec.tip == "chamfer" else 0.0
+    hh = jaw.hook_height or 0.0
+    lo, hi = z0 + 1e-4, z0 + spec.pad_height - 1e-4
     hw = spec.width / 2.0 - 2e-4
-    if hi <= lo:
-        return 0.0, 0.0
-    zone_pieces = [pc.vertices * flip for pc in jaw.pieces if pc.role == "pad"]
-    mesh_v = jaw.mesh.vertices * flip
-    tri = mesh_v[jaw.mesh.faces]
+    zone_pieces = [pc.vertices * flip for pc in jaw.pieces if pc.role in ("pad", "hook")]
+    tri = (jaw.mesh.vertices * flip)[jaw.mesh.faces]
+
+    def faces_at(x: np.ndarray, z: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        f = np.interp(x, xk, yk)
+        front = f + np.maximum(0.0, z0 + chamfer - z) if chamfer > 0.0 else f
+        if hk is not None:
+            front = np.minimum(front, np.interp(x, xk, hk) + np.maximum(0.0, z - z0 - hh))
+        return f, front
 
     def in_zone(pts: np.ndarray) -> np.ndarray:
-        f = np.interp(pts[:, 0], xk, yk)
+        f, front = faces_at(pts[:, 0], pts[:, 2])
         m = (pts[:, 2] >= lo) & (pts[:, 2] <= hi) & (np.abs(pts[:, 0]) <= hw)
-        return m & (pts[:, 1] >= f - 1e-6) & (pts[:, 1] <= f + 0.003)
+        return m & (pts[:, 1] >= front - 1e-6) & (pts[:, 1] <= f + 0.003)
 
     cent = tri.mean(axis=1)
     near = in_zone(cent)
@@ -185,10 +190,10 @@ def pad_zone_hausdorff(build: Any, rng: np.random.Generator, side: str = "left")
     pts = np.concatenate(samples)
     pts = pts[in_zone(pts)]
     d1 = float(_point_triangle_distance(pts, _hull_triangles(zone_pieces)).max()) if len(pts) else 0.0
-    xs = rng.uniform(-hw, hw, 200)
-    zs = rng.uniform(lo, hi, 200)
-    face = np.stack([xs, np.interp(xs, xk, yk), zs], axis=1)
-    d2 = float(_point_triangle_distance(face, tri).max())
+    xs = rng.uniform(-hw, hw, 300)
+    zs = rng.uniform(lo, hi, 300)
+    surface = np.stack([xs, faces_at(xs, zs)[1], zs], axis=1)
+    d2 = float(_point_triangle_distance(surface, tri).max())
     return d1, d2
 
 
@@ -404,6 +409,11 @@ def test_checks_catch_a_jaw_that_cuts_into_the_part() -> None:
     assert bad["early"] <= 0.0
     d1, d2 = pad_zone_hausdorff(b, np.random.default_rng(0))
     assert max(d1, d2) <= HAUSDORFF_MAX
+    from rtt.design.freeform.export import JawMesh
+
+    moved = JawMesh(b.left.mesh.vertices + np.array([0.0, 1e-4, 0.0]), b.left.mesh.faces)  # 0.1 mm back
+    shifted = replace(b, left=replace(b.left, mesh=moved))
+    assert pad_zone_hausdorff(shifted, np.random.default_rng(0))[1] > HAUSDORFF_MAX
 
 
 def test_point_triangle_distance() -> None:
