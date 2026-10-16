@@ -183,15 +183,20 @@ def strip_top(profile: SideProfile) -> float:
     return min(profile.z1 + BODY_CLEARANCE, -ROOT_BLOCK_H - 0.001)
 
 
-def body_slices(profile: SideProfile, width: float) -> list[Piece]:
-    """The 8 enclosing collision slices: one behind the pad strips, 7 up the body."""
+def body_slices(profile: SideProfile, width: float, chamfer: float = 0.0) -> list[Piece]:
+    """The 8 enclosing collision slices: one behind the pad strips, 7 up the body.
+
+    The slice behind the strips overlaps them by 1 mm but never reaches in front of the
+    chamfer's bottom edge (``face_max + chamfer``), so the bevel stays clear of the part.
+    """
     hw = width / 2.0
     zs, y_out = profile.zs, profile.y_out
     out: list[Piece] = []
     z_strip = strip_top(profile)
     band = zs <= z_strip
     back_band = float(np.max(y_out[band])) if band.any() else float(np.interp(z_strip, zs, y_out))
-    out.append(piece_from_box((-hw, profile.y_back - 0.001, profile.z0), (hw, back_band, z_strip), "body"))
+    behind = max(profile.y_back - 0.001, profile.face_max + chamfer)
+    out.append(piece_from_box((-hw, behind, profile.z0), (hw, back_band, z_strip), "body"))
     front = float(np.max(profile.front()[zs > profile.z1])) if (zs > profile.z1).any() else profile.face_min
     edges = np.linspace(z_strip, zs[-1], N_BODY_SLICES)
     for za, zb in itertools.pairwise(edges):

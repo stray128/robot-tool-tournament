@@ -60,6 +60,7 @@ from rtt.design.freeform.pad import (
     simplify_upper,
 )
 from rtt.design.freeform.tip import (
+    HOOK_MIN_PROTRUSION,
     HOOK_OVERLAP,
     MIN_LAND,
     Piece,
@@ -326,6 +327,7 @@ def _plan_hook(jaw: JawPlan, spec: PairSpec, tip_height: float) -> None:
     floor = clearance_floor(jaw.geometry, jaw.xs, tip_height, top, spec.clearance)
     hk = lift_polyline(jaw.xs, jaw.xk, jaw.yk - spec.tip_size, floor)
     hk = np.minimum(_snap_up(hk), jaw.yk)
+    hk = np.where(jaw.yk - hk < HOOK_MIN_PROTRUSION, jaw.yk, hk)  # no hook piece where it barely protrudes
     jaw.hook_k = hk
     jaw.hook_floor = floor
     jaw.hook_h = hh
@@ -581,7 +583,7 @@ def _build_jaw(plan: PairPlan, jaw: JawPlan) -> tuple[list[Piece], dict[str, Any
     if jaw.hook_k is not None:
         hook_local = np.minimum(_local_y(jaw, plan, jaw.hook_k), yk)
         pieces += hook_pieces(jaw.xk, yk, hook_local, z0, _snap(jaw.hook_h or 0.0))
-    pieces += B.body_slices(profile, spec.width)
+    pieces += B.body_slices(profile, spec.width, chamfer)
     pieces.append(B.root_block(profile))
     if jaw.pin is not None:
         a, b = pin_sections(jaw.pin)
@@ -633,7 +635,7 @@ def _print_mesh(
 
     far = qf(float(np.max(profile.y_out))) + 50.0
     face_solid = face_prism(far)
-    front = qf(profile.face_min - 0.001)
+    front = qf(profile.face_min - 0.003)  # the face cuts the loft clear of its front fillets
     zs = np.concatenate([np.linspace(z0, z1, 4)[:-1], np.linspace(z1, z_top, B.N_LOFT)[1:]])
     zs = np.round(zs, 4)
     y_out = np.round(np.interp(zs / S, profile.zs, profile.y_out) * S, 4)
