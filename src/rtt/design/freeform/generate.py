@@ -65,8 +65,8 @@ from rtt.design.freeform.tip import (
     MIN_LAND,
     Piece,
     hook_height,
-    hook_lofts,
     hook_pieces,
+    hooked_front_loft,
     pad_strips,
     piece_from_sections,
 )
@@ -636,8 +636,15 @@ def _print_mesh(
         return m3d.Manifold.extrude(cs, 4.0 - z0).translate([0.0, 0.0, z0 - 2.0])
 
     far = qf(float(np.max(profile.y_out))) + 50.0
-    face_solid = face_prism(far)
-    front = qf(profile.face_min - 0.003)  # the face cuts the loft clear of its front fillets
+    hook_local = info["hook_local"]
+    if hook_local is None:
+        face_solid = face_prism(far)
+        innermost = profile.face_min
+    else:  # the face and the hook as one cutter, so the hook is not a separate solid to fuse
+        hv, hf = hooked_front_loft(xk, yk, q(hook_local), z0, qf(jaw.hook_h or 0.0), far, z0 - 2.0, 2.0, 1.0)
+        face_solid = m3d.Manifold(m3d.Mesh(vert_properties=hv, tri_verts=hf.astype(np.uint32)))
+        innermost = min(profile.face_min, float(np.min(hook_local)))
+    front = qf(innermost - 0.003)  # the face cuts the loft clear of its front fillets
     zs = np.concatenate([np.linspace(z0, z1, 4)[:-1], np.linspace(z1, z_top, B.N_LOFT)[1:]])
     zs = np.round(zs, 4)
     y_out = np.round(np.interp(zs / S, profile.zs, profile.y_out) * S, 4)
@@ -662,11 +669,6 @@ def _print_mesh(
         perm = np.array([[0.0, 0.0, 1.0, -(hw + 1.0)], [1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]])
         solid = solid - m3d.Manifold.extrude(cs, 2.0 * hw + 2.0).transform(perm)
     parts = [solid]
-    if info["hook_local"] is not None:  # one lofted solid per run of hook pieces: no internal faces
-        for hv, hf in hook_lofts(
-            jaw.xk, info["yk"], info["hook_local"], profile.z0, _snap(jaw.hook_h or 0.0)
-        ):
-            parts.append(m3d.Manifold(m3d.Mesh(vert_properties=q(hv), tri_verts=hf.astype(np.uint32))))
     for pc in pieces:
         if pc.role == "locator":
             parts.append(m3d.Manifold.hull_points(pc.vertices * S))

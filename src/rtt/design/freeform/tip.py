@@ -145,41 +145,50 @@ def _hook_kept(yk: np.ndarray, hk: np.ndarray, j: int) -> bool:
     return max(yk[j] - hk[j], yk[j + 1] - hk[j + 1]) >= HOOK_MIN_PROTRUSION
 
 
-def hook_lofts(
-    xk: np.ndarray, yk: np.ndarray, hk: np.ndarray, z0: float, hh: float
-) -> list[tuple[np.ndarray, np.ndarray]]:
-    """The hook as closed meshes, one per run of neighbouring hook pieces (for the print).
+def hooked_front_loft(
+    xk: np.ndarray,
+    yk: np.ndarray,
+    hk: np.ndarray,
+    z0: float,
+    hh: float,
+    far: float,
+    z_lo: float,
+    z_hi: float,
+    ext: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    """The region behind a hooked jaw's front, lofted along x (for the print; any length unit).
 
-    Each run is lofted through the same sections as :func:`hook_pieces`; consecutive sections
-    have parallel corresponding edges, so the loft is exactly the union of the run's pieces
-    but has no internal faces for a boolean to fuse. Returns ``(vertices, faces)`` pairs,
+    At every face vertex the section in the (y, z) plane is bounded in front by the hook
+    front ``hk`` up to ``z0 + hh``, the hook's 45-degree top up to the face ``yk`` and the face
+    above; behind by ``far``; below and above by ``z_lo`` and ``z_hi``. Consecutive sections
+    have parallel corresponding edges, so intersecting this with the body gives exactly the
+    pad strips plus the hook pieces, as one solid with no faces for a boolean to fuse. The
+    loft reaches ``ext`` past the first and last vertex. Returns ``(vertices, faces)``,
     faces outward.
     """
-    runs: list[list[int]] = []
-    for j in range(len(xk) - 1):
-        if xk[j + 1] - xk[j] <= 0.0 or not _hook_kept(yk, hk, j):
-            continue
-        if runs and runs[-1][-1] == j:
-            runs[-1].append(j + 1)
-        else:
-            runs.append([j, j + 1])
-    out = []
-    for run in runs:
-        secs = [_hook_section(float(xk[i]), float(hk[i]), float(yk[i]), z0, hh) for i in run]
-        verts = np.concatenate(secs)
-        faces: list[tuple[int, int, int]] = [(0, 2, 1), (0, 3, 2)]
-        last = 4 * (len(secs) - 1)
-        faces += [(last, last + 1, last + 2), (last, last + 2, last + 3)]
-        for s in range(len(secs) - 1):
-            a, b = 4 * s, 4 * (s + 1)
-            for i in range(4):
-                j = (i + 1) % 4
-                faces += [(a + i, a + j, b + j), (a + i, b + j, b + i)]
-        f = np.array(faces, dtype=np.int64)
-        if _signed_volume(verts, f) < 0:
-            f = f[:, ::-1].copy()
-        out.append((verts, f))
-    return out
+    xs = np.concatenate([[xk[0] - ext], xk, [xk[-1] + ext]])
+    fs = np.concatenate([[yk[0]], yk, [yk[-1]]])
+    hs = np.concatenate([[hk[0]], hk, [hk[-1]]])
+    secs = []
+    for x, f, h in zip(xs, fs, hs, strict=True):
+        zk = z0 + hh + max(f - h, 1e-6 * max(1.0, abs(far)))  # the top meets the face (never at zero length)
+        yz = [(h, z_lo), (far, z_lo), (far, z_hi), (f, z_hi), (f, zk), (h, z0 + hh)]
+        secs.append([(x, y, z) for y, z in yz])
+    k = 6
+    verts = np.array(secs, dtype=np.float64).reshape(-1, 3)
+    faces: list[tuple[int, int, int]] = []
+    for s in range(len(secs) - 1):
+        a, b = k * s, k * (s + 1)
+        for i in range(k):
+            j = (i + 1) % k
+            faces += [(a + i, a + j, b + j), (a + i, b + j, b + i)]
+    last = k * (len(secs) - 1)
+    for i in (2, 3, 4, 5):  # caps fanned from the far bottom corner (the section is star-shaped from it)
+        faces += [(1, i + 1 if i < 5 else 0, i), (last + 1, last + i, last + (i + 1 if i < 5 else 0))]
+    f = np.array(faces, dtype=np.int64)
+    if _signed_volume(verts, f) < 0:
+        f = f[:, ::-1].copy()
+    return verts, f
 
 
 def hook_height(tip_size: float) -> float:
