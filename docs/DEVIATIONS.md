@@ -14,7 +14,8 @@ before the tag.
 ## Go/no-go decision (before the tag)
 
 - **Decision:** Part A (v2), with the stricter rules declared below; F1 is not taken. GV4
-  (Nebius parity) and GV5 (harness) must still pass by their deadlines, or F1 applies.
+  (Nebius parity) and GV5 (harness) passed on 2026-10-16, before their deadlines, so the
+  decision stands and Part B is marked "not run" in `docs/PREREG.md`.
 - **Gates:** GV0 [x], GV1 [x], GV2 [x] (cost miss declared), GV3 [x] (spread miss declared,
   frozen), GV-H [x] (0 heroes: offset-contrast fallback), GV4 [x] (2026-10-16: 384 of 384
   episodes agree on outcome, every geometry and hull hash equal), GV5 [x] (2026-10-16:
@@ -65,6 +66,10 @@ by the track that owns the code, before any v2 design was simulated on the score
 | Hero rule | `physics_invalid` episodes count against qualification | `physics_unreliable` episodes too (digest draft `8bbdb111...` -> `dda0ec35...`, changed before calibration) | A failure caused by the penetration rule is not a failure a viewer sees; a failure is never staged |
 | Stock entrant | Validators apply to recipes | The stock blade must also seat inside the 2-40 mm closure range (`q_seat_range`) | One validity rule for every entrant (integration ruling, track G) |
 | GV2 low-friction case | Must slip or drop | Any failure mode | An ejection or a physics flag at mu 0.05 also means the part was not carried (integration ruling, track S) |
+| Diversity bars (rule D6) | t from 10k random valid Sobol pairs | Applied with the full section-13 validators on the six patched training parts (`configs/diversity_v2.json`, `python -m rtt.search.threshold_v2`): t 0.070, explore bar 0.15; the draft constants 0.080 / 0.17 came from the schema rules only | The rule asks for valid designs, and validity includes the geometry stages (gate GV5, 2026-10-16, before any pilot) |
+| GV5 probe | 5 calls of Super with the v2 tool | Each call is arm C's real round-1 prompt (training parts, v2 entrants, round 0 scored by the simulator) and the slots pass the full validators (`probe_v2 --real`) | Track P's probe used synthetic parts in the prompt and schema checks only: 100 % valid, 35 % under the geometry validators |
+| GV4 episode set | 100 v2 episodes | 384: the six v2 entrants and two Sobol recipes (seed 20261024) on all 48 `train_v2` episodes, jaws built in the job (`rtt.sim.gv4`) | More than the minimum, and every entrant geometry is covered |
+| tau rule input | Scores on the 1/48 grid | The GV3 report rounds scores to 6 decimals; `load_calibration_v2` snaps them back to their grid points (within 5e-7) | Without it the tau rule refused the frozen GV3 report (merge fallout, fixed 2026-10-17 before tau was computed) |
 
 New files beyond the spec's track table: `src/rtt/parts/{pieces,suite,preview}.py`,
 `src/rtt/sim/gates_v2.py`, `src/rtt/analysis/{gv3_run,gvh_run}.py`, `scripts/v2_bout.py`.
@@ -136,6 +141,25 @@ The tolerances in `docs/TASK_V2.md` may change once, during GV3, on the screenin
 If they change, record the old and new values, the iteration and the reason here.
 Unchanged at the freeze: seat 1.0 mm, dx and dy 0.75 mm, yaw 2 deg, tilt 3 deg, tilt after
 the hold 5 deg.
+
+### Pilot (before the tag)
+
+- **2026-10-17, 00:00 IST: the pilot ran on the laptop, not on Nebius (provisional).** The
+  Nebius CLI's browser session expired at about 23:53 IST on Oct 16, so the image of the
+  merge commit could not be pushed and no job could be submitted. The three random pilots
+  (seeds 101-103) and the two Nemotron pilots (101-102) ran locally on the merged code
+  (`main` `24234cb`, then `f80e58f`, which only adds site data) with the same commands as
+  the jobs (`rtt search --space freeform-v2`). tau and the R rule's q in PREREG A1.1 and A7
+  are therefore provisional: the protocol's pilot (A12) is the same seeds on `uks2-cpu` from
+  the image of the tagged commit, and its tau and q are the ones frozen. Gate GV4 found the
+  laptop and `cpu-d3` identical in outcome on 384 of 384 v2 episodes, so the values are
+  expected to carry over. Known before any confirmatory run; no confirmatory seed was used.
+- **Held-out procedural secret.** PREREG A6 (draft) said a new secret would be drawn for
+  `heldout_procedural_v2`. The code draws the suite from the committed secret
+  (`configs/suites/heldout_v1.sha256`, `073055ff...`), domain-separated by
+  `rtt-heldout-procedural-v2`, so the v1 and v2 suites are uncorrelated. The secret has
+  not been used by any run we can find (the real-object development selections use the public
+  dev seed 20261016). **[decide]** keep it (recommended) or draw a new one before the tag.
 
 ## After the tag
 

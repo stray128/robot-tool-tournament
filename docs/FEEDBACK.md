@@ -178,7 +178,56 @@ What surprised us:
 - **Provisioning overhead is the same on CPU:** about 110 s from creation to container
   start on both platforms, against 21-22 s of actual work for these jobs.
 
+### 2026-10-17: the v2 parity job, and an expired CLI session
+
+Sources: `docs/NEBIUS.md` (v2 section), `docs/BENCH_V2.md` (GV4), the spend ledger and
+`runs/cloud/gv4-20261016-181945/`.
+
+What worked:
+
+- **Bit-for-bit physics across machines, again.** 384 v2 episodes, with every finger
+  generated inside the job, gave the same outcome as on our laptop in 384 of 384 cases;
+  257 records matched bit for bit and the rest differed by at most 1e-15 mm. Every
+  geometry hash matched. The job (`cpu-d3`, 32 vCPU, uk-south2) cost $0.040 and ran the
+  episodes 3.5x faster than the laptop.
+- **A 32-vCPU CPU job is as easy as a 16-vCPU one:** same image, same 119 s from creation to
+  start, $1.056/h.
+
+What surprised us:
+
+- **The CLI session ends after about 12 hours, and unattended commands then hang.** The CLI
+  profile signs in through the browser. When that session expired, the Docker credential
+  helper (`nebius registry docker-credential`) printed `Error getting credentials - err:
+  exit status 7` and `docker push` waited for the whole 10-minute timeout without pushing;
+  `nebius iam whoami` waited for a browser login. An overnight batch started from a script
+  would stall the same way. *Suggestion:* fail fast with "session expired, run `nebius
+  profile ...`" when no terminal is attached, have the credential helper exit non-zero
+  quickly, and document service-account profiles for unattended use next to the federation
+  quick-start.
+
 ## NVIDIA Nemotron models
+
+### 2026-10-16: the v2 design tool on the real prompt
+
+Sources: `docs/BENCH_V2.md` (GV5), `runs/gates-v2/gv5/` (probe and run ledgers).
+
+- **Five calls of Super with the v2 `submit_designs` tool** (4 slots plus 4 reserves, each slot
+  with a hypothesis, a change list and distances), on the real round-1 prompt of 12.6k tokens
+  with six parts, the placements, the registration tolerances and an engineering-notes block:
+  16 of 20 primary slots valid under the full geometry validators, and every call filled its
+  4 slots from its own reserves, so no repair call was needed. $0.030 in total, 10.6-15.0 s
+  per call, 2.1-3.2k completion tokens.
+- The invalid slots were near misses a person would also make without a calculator: a seat
+  closure 2-7 mm beyond the 40 mm stroke on the hex standoff, and a funnel draft outside its
+  15-70 deg range.
+- **A full 40-design v2 run** (15 calls, the cap is 16) cost $0.114: 225k prompt and 51.6k
+  completion tokens, 17.4k of them reasoning; p50 latency 15.8 s, max 31.1 s. 29 of 32 slots
+  were model designs (14 from reserves) and 3 were filled at random. Replaying it from the
+  response cache made 0 API calls and reproduced the run exactly.
+- An earlier probe whose prompt described synthetic stand-in parts looked perfect under
+  schema checks (100 % valid), but only 35 % of its slots passed the geometry validators on
+  the real parts. Testing a tool-calling model on a stand-in prompt overstates it; the real
+  prompt is cheap to build.
 
 ### 2026-10-15: proposer output-mode probe (2 calls per model and mode)
 

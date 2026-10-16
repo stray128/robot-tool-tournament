@@ -370,3 +370,60 @@ Both columns are jobs from this session's image or the last H100 image, with the
   The per-vCPU and per-GiB rates needed to price a preset are on the docs pricing page.
 - **No `NEBIUS_JOB_ID` inside the container** (unchanged). The laptop still stores the ID
   next to each run.
+
+## v2 on Nebius: gate GV4 and the merge image (2026-10-16 and 17)
+
+The v2 protocol (`docs/PREREG.md` Part A) builds each design's jaws inside the job, so gate
+GV4 checks the generator and the physics together on the executor of record.
+
+### Commands
+
+```bash
+make image && make push                                   # from a clean commit (REF=HEAD)
+python -m rtt.sim.gv4 run --out runs/gates-v2/gv4/laptop.json --workers 14
+python -m rtt.cloud run gv4 --no-fallback --vcpus 32      # the same 384 episodes in a job
+python -m rtt.sim.gv4 compare runs/gates-v2/gv4/laptop.json runs/cloud/<run_id>/gv4.json
+python -m rtt.cloud run search --space freeform-v2 --arm random --runs 3 --budget 40 \
+    --seeds 101,102,103 --no-fallback --vcpus 32          # the v2 pilot (A12)
+```
+
+`--space freeform-v2` (also on `rtt search` and `rtt job search`) selects the v2 evaluator
+(`train_v2` under `task_v2`); the job manifest then hashes `task_v2.yaml`, `train_v2.yaml`
+and `parts_v2.yaml`.
+
+### Measured
+
+| | Value |
+|---|---|
+| Image build from a commit (dependency layers cached) | 15 s; 2.06 GB unpacked |
+| Push to both registries | 2 min 36 s (uk-south2 54 s); digest `rtt-sim@sha256:74a3abc58ce7...` from `032a39f` |
+| GV4 job `aijob-e05ppqtwhtxanj89ze` (`gv4-20261016-181945`) | `cpu-d3` `32vcpu-128gb`, uk-south2: `PROVISIONING` about 53 s, `STARTING` about 42 s, `IMAGE_PULLING` about 32 s, then running; 119 s from creation to container start |
+| Work inside the container | 16 s: 384 v2 episodes, jaws built in the job, in 12.9 s |
+| Cost | $0.040 wall-based, $0.005 run-only |
+| Physics per episode (build included) | about 1.07 CPU-s on 32 Genoa vCPUs (12.9 s x 32 / 384) against 1.43 CPU-s on the laptop (14 workers of a Ryzen 7 5800H, 44.6 s) |
+| Parity | 384 of 384 outcomes equal, 257 records bit for bit, the rest within 1e-15 mm; every part, jaw-pair, design and hull hash equal (`docs/BENCH_V2.md`) |
+
+The spend ledger total after GV4 is $1.11 (wall-based upper bound for every job so far).
+
+**What a v2 run costs [derived].** A run simulates 40 designs x 48 episodes = 1,920 episodes,
+about 34 CPU-min on Genoa (2,054 CPU-s) plus the geometry validators in the main process.
+At $1.056 per hour for 32 vCPUs, one run's physics is about $0.04 and 2 arms x R runs about
+R x $0.08, plus about 2 minutes of provisioning per job.
+
+### The CLI session expires, and the push hangs instead of failing
+
+The Nebius CLI profile authenticates through the browser (federation). Its session lasted
+about 12 hours: the token refreshed at 11:53 IST on Oct 16 had expired by 00:00 IST on Oct 17.
+
+- `push_image.sh` uses `nebius registry docker-credential` as Docker's credential helper.
+  With the expired session the helper returned `Error getting credentials - err: exit status
+  7`, and `docker push` then hung for the full 10 minutes of the shell's timeout instead of
+  failing. Nothing was pushed: `image.env` kept the previous digest.
+- `nebius iam whoami` (and every other call) waits for a browser login, so unattended
+  scripts stall rather than exit.
+- Jobs already running are unaffected; only new submissions, polls and pushes need the
+  session.
+
+For unattended runs (overnight pilots, the confirmatory batch) the CLI should use a service
+account's key instead of the federation profile, or the session should be refreshed by hand
+right before a batch.

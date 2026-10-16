@@ -63,6 +63,29 @@ Replaces 0:00-0:12 of the build-plan storyboard. One part, one error, three fing
 **Variant B** (fewer than 3 heroes): 0:00-0:06 becomes two panels, imprint vs designed,
 with the offset readouts only. The voice-over drops "The stock finger loses it."
 
+**Variant B applies** (GV-H, 2026-10-16: 0 heroes; the stock blade fails registration on
+most conditions but never visibly). Proposal for the hook, from data already recorded:
+
+- **Part and placement:** the L-bracket at `train_v2` placement c2, 3 mm off centre across
+  the jaw, the condition's first jitter seed. It is the one part where the hero screen shows
+  the contrast in full: the configurator imprint is short or off centre on 6 of 6
+  translation errors, and the best designed recipe passes 7 of 7 with an offset of at most
+  0.5 mm.
+- **Panels:** the configurator imprint (amber: "jammed [5.9] mm short, [2.6] mm off") and a
+  drafted V-funnel, design `sobol_00` of the GV3 calibration sample (green: "[0.0] mm off,
+  seated"). An optional third panel is the stock blade, which holds the bracket [2.6] mm off
+  centre without dropping it: say "holds it where it landed", never "loses it".
+- **Recording:** bout `v2-hero-l-bracket` on the site (`configs/bouts/v2_hero_l_bracket.json`,
+  recorded with `scripts/v2_bout.py`), stills in `docs/look/hero_*_l_bracket.png`. The
+  bracketed numbers are the overlay values of that recording (imprint seat shortfall 5.92 mm,
+  offset -2.60 mm; V-funnel offset 0.0005 mm; stock offset -2.59 mm).
+- **Labels:** the V-funnel is a random calibration design, so it is "a designed finger",
+  never "the finger Nemotron designed" (rules above), and the clip carries "pilot", as every
+  calibration bout does. Once a recorded Nemotron run has a recipe that registers the
+  bracket at c2, its clip replaces the V-funnel panel.
+- **Voice-over (Variant B):** "Same part, placed three millimetres off. A shape-matched
+  imprint jams short of its seat. A drafted finger pulls it to centre, and holds."
+
 ### 0:45-1:55 One live round (70 s continuous)
 
 One take of a real bout, recorded; captions on. If it is a stored run, it is labelled
