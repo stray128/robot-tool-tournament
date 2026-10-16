@@ -299,6 +299,14 @@ def test_record_conversion_prefers_success_v2_and_derives_flags() -> None:
     ep = episode_from_record_v2(s_record, {"c": "tee_a"}, {})
     assert not ep.success and ep.lift_success and ep.off_centre and not ep.jam_on_close
     assert ep.reg_dx_mm is None and ep.placement == "c2" and ep.failure_mode == "not_registered"
+    # the simulator's physics flags pass through as failures on both criteria: a reset
+    # (bad_qacc above 0, any time in the scored part) and ruling 4's held-but-penetrating case
+    unrel = {**s_record, "lift_success": False, "registered": True, "failure_mode": "physics_unreliable"}
+    ep = episode_from_record_v2(unrel, {"c": "tee_a"}, {})
+    assert not ep.success and not ep.lift_success and ep.failure_mode == "physics_unreliable"
+    reset = {**s_record, "success": True, "lift_success": True, "registered": True, "bad_qacc": 1}
+    ep = episode_from_record_v2({**reset, "failure_mode": None, "registration_flags": []}, {"c": "tee_a"}, {})
+    assert not ep.success and ep.failure_mode == "physics_invalid"
 
 
 def test_the_runner_drives_a_v2_search_on_the_adapter(tmp_path: Path) -> None:

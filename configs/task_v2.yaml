@@ -14,18 +14,24 @@
 #   frame (|dx|, |dy| <= 0.75 mm, yaw <= 2 deg modulo the part's symmetry, tilt <= 3 deg),
 #   then tilt <= 5 deg when the hold is confirmed. Tolerances may change only once, during
 #   GV3 on the screening sample, and are then frozen in PREREG.
-# - checks.bad_qacc: MuJoCo's bad-acceleration warning (a silent NaN reset) makes the
-#   episode physics_invalid.
-# Physics, gripper, score and robustness values are task_v1's, unchanged.
-# - native_ccd stays false, by the rule of spec section 6 as measured in GV2 on 2026-10-16
-#   (rtt.sim.gates_v2; numbers in docs/BENCH_V2.md): the lip-edge regression is reproduced on
-#   v1 primitives and gone on v2 mesh geometry, but outcome parity on/off is 98.5 % on the v1
-#   parity set and 84-93 % on 180-216 v2 episodes, below the rule's 99 %. The v2 disagreements
-#   are mostly libccd (false) failing where native and 1 ms agree. A switch needs a ruling.
+# - checks.bad_qacc: MuJoCo's bad-acceleration warning (a silent NaN reset) during the scored
+#   part of the episode makes it physics_invalid.
+# - checks.held_penetration_max_mm: a held episode whose deepest jaw-part penetration is above
+#   1 mm is physics_unreliable, a failure on both criteria (founder ruling 4, 2026-10-16).
+# Gripper, score and robustness values are task_v1's, unchanged. Physics is task_v1's except
+# two settings, both founder rulings of 2026-10-16 (Addendum D), declared in docs/DEVIATIONS.md:
+# - timestep 1 ms (ruling 3) for every v2 episode, against task_v1's 2 ms. At 2 ms the mesh-mesh
+#   contacts of v2 jaws and parts gave 2-3 mm penetrations and outcomes that changed with the
+#   step (1 ms vs 2 ms parity 88-96 % on 180-216 episodes, gate GV2, docs/BENCH_V2.md).
+#   The control period stays 2 ms (two physics steps per tick), as in every parity run.
+# - native_ccd true (ruling 2), against the rule of spec section 6, which kept it off: on/off
+#   parity was 98.5 % on the v1 parity set and 84-93 % on v2 episodes, below the rule's 99 %,
+#   but the v2 disagreements were mostly libccd failing where native and a 1 ms step agree,
+#   and the lip-edge regression that turned it off in task_v1 does not occur on v2 meshes.
 name: task_v2
 
 physics:
-  timestep: 0.002
+  timestep: 0.001               # 1 ms (ruling 3); task_v1 runs at 2 ms
   integrator: implicitfast
   cone: elliptic
   impratio: 10.0
@@ -38,7 +44,7 @@ physics:
   limit_solref: [0.004, 1.0]
   iterations: 100
   ls_iterations: 50
-  native_ccd: false             # libccd MPR; see the header and docs/BENCH_V2.md before changing it
+  native_ccd: true              # MuJoCo's native convex collision (ruling 2); see the header and docs/BENCH_V2.md
   multi_ccd: true               # several contact points per convex pair (a cylinder stands on 4-5, not 1)
   object_density: 1200.0        # kg/m^3 (G3): solid plastic parts; a suite size may set its own material
   table_top_z: 0.0
@@ -101,7 +107,7 @@ controller:
   lift_height: 0.15
   lift_time: 1.5
   open_target: -0.002
-  control_period: 0.002         # 500 Hz (one physics step at the 2 ms timestep)
+  control_period: 0.002         # 500 Hz: two physics steps at the 1 ms timestep (unchanged from task_v1)
 
 score:
   success_lift: 0.10
@@ -157,5 +163,6 @@ registration:                   # registered-grasp rule (rtt.sim.register; D1)
   creep_delay: 0.2              # s after HOLD starts: hold-creep reference (logged, never scored)
 
 checks:
-  bad_qacc: true                # MuJoCo bad qacc / qvel / qpos reset -> physics_invalid
+  bad_qacc: true                # MuJoCo bad qacc / qvel / qpos reset in the scored window -> physics_invalid
+  held_penetration_max_mm: 1.0  # held, but jaw-part penetration above this -> physics_unreliable (ruling 4)
   trajectory_hash: true         # sha256 of the state at every check tick (determinism gates)

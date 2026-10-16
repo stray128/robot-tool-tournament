@@ -93,15 +93,76 @@ def _tracker(success_at: float | None, max_lift: float = 0.15) -> LiftTracker:
 
 def test_precedence_physics_flags_then_v1_modes_then_registration() -> None:
     reset = CheckEvent(FLAG_BAD_QACC, 5.0, Phase.HOLD)
-    late_reset = CheckEvent(FLAG_BAD_QACC, 7.0, Phase.HOLD)  # after the confirmed success: tail only
     pen_close = CheckEvent(FLAG_PENETRATION, 2.0, Phase.CLOSE)
     assert classify_v2([reset], _tracker(6.0), True, True) == (False, False, "physics_invalid")
     assert classify_v2([reset, pen_close], _tracker(None), True, False) == (False, False, "physics_invalid")
-    assert classify_v2([late_reset], _tracker(6.0), True, True) == (True, True, None)
     assert classify_v2([pen_close], _tracker(None), True, False) == (False, False, "ejected_on_close")
     assert classify_v2([], _tracker(None, 0.0), False, False) == (False, False, "missed_grasp")
     assert classify_v2([], _tracker(6.0), True, False) == (False, True, "not_registered")
     assert classify_v2([], _tracker(6.0), True, True) == (True, True, None)
+
+
+def test_any_reset_in_the_scored_events_invalidates_the_episode() -> None:
+    """One rule in the scorer, the search harness and the analysis: the reset counter rose ->
+    physics_invalid. The checks stop when the outcome is decided, so the events (like the
+    record's ``bad_qacc`` count) hold the scored part only; there is no "after the success"."""
+    at_success = CheckEvent(FLAG_BAD_QACC, 6.0, Phase.HOLD)
+    assert classify_v2([at_success], _tracker(6.0), True, True) == (False, False, "physics_invalid")
+    later = CheckEvent(FLAG_BAD_QACC, 7.0, Phase.HOLD)  # cannot come from an episode; still invalid
+    assert classify_v2([later], _tracker(6.0), True, True) == (False, False, "physics_invalid")
+
+
+def test_held_episodes_above_the_penetration_limit_are_physics_unreliable() -> None:
+    """Founder ruling 4: held + jaw-part penetration above 1 mm -> a failure on both criteria."""
+    held = _tracker(6.0)
+    rule = {"held_penetration_max_mm": 1.0}
+    unreliable = (False, False, "physics_unreliable")
+    assert classify_v2([], held, True, True, penetration_mm=1.2, **rule) == unreliable
+    assert classify_v2([], held, True, False, penetration_mm=1.2, **rule) == unreliable
+    assert classify_v2([], held, True, True, penetration_mm=1.0, **rule) == (True, True, None)  # "above"
+    assert classify_v2([], held, True, True, penetration_mm=math.nan, **rule)[2] == "physics_unreliable"
+    # not held: the v1 label stands; a reset still comes first
+    assert classify_v2([], _tracker(None), True, False, penetration_mm=3.0, **rule) == (
+        False,
+        False,
+        "unstable_hold",
+    )
+    reset = CheckEvent(FLAG_BAD_QACC, 5.0, Phase.HOLD)
+    assert classify_v2([reset], held, True, True, penetration_mm=3.0, **rule)[2] == "physics_invalid"
+    assert classify_v2([], held, True, True, penetration_mm=3.0) == (True, True, None)  # rule off
+
+
+def test_the_penetration_rule_runs_in_the_episode() -> None:
+    clean = run_episode_v2(_pair(), G1_BOX, Placement(), 0, record=False, task=TASK, check_part=False)
+    assert clean.success and clean.metrics["obj_finger_pen_max"] > 0.0
+    strict = TASK.with_overrides(checks={"held_penetration_max_mm": 1e-6})
+    res = run_episode_v2(_pair(), G1_BOX, Placement(), 0, record=False, task=strict, check_part=False)
+    assert (res.success, res.lift_success, res.failure_mode) == (False, False, "physics_unreliable")
+    assert res.traj_sha == clean.traj_sha  # a scoring rule: the trajectory is the same
+
+
+def test_the_replay_tail_never_changes_the_outcome() -> None:
+    for perturbation in (None, BLAST):
+        kw = {"task": TASK, "check_part": False, "perturbation": perturbation}
+        bare = run_episode_v2(_pair(), G1_BOX, Placement(), 0, record=False, **kw)
+        rec = run_episode_v2(_pair(), G1_BOX, Placement(), 0, record=True, **kw)
+        assert rec.n_steps > bare.n_steps  # the tail ran
+        assert (rec.success, rec.lift_success, rec.failure_mode, rec.bad_qacc) == (
+            bare.success,
+            bare.lift_success,
+            bare.failure_mode,
+            bare.bad_qacc,
+        )
+        assert rec.flags == bare.flags and rec.traj_sha == bare.traj_sha
+
+
+def test_the_penetration_limit_must_be_positive() -> None:
+    from rtt.sim.task import ChecksConfig
+
+    assert ChecksConfig().held_penetration_max_mm == 1.0
+    for bad in (0.0, -1.0, True):
+        with pytest.raises(ValueError, match="held_penetration_max_mm"):
+            ChecksConfig(held_penetration_max_mm=bad)
 
 
 def test_v2_failure_modes_extend_v1() -> None:
@@ -109,6 +170,7 @@ def test_v2_failure_modes_extend_v1() -> None:
     assert set(FAILURE_MODES_V2) - set(FAILURE_MODES) == {
         "not_registered",
         "physics_invalid",
+        "physics_unreliable",
         "invalid_build",
     }
 

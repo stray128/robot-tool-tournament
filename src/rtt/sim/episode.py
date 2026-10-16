@@ -25,7 +25,9 @@ on a part with the same controller phases, checks and lift tracker, and adds:
   state at every check tick (``traj_sha``, for the determinism gates), and when recording,
   per-frame overlay channels for the replay;
 * the v2 outcome (:func:`rtt.sim.score.classify_v2`): ``success`` is the registered grasp,
-  ``lift_success`` the v1 criterion.
+  ``lift_success`` the v1 criterion; a held episode whose object-jaw penetration (sampled at
+  every check tick up to the decision) is above ``task.checks.held_penetration_max_mm`` is
+  ``physics_unreliable`` and fails both.
 
 The v2 loop keeps its own clock (``tick * control_period``) so a MuJoCo reset, which sets
 ``data.time`` back to 0, cannot restart the controller. :func:`run_episode` hands a
@@ -620,8 +622,15 @@ def run_episode_v2(
         registration = not_measured(pair.q_seat)
     else:
         registration = assess(reg_pose, reg_q, pair.q_seat, spec, reg_cfg, hold_tilt)
-    checks_bad = checks.bad_qacc_count
-    success, lift_success, mode = classify_v2(checks.events, tracker, grasped, registration.registered)
+    checks_bad = checks.bad_qacc_count  # resets in the scored part only: the tail is never checked
+    success, lift_success, mode = classify_v2(
+        checks.events,
+        tracker,
+        grasped,
+        registration.registered,
+        penetration_mm=1000.0 * pen_max,
+        held_penetration_max_mm=task.checks.held_penetration_max_mm,
+    )
 
     metrics.update(
         mu=mu,

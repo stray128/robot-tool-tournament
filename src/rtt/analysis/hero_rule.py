@@ -30,8 +30,10 @@ after the hold). ``success_v2`` is the registered-grasp criterion of ``docs/TASK
 
 **Episodes per condition.** A condition may hold several episodes (jitter seeds). It
 counts as showing a property only if a strict majority of its episodes do; ties count
-against qualification. An episode flagged ``physics_invalid`` never counts as a stock or
-imprint failure and never counts as a designed pass.
+against qualification. An episode with a physics flag, ``physics_invalid`` (a MuJoCo reset)
+or ``physics_unreliable`` (held with jaw-part penetration above 1 mm, founder ruling 4 of
+2026-10-16), never counts as a stock or imprint failure and never counts as a designed pass:
+its outcome says nothing about the fingers.
 
 **Unmeasured values count against qualification.** A missing offset, shortfall or tilt is
 ``None``, never 0: an unmeasured offset is never a designed pass, an unmeasured shortfall
@@ -94,6 +96,8 @@ _MODE_ALIASES: Final[dict[str, str]] = {
     "missed": "missed_grasp",
 }
 HookMode = Literal["hero_triptych", "offset_contrast_only"]
+#: Failure modes that make an episode say nothing about the fingers (counted against qualification).
+PHYSICS_FLAG_MODES: Final[frozenset[str]] = frozenset({"physics_invalid", "physics_unreliable"})
 
 
 @dataclass(frozen=True)
@@ -122,7 +126,10 @@ class HeroRule:
                 "visible_modes": sorted(VISIBLE_MODES),
                 "aliases": _MODE_ALIASES,
                 "offset": "planar sqrt(dx^2+dy^2), palm frame, close + 0.25 s",
-                "aggregation": "strict majority of a condition's episodes; ties and physics_invalid against",
+                "aggregation": (
+                    "strict majority of a condition's episodes; ties and physics flags "
+                    "(physics_invalid, physics_unreliable) against"
+                ),
                 "unmeasured": "a missing or (on physics_invalid) non-finite value is None and counts against",
                 "outcome": "episode_outcome: explicit success_v2, else harness or sim-record convention",
                 "label": HERO_LABEL,
@@ -142,7 +149,7 @@ class ScreenEpisode:
     tilt_deg: float | None = None
     seat_short_mm: float | None = None
     offset_mm: float | None = None
-    physics_invalid: bool = False
+    physics_invalid: bool = False  # either physics flag (PHYSICS_FLAG_MODES) or a reset count
 
     def __post_init__(self) -> None:
         if self.condition not in HERO_CONDITIONS:
@@ -171,7 +178,7 @@ class ScreenEpisode:
         cond = condition if condition is not None else _record_condition(rec)
         ok, _ = episode_outcome(rec)
         mode = rec.get("failure_mode")
-        invalid = bool(rec.get("bad_qacc")) or mode == "physics_invalid"
+        invalid = bool(rec.get("bad_qacc")) or mode in PHYSICS_FLAG_MODES
 
         def measured(key: str) -> float | None:
             raw = rec.get(key)

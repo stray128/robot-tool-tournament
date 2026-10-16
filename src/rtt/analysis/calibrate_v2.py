@@ -11,8 +11,14 @@ GV3 asks of the design scores (mean registered-grasp success over the 48 episode
    outright. A miss here may be declared in PREREG, as with v1 gate G3.
 4. **Ceiling.** At most 10 % of the Sobol designs score 100 %.
 
-Reported, not gating: lift-only scores, ``jam_on_close`` and ``off_centre`` counts, and the
-share of ``physics_invalid`` episodes (above 1 % it is logged in ``docs/DEVIATIONS.md``).
+Reported, not gating: lift-only scores, ``jam_on_close`` and ``off_centre`` counts, the
+share of ``physics_invalid`` episodes (above 1 % it is logged in ``docs/DEVIATIONS.md``) and
+the share of ``physics_unreliable`` episodes (held with jaw-part penetration above 1 mm; a
+failure on both criteria, founder ruling 4 of 2026-10-16).
+
+A ``physics_invalid`` episode is one whose record has ``bad_qacc`` above 0 or carries that
+failure mode: the record's counter covers the scored part of the episode only, which is the
+window the simulator's scorer labels, so the two can never disagree.
 
 **Procedure rules** (fixed before the pilot, enforced by :class:`CalibrationLog`):
 
@@ -115,6 +121,7 @@ class DesignScoreV2:
     jam_on_close: int
     off_centre: int
     physics_invalid: int
+    physics_unreliable: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
@@ -200,6 +207,10 @@ def _invalid(rec: Mapping[str, Any]) -> bool:
     return bool(rec.get("bad_qacc")) or rec.get("failure_mode") == "physics_invalid"
 
 
+def _unreliable(rec: Mapping[str, Any]) -> bool:
+    return rec.get("failure_mode") == "physics_unreliable"
+
+
 def score_designs_v2(
     records: Iterable[Mapping[str, Any]],
     names: Mapping[str, tuple[str, Origin]],
@@ -255,6 +266,7 @@ def score_designs_v2(
                 jam_on_close=sum("jam_on_close" in _sub_flags(r) for r in recs),
                 off_centre=sum("off_centre" in _sub_flags(r) for r in recs),
                 physics_invalid=sum(_invalid(r) for r in recs),
+                physics_unreliable=sum(_unreliable(r) for r in recs),
             )
         )
     return out
@@ -275,6 +287,7 @@ class GV3Targets:
     n_sobol: int = 64
     n_round0_entrants: int = 4
     physics_invalid_max: float = 0.01  # reported; above it a deviation is logged
+    physics_unreliable_max: float = 0.01  # reported only (ruling 4 already scores them as failures)
 
 
 @dataclass(frozen=True)
@@ -353,6 +366,8 @@ class CalibrationV2Report:
         n_eps = sum(r.n_episodes for r in self.rows)
         invalid = sum(r.physics_invalid for r in self.rows)
         share = invalid / n_eps if n_eps else 0.0
+        unreliable = sum(r.physics_unreliable for r in self.rows)
+        u_share = unreliable / n_eps if n_eps else 0.0
         return [
             Check(
                 "entrants_in_range",
@@ -378,6 +393,13 @@ class CalibrationV2Report:
                 f"{invalid}/{n_eps} episodes ({100 * share:.2f}%)",
                 f"<= {100 * t.physics_invalid_max:.0f}% (else log a deviation)",
                 share <= t.physics_invalid_max + 1e-12,
+                gating=False,
+            ),
+            Check(
+                "physics_unreliable_share",
+                f"{unreliable}/{n_eps} episodes ({100 * u_share:.2f}%)",
+                f"<= {100 * t.physics_unreliable_max:.0f}% (reported; scored as failures)",
+                u_share <= t.physics_unreliable_max + 1e-12,
                 gating=False,
             ),
         ]
@@ -411,12 +433,14 @@ class CalibrationV2Report:
 
     def table(self) -> str:
         lines = [f"GV3 calibration, iteration {self.iteration}, screening seed {self.screening_seed}", ""]
-        lines.append(f"{'design':<24}{'registered':>11}{'lift':>8}{'jam':>6}{'off':>6}{'invalid':>8}")
+        lines.append(
+            f"{'design':<24}{'registered':>11}{'lift':>8}{'jam':>6}{'off':>6}{'invalid':>8}{'unrel':>7}"
+        )
         for r in [*self.entrants, *self.references]:
             tag = r.name + (" (ref)" if r.origin == "reference" else "")
             lines.append(
                 f"{tag:<24}{100 * r.score:>10.1f}%{100 * r.lift_score:>7.1f}%{r.jam_on_close:>6}"
-                f"{r.off_centre:>6}{r.physics_invalid:>8}"
+                f"{r.off_centre:>6}{r.physics_invalid:>8}{r.physics_unreliable:>7}"
             )
         stats = self.sobol_stats()
         if stats.get("n"):

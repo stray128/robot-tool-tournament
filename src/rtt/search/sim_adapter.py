@@ -355,8 +355,12 @@ def episode_from_record_v2(
     ``success`` is the registered grasp (``success_v2``); ``lift_success`` is the v1
     lift-and-hold flag. ``jam_on_close`` / ``off_centre`` come from the record's
     ``registration_flags`` (or its own fields, else ``seat_short_mm``). An episode whose
-    ``bad_qacc`` counter rose is ``physics_invalid`` and never a success. Registration values
-    the simulator could not measure (NaN) become ``None``.
+    ``bad_qacc`` counter rose is ``physics_invalid`` and never a success: the same rule as the
+    simulator's scorer (:func:`rtt.sim.score.classify_v2`), because the record's counter covers
+    the scored part of the episode only (resets in the replay-only tail are never counted).
+    ``physics_unreliable`` (a held episode with jaw-part penetration above 1 mm) arrives as
+    the record's failure mode, already a failure on both criteria. Registration values the
+    simulator could not measure (NaN) become ``None``.
     """
     cid = str(_get(record, "condition_id"))
     lift = bool(_get(record, "lift_success", _get(record, "success")))

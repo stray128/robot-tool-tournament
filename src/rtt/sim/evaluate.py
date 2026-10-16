@@ -411,7 +411,8 @@ class EpisodeRecordV2:
     ``registration_flags``). ``tilt_max_deg`` is the part's largest tilt from vertical before the
     outcome was decided (the hero rule's visible-failure test). ``hold_creep_mm`` is logged, never
     scored. ``bad_qacc`` counts
-    MuJoCo state resets. ``geometry_hash`` identifies the jaw pair built for this part (empty
+    MuJoCo state resets in the scored part of the episode (the replay-only tail is never
+    checked); above 0 the episode is ``physics_invalid``. ``geometry_hash`` identifies the jaw pair built for this part (empty
     for an ``invalid_build``). ``err_z_mm`` is a held-out height error (0 in training).
     ``wall_time_s`` is the only field that is not deterministic.
     """
@@ -693,12 +694,13 @@ def evaluate_designs_v2(
     return records
 
 
-def physics_invalid_share(records: Sequence[EpisodeRecordV2]) -> float:
-    """Share of simulated episodes labelled ``physics_invalid`` (> 1 % is a logged deviation)."""
+def physics_invalid_share(records: Sequence[EpisodeRecordV2], mode: str = "physics_invalid") -> float:
+    """Share of simulated episodes labelled ``mode``: ``physics_invalid`` (> 1 % is a logged
+    deviation) or ``physics_unreliable`` (held with jaw-part penetration above 1 mm)."""
     simulated = [r for r in records if r.failure_mode != "invalid_build"]
     if not simulated:
         return 0.0
-    return sum(r.failure_mode == "physics_invalid" for r in simulated) / len(simulated)
+    return sum(r.failure_mode == mode for r in simulated) / len(simulated)
 
 
 _ARROW_TYPES = {"bool": "bool_", "int": "int64", "float": "float64", "str": "string", "str | None": "string"}

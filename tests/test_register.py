@@ -53,15 +53,18 @@ def test_task_v2_yaml_matches_the_dataclass_plus_its_overrides() -> None:
     expected = TaskV2(
         controller=dataclasses.replace(v1.controller, grasp_height_fracs=()),
         jitter=dataclasses.replace(v1.jitter, pos=0.0005, yaw_deg=1.0, mu_frac=0.10),
-        physics=dataclasses.replace(v1.physics, native_ccd=TASK.physics.native_ccd),
+        physics=dataclasses.replace(v1.physics, timestep=0.001, native_ccd=True),
     )
     assert TASK == expected
     assert TASK.name == "task_v2" and DEFAULT_TASK_V2_PATH.name == "task_v2.yaml"
     assert TASK.registration == RegistrationConfig()
-    # v2 differs from v1 only where the spec says so
+    # v2 differs from v1 only where the spec and the founder rulings of 2026-10-16 say so:
+    # 1 ms (ruling 3), native collision (ruling 2), the penetration rule (ruling 4)
     for section in ("gripper", "score", "robustness", "replay"):
         assert getattr(TASK, section) == getattr(v1, section)
-    assert dataclasses.replace(TASK.physics, native_ccd=v1.physics.native_ccd) == v1.physics
+    assert dataclasses.replace(TASK.physics, timestep=0.002, native_ccd=False) == v1.physics
+    assert TASK.physics.timestep == 0.001 and TASK.controller.control_period == 0.002
+    assert TASK.checks.held_penetration_max_mm == 1.0
 
 
 def test_task_v1_is_untouched_by_v2() -> None:

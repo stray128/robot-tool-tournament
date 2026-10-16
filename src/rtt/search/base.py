@@ -81,9 +81,12 @@ FAILURE_MODES: Final[tuple[str, ...]] = (
 )
 
 
-#: v2 failure labels (spec section 7), in order of precedence; ``physics_invalid`` comes first.
+#: v2 failure labels (spec section 7), in order of precedence: the physics flags come first
+#: (``physics_invalid``, a MuJoCo reset; ``physics_unreliable``, a held episode with jaw-part
+#: penetration above 1 mm, founder ruling 4 of 2026-10-16).
 FAILURE_MODES_V2: Final[tuple[str, ...]] = (
     "physics_invalid",
+    "physics_unreliable",
     "missed_grasp",
     "ejected_on_close",
     "slip_during_lift",

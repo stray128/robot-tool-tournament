@@ -250,13 +250,25 @@ class ChecksConfig:
     """Extra physics checks of task v2 (``rtt.sim.checks``).
 
     * ``bad_qacc``: MuJoCo's bad-acceleration (and bad position / velocity) warning counter
-      went up, i.e. MuJoCo silently reset the simulation; the episode becomes
-      ``physics_invalid``.
+      went up during the scored part of the episode (up to the moment the outcome is decided;
+      the replay-only tail is never checked), i.e. MuJoCo silently reset the simulation; the
+      episode becomes ``physics_invalid``.
+    * ``held_penetration_max_mm``: a held episode (the v1 lift-and-hold criterion met) whose
+      deepest jaw-part penetration over the scored part of the episode exceeds this becomes
+      ``physics_unreliable`` and fails both the registered and the lift-only criterion
+      (founder ruling 4, 2026-10-16: the same rule for every arm and design). ``inf`` turns
+      the rule off.
     * ``trajectory_hash``: keep a SHA-256 of the state at every check tick (determinism).
     """
 
     bad_qacc: bool = True
+    held_penetration_max_mm: float = 1.0
     trajectory_hash: bool = True
+
+    def __post_init__(self) -> None:
+        v = self.held_penetration_max_mm
+        if not isinstance(v, int | float) or isinstance(v, bool) or not v > 0:
+            raise ValueError(f"checks.held_penetration_max_mm must be a number > 0, got {v!r}")
 
 
 def _build[T](cls: type[T], raw: dict[str, Any] | None, where: str) -> T:

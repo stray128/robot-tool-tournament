@@ -490,8 +490,14 @@ def test_score_designs_v2_from_records() -> None:
     assert row.score == pytest.approx((5 * 2 + 8 - 1) / 48)  # 5 parts at c0 + all of the slug, minus 1
     assert row.lift_score == pytest.approx(47 / 48)
     assert row.by_part["slug"] == pytest.approx(1.0) and row.by_placement["c0"] == pytest.approx(11 / 12)
-    assert row.jam_on_close == 6 and row.physics_invalid == 1
+    assert row.jam_on_close == 6 and row.physics_invalid == 1 and row.physics_unreliable == 0
     assert row.failure_modes == {"not_registered": 30}
+    # ruling 4: physics_unreliable records (held, penetration above 1 mm) fail both criteria
+    unrel = [dict(r) for r in recs]
+    unrel[1].update(success=False, registered=True, failure_mode="physics_unreliable", lift_success=False)
+    (u,) = score_designs_v2(unrel, {"d1": ("imprint_c", "entrant")})
+    assert u.physics_unreliable == 1 and u.score == pytest.approx(row.score - 1 / 48)
+    assert u.lift_score == pytest.approx(row.lift_score - 1 / 48)
     with pytest.raises(ValueError, match="47 episodes"):
         score_designs_v2(recs[1:], {"d1": ("x", "entrant")})
     with pytest.raises(ValueError, match="no episode"):
@@ -834,6 +840,19 @@ def test_screen_episode_from_v2_record() -> None:
     assert ep.mode == "slip_during_lift" and not ep.physics_invalid
     bad = ScreenEpisode.from_record({**rec, "registered": True, "bad_qacc": 3})
     assert bad.physics_invalid and not bad.success_v2
+    # ruling 4: a held episode above 1 mm penetration says nothing about the fingers either
+    unreliable = ScreenEpisode.from_record({**rec, "success": False, "failure_mode": "physics_unreliable"})
+    assert unreliable.physics_invalid and not unreliable.success_v2
+
+
+def test_physics_unreliable_stock_episodes_never_qualify_a_hero() -> None:
+    """A stock 'failure' that is only the penetration rule is not a failure a viewer sees."""
+    flagged = [
+        ScreenEpisode(condition=c, success_v2=False, failure_mode="physics_unreliable", physics_invalid=True)
+        for c in HERO_CONDITIONS
+    ]
+    v = evaluate_part("p", flagged, {"d": _eps()})
+    assert v.stock_fails == 0 and not v.a_ok and not v.hero
 
 
 def test_screen_episode_from_simulator_record() -> None:
