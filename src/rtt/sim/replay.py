@@ -71,6 +71,51 @@ _V2_REQUIRED = (
 _V2_KEYS = frozenset((*_V2_REQUIRED, "static", "static_visuals", "overlays"))
 _SLUG = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 _CODE_VERSION = re.compile(r"^[0-9a-f]{7,40}(\+dirty)?$")
+_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+_SEMVER = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+$")
+_UTC = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z$")
+
+
+def _is_int(v: Any) -> bool:
+    return isinstance(v, int) and not isinstance(v, bool)
+
+
+def _nonempty_str(v: Any) -> bool:
+    return isinstance(v, str) and bool(v)
+
+
+# per-field value rules of the schema's meta and provenance blocks: (key, test, what it must be)
+_META_RULES: tuple[tuple[str, Callable[[Any], bool], str], ...] = (
+    ("design_space", lambda v: isinstance(v, str) and bool(_SLUG.match(v)), "a slug"),
+    ("design_id", _nonempty_str, "a non-empty string"),
+    (
+        "geometry_id",
+        lambda v: v is None or (isinstance(v, str) and bool(_SHA256.match(v))),
+        "a sha256 or null",
+    ),
+    ("part_id", lambda v: isinstance(v, str) and bool(_SLUG.match(v)), "a slug"),
+)
+_PROVENANCE_RULES: tuple[tuple[str, Callable[[Any], bool], str], ...] = (
+    ("engine_version", lambda v: isinstance(v, str) and bool(_SEMVER.match(v)), "a x.y.z version"),
+    ("run_id", lambda v: isinstance(v, str) and bool(_SLUG.match(v)), "a slug"),
+    (
+        "code_version",
+        lambda v: isinstance(v, str) and bool(_CODE_VERSION.match(v)),
+        "a git commit (optionally +dirty)",
+    ),
+    ("product_mode", lambda v: isinstance(v, bool), "true or false"),
+    ("episode", _nonempty_str, "a non-empty string"),
+    ("suite", lambda v: isinstance(v, str) and bool(_SLUG.match(v)), "a slug"),
+    ("condition", _nonempty_str, "a non-empty string"),
+    ("seed", lambda v: _is_int(v) and v >= 0, "an integer >= 0"),
+    ("task_sha256", lambda v: isinstance(v, str) and bool(_SHA256.match(v)), "a sha256"),
+    ("record_version", lambda v: _is_int(v) and v >= 1, "an integer >= 1"),
+    (
+        "created_utc",
+        lambda v: isinstance(v, str) and bool(_UTC.match(v)),
+        "a UTC time like 2026-10-16T12:00:00Z",
+    ),
+)
 # provenance keys the schema allows (it sets additionalProperties: false there)
 PROVENANCE_KEYS = (
     "source",
@@ -372,6 +417,10 @@ def check_header(
             errs.append(f"{k} must be {v!r}")
     if header["version"] != VERSION:
         errs.append(f"version must be {VERSION}")
+    if not (_is_int(header["fps"]) and 1 <= header["fps"] <= 1000):
+        errs.append("fps must be an integer in [1, 1000]")
+    if not (_is_int(header["n_frames"]) and header["n_frames"] >= 1):
+        errs.append("n_frames must be an integer >= 1")
     if header["n_bodies"] != len(header["bodies"]):
         errs.append("n_bodies != len(bodies)")
     if frames is not None and tuple(frames.shape) != (
@@ -409,9 +458,11 @@ def check_header(
         if not b.get("visuals") and not b.get("geoms"):
             errs.append(f"body {b.get('name')} has neither visuals nor geoms")
     meta = header["meta"]
-    for k in ("design_space", "design_id", "geometry_id", "part_id"):
+    for k, ok, what in _META_RULES:
         if k not in meta:
             errs.append(f"meta.{k} is required")
+        elif not ok(meta[k]):
+            errs.append(f"meta.{k} must be {what}, got {meta[k]!r}")
     prov = header["provenance"]
     for k, want in (("source", "simulation"), ("engine", "mujoco")):
         if prov.get(k) != want:
@@ -419,13 +470,12 @@ def check_header(
     stray = set(prov) - set(PROVENANCE_KEYS)
     if stray:
         errs.append(f"provenance has keys the schema does not allow: {sorted(stray)} (put them in meta)")
-    if "run_id" in prov and not _SLUG.match(str(prov["run_id"])):
-        errs.append("provenance.run_id must be a slug")
     for k in ("engine_version", "run_id", "code_version", "product_mode"):
         if k not in prov:
             errs.append(f"provenance.{k} is required")
-    if "code_version" in prov and not _CODE_VERSION.match(str(prov["code_version"])):
-        errs.append("provenance.code_version must be a git commit (optionally +dirty)")
+    for k, ok, what in _PROVENANCE_RULES:
+        if k in prov and not ok(prov[k]):
+            errs.append(f"provenance.{k} must be {what}, got {prov[k]!r}")
     ovl = header.get("overlays")
     if ovl is not None:
         if set(ovl.get("channels", [])) - set(OVERLAY_CHANNELS):

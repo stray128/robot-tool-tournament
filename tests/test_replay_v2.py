@@ -126,6 +126,27 @@ def _mutations() -> list[tuple[str, Any]]:
     def stray_provenance(h: dict) -> None:
         h["provenance"]["gpu"] = "L4"
 
+    def part_not_slug(h: dict) -> None:
+        h["meta"]["part_id"] = "pipe tee"
+
+    def space_not_slug(h: dict) -> None:
+        h["meta"]["design_space"] = "freeform v2"
+
+    def geometry_not_sha(h: dict) -> None:
+        h["meta"]["geometry_id"] = "abc"
+
+    def episode_not_text(h: dict) -> None:
+        h["provenance"]["episode"] = 3
+
+    def negative_seed(h: dict) -> None:
+        h["provenance"]["seed"] = -1
+
+    def local_time(h: dict) -> None:
+        h["provenance"]["created_utc"] = "2026-10-16 12:00"
+
+    def float_fps(h: dict) -> None:
+        h["fps"] = 29.97
+
     return [
         ("unknown asset", unknown_asset),
         ("scale", mirrored),
@@ -137,6 +158,13 @@ def _mutations() -> list[tuple[str, Any]]:
         ("changes", no_changes),
         ("engine", engine),
         ("does not allow", stray_provenance),
+        ("meta.part_id must be a slug", part_not_slug),
+        ("meta.design_space must be a slug", space_not_slug),
+        ("meta.geometry_id must be a sha256 or null", geometry_not_sha),
+        ("provenance.episode", episode_not_text),
+        ("provenance.seed", negative_seed),
+        ("provenance.created_utc", local_time),
+        ("fps", float_fps),
     ]
 
 
@@ -148,6 +176,8 @@ def test_writer_refuses_a_broken_header(lifted: Any, tmp_path: Path, message: st
     with pytest.raises(ValueError, match=re.escape(message)):
         rp.write_replay(rp.Replay(frames=replay.frames, header=header), tmp_path / "bad")
     assert not list(tmp_path.iterdir()), "nothing is written for an invalid header"
+    if message not in ("unknown asset", "n_bodies", "not referenced", "content addressed"):
+        assert VALIDATOR.errors(header), "the writer's rule is one the schema has too"
 
 
 def test_overlays_round_trip_as_float16(episode: Any, tmp_path: Path) -> None:
@@ -228,6 +258,22 @@ def test_visual_and_provenance_helpers(monkeypatch: pytest.MonkeyPatch) -> None:
     for bad in ("main", "", None, "0123456-clean"):
         with pytest.raises(ValueError):
             rp.normalise_code_version(bad)
+
+
+def test_lift_slugs_the_part_id_and_takes_provenance_overrides(episode: Any, tmp_path: Path) -> None:
+    store = AssetStore(tmp_path / "assets")
+    v2 = lift_to_v2(
+        copy.deepcopy(episode.replay),
+        store,
+        run_id="r",
+        code_version="10e9384",
+        part_id="pipe tee",
+        seed=7,
+        condition="c1",
+    )
+    assert v2.header["meta"]["part_id"] == "pipe-tee"
+    assert v2.header["provenance"]["seed"] == 7 and v2.header["provenance"]["condition"] == "c1"
+    assert VALIDATOR.errors(v2.header) == []
 
 
 def test_upgrade_header_needs_known_bodies(episode: Any) -> None:

@@ -242,14 +242,8 @@ def _finish_v2(
     header = replay.header
     meta = dict(header.get("meta") or {})
     used = {v["asset"] for vs in visuals.values() for v in vs}
-    prov = rp.provenance(
-        run_id=run_id,
-        code_version=code_version,
-        product_mode=product_mode,
-        seed=meta.get("seed"),
-        condition=meta.get("condition_id"),
-        **provenance_extra,
-    )
+    extra = {"seed": meta.get("seed"), "condition": meta.get("condition_id"), **provenance_extra}
+    prov = rp.provenance(run_id=run_id, code_version=code_version, product_mode=product_mode, **extra)
     v1 = {**header, "n_frames": replay.n_frames}
     if overlays is not None:
         v1["overlay_channels"] = list(channels)
@@ -330,7 +324,7 @@ def lift_to_v2(
         "design_space": design_space,
         "design_id": str(design_id or meta.get("design_id") or "unknown"),
         "geometry_id": geometry_id,
-        "part_id": part_id or _part_id(meta),
+        "part_id": _slug(part_id) if part_id else _part_id(meta),
     }
     if stock_blade:
         v2_meta["finger_visual"] = "stock blade CAD over the v1 box approximation"
