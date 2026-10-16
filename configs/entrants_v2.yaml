@@ -6,8 +6,9 @@
 # Reference entrants are scored outside the budget and shown in every comparison.
 #
 # - stock: the stock gripper's own clamp blade, as committed collision hulls (convex
-#   decomposition of the real blade, fixed asset with its sha256). Until the hull file exists
-#   the build falls back to the v1 box approximation (configs/entrants.yaml, "stock").
+#   decomposition of the real blade: CoACD 0.02, seed 0, fixed asset with its sha256), with
+#   the blade mesh's mass properties. Until the hull file exists the build falls back to the
+#   v1 box approximation (configs/entrants.yaml, "stock"), carried in FingerPair.boxes.
 # - imprint_configurator: what a commercial custom-jaw configurator cuts: the part's negative
 #   with straight walls (draft 0) and 0.4 mm clearance. Its depth is set per part:
 #   max(4 mm, min(40% of the part's half-extent along the closing axis in the grip band,
@@ -18,7 +19,7 @@ entrants:
   - name: stock
     kind: stock
     round0: true
-    hulls: assets/gripper/stock/stock_blade_hulls.npz
+    hulls: assets/gripper/so_arm_102/stock_blade_hulls.npz
     rationale: The gripper's own clamp blade, as shipped.
 
   - name: flat

@@ -141,14 +141,19 @@ def load_entrants_v2(path: str | Path | None = None) -> list[Baseline]:
 
 
 def _stock_hulls(baseline: Baseline) -> tuple[list[np.ndarray], list[np.ndarray]] | None:
-    """(left, right) blade hulls in their jaw frames, or ``None`` when the asset is absent."""
+    """(left, right) blade hulls in their jaw frames, or ``None`` when the asset is absent.
+
+    The hull file (written once by the render track) holds ``left_NN`` and ``right_NN``
+    vertex arrays in the jaw body frames of :mod:`rtt.design.freeform.types`, plus a ``meta``
+    record; a file with left hulls only gets the mirror image for the right jaw.
+    """
     if not baseline.hulls:
         return None
     path = REPO / baseline.hulls
-    if not path.exists():
+    if not path.is_file():
         return None
-    with np.load(path) as data:
-        keys = sorted(data.files)
+    with np.load(path, allow_pickle=False) as data:
+        keys = sorted(k for k in data.files if k != "meta")
         left = [np.asarray(data[k], dtype=np.float64) for k in keys if k.startswith("left")]
         right = [np.asarray(data[k], dtype=np.float64) for k in keys if k.startswith("right")]
         if not left:
@@ -158,6 +163,20 @@ def _stock_hulls(baseline: Baseline) -> tuple[list[np.ndarray], list[np.ndarray]
     if not right:
         right = [p * np.array([1.0, -1.0, 1.0]) for p in left]
     return left, right
+
+
+def _stock_jaw_geometry(baseline: Baseline) -> tuple[Any, Any] | None:
+    """The render track's stock jaws (blade mesh mass, inertia and print hash), if available."""
+    if not baseline.hulls:
+        return None
+    try:
+        from rtt.render.gripper import stock_jaws
+    except ImportError:
+        return None
+    try:
+        return stock_jaws(REPO / baseline.hulls)
+    except Exception:  # the vendored blade meshes are absent: use the hull union instead
+        return None
 
 
 def _v1_stock_pieces() -> tuple[list[np.ndarray], tuple[Any, ...]]:
@@ -237,14 +256,22 @@ def build_stock_pair(baseline: Baseline, part: Any, task: Any) -> Any:
     n = round(width / 1e-4)
     xs = np.round(-width / 2.0 + 1e-4 * np.arange(n + 1), 7)
     sides = []
-    y0 = -math.inf
+    contacts = []
     for part_g, jaw_g in ((g, jaw_left), (gm, jaw_right)):
         contact, p, front = stock_seat(part_g, jaw_g, xs, tip, reach, h)
         if not math.isfinite(contact):
             raise InvalidDesign("outline_empty", "the stock blade does not reach the part", part_id)
-        y0 = max(y0, contact)
+        contacts.append(contact)
         sides.append((p, front))
-    y0 = float(np.round(y0, 7))
+    # The stock jaws are not seat-aligned: on a part that is not symmetric across the closing
+    # axis the first jaw to touch pushes it until the other touches too. q_seat is that
+    # closure (both jaws touching); the part ends up off by half the difference.
+    y0 = float(np.round(0.5 * (contacts[0] + contacts[1]), 7))
+    if abs(contacts[0] - contacts[1]) > 1e-4:  # more than 0.05 mm off-centre
+        notes.append(
+            f"stock jaws touch {abs(contacts[0] - contacts[1]) * 500.0:.2f} mm off-centre on {part_id}: "
+            "the part is pushed until both touch"
+        )
     q_seat = float(np.round(ohg - y0, 7))
     plan = SimpleNamespace(
         left=_StockJaw(xs, sides[0][0], xs, np.where(np.isfinite(sides[0][1]), sides[0][1], 1.0) + y0),
@@ -252,7 +279,11 @@ def build_stock_pair(baseline: Baseline, part: Any, task: Any) -> Any:
     )
     capture = capture_report(plan, mu=float(task.physics.friction))
     jaws = []
-    for pieces in (left, right):
+    official = _stock_jaw_geometry(baseline) if hulls is not None else None
+    if official is not None:
+        jaws = list(official)
+        notes.append("stock blade: hull pieces with the blade mesh's mass properties")
+    for pieces in () if official is not None else (left, right):
         hull_m = [m3d.Manifold.hull_points(p * 1000.0) for p in pieces]
         solid = m3d.Manifold.batch_boolean(hull_m, m3d.OpType.Add).to_mesh64()
         verts = np.asarray(solid.vert_properties)[:, :3] / 1000.0
