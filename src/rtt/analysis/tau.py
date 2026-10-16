@@ -66,7 +66,9 @@ __all__ = [
     "TauResultV2",
     "TauRuleV2",
     "check_on_grid",
+    "check_same_task",
     "derive_tau_v2",
+    "evaluator_hashes",
     "load_calibration_v2",
     "load_runs_v2",
     "main",
@@ -112,6 +114,31 @@ def _manifest_file(directory: Path) -> Path:
     raise FileNotFoundError(f"{directory}: no manifest.json (or search/manifest.json)")
 
 
+def evaluator_hashes(directory: str | Path) -> tuple[str | None, str | None]:
+    """``(task_hash, suite_hash)`` from a search output's manifest (``None`` where absent)."""
+    manifest = json.loads(_manifest_file(Path(directory)).read_text(encoding="utf-8"))
+    ev = manifest.get("evaluator") or {}
+    return ev.get("task_hash"), ev.get("suite_hash")
+
+
+def check_same_task(directories: Sequence[str | Path], runs: Sequence[RunRecord]) -> None:
+    """Refuse to pool search outputs scored on different tasks or suites, or with another budget.
+
+    Every output must report the same evaluator ``task_hash`` and ``suite_hash`` (a run
+    scored before a GV3 iteration is not comparable with one scored after it), and every run
+    must have B = 40 with a round 0 of 8.
+    """
+    rule = TauRuleV2()
+    hashes = {str(d): evaluator_hashes(d) for d in directories}
+    if len(set(hashes.values())) > 1:
+        raise ValueError(f"search outputs scored on different task/suite hashes: {hashes}")
+    for r in runs:
+        if r.budget != rule.budget or r.round0_size != rule.round0_size or len(r.scores) != rule.budget:
+            raise ValueError(
+                f"{r.run_id}: budget {r.budget}, round 0 {r.round0_size}; v2 runs use {rule.budget}/{rule.round0_size}"
+            )
+
+
 def _declared_design_space(manifest: dict[str, Any]) -> str | None:
     for holder in (manifest, manifest.get("config") or {}, manifest.get("evaluator") or {}):
         value = holder.get("design_space") if isinstance(holder, dict) else None
@@ -123,10 +150,13 @@ def _declared_design_space(manifest: dict[str, Any]) -> str | None:
 def load_runs_v2(directory: str | Path, *, score_key: str = "success") -> list[RunRecord]:
     """The runs of one v2 search output; refuses outputs that do not declare ``freeform-v2``.
 
-    The manifest must carry ``design_space`` (top level, ``config`` or ``evaluator``), the
-    evaluator's ``episodes_per_design`` must be 48 when present, and every score must lie
-    on the 1/48 grid. ``score_key`` picks the history score: ``"success"`` is the primary
-    ``success_v2`` mean, ``"lift_success"`` the lift-only mean reported for every endpoint.
+    The manifest must carry ``design_space`` (top level, ``config`` or ``evaluator``) and the
+    evaluator's ``episodes_per_design`` (48), and every score must lie on the 1/48 grid.
+    ``score_key`` picks the history score: ``"success"`` is the primary ``success_v2`` mean,
+    ``"lift_success"`` the lift-only mean reported for every endpoint. Every design must
+    carry both, and its registered score may never exceed its lift-only score (a registered
+    grasp is a lift-and-hold success first), which catches a lift-only score filed as the
+    primary one.
     """
     root = Path(directory)
     manifest_file = _manifest_file(root)
@@ -135,15 +165,28 @@ def load_runs_v2(directory: str | Path, *, score_key: str = "success") -> list[R
     if space != DESIGN_SPACE:
         raise ValueError(f"{root}: design_space {space!r}, expected {DESIGN_SPACE!r}")
     per_design = (manifest.get("evaluator") or {}).get("episodes_per_design")
-    if per_design is not None and int(per_design) != EPISODES_PER_DESIGN_V2:
+    if per_design is None or int(per_design) != EPISODES_PER_DESIGN_V2:
         raise ValueError(f"{root}: {per_design} episodes per design, expected {EPISODES_PER_DESIGN_V2}")
-    if score_key == "success":
-        runs = load_runs(root)
-    else:
-        runs = [_with_scores(r, _history_scores(manifest_file.parent, r, score_key)) for r in load_runs(root)]
-    for r in runs:
+    primary = load_runs(root)
+    out = []
+    for r in primary:
+        lift = _history_scores(manifest_file.parent, r, "lift_success")
+        if len(lift) != len(r.scores):
+            raise ValueError(f"{r.run_id}: {len(lift)} lift-only scores, expected {len(r.scores)}")
+        bad = [i + 1 for i, (s, ls) in enumerate(zip(r.scores, lift, strict=True)) if s > ls + _EPS]
+        if bad:
+            raise ValueError(
+                f"{root} {r.run_id}: designs {bad[:5]} score higher registered than lift-only; "
+                "score.success must be the mean success_v2"
+            )
+        out.append(
+            r
+            if score_key == "success"
+            else _with_scores(r, _history_scores(manifest_file.parent, r, score_key))
+        )
+    for r in out:
         check_on_grid(r.scores, what=f"{root} {r.run_id} {score_key}")
-    return runs
+    return out
 
 
 def _history_scores(search_dir: Path, run: RunRecord, key: str) -> tuple[float, ...]:
@@ -366,6 +409,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     report: dict[str, Any] = {"format": "rtt-s1-analysis", "version": 2, "design_space": DESIGN_SPACE}
     random_runs = [r for p in args.random for r in load_runs_v2(p)]
     if args.cmd == "derive":
+        check_same_task(args.random, random_runs)
         sobol, entrants = load_calibration_v2(args.calibration)
         res = derive_tau_v2(
             random_runs, sobol, entrants, forbidden_seeds=_confirmatory_seeds(args.seeds_main)
@@ -383,6 +427,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     else:
         check_on_grid([args.tau], what="--tau")
         nemo_runs = [r for p in args.nemotron for r in load_runs_v2(p)]
+        check_same_task([*args.random, *args.nemotron], [*random_runs, *nemo_runs])
         budget = random_runs[0].budget
         rows_a = run_rows(random_runs, args.tau)
         rows_c = run_rows(nemo_runs, args.tau)

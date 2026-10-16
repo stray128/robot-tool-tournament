@@ -18,11 +18,11 @@ share of ``physics_invalid`` episodes (above 1 % it is logged in ``docs/DEVIATIO
 
 * The screening sample's Sobol seed differs from every gate seed and every search seed
   (:func:`check_screening_seed`).
-* At most 3 logged iterations. Each iteration after the first may change task-level knobs
-  only: part dimensions, density or material (``part:``), placements (``placement:``),
-  friction or grip force within the gripper's spec (``task:mu``, ``task:grip_force_n``), and
-  the registration tolerances (``tolerance:``). Nothing per design, no entrant, no physics
-  setting.
+* At most 3 logged iterations. Each iteration after the first may change suite-level knobs
+  only: part dimensions, density or material (``part:``), placements (``placement:``), and
+  the registration tolerances (``tolerance:``). Nothing per design, no entrant, and no
+  physics or task setting: friction stays 0.3 and the grip force 25 N per jaw, because the
+  fixed claims (PREREG A13) and the hashed engineering notes are stated at those values.
 * The registration tolerances change in at most one iteration.
 * After the last iteration: pass -> freeze; only the headroom criterion failing -> declare
   the miss and freeze; anything else -> fallback F1 (v1 protocol), the founder's go/no-go.
@@ -59,6 +59,7 @@ __all__ = [
     "GV3Targets",
     "check_knob",
     "check_screening_seed",
+    "episode_outcome",
     "freeze_hashes",
     "gv3_decision",
     "score_designs_v2",
@@ -81,7 +82,6 @@ FREEZE_FILES: Final[tuple[str, ...]] = (
     "configs/entrants_v2.yaml",
     "configs/parts_v2.yaml",
 )
-_TASK_KNOBS: Final[frozenset[str]] = frozenset({"mu", "grip_force_n"})
 _TOLERANCES: Final[frozenset[str]] = frozenset(
     {"seat_short_mm", "centre_dx_mm", "centre_dy_mm", "yaw_deg", "tilt_close_deg", "tilt_hold_deg"}
 )
@@ -117,10 +117,48 @@ class DesignScoreV2:
         return d
 
 
-def _success_v2(rec: Mapping[str, Any]) -> bool:
-    if "success_v2" in rec:
-        return bool(rec["success_v2"])
-    return bool(rec["success"]) and bool(rec["registered"])
+def episode_outcome(rec: Mapping[str, Any]) -> tuple[bool, bool | None]:
+    """``(success_v2, lift_success)`` of one v2 episode record, whichever convention wrote it.
+
+    Two record conventions exist, and both are read:
+
+    * the search harness (``EpisodeOutcome`` in ``rtt.search.base``): ``success`` *is*
+      ``success_v2`` and ``lift_success`` is the lift-only result;
+    * a sim-level record without ``lift_success``: ``success`` is lift-only, and
+      ``success_v2`` is either explicit or ``success`` and ``registered``. With an explicit
+      ``success_v2`` and no ``success``, the lift-only result is unknown (``None``).
+
+    An explicit ``success_v2`` always wins. A record that contradicts itself is refused
+    rather than scored: a registered success that did not lift, that is not
+    ``registered``, or that carries a ``not_registered`` sub-flag (``jam_on_close``,
+    ``off_centre``). So a jammed part never counts as a registered grasp.
+    """
+    lift_raw = rec.get("lift_success")
+    if lift_raw is not None:  # harness convention: success is success_v2
+        lift = bool(lift_raw)
+        reg_ok = bool(rec["success"])
+        if "success_v2" in rec and bool(rec["success_v2"]) != reg_ok:
+            raise ValueError(
+                "inconsistent episode record: it has lift_success, so success is success_v2, "
+                f"but success_v2 is {rec['success_v2']!r} and success {rec['success']!r}"
+            )
+    elif "success_v2" in rec:  # sim-record convention, explicit success_v2
+        reg_ok = bool(rec["success_v2"])
+        lift = None if rec.get("success") is None else bool(rec["success"])
+    else:  # sim-record convention: success is lift-only
+        lift = bool(rec["success"])
+        reg_ok = lift and bool(rec["registered"])
+    if reg_ok:
+        if lift is False:
+            raise ValueError("inconsistent episode record: success_v2 without a lift-only success")
+        if rec.get("registered") is not None and not bool(rec["registered"]):
+            raise ValueError("inconsistent episode record: success_v2 on an episode that is not registered")
+        if rec.get("jam_on_close") or rec.get("off_centre"):
+            raise ValueError(
+                "inconsistent episode record: success_v2 with a not_registered sub-flag "
+                "(jam_on_close or off_centre)"
+            )
+    return reg_ok, lift
 
 
 def _invalid(rec: Mapping[str, Any]) -> bool:
@@ -136,9 +174,10 @@ def score_designs_v2(
 ) -> list[DesignScoreV2]:
     """Score every design in ``names`` (design_id -> (name, origin)) from its episode records.
 
-    ``success_v2`` is read from the record, or computed as lift-and-hold ``success`` and
-    ``registered``; a ``physics_invalid`` episode (``bad_qacc`` or that failure mode) is a
-    failure. Every design must have ``episodes_per_design`` episodes (``None``: any number).
+    ``success_v2`` and the lift-only result come from :func:`episode_outcome` (either record
+    convention; contradictory records are refused); a ``physics_invalid`` episode
+    (``bad_qacc`` or that failure mode) is a failure on both. Every design must have
+    ``episodes_per_design`` episodes (``None``: any number).
     """
     grouped: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
     for rec in records:
@@ -150,7 +189,11 @@ def score_designs_v2(
             raise ValueError(f"{name} ({design_id}): no episode records")
         if episodes_per_design is not None and len(recs) != episodes_per_design:
             raise ValueError(f"{name} ({design_id}): {len(recs)} episodes, expected {episodes_per_design}")
-        ok = [_success_v2(r) and not _invalid(r) for r in recs]
+        outcomes = [episode_outcome(r) for r in recs]
+        ok = [reg and not _invalid(r) for r, (reg, _) in zip(recs, outcomes, strict=True)]
+        if any(lift is None for _, lift in outcomes):
+            raise ValueError(f"{name} ({design_id}): an episode record has no lift-only result")
+        lifted = [bool(lift) and not _invalid(r) for r, (_, lift) in zip(recs, outcomes, strict=True)]
         by_part: dict[str, list[bool]] = defaultdict(list)
         by_place: dict[str, list[bool]] = defaultdict(list)
         for r, s in zip(recs, ok, strict=True):
@@ -165,7 +208,7 @@ def score_designs_v2(
                 design_id=design_id,
                 origin=origin,
                 score=sum(ok) / len(ok),
-                lift_score=sum(bool(r["success"]) and not _invalid(r) for r in recs) / len(recs),
+                lift_score=sum(lifted) / len(recs),
                 n_episodes=len(recs),
                 mass_g=None if masses_g is None else masses_g.get(design_id),
                 by_part={k: sum(v) / len(v) for k, v in sorted(by_part.items())},
@@ -375,19 +418,17 @@ def check_screening_seed(seed: int, forbidden: Iterable[int] = ()) -> None:
 
 
 def check_knob(name: str) -> str:
-    """Return the category of a task-level knob, or raise for anything a calibration may not touch."""
+    """Return the category of a calibration knob, or raise for anything a calibration may not touch."""
     category, sep, rest = name.partition(":")
     if not sep or not rest:
         raise ValueError(f"knob {name!r}: expected '<category>:<name>'")
     if category in ("part", "placement"):
         return category
-    if category == "task" and rest in _TASK_KNOBS:
-        return category
     if category == "tolerance" and rest in _TOLERANCES:
         return category
     raise ValueError(
         f"knob {name!r} may not be tuned in calibration (allowed: part:*, placement:*, "
-        f"task:{{{','.join(sorted(_TASK_KNOBS))}}}, tolerance:{{{','.join(sorted(_TOLERANCES))}}})"
+        f"tolerance:{{{','.join(sorted(_TOLERANCES))}}}; friction, grip force and physics stay fixed)"
     )
 
 

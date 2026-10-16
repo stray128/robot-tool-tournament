@@ -142,7 +142,16 @@ def test_rule_digests_are_stable_and_sensitive() -> None:
 # --------------------------------------------------------------------------- run loading
 
 
-def _fake_search(root: Path, arm: str, runs: dict[str, list[float]], *, design_space: str | None) -> Path:
+def _fake_search(
+    root: Path,
+    arm: str,
+    runs: dict[str, list[float]],
+    *,
+    design_space: str | None,
+    task_hash: str = "task-a",
+    lift_bonus: int = 4,
+    per_design: int | None = 48,
+) -> Path:
     out = root / f"{arm}-{len(list(root.iterdir()))}"
     per_run = []
     for i, (run_id, scores) in enumerate(runs.items()):
@@ -153,7 +162,7 @@ def _fake_search(root: Path, arm: str, runs: dict[str, list[float]], *, design_s
             json.dumps(
                 {
                     "index": j + 1,
-                    "score": {"success": s, "lift_success": min(1.0, s + 4 * G)},
+                    "score": {"success": s, "lift_success": min(1.0, max(0.0, s + lift_bonus * G))},
                     "proposal": {"origin": o},
                 }
             )
@@ -167,7 +176,7 @@ def _fake_search(root: Path, arm: str, runs: dict[str, list[float]], *, design_s
         "status": "complete",
         "budget": len(next(iter(runs.values()))),
         "round_sizes": [8, 8, 8, 8, 8],
-        "evaluator": {"episodes_per_design": 48},
+        "evaluator": {"episodes_per_design": per_design, "task_hash": task_hash, "suite_hash": "suite-a"},
         "per_run": per_run,
     }
     if design_space is not None:
@@ -198,6 +207,27 @@ def test_load_runs_v2_requires_the_v2_design_space(tmp_path: Path) -> None:
         tau.load_runs_v2(_fake_search(tmp_path, "random", runs, design_space="box14-v1"))
     with pytest.raises(KeyError, match="no_such"):
         tau.load_runs_v2(good, score_key="no_such")
+
+
+def test_load_runs_v2_refuses_lift_only_scores_filed_as_primary(tmp_path: Path) -> None:
+    rng = np.random.default_rng(2)
+    runs = {"r0": _scores_with_t(12, rng)}
+    # registered above lift-only is impossible: the history holds a lift-only score as "success"
+    swapped = _fake_search(tmp_path, "random", runs, design_space="freeform-v2", lift_bonus=-4)
+    with pytest.raises(ValueError, match="higher registered than lift-only"):
+        tau.load_runs_v2(swapped)
+    with pytest.raises(ValueError, match="episodes per design"):
+        tau.load_runs_v2(_fake_search(tmp_path, "random", runs, design_space="freeform-v2", per_design=None))
+
+
+def test_analyze_refuses_arms_scored_on_different_tasks(tmp_path: Path) -> None:
+    rng = np.random.default_rng(4)
+    a = _fake_search(tmp_path, "random", {"a0": _scores_with_t(30, rng)}, design_space="freeform-v2")
+    c = _fake_search(
+        tmp_path, "nemotron", {"c0": _scores_with_t(12, rng)}, design_space="freeform-v2", task_hash="task-b"
+    )
+    with pytest.raises(ValueError, match="different task/suite"):
+        tau.main(["analyze", "--random", str(a), "--nemotron", str(c), "--tau", str(36 * G)])
 
 
 def test_analyze_cli_recovers_a_planted_effect_end_to_end(tmp_path: Path) -> None:
@@ -435,6 +465,59 @@ def test_score_designs_v2_from_records() -> None:
     assert alt.score == 0.0
 
 
+def test_episode_outcome_reads_both_record_conventions() -> None:
+    eo = calibrate_v2.episode_outcome
+    # search-harness convention: success is success_v2, lift_success is lift-only
+    assert eo({"success": False, "lift_success": True, "registered": False, "jam_on_close": True}) == (
+        False,
+        True,
+    )
+    assert eo({"success": True, "lift_success": True, "registered": True}) == (True, True)
+    # sim-record convention: success is lift-only
+    assert eo({"success": True, "registered": False}) == (False, True)
+    assert eo({"success": True, "registered": True}) == (True, True)
+    assert eo({"success_v2": True}) == (True, None)
+    with pytest.raises(KeyError):
+        eo({"success": True})  # neither registered nor success_v2: never guessed
+
+
+@pytest.mark.parametrize(
+    "rec",
+    [
+        {"success": True, "lift_success": True, "jam_on_close": True},  # jammed, yet registered
+        {"success": True, "lift_success": True, "off_centre": True},
+        {"success_v2": True, "success": True, "jam_on_close": True},
+        {"success": True, "lift_success": False},  # registered without a lift
+        {"success": True, "lift_success": True, "registered": False},
+        {"success": True, "lift_success": True, "success_v2": False},
+        {"success_v2": True, "success": False},
+    ],
+)
+def test_contradictory_records_are_refused_not_scored(rec: dict[str, object]) -> None:
+    with pytest.raises(ValueError, match="inconsistent"):
+        calibrate_v2.episode_outcome(rec)
+
+
+def test_score_designs_v2_with_harness_records() -> None:
+    """Harness records (success = success_v2): lift-only must come from lift_success."""
+    recs = [
+        {
+            "design_id": "imp",
+            "success": i < 12,
+            "lift_success": True,
+            "registered": i < 12,
+            "jam_on_close": i >= 12,
+            "failure_mode": None if i < 12 else "not_registered",
+        }
+        for i in range(48)
+    ]
+    (row,) = score_designs_v2(recs, {"imp": ("imprint_configurator", "entrant")})
+    assert row.score == pytest.approx(12 / 48) and row.lift_score == pytest.approx(1.0)
+    assert row.jam_on_close == 36
+    with pytest.raises(ValueError, match="lift-only"):
+        score_designs_v2([{"design_id": "x", "success_v2": True}] * 48, {"x": ("x", "sobol")})
+
+
 def test_screening_seed_and_knob_rules() -> None:
     check_screening_seed(calibrate_v2.SCREENING_SEED_V2, forbidden=[1001, 1002])
     for bad in (101, 20261018, 205):
@@ -444,9 +527,11 @@ def test_screening_seed_and_knob_rules() -> None:
         check_screening_seed(777, forbidden=[777])
     assert check_knob("part:block.length_mm") == "part"
     assert check_knob("placement:c2") == "placement"
-    assert check_knob("task:mu") == "task"
     assert check_knob("tolerance:seat_short_mm") == "tolerance"
     for bad in (
+        # friction and grip force are fixed: the claims (PREREG A13) and notes are stated at them
+        "task:mu",
+        "task:grip_force_n",
         "entrant:stock.width",
         "design:pad_depth_mm",
         "task:timestep",
@@ -463,14 +548,16 @@ def test_calibration_log_enforces_the_procedure(tmp_path: Path) -> None:
     log = CalibrationLog.open(path)
     bad = _report([0] * 22 + [20] * 22 + [24] * 16 + [30] * 4)  # headroom fails
     with pytest.raises(ValueError, match="iteration 1 is the task as drafted"):
-        log.record(bad, changes={"task:mu": (0.3, 0.35)})
+        log.record(bad, changes={"placement:c2": (-3.0, -2.5)})
     assert log.record(bad)[0] == "iterate"
     with pytest.raises(ValueError, match="must log what changed"):
         log.record(_report(GOOD_SOBOL, iteration=2))
     with pytest.raises(ValueError, match="may not be tuned"):
         log.record(_report(GOOD_SOBOL, iteration=2), changes={"entrant:flat.width": (20, 22)})
+    with pytest.raises(ValueError, match="may not be tuned"):
+        log.record(_report(GOOD_SOBOL, iteration=2), changes={"task:mu": (0.3, 0.35)})
     with pytest.raises(ValueError, match="iteration 3"):
-        log.record(_report(GOOD_SOBOL, iteration=3), changes={"task:mu": (0.3, 0.35)})
+        log.record(_report(GOOD_SOBOL, iteration=3), changes={"placement:c2": (-3.0, -2.5)})
     second = _report([0] * 22 + [20] * 22 + [24] * 16 + [30] * 4, iteration=2)
     assert log.record(second, changes={"tolerance:seat_short_mm": (1.0, 1.2)})[0] == "iterate"
     # tolerances may change only once
@@ -485,7 +572,7 @@ def test_calibration_log_enforces_the_procedure(tmp_path: Path) -> None:
     )
     assert (decision, failing) == ("declare_miss_and_freeze", ["headroom"])
     with pytest.raises(ValueError, match="already closed"):
-        log2.record(_report(GOOD_SOBOL, iteration=4), changes={"task:mu": (0.3, 0.3)})
+        log2.record(_report(GOOD_SOBOL, iteration=4), changes={"placement:c1": (2.0, 2.0)})
     saved = json.loads(path.read_text())
     assert [it["decision"] for it in saved["iterations"]] == ["iterate", "iterate", "declare_miss_and_freeze"]
 
@@ -494,13 +581,13 @@ def test_calibration_log_closes_on_pass_and_keeps_one_sample(tmp_path: Path) -> 
     log = CalibrationLog.open(tmp_path / "log.json")
     assert log.record(_report(GOOD_SOBOL))[0] == "freeze"
     with pytest.raises(ValueError, match="already closed"):
-        log.record(_report(GOOD_SOBOL, iteration=2), changes={"task:mu": (0.3, 0.32)})
+        log.record(_report(GOOD_SOBOL, iteration=2), changes={"placement:c1": (2.0, 1.5)})
     other = CalibrationLog.open(tmp_path / "log2.json")
     other.record(_report([0] * 22 + [20] * 22 + [24] * 16 + [30] * 4))
     moved = _report(GOOD_SOBOL, iteration=2)
     moved.screening_seed = 20261030
     with pytest.raises(ValueError, match="same screening sample"):
-        other.record(moved, changes={"task:mu": (0.3, 0.32)})
+        other.record(moved, changes={"placement:c1": (2.0, 1.5)})
 
 
 def test_freeze_hashes(tmp_path: Path) -> None:
@@ -631,6 +718,35 @@ def test_screen_episode_from_v2_record() -> None:
     assert ep.mode == "slip_during_lift" and not ep.physics_invalid
     bad = ScreenEpisode.from_record({**rec, "registered": True, "bad_qacc": 3})
     assert bad.physics_invalid and not bad.success_v2
+
+
+def test_unmeasured_values_count_against_qualification() -> None:
+    # a designed episode with no registration pose is never a centred pass
+    blind = [ScreenEpisode.from_record({"condition": c, "success_v2": True}) for c in HERO_CONDITIONS]
+    assert all(e.offset_mm is None for e in blind)
+    assert evaluate_part("p", _stock_fails(5, 3), {"d": blind}).design_passes == 0
+    # an imprint episode with no shortfall or offset is never a jam
+    unmeasured = [ScreenEpisode(condition=c, success_v2=False) for c in TRANSLATION_CONDITIONS]
+    assert evaluate_part("p", _stock_fails(5, 3), {"d": _eps()}, unmeasured).imprint_hits == 0
+    # an unmeasured tilt is never a visible failure
+    quiet = [
+        ScreenEpisode(condition=c, success_v2=False, failure_mode="not_registered") for c in HERO_CONDITIONS
+    ]
+    assert evaluate_part("p", quiet, {"d": _eps()}).stock_visible == 0
+
+
+def test_non_finite_measurements() -> None:
+    rec = {
+        "condition": "x+1",
+        "success": False,
+        "registered": False,
+        "reg_dx_mm": float("nan"),
+        "reg_dy_mm": 0.0,
+    }
+    ep = ScreenEpisode.from_record({**rec, "bad_qacc": 2})  # a NaN reset: unmeasured, not a crash
+    assert ep.physics_invalid and ep.offset_mm is None and not ep.success_v2
+    with pytest.raises(ValueError, match="valid episode"):
+        ScreenEpisode.from_record(rec)
 
 
 def test_hero_cli_round_trip(tmp_path: Path) -> None:

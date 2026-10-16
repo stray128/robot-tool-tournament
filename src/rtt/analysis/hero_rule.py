@@ -33,6 +33,12 @@ counts as showing a property only if a strict majority of its episodes do; ties 
 against qualification. An episode flagged ``physics_invalid`` never counts as a stock or
 imprint failure and never counts as a designed pass.
 
+**Unmeasured values count against qualification.** A missing offset, shortfall or tilt is
+``None``, never 0: an unmeasured offset is never a designed pass, an unmeasured shortfall
+or offset is never an imprint jam, and an unmeasured tilt is never a visible failure. A
+non-finite measurement on a valid episode is refused; on a ``physics_invalid`` episode it
+reads as unmeasured.
+
 **Outcome.** Heroes are labelled "showcase parts chosen because the stock finger fails".
 If fewer than 3 parts qualify, the hook uses the imprint-vs-designed offset contrast only
 (``hook_mode = "offset_contrast_only"``).
@@ -48,6 +54,8 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Final, Literal
+
+from rtt.analysis.calibrate_v2 import episode_outcome
 
 __all__ = [
     "HERO_CONDITIONS",
@@ -115,6 +123,8 @@ class HeroRule:
                 "aliases": _MODE_ALIASES,
                 "offset": "planar sqrt(dx^2+dy^2), palm frame, close + 0.25 s",
                 "aggregation": "strict majority of a condition's episodes; ties and physics_invalid against",
+                "unmeasured": "a missing or (on physics_invalid) non-finite value is None and counts against",
+                "outcome": "episode_outcome: explicit success_v2, else harness or sim-record convention",
                 "label": HERO_LABEL,
             },
             sort_keys=True,
@@ -129,9 +139,9 @@ class ScreenEpisode:
     condition: str
     success_v2: bool
     failure_mode: str | None = None
-    tilt_deg: float = 0.0
-    seat_short_mm: float = 0.0
-    offset_mm: float = 0.0
+    tilt_deg: float | None = None
+    seat_short_mm: float | None = None
+    offset_mm: float | None = None
     physics_invalid: bool = False
 
     def __post_init__(self) -> None:
@@ -140,8 +150,9 @@ class ScreenEpisode:
                 f"unknown hero condition {self.condition!r} (expected one of {list(HERO_CONDITIONS)})"
             )
         for name in ("tilt_deg", "seat_short_mm", "offset_mm"):
-            if not math.isfinite(getattr(self, name)):
-                raise ValueError(f"{name} must be finite")
+            value = getattr(self, name)
+            if value is not None and not math.isfinite(value):
+                raise ValueError(f"{name} must be finite (or None when unmeasured)")
 
     @property
     def mode(self) -> str | None:
@@ -151,22 +162,30 @@ class ScreenEpisode:
     def from_record(cls, rec: Mapping[str, Any], *, condition: str | None = None) -> ScreenEpisode:
         """From a v2 episode record (``RECORD_VERSION = 2`` field names)."""
         cond = condition if condition is not None else str(rec.get("hero_condition", rec.get("condition")))
-        if "success_v2" in rec:
-            ok = bool(rec["success_v2"])
-        else:
-            ok = bool(rec["success"]) and bool(rec["registered"])
-        tilts = [
-            float(rec[k]) for k in ("tilt_max_deg", "reg_tilt_deg", "hold_tilt_deg") if rec.get(k) is not None
-        ]
+        ok, _ = episode_outcome(rec)
         mode = rec.get("failure_mode")
         invalid = bool(rec.get("bad_qacc")) or mode == "physics_invalid"
+
+        def measured(key: str) -> float | None:
+            raw = rec.get(key)
+            if raw is None:
+                return None
+            value = float(raw)
+            if not math.isfinite(value):
+                if invalid:
+                    return None
+                raise ValueError(f"{key} = {raw!r} on a valid episode")
+            return value
+
+        tilts = [t for t in map(measured, ("tilt_max_deg", "reg_tilt_deg", "hold_tilt_deg")) if t is not None]
+        dx, dy = measured("reg_dx_mm"), measured("reg_dy_mm")
         return cls(
             condition=cond,
             success_v2=ok and not invalid,
             failure_mode=None if mode is None else str(mode),
-            tilt_deg=max(tilts) if tilts else 0.0,
-            seat_short_mm=float(rec.get("seat_short_mm") or 0.0),
-            offset_mm=math.hypot(float(rec.get("reg_dx_mm") or 0.0), float(rec.get("reg_dy_mm") or 0.0)),
+            tilt_deg=max(tilts) if tilts else None,
+            seat_short_mm=measured("seat_short_mm"),
+            offset_mm=None if dx is None or dy is None else math.hypot(dx, dy),
             physics_invalid=invalid,
         )
 
@@ -246,7 +265,8 @@ def evaluate_part(
         return not e.physics_invalid and not e.success_v2
 
     def stock_visible(e: ScreenEpisode) -> bool:
-        return stock_fail(e) and (e.mode in VISIBLE_MODES or e.tilt_deg > rule.visible_tilt_deg)
+        tilted = e.tilt_deg is not None and e.tilt_deg > rule.visible_tilt_deg
+        return stock_fail(e) and (e.mode in VISIBLE_MODES or tilted)
 
     fails = sum(_majority(stock_by[c], stock_fail) for c in conds)
     visible = sum(_majority(stock_by[c], stock_visible) for c in conds)
@@ -262,9 +282,9 @@ def evaluate_part(
         imp_by = _by_condition(imprint, TRANSLATION_CONDITIONS, f"{part_id} imprint")
 
         def jammed_or_off(e: ScreenEpisode) -> bool:
-            return not e.physics_invalid and (
-                e.seat_short_mm >= rule.imprint_short_mm or e.offset_mm >= rule.imprint_offset_mm
-            )
+            short = e.seat_short_mm is not None and e.seat_short_mm >= rule.imprint_short_mm
+            off = e.offset_mm is not None and e.offset_mm >= rule.imprint_offset_mm
+            return not e.physics_invalid and (short or off)
 
         imprint_hits = sum(_majority(imp_by[c], jammed_or_off) for c in TRANSLATION_CONDITIONS)
         b_ok = imprint_hits >= rule.imprint_min
@@ -274,13 +294,14 @@ def evaluate_part(
         reasons.append("(b) imprint not screened")
 
     def designed_pass(e: ScreenEpisode) -> bool:
-        return not e.physics_invalid and e.success_v2 and e.offset_mm <= rule.designed_offset_mm
+        centred = e.offset_mm is not None and e.offset_mm <= rule.designed_offset_mm
+        return not e.physics_invalid and e.success_v2 and centred
 
     ranking: list[tuple[int, float, str]] = []
     for design_id, eps in designed.items():
         by = _by_condition(eps, conds, f"{part_id} design {design_id}")
         passes = sum(_majority(by[c], designed_pass) for c in conds)
-        offsets = [e.offset_mm for c in conds for e in by[c]]
+        offsets = [math.inf if e.offset_mm is None else e.offset_mm for c in conds for e in by[c]]
         ranking.append((-passes, sum(offsets) / len(offsets), design_id))
     if ranking:
         neg_passes, _, best = min(ranking)
