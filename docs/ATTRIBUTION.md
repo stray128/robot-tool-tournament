@@ -24,12 +24,15 @@ On screen the gripper is always called "an open-source parallel gripper".
 
 **Credit:** Robonine, SO-ARM 102, https://github.com/roboninecom/SO-ARM-102, CC BY 4.0.
 
+**Copyright notice (as supplied upstream):** Copyright (c) 2026 Robonine.
+
 - **Source:** commit `190eb162c9e59d7f6dceab850ea1b5c6a4539c14`, files
   `simulation/urdf/meshes/link5_1.stl` (frame), `clamp1_1.stl` (left clamp) and
   `clamp2_1.stl` (right clamp). They are vendored unmodified in
   `assets/gripper/so_arm_102/meshes/` with the licence text, and pinned by sha256 in
   `assets/gripper/so_arm_102/lock.json`.
-- **Licence:** the upstream licence map puts everything under `simulation/` under
+- **Licence:** the upstream licence map (`LICENSING.md` and `REUSE.toml` at the pinned
+  commit) puts everything under `simulation/` under
   CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). The licence text is in
   `assets/gripper/so_arm_102/LICENSE-CC-BY-4.0.txt`.
 - **Modified:** cut at the jaw root plane into carriage and blade; re-posed into the

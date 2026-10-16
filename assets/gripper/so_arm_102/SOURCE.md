@@ -4,12 +4,14 @@ These files are the simulation meshes of an open-source parallel gripper, used f
 gripper's look in renders and replays and for the "stock" finger entrant.
 
 **Credit:** Robonine, SO-ARM 102, https://github.com/roboninecom/SO-ARM-102, CC BY 4.0.
+Upstream copyright notice: Copyright (c) 2026 Robonine.
 
 - Upstream commit: `190eb162c9e59d7f6dceab850ea1b5c6a4539c14`.
 - Upstream files: `simulation/urdf/meshes/link5_1.stl`, `clamp1_1.stl` and `clamp2_1.stl`,
   plus the licence text `DOCS-LICENSE.txt`, saved here as `LICENSE-CC-BY-4.0.txt`.
-- Upstream licence map: the `simulation/` folder (URDF and meshes) is CC BY 4.0. The
-  fabrication CAD under `models/` is CERN-OHL-P-2.0 and is **not** used or redistributed here.
+- Upstream licence map (`LICENSING.md` and `REUSE.toml` at that commit): the `simulation/`
+  folder (URDF and meshes) is CC BY 4.0. The fabrication CAD under `models/` is
+  CERN-OHL-P-2.0 and is **not** used or redistributed here.
 - `lock.json` pins every file by path, size and sha256. `python scripts/fetch_assets.py`
   downloads and verifies them; `--check` only verifies.
 
