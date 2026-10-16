@@ -84,6 +84,24 @@ the labels are copied into `manifest.json`:
 Check every "assumed" value against a stock jaw before printing. Without the rack, the
 drive has to be transferred from a stock jaw.
 
+### Print pack v2 (freeform jaw pairs)
+
+`make_print_pack_v2(pair, left_stl, right_stl, out_dir, recipe=...)` packs one compiled
+v2 jaw pair (`rtt.design.freeform`) for one part: `left.stl` and `right.stl` (each jaw's
+own solid, root plane on the bed), `mount_left.stl` and `mount_right.stl` (each jaw fused
+with a carriage block), the GLBs, `recipe.json`, `ATTRIBUTION.txt` and `manifest.json`.
+
+- **Block width.** A v2 jaw's root block is the clamp cut face measured on the gripper's
+  simulation mesh: 46 mm across, not the 42 mm of the v1 interface. `v2_clamp()` widens
+  the carriage block to 46 mm (source "measured" in the manifest); the bores, their
+  spacing and the block depth are unchanged.
+- **One solid per file.** Each bare jaw has two blind M3 holes (3.2 mm, 6 mm deep) in its
+  root block for bolting it onto a carriage. In a mount the block covers the root plane,
+  which would seal those holes as voids inside the print, so they are filled: every mount
+  is exactly one closed solid (`voids_filled` in the manifest says how many were filled).
+  The pack refuses any file that is open, inconsistently wound, of zero volume, several
+  separate solids, or that still encloses a void.
+
 ## Measured (2026-10-15, 16-core workstation shared with other jobs)
 
 | Run | Part | Budget | Intake | Search | Certify | Pack | Total | Model spend |

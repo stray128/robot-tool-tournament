@@ -250,3 +250,106 @@ def test_print_pack_v2_refuses_a_jaw_that_misses_its_carriage(pair: Any, tmp_pat
     with pytest.raises(ValueError, match="carriage block"):
         make_print_pack_v2(detached, stls["left"], stls["right"], tmp_path, recipe={})
     assert not any(tmp_path.iterdir())  # nothing half-written
+
+
+# --------------------------------------------------------------------------- print pack v2, real jaws
+
+#: Real generator builds (rtt.design.freeform) on library parts (rtt.parts): every pad strategy,
+#: a hook, a sweep and four different parts. Each jaw carries the 46 mm root block measured on
+#: the gripper's clamp cut face and two blind M3 holes opening on its root plane.
+REAL_PAIRS = (
+    ("flat", "block"),
+    ("imprint_configurator", "pipe_tee"),
+    ("imprint_swept", "steel_slug"),
+    ("ref_wrap", "flanged_bushing"),
+    ("ref_hook", "hex_standoff"),
+)
+
+
+def _real_build(entrant: str, part: str) -> Any:
+    from rtt.design.freeform import build_pair_full, load_entrants_v2
+    from rtt.parts.library import get_part
+    from rtt.sim.task import default_task_v2
+
+    design = {e.name: e for e in load_entrants_v2()}[entrant]
+    return build_pair_full(design, get_part(part), default_task_v2())
+
+
+def _real_stls(build: Any) -> tuple[bytes, bytes]:
+    from rtt.design.freeform import stl_bytes
+
+    return (
+        stl_bytes(build.left_mesh.vertices, build.left_mesh.faces),
+        stl_bytes(build.right_mesh.vertices, build.right_mesh.faces),
+    )
+
+
+def _solid(blob: bytes) -> trimesh.Trimesh:
+    m = trimesh.load(io.BytesIO(blob), file_type="stl", force="mesh")
+    m.merge_vertices()
+    return m
+
+
+@pytest.mark.parametrize(("entrant", "part"), REAL_PAIRS)
+def test_print_pack_v2_packs_real_jaws_as_single_watertight_solids(
+    entrant: str, part: str, tmp_path: Path
+) -> None:
+    from manifold3d import Manifold, OpType
+
+    from rtt.design.freeform import body as B
+    from rtt.part.mount import manifold_from_trimesh
+    from rtt.part.pack import V2_BLOCK_SOURCE
+
+    build = _real_build(entrant, part)
+    l_stl, r_stl = _real_stls(build)
+    zpath = make_print_pack_v2(build.pair, l_stl, r_stl, tmp_path, recipe=build.recipe_record())
+    with zipfile.ZipFile(zpath) as zf:
+        folder = zf.namelist()[0].split("/")[0]
+        read = {n.split("/", 1)[1]: zf.read(n) for n in zf.namelist()}
+    assert sorted(read) == sorted(PACK_V2_FILES)
+    manifest = json.loads(read["manifest.json"])
+    assert manifest["clamp_interface"]["block_width_mm"] == {"value": 46.0, "source": V2_BLOCK_SOURCE}
+    for side, jaw_stl in (("left", l_stl), ("right", r_stl)):
+        jaw, mount = _solid(read[f"{side}.stl"]), _solid(read[f"mount_{side}.stl"])
+        for name, m in ((f"{side}.stl", jaw), (f"mount_{side}.stl", mount)):
+            assert m.is_watertight and m.is_winding_consistent and m.is_volume, name
+            assert m.body_count == 1 and m.volume > 0.0, name
+            assert manifest["files"][name]["volume_mm3"] == pytest.approx(m.volume, rel=1e-6)
+        assert jaw.extents[0] == pytest.approx(46.0, abs=1e-3)  # the measured root block
+        assert mount.extents[0] == pytest.approx(46.0, abs=1e-3)  # the block is as wide as the jaw
+        # the bare jaw keeps its two bolt holes (filling them adds their volume) ...
+        holes = []
+        sy = 1.0 if side == "left" else -1.0
+        r, depth = 500.0 * B.MOUNT_HOLE_DIAMETER, 1000.0 * B.MOUNT_HOLE_DEPTH
+        for sx in (-1.0, 1.0):
+            cyl = Manifold.cylinder(depth, r, r, 64)
+            holes.append(cyl.translate((sx * 1000.0 * B.MOUNT_HOLE_X, sy * 1000.0 * B.MOUNT_HOLE_Y, -depth)))
+        frame_jaw = _solid(jaw_stl)
+        filled = Manifold.batch_boolean([manifold_from_trimesh(frame_jaw), *holes], OpType.Add).volume()
+        assert filled - frame_jaw.volume == pytest.approx(2 * np.pi * r * r * depth, rel=0.05)
+        # ... and the one-piece mount has them filled: no sealed void left inside the print
+        assert manifest["files"][f"mount_{side}.stl"]["voids_filled"] == 2
+    assert folder.startswith("print_pack_")
+
+
+def test_print_pack_v2_refuses_a_block_narrower_than_the_jaw(tmp_path: Path) -> None:
+    from rtt.part.mount import ClampInterface
+
+    build = _real_build("flat", "block")
+    with pytest.raises(ValueError, match="wider than the 42 mm carriage block"):
+        make_print_pack_v2(build.pair, *_real_stls(build), tmp_path, recipe={}, clamp=ClampInterface())
+    assert not any(tmp_path.iterdir())
+
+
+def test_one_solid_check_names_an_enclosed_void() -> None:
+    from rtt.part.pack import _check_one_solid, _fill_voids
+
+    outer = trimesh.creation.box(extents=(10.0, 10.0, 10.0))
+    cavity = trimesh.creation.box(extents=(2.0, 2.0, 2.0))
+    cavity.invert()
+    hollow = trimesh.util.concatenate([outer, cavity])
+    with pytest.raises(ValueError, match="encloses 1 void"):
+        _check_one_solid(hollow, "hollow")
+    solid, n = _fill_voids(hollow, "hollow")
+    assert n == 1 and solid.volume == pytest.approx(1000.0)
+    _check_one_solid(solid, "filled")

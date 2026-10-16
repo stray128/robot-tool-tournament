@@ -29,7 +29,10 @@ part (:class:`rtt.design.freeform.types.FingerPair`):
   is its own part (built against the mirrored part), never the left one mirrored.
 * ``left.glb``, ``right.glb``: the same jaws for viewing, in their jaw (body) frames.
 * ``mount_left.stl``, ``mount_right.stl``: the jaw fused with the carriage block for the
-  gripper's guide rods (:mod:`rtt.part.mount`), upright on the block.
+  gripper's guide rods (:mod:`rtt.part.mount`), upright on the block. The block is as wide as
+  the jaw's root block (:func:`v2_clamp`: 46 mm, the clamp cut face measured on the gripper),
+  and the jaw's two M3 bolt holes, which open on the root plane the block covers, are filled,
+  so each mount is one closed solid with no enclosed void.
 * ``recipe.json``, ``certificate.html`` (when given), ``ATTRIBUTION.txt``,
   ``manifest.json`` (every file's bytes and sha256, the jaw-frame STL hashes checked
   against ``JawGeometry.print_mesh_sha``, masses, ids) and ``README.txt``.
@@ -60,7 +63,14 @@ from rtt.search.select import FrozenDesign
 from rtt.sim.task import default_task
 from rtt.store.manifest import write_json_atomic
 
-__all__ = ["PACK_FILES", "PACK_V2_FILES", "collect_run", "make_print_pack", "make_print_pack_v2"]
+__all__ = [
+    "PACK_FILES",
+    "PACK_V2_FILES",
+    "collect_run",
+    "make_print_pack",
+    "make_print_pack_v2",
+    "v2_clamp",
+]
 
 PACK_FILES: Final = (
     "README.txt",
@@ -374,10 +384,12 @@ left.stl, right.stl
     The two jaws in millimetres, already turned for printing: root plane on the bed,
     tip up. The pad faces print as vertical walls, so no supports are needed. The right
     jaw is its own part; do not mirror the left one.
+    Each has two M3 holes (3.2 mm, 6 mm deep) in its root block, to bolt it onto a carriage.
 mount_left.stl, mount_right.stl
-    The same jaws fused with a carriage block for the gripper's two guide rods (bores
-    {bore} mm at {spacing} mm centres), upright on the block. Print these to replace the
-    stock jaws; print left/right.stl to bolt onto your own carriages instead.
+    The same jaws fused with a {width} mm carriage block for the gripper's two guide rods
+    (bores {bore} mm at {spacing} mm centres), upright on the block. Each is one piece, so
+    its M3 holes are filled. Print these to replace the stock jaws; print left/right.stl
+    to bolt onto your own carriages instead.
 left.glb, right.glb
     The jaws for any 3D viewer, in the gripper's frame (metres, Z up).
 recipe.json, manifest.json
@@ -420,8 +432,63 @@ def _print_upright(mesh_mm: trimesh.Trimesh) -> trimesh.Trimesh:
     return out
 
 
-def _mount(jaw_mm: trimesh.Trimesh, side: str, iface: ClampInterface) -> trimesh.Trimesh:
-    """The jaw (jaw frame, mm) fused with the carriage block, turned upright on the block."""
+V2_BLOCK_SOURCE: Final = (
+    "measured: the clamp cut face of the gripper's simulation mesh (the jaw's root block)"
+)
+WIDTH_TOL_MM: Final = 1e-3  # float32 STL coordinates on the 46 mm root block land within this
+
+
+def v2_clamp() -> ClampInterface:
+    """The carriage block for a v2 jaw: as wide as the jaw's root block.
+
+    v2 jaws carry the footprint of the clamp cut face measured on the gripper's own mesh
+    (:data:`rtt.design.freeform.body.ROOT_BLOCK_X`, 46 mm across), wider than the 42 mm root
+    footprint of the v1 clamp interface, so the v2 block is 46 mm wide. The rod bores, their
+    spacing and the block depth are the v1 interface's.
+    """
+    from rtt.design.freeform.body import ROOT_BLOCK_X
+
+    return ClampInterface(block_width_mm=round(1000.0 * (ROOT_BLOCK_X[1] - ROOT_BLOCK_X[0]), 4))
+
+
+def _check_one_solid(mesh: trimesh.Trimesh, what: str) -> None:
+    """Refuse anything but one closed, outward-facing solid of positive volume, with no void."""
+    if not (mesh.is_watertight and mesh.is_winding_consistent and mesh.is_volume):
+        raise ValueError(f"{what} is not a closed, consistently oriented solid")
+    if not mesh.volume > 0.0:
+        raise ValueError(f"{what} has no positive volume ({mesh.volume:g} mm^3)")
+    if mesh.body_count != 1:
+        shells = mesh.split(only_watertight=False)
+        voids = sum(1 for m in shells if m.volume < 0.0)
+        if voids:
+            raise ValueError(f"{what} encloses {voids} void(s); a printed solid must not")
+        raise ValueError(f"{what} is {mesh.body_count} separate solids, not one")
+
+
+def _fill_voids(mesh: trimesh.Trimesh, what: str) -> tuple[trimesh.Trimesh, int]:
+    """The solid with every enclosed void filled, and how many there were.
+
+    A void is a closed shell facing inward (negative volume) inside the solid; dropping its
+    shell fills it exactly. More than one outward shell means separate solids: an error.
+    """
+    if mesh.body_count == 1:
+        return mesh, 0
+    shells = mesh.split(only_watertight=False)
+    outer = [m for m in shells if m.volume > 0.0]
+    if len(outer) != 1:
+        raise ValueError(
+            f"{what} is {len(outer)} separate solids, not one (the jaw does not reach its carriage block)"
+        )
+    return outer[0], len(shells) - 1
+
+
+def _mount(jaw_mm: trimesh.Trimesh, side: str, iface: ClampInterface) -> tuple[trimesh.Trimesh, int]:
+    """The jaw (jaw frame, mm) fused with the carriage block, turned upright on the block.
+
+    The jaw's two M3 bolt holes open on its root plane, which the block covers: fused, they
+    would be two sealed voids inside the print. They are filled (:func:`_fill_voids`), so the
+    mount is exactly one closed solid; returns it and the number of voids filled.
+    """
     from manifold3d import Manifold, OpType
 
     from rtt.design.freeform.types import CARRIAGE_INNER_Y
@@ -431,14 +498,19 @@ def _mount(jaw_mm: trimesh.Trimesh, side: str, iface: ClampInterface) -> trimesh
     if side == "right":  # the same block turned 180 degrees about z, as the stock right jaw
         block = block.rotate((0.0, 0.0, 180.0))
     lo, hi = jaw_mm.bounds
-    if lo[0] < -iface.block_width_mm / 2.0 or hi[0] > iface.block_width_mm / 2.0:
-        raise ValueError(f"the {side} jaw is wider than the carriage block")
+    half = iface.block_width_mm / 2.0 + WIDTH_TOL_MM
+    if lo[0] < -half or hi[0] > half:
+        raise ValueError(
+            f"the {side} jaw spans x {lo[0]:.3f} to {hi[0]:.3f} mm, wider than the "
+            f"{iface.block_width_mm:g} mm carriage block"
+        )
     solid = Manifold.batch_boolean([block, manifold_from_trimesh(jaw_mm)], OpType.Add)
     mesh = solid.to_mesh()
     fused = trimesh.Trimesh(
         np.asarray(mesh.vert_properties, dtype=np.float64)[:, :3], np.asarray(mesh.tri_verts), process=True
     )
-    out = fused.copy()
+    out, filled = _fill_voids(fused, f"the {side} mount")
+    out = out.copy()
     lo, hi = out.bounds
     out.apply_translation([-(lo[0] + hi[0]) / 2.0, -(lo[1] + hi[1]) / 2.0, -lo[2]])  # block down
     rot = np.eye(4)
@@ -446,7 +518,7 @@ def _mount(jaw_mm: trimesh.Trimesh, side: str, iface: ClampInterface) -> trimesh
     out.apply_transform(rot)  # tip up, block on the bed
     lo, hi = out.bounds
     out.apply_translation([0.0, 0.0, -lo[2]])
-    return out
+    return out, filled
 
 
 def make_print_pack_v2(
@@ -482,25 +554,19 @@ def make_print_pack_v2(
             "the stock blade is the open-source gripper's own part (CC BY 4.0), not a generated "
             "jaw; this pack's files are CC0-1.0, so it is not packed here"
         )
-    iface = clamp or ClampInterface()
-    meshes, mounts = {}, {}
+    iface = clamp or v2_clamp()
+    meshes: dict[str, trimesh.Trimesh] = {}
+    mounts: dict[str, trimesh.Trimesh] = {}
+    voids: dict[str, int] = {}
     for side, data, jaw in (("left", left_stl, pair.left), ("right", right_stl, pair.right)):
         if hashlib.sha256(data).hexdigest() != jaw.print_mesh_sha:
             raise ValueError(f"{side}.stl does not match the pair's print_mesh_sha")
         mesh = trimesh.load(io.BytesIO(data), file_type="stl", force="mesh", process=True)
         mesh.merge_vertices()
-        if not (mesh.is_watertight and mesh.is_volume):
-            raise ValueError(f"{side}.stl is not a closed, consistently oriented solid")
-        if mesh.body_count != 1:
-            raise ValueError(f"{side}.stl has {mesh.body_count} separate solids; a jaw prints as one")
-        mount = _mount(mesh, side, iface)
-        if not mount.is_watertight:
-            raise ValueError(f"the {side} mount jaw is not watertight")
-        if mount.body_count != 1:
-            raise ValueError(
-                f"the {side} jaw does not reach its carriage block (the mount is {mount.body_count} solids)"
-            )
-        meshes[side], mounts[side] = mesh, mount
+        _check_one_solid(mesh, f"{side}.stl")
+        mount, filled = _mount(mesh, side, iface)
+        _check_one_solid(mount, f"the {side} mount (jaw fused with its carriage block)")
+        meshes[side], mounts[side], voids[side] = mesh, mount, filled
     base = Path(out_dir)
     folder = name or f"print_pack_{pair.design_id[:12]}_{pair.part_id}"
     if not _SAFE_FOLDER.fullmatch(folder):
@@ -531,9 +597,16 @@ def make_print_pack_v2(
             "units": "mm",
             "orientation": "print (root plane on the bed, tip up)",
             "watertight": True,
+            "volume_mm3": round(float(mesh.volume), 3),
             "jaw_frame_sha256": pair.left.print_mesh_sha if side == "left" else pair.right.print_mesh_sha,
         }
-        files_meta[f"mount_{side}.stl"] = {"units": "mm", "orientation": "print (carriage block on the bed)"}
+        files_meta[f"mount_{side}.stl"] = {
+            "units": "mm",
+            "orientation": "print (carriage block on the bed)",
+            "watertight": True,
+            "volume_mm3": round(float(mounts[side].volume), 3),
+            "voids_filled": voids[side],
+        }
         files_meta[f"{side}.glb"] = {"units": "m", "frame": "jaw body frame, Z up"}
     write_json_atomic(pack / "recipe.json", recipe)
     if certificate_html is not None:
@@ -548,6 +621,7 @@ def make_print_pack_v2(
             design=pair.design_id[:12],
             part=pair.part_id,
             disclaimer=DISCLAIMER,
+            width=f"{iface.block_width_mm:g}",
             bore=f"{iface.rod_bore_d_mm:g}",
             spacing=f"{iface.rod_spacing_mm:g}",
             mass_left=f"{1000.0 * pair.left.mass:.1f}",
@@ -556,6 +630,9 @@ def make_print_pack_v2(
         ),
         encoding="utf-8",
     )
+    clamp_interface = iface.describe()
+    if iface.block_width_mm == v2_clamp().block_width_mm:
+        clamp_interface["block_width_mm"]["source"] = V2_BLOCK_SOURCE
     files = {}
     for path in sorted(p for p in pack.iterdir() if p.is_file()):
         files[path.name] = {
@@ -584,7 +661,7 @@ def make_print_pack_v2(
                 "pieces": {"left": pair.left.n_pieces, "right": pair.right.n_pieces},
             },
             "part": {"part_id": pair.part_id, **(part or {})},
-            "clamp_interface": iface.describe(),
+            "clamp_interface": clamp_interface,
             "files": files,
         },
     )
