@@ -76,6 +76,7 @@ from rtt.sim.task import TaskConfig, default_task, task_digest
 __all__ = [
     "ASSET_LICENSE",
     "DEFAULT_CONFIG",
+    "DEFAULT_CONFIG_V2",
     "GSO_CITATION",
     "MAX_PACK_FILE_BYTES",
     "CandidateResult",
@@ -109,10 +110,13 @@ __all__ = [
     "rest_test",
     "secret_seed_material",
     "select_objects",
+    "selection_part_suite",
     "selection_suite",
 ]
 
 DEFAULT_CONFIG = REPO_ROOT / "configs" / "suites" / "heldout_real_v1.yaml"
+DEFAULT_CONFIG_V2 = REPO_ROOT / "configs" / "suites" / "heldout_real_v2.yaml"
+TEXTURE_FILE = "texture.png"
 CACHE_ENV = "RTT_GSO_CACHE"
 DEFAULT_CACHE = Path("~/.cache/rtt/gso")
 SCREEN_VERSION = 1  # bump whenever a change here can change a candidate's outcome
@@ -351,6 +355,21 @@ class GsoCache:
             _write_atomic(path, data)
         return path
 
+    def texture_path(self, name: str, file: str = TEXTURE_FILE) -> Path:
+        """Local copy of an object's texture image (fetched on first use, like the mesh).
+
+        Only visual assets need it; screening and scoring never read textures."""
+        _check_name(name)
+        if not _NAME.match(file):
+            raise ValueError(f"not a plain file name: {file!r}")
+        path = self.dir / "models" / name / file
+        if not path.is_file():
+            data = self.fetch(self.source.raw_url(name, file))
+            if not data:
+                raise ValueError(f"{name}/{file}: empty download")
+            _write_atomic(path, data)
+        return path
+
     def screen_dir(self, key: str) -> Path:
         return self.dir / "screen" / key
 
@@ -413,17 +432,50 @@ class RestRules:
 
 @dataclass(frozen=True)
 class DecompositionRules:
-    """Convex decomposition settings passed to :func:`rtt.sim.mesh.mesh_object_from_trimesh`."""
+    """Convex decomposition settings passed to :func:`rtt.sim.mesh.mesh_object_from_trimesh`.
+
+    ``min_parts``, ``retry_threshold`` and ``coacd_version`` are the v2 rule (heldout_real_v2:
+    CoACD 0.02, seed 0, at least 6 pieces else once more at 0.01, CoACD pinned). At their
+    defaults they are left out of every digest and cache key, so v1 keys are unchanged.
+    """
 
     method: Literal["coacd", "hull"] = "coacd"
     threshold: float = 0.05
     max_parts: int = 16
     max_part_vertices: int = 48
     seed: int = 0
+    min_parts: int = 1
+    retry_threshold: float | None = None
+    coacd_version: str | None = None
 
     def __post_init__(self) -> None:
         if self.method not in ("coacd", "hull"):
             raise ValueError(f"decomposition.method must be coacd or hull, got {self.method!r}")
+        if self.min_parts < 1 or self.min_parts > self.max_parts:
+            raise ValueError("decomposition.min_parts must be in [1, max_parts]")
+        if self.retry_threshold is not None and not 0 < self.retry_threshold < self.threshold:
+            raise ValueError("decomposition.retry_threshold must be positive and below threshold")
+        if self.coacd_version is not None and not re.fullmatch(r"\d+(\.\d+)*", self.coacd_version):
+            raise ValueError(
+                f"decomposition.coacd_version must be a version like 1.0.14, got {self.coacd_version!r}"
+            )
+
+    def payload(self) -> dict[str, Any]:
+        """The settings for digests: v2-only fields only when they are not at their default."""
+        out = asdict(self)
+        for key, default in _V2_DECOMPOSITION_DEFAULTS.items():
+            if out[key] == default:
+                del out[key]
+        return out
+
+
+_V2_DECOMPOSITION_DEFAULTS: dict[str, Any] = {"min_parts": 1, "retry_threshold": None, "coacd_version": None}
+
+
+def _rules_payload(rules: ScreenRules) -> dict[str, Any]:
+    out = asdict(rules)
+    out["decomposition"] = rules.decomposition.payload()
+    return out
 
 
 @dataclass(frozen=True)
@@ -468,7 +520,7 @@ class ScreenRules:
         """
         payload = {
             "version": SCREEN_VERSION,
-            "rules": asdict(self),
+            "rules": _rules_payload(self),
             "task": task_digest(task),
             "libraries": _library_versions(),
         }
@@ -541,7 +593,7 @@ class GsoConfig:
             "source": asdict(self.source),
             "draw": asdict(self.draw),
             "placement": asdict(self.placement),
-            "rules": asdict(self.rules),
+            "rules": _rules_payload(self.rules),
             "denylist": {
                 "tokens": sorted(self.denylist.tokens),
                 "name_sha256": sorted(self.denylist.name_sha256),
@@ -585,6 +637,8 @@ def gso_config_from_dict(raw: Mapping[str, Any], where: str = "config") -> GsoCo
         extra = set(sub) - set(cls.__dataclass_fields__)
         if extra:
             raise ValueError(f"{where}: unknown keys in 'rules.{label}': {sorted(extra)}")
+    if decomp.get("coacd_version") is not None:
+        decomp["coacd_version"] = str(decomp["coacd_version"])
     return GsoConfig(
         name=str(raw.get("name", "heldout_real")),
         source=GsoSource(
@@ -991,6 +1045,9 @@ def _evaluate_uncached(
             max_part_vertices=d.max_part_vertices,
             seed=d.seed,
             source_sha256=facts["file_sha256"],
+            min_parts=d.min_parts,
+            retry_threshold=d.retry_threshold,
+            pin_coacd=d.coacd_version,
         )
     except MemoryError:
         raise  # a resource limit, not a property of the object
@@ -1351,6 +1408,45 @@ def selection_suite(
         )
     suffix = "" if selection.mode == "scored" else f"-{selection.mode}"
     return Suite(f"{selection.name}{suffix}", tuple(conditions))
+
+
+def selection_part_suite(
+    selection: Selection,
+    objects: Sequence[objs.MeshObject],
+    *,
+    limit: int | None = None,
+    visual_assets: Mapping[str, str] | None = None,
+) -> Any:
+    """The selection as a v2 :class:`rtt.parts.suite.PartSuite` of scanned parts.
+
+    Same conditions, seeds and order as :func:`selection_suite`; each object becomes a
+    :class:`~rtt.parts.types.PartSpec` of family ``gso`` (same pieces and geometry hash,
+    yaw symmetry detected from the footprint). The density is the object's own when set,
+    else the scan material's (:data:`rtt.parts.materials.SCAN_CLAY`, 1200 kg/m^3, the
+    task_v1 object density the screen's mass cap used); a task with another object density
+    needs the objects' ``density`` set before this call.
+    ``visual_assets`` maps object names to asset ids of their visual meshes.
+    """
+    from rtt.parts.library import part_from_mesh_object
+    from rtt.parts.suite import PartCondition, PartSuite
+
+    v1 = selection_suite(selection, objects, limit=limit)
+    assets = dict(visual_assets or {})
+    conditions = []
+    for c in v1:
+        assert isinstance(c.obj, objs.MeshObject)
+        part = part_from_mesh_object(c.obj, visual_asset=assets.get(c.obj.name))
+        conditions.append(
+            PartCondition(
+                condition_id=c.condition_id,
+                part=part,
+                placement=c.placement,
+                seeds=c.seeds,
+                placement_label=c.placement_label,
+                size_label="scan",
+            )
+        )
+    return PartSuite(v1.name, tuple(conditions))
 
 
 # --------------------------------------------------------------------------- attribution

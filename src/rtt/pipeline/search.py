@@ -1,8 +1,10 @@
 """One search invocation as the ``rtt search`` command and the Nebius search job run it.
 
-:func:`run_search_command` builds the training-suite evaluator on the chosen executor
-and, for the LLM arms, the pre-registered proposer client with its response cache and
-spend ledger inside the output directory, then calls
+:func:`run_search_command` builds the training-suite evaluator of the chosen design space
+(``box-v1``: :class:`~rtt.search.sim_adapter.SimEvaluator` on ``train_v1``; ``freeform-v2``:
+:class:`~rtt.search.sim_adapter.SimEvaluatorV2` on ``train_v2`` under ``task_v2``) on the
+chosen executor and, for the LLM arms, the pre-registered proposer client with its
+response cache and spend ledger inside the output directory, then calls
 :func:`rtt.search.runner.run_search`. The LLM arms always run under a spend cap.
 """
 
@@ -15,10 +17,34 @@ from typing import Any, Final
 
 from rtt.llm.cache import CacheMode
 
-__all__ = ["DEFAULT_SPEND_CAP_USD", "SearchRequest", "parse_seeds", "run_search_command"]
+__all__ = [
+    "DEFAULT_SPEND_CAP_USD",
+    "SPACE_ALIASES",
+    "SearchRequest",
+    "parse_seeds",
+    "parse_space",
+    "run_search_command",
+]
 
 #: Default cap on live model spend for one ``rtt search`` invocation.
 DEFAULT_SPEND_CAP_USD: Final = 2.0
+#: ``--space`` values: the design-space names and their short aliases.
+SPACE_ALIASES: Final[dict[str, str]] = {
+    "box-v1": "box-v1",
+    "v1": "box-v1",
+    "freeform-v2": "freeform-v2",
+    "v2": "freeform-v2",
+}
+
+
+def parse_space(name: str | None) -> str:
+    """``box-v1`` / ``freeform-v2`` from a ``--space`` value (``v1``/``v2`` accepted; default v1)."""
+    if name is None:
+        return "box-v1"
+    try:
+        return SPACE_ALIASES[str(name).strip().lower()]
+    except KeyError:
+        raise ValueError(f"--space: expected one of {sorted(SPACE_ALIASES)}, got {name!r}") from None
 
 
 def parse_seeds(spec: str | None, runs: int) -> list[int]:
@@ -58,17 +84,19 @@ class SearchRequest:
     spend_cap_usd: float = DEFAULT_SPEND_CAP_USD
     cache_mode: CacheMode = "readwrite"
     cache_dir: Path | None = None
+    space: str = "box-v1"
 
 
 def run_search_command(req: SearchRequest) -> Any:
     """Run the search described by ``req``; returns the :class:`~rtt.search.runner.SearchOutcome`."""
     from rtt.search.nemotron import make_proposer_client
     from rtt.search.runner import ARMS, run_search
-    from rtt.search.sim_adapter import SimEvaluator
+    from rtt.search.sim_adapter import SimEvaluator, SimEvaluatorV2
     from rtt.sim.exec_cpu import CpuExecutor
 
     if req.arm not in ARMS:
         raise ValueError(f"unknown arm {req.arm!r}; choose from {sorted(ARMS)}")
+    space = parse_space(req.space)
     out = Path(req.out)
     client = None
     if ARMS[req.arm].uses_llm:
@@ -80,8 +108,14 @@ def run_search_command(req: SearchRequest) -> Any:
         )
     pool = CpuExecutor(req.workers) if req.executor == "cpu" else None
     try:
-        evaluator = SimEvaluator(executor=pool if pool is not None else req.executor, workers=req.workers)
-        return run_search(req.arm, req.runs, req.budget, req.seeds, evaluator, out, client)
+        executor = pool if pool is not None else req.executor
+        if space == "freeform-v2":
+            if req.executor != "cpu":
+                raise ValueError("freeform-v2 runs on the CPU executor only (MuJoCo Warp has no v2 path)")
+            evaluator: Any = SimEvaluatorV2(executor=executor, workers=req.workers)
+        else:
+            evaluator = SimEvaluator(executor=executor, workers=req.workers)
+        return run_search(req.arm, req.runs, req.budget, req.seeds, evaluator, out, client, space=space)
     finally:
         if pool is not None:
             pool.close()

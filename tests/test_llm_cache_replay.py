@@ -142,3 +142,87 @@ def test_runs_with_failed_calls_replay_exactly(tmp_path: Path, failure: str) -> 
     assert replayed.runs[0].fingerprint == live.runs[0].fingerprint
     assert replayed.manifest["per_run"][0]["llm_disabled"] == live.manifest["per_run"][0]["llm_disabled"]
     assert all(c.cached for c in replayed.runs[0].ctx.llm_calls)
+
+
+# --------------------------------------------------------------------------- freeform-v2 (GV5)
+
+
+@pytest.mark.parametrize("arm", ["nemotron", "zeroshot"])
+def test_v2_replay_reproduces_the_run_with_zero_api_calls(tmp_path: Path, arm: str) -> None:
+    from rtt.search.fakes_v2 import FakeEvaluatorV2, ScriptedProposerV2, stub_entrants
+
+    cache = tmp_path / "llm_cache"
+    recorder = ScriptedProposerV2(11, invalid_rate=0.3, similar_rate=0.2, garbage_rate=0.15)
+    live = run_search(
+        arm,
+        2,
+        40,
+        SEEDS,
+        FakeEvaluatorV2(0),
+        tmp_path / "live",
+        client(cache, "readwrite", recorder),
+        entrants=stub_entrants(),
+    )
+    assert recorder.calls > 0 and len(ResponseCache(cache)) == recorder.calls
+
+    NoNetwork.calls = 0
+    replayed = run_search(
+        arm,
+        2,
+        40,
+        SEEDS,
+        FakeEvaluatorV2(0),
+        tmp_path / "replay",
+        client(cache, "replay", NoNetwork()),
+        entrants=stub_entrants(),
+    )
+    assert NoNetwork.calls == 0
+    for a, b in zip(live.runs, replayed.runs, strict=True):
+        assert a.fingerprint == b.fingerprint
+        assert a.frozen.content_sha256 == b.frozen.content_sha256
+        assert [c.request_hash for c in a.ctx.llm_calls] == [c.request_hash for c in b.ctx.llm_calls]
+        assert all(c.cached for c in b.ctx.llm_calls)
+        for name in ("history.jsonl", "rejections.jsonl"):
+            run_dir = Path("runs") / a.ctx.run_id / name
+            assert (tmp_path / "live" / run_dir).read_bytes() == (tmp_path / "replay" / run_dir).read_bytes()
+    for name in ("designs.jsonl", "designs.parquet"):
+        assert (tmp_path / "live/results" / name).read_bytes() == (
+            tmp_path / "replay/results" / name
+        ).read_bytes()
+    assert read_manifest(tmp_path / "replay/manifest.json")["llm"]["live_calls"] == 0
+
+
+def test_v2_a_changed_notes_block_misses_the_cache(tmp_path: Path) -> None:
+    """The engineering notes are part of the prompt: a different task constant is a different request."""
+    from dataclasses import replace
+
+    from rtt.search.fakes_v2 import FakeEvaluatorV2, ScriptedProposerV2, stub_entrants
+
+    class Slippery(FakeEvaluatorV2):
+        def describe(self):  # type: ignore[no-untyped-def]
+            return replace(super().describe(), friction=0.6)
+
+    cache = tmp_path / "llm_cache"
+    run_search(
+        "nemotron",
+        1,
+        24,
+        SEEDS[:1],
+        FakeEvaluatorV2(0),
+        tmp_path / "live",
+        client(cache, "readwrite", ScriptedProposerV2(3)),
+        entrants=stub_entrants(),
+    )
+    NoNetwork.calls = 0
+    with pytest.raises(CacheMiss):
+        run_search(
+            "nemotron",
+            1,
+            24,
+            SEEDS[:1],
+            Slippery(0),
+            tmp_path / "replay",
+            client(cache, "replay", NoNetwork()),
+            entrants=stub_entrants(),
+        )
+    assert NoNetwork.calls == 0

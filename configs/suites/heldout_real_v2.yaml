@@ -1,0 +1,140 @@
+# Real-object held-out suite v2: the heldout_real_v1 selection rule, unchanged, with the v2
+# convex decomposition (spec section 6) and v2 parts (rtt.parts). Load with
+# rtt.sim.gso.load_gso_config(rtt.sim.gso.DEFAULT_CONFIG_V2); select with the same pipeline
+# as v1 (rtt.pipeline.heldout_real, config=...), then rtt.sim.gso.selection_part_suite() for
+# the v2 suite of scanned parts (family "gso", yaw symmetry detected from the footprint).
+# Secondary endpoint. Pads conform to the hull union, so a finer decomposition is fair to
+# every design.
+#
+# What changes from v1 (everything else below is copied verbatim):
+#   * decomposition: CoACD threshold 0.02 (v1: 0.05), seed 0, CoACD 1.0.14 pinned (refuses to
+#     run on another version), up to 32 pieces (v1: 16). An object that decomposes into fewer
+#     than 6 solid pieces is decomposed once more at 0.01 and that result is kept. Measured
+#     2026-10-16 on 5 scans: at 0.02 CoACD wants 12-32 pieces, and 4 of 5 hit a cap of 16.
+#     Why: 3 pieces of a bottle (the v1 setting) left 2.9-6.3 mm of penetration.
+#   * draw.exclude_names adds every scan used by the 2026-10-15/16 visual-upgrade prototypes
+#     (simulated, rendered or decomposed there), so none of them is scored.
+#   * The draw order and placements use the same seed domain as v1, so a given secret draws
+#     the same candidates in the same order; the screen can accept a different set, because
+#     the pieces differ. The scored secret is a new one, committed in the v2 PREREG.
+#   * Hashes of every accepted object's hulls go in the PREREG (selection.json records them).
+#
+# --- v1 header follows ---
+# Real-object held-out suite v1: household objects from Google Scanned Objects (GSO).
+# Load with rtt.sim.gso.load_gso_config(); select and score with rtt.pipeline.heldout_real.
+# Protocol, rule derivations and measured numbers: docs/HELDOUT_REAL.md.
+#
+# Source: the MuJoCo conversion of GSO at a pinned commit. Its MJCF (XML) files are MIT,
+# the meshes and textures CC BY 4.0 (Downs et al., 2022). Nothing is vendored: each
+# examined object's model.obj (the scan, in metres) is fetched at run time from the
+# commit-pinned raw URL into a cache directory, and its SHA-256 is recorded.
+#
+# Selection rule (deterministic; a pure function of this file, the task file, the code
+# and the seed):
+#   1. Catalogue: the 1030 object directories under models/ at `commit`. The listing is
+#      checked against `models_tree` (the git tree id) before use.
+#   2. Category rule: an object is dropped if any token of its name (lower case, split on
+#      non-alphanumerics) is in `denylist.tokens`, or the SHA-256 of its full name is in
+#      `denylist.name_sha256`. Vehicles and their toy models are out: most are wheeled,
+#      and a scan fuses the wheels to the body, so it cannot roll as the real object would.
+#   3. Draw order: a permutation of the remaining names from the seed (SHA-256 domain
+#      separated; the scored draw uses the held-out secret, the dev draw `dev_seed`).
+#   4. Walk the permutation and accept an object if, in the most probable stable pose
+#      (probability >= min_pose_probability) that fits, it passes every rule below; stop
+#      at n_objects accepted. Every examined object that fails is listed with its reason.
+#   5. No object simulated during development is scored: every name in
+#      `draw.exclude_names` is dropped from the scored pool, and the scored draw refuses to
+#      run while the current dev draw has an object missing from that list.
+name: heldout_real_v2
+
+source:
+  repo: kevinzakka/mujoco_scanned_objects
+  commit: 6ff8d275cebfd5b47e49685e3cfbe64b20e49a3c   # 2022-07-07 "Add citation."; the repository's last commit
+  models_tree: f3147fe21181395ff28d8e146254e1c8c9603876
+  n_models: 1030
+  mesh_file: model.obj
+
+draw:
+  n_objects: 64                 # scored draw (Addendum A: 50-100)
+  dev_seed: 20261016            # public: the exploratory smoke subset only
+  n_dev: 10
+  exclude_dev: true             # recompute the dev draw and require it to be in exclude_names
+  seeds_per_condition: 2        # jitter seeds per object (as the synthetic held-out suite)
+  # Every object simulated during development, never scored: the current dev draw (10) and
+  # the first dev draw of 2026-10-15 (made before the category rule was corrected; 6 of its
+  # objects are not in the current draw), on which entrants and the CoACD-vs-hull study ran.
+  exclude_names:
+    - BIRD_RATTLE
+    - Big_O_Sponges_Assorted_Cellulose_12_pack
+    - Crayola_Crayons_24_count
+    - Home_Fashions_Washcloth_Linen
+    - Jawbone_UP24_Wireless_Activity_Tracker_Pink_Coral_L
+    - Just_For_Men_Mustache_Beard_Brushin_Hair_Color_Gel_Kit_Jet_Black_M60
+    - Lutein
+    - OXO_Cookie_Spatula
+    - Perricone_MD_No_Mascara_Mascara
+    - Perricone_MD_Nutritive_Cleanser
+    - Perricone_MD_Photo_Plasma
+    - Phillips_Milk_of_Magnesia_Saline_Laxative_Liquid_Original
+    - Phillips_Stool_Softener_Liquid_Gels_30_liquid_gels
+    - Playmates_Industrial_CoSplinter_Teenage_Mutant_Ninja_Turtle_Action_Figure
+    - Womens_Angelfish_Boat_Shoe_in_Linen_Oat
+    - Womens_Authentic_Original_Boat_Shoe_in_Classic_Brown_Leather
+    # v2 additions: scans used by the visual-upgrade prototypes (2026-10-15/16)
+    - 3M_Vinyl_Tape_Green_1_x_36_yd
+    - Beta_Glucan
+    - Cole_Hardware_Mug_Classic_Blue
+    - Craftsman_Grip_Screwdriver_Phillips_Cushion
+    - Marc_Anthony_Strictly_Curls_Curl_Envy_Perfect_Curl_Cream_6_fl_oz_bottle
+    - Pony_C_Clamp_1440
+    - Room_Essentials_Mug_White_Yellow
+    - Threshold_Porcelain_Coffee_Mug_All_Over_Bead_White
+
+placement:                      # per object, drawn from the same seed as the order
+  xy_mm: 80.0                   # nominal x, y uniform in +-80 mm (as heldout_v1)
+  err_xy_mm: 3.0                # pose error unknown to the controller, +-3 mm in x and y
+  err_yaw_deg: 8.0              # and +-8 deg; yaw itself is uniform over a full turn
+
+rules:
+  # Fit: the gripper opens 84 mm (configs/task_v1.yaml); the width across the jaw, in the
+  # chosen stable pose with the narrowest horizontal extent on the closing axis, keeps the
+  # same 5 mm margin as the synthetic held-out suite.
+  max_grip_width_mm: 79.0
+  min_height_mm: 6.0            # the thinnest training part (the 6 mm wire)
+  max_extent_mm: 250.0          # length and height; about 40 % beyond the longest training part
+  min_pose_probability: 0.05    # ignore resting poses a dropped part almost never lands in
+  # Mass: solid at the task's object density (null: physics.object_density, 1200 kg/m^3).
+  # Cap = mu_min * F / (g * safety): mu_min = friction * (1 - jitter.mu_frac) = 0.27,
+  # F = 50 N, g = 9.81 m/s^2, safety 1.5 -> 0.917 kg (the heaviest training part is 0.91 kg).
+  density: null
+  mass_safety_factor: 1.5
+  rest:                         # on the table, gripper parked above, no jitter
+    duration_s: 2.0
+    max_shift_mm: 2.0           # horizontal drift of the centre
+    max_drop_mm: 2.0            # vertical change of the centre
+    max_tilt_deg: 2.0           # total rotation
+    max_speed_mm_s: 5.0         # centre speed at the end
+  decomposition:                # rtt.sim.mesh (the part-intake path); v2 rule
+    method: coacd
+    threshold: 0.02               # v1: 0.05
+    max_parts: 32                 # v1: 16
+    max_part_vertices: 48
+    seed: 0
+    min_parts: 6                  # fewer solid pieces -> one more run at retry_threshold
+    retry_threshold: 0.01
+    coacd_version: "1.0.14"       # pinned: hulls differ between CoACD versions
+
+denylist:
+  tokens: [airplane, auto, automotive, bus, car, cars, carsii, engine, jeep, motor, motorcycle, plane,
+           planes, racing, taxi, tire, tires, tractor, train, trains, truck, trucks, turboprop, tyre,
+           tyres, vehicle, vehicles, wheel, wheels]
+  # Six objects excluded individually, fixed before any seed is revealed. Their names are
+  # kept out of published files, so they are listed by the SHA-256 of the full name (never
+  # of a single word).
+  name_sha256:
+    - 0c309b26fd1fce95677bdcfbeb4d9d7274e91b448c8e07cda8009fc81a7583f6
+    - 10b0ea89f2800d527b77aa6328cfb61fdcd16709e1d3892e19d1d80a586b4afc
+    - 1ccbb7acdf84783980544d2fa28de552aa351b409aff58503eeab6e60a254826
+    - 2dcaa166309d3df3afec6c0368f502f79ee938ac241b6993b958ec89a568eac7
+    - 44da8d70aa2294054da81da474a5c3bd2e326106192b1e55706e1d1505552d96
+    - 8c92133b51c3e9097b1395ee507922adc0277ebdb50031e4eac67a0350ec2bcf

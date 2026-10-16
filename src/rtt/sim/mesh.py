@@ -17,9 +17,14 @@ table like any primitive:
    a fixed ``seed``) when installed, else one convex hull per connected component
    (``decomposition="hull"`` forces this). MuJoCo collides every piece as a convex
    hull, so a concave part needs the decomposition to be held by its real surface.
+   The v2 rule for scans (``min_parts``, ``retry_threshold``, ``pin_coacd``) re-runs
+   CoACD at a finer threshold when it returns too few pieces, and pins the CoACD version.
 5. **Mass properties** from the watertight mesh (volume, centre of mass and inertia,
    per unit density); for a mesh that does not enclose a volume they come from the
    convex pieces instead (overlaps between pieces are counted twice).
+
+:func:`intake_frame` exposes steps 1-3 as an :class:`IntakeFrame`, which replays the same
+rigid steps on another mesh of the object (the textured scan, see :mod:`rtt.sim.gso_visual`).
 
 Decomposition takes from milliseconds (a box) to tens of seconds (a detailed scan),
 so :func:`save_mesh_object` / :func:`read_mesh_object` cache the result as ``.npz``.
@@ -31,6 +36,7 @@ import hashlib
 import json
 import math
 from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
@@ -161,25 +167,44 @@ def _mass_properties(
     return total, com, inertia
 
 
-def mesh_object_from_trimesh(
-    mesh: trimesh.Trimesh,
-    *,
-    name: str,
-    scale: float = 1.0,
-    density: float | None = None,
-    pose_index: int = 0,
-    decomposition: Decomposition = "auto",
-    threshold: float = 0.05,
-    max_parts: int = 16,
-    max_part_vertices: int = 48,
-    seed: int = 0,
-    source_sha256: str = "",
-) -> MeshObject:
-    """Build a :class:`MeshObject` from an in-memory mesh (see the module docstring)."""
+@dataclass(frozen=True, eq=False)
+class IntakeFrame:
+    """The rigid steps that take a mesh into the grasp frame, in the order intake applies them.
+
+    ``scale`` (file units to metres), then ``pose`` (rest on ``z = 0`` in stable pose
+    ``pose_index``, with ``probability``), then ``turn`` (narrowest horizontal extent onto
+    y), then ``centre`` (bounding box on the origin). :meth:`apply` replays them on another
+    mesh of the same object, e.g. the textured scan, so a vertex that equals one of the
+    geometry mesh's lands on bit-identical coordinates.
+    """
+
+    scale: float
+    pose_index: int
+    probability: float
+    pose: np.ndarray
+    turn: np.ndarray
+    centre: np.ndarray
+
+    @property
+    def matrix(self) -> np.ndarray:
+        """The composed 4x4 transform (for exporters; :meth:`apply` replays the steps instead)."""
+        return self.centre @ self.turn @ self.pose @ np.diag([self.scale, self.scale, self.scale, 1.0])
+
+    def apply(self, mesh: trimesh.Trimesh) -> trimesh.Trimesh:
+        out = mesh.copy()
+        out.apply_scale(self.scale)
+        for step in (self.pose, self.turn, self.centre):
+            out.apply_transform(step)
+        return out
+
+
+def intake_frame(
+    mesh: trimesh.Trimesh, *, name: str, scale: float = 1.0, pose_index: int = 0
+) -> tuple[IntakeFrame, trimesh.Trimesh]:
+    """Clean and scale ``mesh``, rest it in stable pose ``pose_index`` and move it into the
+    grasp frame (module docstring, steps 1-3): the frame and the rested, cleaned mesh."""
     if scale <= 0:
         raise ValueError(f"scale must be positive, got {scale}")
-    if max_parts < 1 or max_part_vertices < 4:
-        raise ValueError("max_parts must be >= 1 and max_part_vertices >= 4")
     mesh = _clean(mesh)
     if len(mesh.faces) < 4:
         raise ValueError(f"mesh {name!r} has fewer than 4 usable faces")
@@ -204,16 +229,77 @@ def mesh_object_from_trimesh(
     centre = np.eye(4)
     centre[:3, 3] = -(lo + hi) / 2.0
     rested.apply_transform(centre)
+    return IntakeFrame(float(scale), int(pose_index), probability, pose, turn, centre), rested
 
+
+def coacd_version() -> str | None:
+    """The installed CoACD version, or ``None`` if it is not installed."""
+    from importlib.metadata import PackageNotFoundError, version
+
+    try:
+        return version("coacd")
+    except PackageNotFoundError:
+        return None
+
+
+def decomposition_label(threshold: float, seed: int, version: str | None) -> str:
+    """The ``decomposition`` string of a pinned v2 CoACD run, e.g. ``coacd-1.0.14:t=0.02:seed=0``."""
+    return f"coacd-{version or 'unknown'}:t={threshold:g}:seed={seed}"
+
+
+def mesh_object_from_trimesh(
+    mesh: trimesh.Trimesh,
+    *,
+    name: str,
+    scale: float = 1.0,
+    density: float | None = None,
+    pose_index: int = 0,
+    decomposition: Decomposition = "auto",
+    threshold: float = 0.05,
+    max_parts: int = 16,
+    max_part_vertices: int = 48,
+    seed: int = 0,
+    source_sha256: str = "",
+    min_parts: int = 1,
+    retry_threshold: float | None = None,
+    pin_coacd: str | None = None,
+) -> MeshObject:
+    """Build a :class:`MeshObject` from an in-memory mesh (see the module docstring).
+
+    v2 decomposition rule (all three default to off, which is the v1 behaviour): when CoACD
+    returns fewer than ``min_parts`` solid pieces, it runs again at ``retry_threshold`` and
+    that result is kept whatever its count; ``pin_coacd`` refuses to run unless that exact
+    CoACD version is installed (hulls differ between versions). With any of them set the
+    object's ``decomposition`` records the version, the threshold used and the seed.
+    """
+    if max_parts < 1 or max_part_vertices < 4 or min_parts < 1:
+        raise ValueError("max_parts and min_parts must be >= 1 and max_part_vertices >= 4")
+    frame, rested = intake_frame(mesh, name=name, scale=scale, pose_index=pose_index)
+    probability = frame.probability
+
+    v2_rule = min_parts > 1 or retry_threshold is not None or pin_coacd is not None
+    label: str
     if decomposition == "auto":
         decomposition = "coacd" if coacd_available() else "hull"
     if decomposition == "coacd":
-        pieces = _decompose_coacd(rested, threshold, max_parts, max_part_vertices, seed)
+        installed = coacd_version()
+        if pin_coacd is not None and installed != pin_coacd:
+            raise RuntimeError(
+                f"CoACD {pin_coacd} is pinned for this decomposition, but {installed} is installed"
+            )
+        hulls = _solid_hulls(_decompose_coacd(rested, threshold, max_parts, max_part_vertices, seed))
+        used = threshold
+        if len(hulls) < min_parts and retry_threshold is not None:
+            hulls = _solid_hulls(
+                _decompose_coacd(rested, retry_threshold, max_parts, max_part_vertices, seed)
+            )
+            used = retry_threshold
+        label = decomposition_label(used, seed, installed) if v2_rule else "coacd"
     elif decomposition == "hull":
-        pieces = _decompose_hull(rested, max_parts)
+        hulls = _solid_hulls(_decompose_hull(rested, max_parts))
+        label = "hull"
     else:
         raise ValueError(f"unknown decomposition {decomposition!r}")
-    hulls = [h for h in (_hull(p) for p in pieces) if h is not None]
     if not hulls:
         hull = _hull(np.asarray(rested.vertices))
         if hull is None:
@@ -234,8 +320,12 @@ def mesh_object_from_trimesh(
         source_sha256=source_sha256,
         pose_index=pose_index,
         pose_probability=probability,
-        decomposition=decomposition,
+        decomposition=label,
     )
+
+
+def _solid_hulls(pieces: Sequence[np.ndarray]) -> list[trimesh.Trimesh]:
+    return [h for h in (_hull(p) for p in pieces) if h is not None]
 
 
 def load_mesh_object(
@@ -250,6 +340,9 @@ def load_mesh_object(
     max_parts: int = 16,
     max_part_vertices: int = 48,
     seed: int = 0,
+    min_parts: int = 1,
+    retry_threshold: float | None = None,
+    pin_coacd: str | None = None,
 ) -> MeshObject:
     """Load an STL/OBJ/PLY file as a simulator object resting in a stable pose.
 
@@ -275,6 +368,9 @@ def load_mesh_object(
         max_part_vertices=max_part_vertices,
         seed=seed,
         source_sha256=hashlib.sha256(raw).hexdigest(),
+        min_parts=min_parts,
+        retry_threshold=retry_threshold,
+        pin_coacd=pin_coacd,
     )
 
 

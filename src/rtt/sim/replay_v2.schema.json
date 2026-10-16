@@ -3,7 +3,7 @@
   "$id": "urn:rtt:schema:replay-header:2",
   "title": "RTT replay header, version 2",
   "description": "The <stem>.json header of a v2 episode replay. Poses live in <stem>.bin with the v1 layout: little-endian float32 [frames x bodies x 7], each body frame's world pose (px, py, pz, qx, qy, qz, qw), Z up, metres. Bodies are drawn from content-addressed GLB assets placed in the body frame; v1-style primitive geoms are optional and serve as the collision overlay. Readers accept version 1 (the v1 header) and version 2 (this schema).",
-  "$comment": "Rules JSON Schema cannot express, checked by the writer's tests: n_bodies == len(bodies); the .bin file holds n_frames * n_bodies * 7 float32 values; every visual's asset is a key of assets; each asset key equals sha256[:16] and its uri equals 'assets/' + key + '.glb'; sha256 and bytes match the file; the overlay sidecar, when present, holds n_frames * len(channels) float16 values.",
+  "$comment": "Rules JSON Schema cannot express, checked by rtt.sim.replay.check_header and the tests: n_bodies == len(bodies); the .bin file holds n_frames * n_bodies * 7 float32 values; every visual's asset is a key of assets and every asset is drawn by some visual (assets holds exactly the referenced entries); each asset key equals sha256[:16] and its uri equals 'assets/' + key + '.glb'; sha256 and bytes match the file; the overlay sidecar, when present, holds n_frames * len(channels) float16 values.",
   "type": "object",
   "required": [
     "format",

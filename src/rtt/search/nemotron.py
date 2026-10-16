@@ -108,6 +108,7 @@ from rtt.search.diversity import (
     NUMERIC_PARAMS,
     POINTS_PER_RANGE,
     Nearest,
+    Screened,
     all_cells,
     cell_name,
     cell_of,
@@ -116,9 +117,11 @@ from rtt.search.diversity import (
     nearest,
     neighbours,
     points_of,
+    screen,
     to_points,
 )
-from rtt.search.random_search import DesignSampler, SamplerExhaustedError
+from rtt.search.random_search import SamplerExhaustedError
+from rtt.search.space import V1, DesignSpace
 from rtt.store.manifest import write_json_atomic
 
 __all__ = [
@@ -206,15 +209,20 @@ class PromptLeakError(RuntimeError):
     """A prompt mentioned held-out material; it is never sent."""
 
 
-def assert_prompt_clean(messages: Sequence[Mapping[str, Any]]) -> None:
-    """Refuse any message text that refers to the held-out suite or the secrets folder."""
+def assert_prompt_clean(
+    messages: Sequence[Mapping[str, Any]], pattern: re.Pattern[str] = _FORBIDDEN_PROMPT_TEXT
+) -> None:
+    """Refuse any message text that refers to the held-out suite or the secrets folder.
+
+    v2 arms pass a stricter ``pattern`` that also refuses the unseen held-out part families.
+    """
     for message in messages:
         content = message.get("content")
-        if isinstance(content, str) and _FORBIDDEN_PROMPT_TEXT.search(content):
+        if isinstance(content, str) and pattern.search(content):
             raise PromptLeakError("prompt refers to held-out material; refusing to send it")
 
 
-def scrub_model_text(text: str) -> str:
+def scrub_model_text(text: str, pattern: re.Pattern[str] = _FORBIDDEN_PROMPT_TEXT) -> str:
     """Model-authored text made safe to quote in a later prompt.
 
     The model never sees held-out material, but its own words can still trip the
@@ -223,7 +231,7 @@ def scrub_model_text(text: str) -> str:
     before it is quoted back, so only text this code writes can trigger
     :class:`PromptLeakError`.
     """
-    return _FORBIDDEN_PROMPT_TEXT.sub("[removed]", text)
+    return pattern.sub("[removed]", text)
 
 
 def _json_safe(value: Any) -> Any:
@@ -257,12 +265,12 @@ def _raw_geometry(raw: Any) -> dict[str, Any] | None:
     return _json_safe({k: raw[k] for k in GEOMETRY_PARAMS if k in raw})
 
 
-def _parent_labels(parents: Any) -> tuple[str, ...]:
+def _parent_labels(parents: Any, pattern: re.Pattern[str] = _FORBIDDEN_PROMPT_TEXT) -> tuple[str, ...]:
     """The first two parent labels the model gave, scrubbed, single-line and bounded."""
     if not isinstance(parents, list):
         return ()
     labels = (" ".join(str(p).split())[:_MAX_PARENT_CHARS] for p in parents if isinstance(p, str | int))
-    return tuple(scrub_model_text(label) for label in labels)[:2]
+    return tuple(scrub_model_text(label, pattern) for label in labels)[:2]
 
 
 # --------------------------------------------------------------------------- tool schema
@@ -290,7 +298,9 @@ def reserve_names(n: int) -> list[str]:
     return [f"reserve_{i}" for i in range(1, n + 1)]
 
 
-def _slot_schema(slot: SlotSpec, explain: bool, *, reserve: bool = False) -> dict[str, Any]:
+def _slot_schema(
+    slot: SlotSpec, explain: bool, *, reserve: bool = False, space: DesignSpace | None = None
+) -> dict[str, Any]:
     properties: dict[str, Any] = {}
     if reserve:
         properties["operator"] = {
@@ -321,6 +331,14 @@ def _slot_schema(slot: SlotSpec, explain: bool, *, reserve: bool = False) -> dic
     if explain:
         for name, description in _EXPLAIN_FIELDS.items():
             properties[name] = {"type": "string", "description": description}
+    if space is not None and space.name != V1:
+        properties.update(space.tool_schema())
+        return {
+            "type": "object",
+            "properties": properties,
+            "required": list(properties),
+            "additionalProperties": False,
+        }
     for name in GEOMETRY_PARAMS:
         if name in CATEGORICAL_OPTIONS:
             properties[name] = {"type": "string", "enum": list(CATEGORICAL_OPTIONS[name])}
@@ -336,15 +354,17 @@ def _slot_schema(slot: SlotSpec, explain: bool, *, reserve: bool = False) -> dic
 
 
 def submit_designs_tool(
-    slots: Sequence[SlotSpec], *, explain: bool = False, reserves: int = 0
+    slots: Sequence[SlotSpec], *, explain: bool = False, reserves: int = 0, space: DesignSpace | None = None
 ) -> dict[str, Any]:
     """The forced tool: ``analysis`` first, then one object per slot in order, then the reserves.
 
     With ``explain``, every slot also asks for ``changes`` and ``same_cell_distances``
     between the hypothesis and the parameters (arm C). ``reserves`` adds
     ``reserve_1`` ... ``reserve_n``: extra designs, each with its own operator, that
-    replace rejected slots in order.
+    replace rejected slots in order. A v2 ``space`` replaces the 10 v1 parameters of each
+    slot with ``pad``, ``tip`` and ``params`` (:meth:`~rtt.search.space_v2.FreeformSpaceV2.tool_schema`).
     """
+    v2 = space is not None and space.name != V1
     properties: dict[str, Any] = {
         "analysis": {
             "type": "string",
@@ -352,15 +372,16 @@ def submit_designs_tool(
         }
     }
     for slot in slots:
-        properties[slot.name] = _slot_schema(slot, explain)
+        properties[slot.name] = _slot_schema(slot, explain, space=space)
     for name in reserve_names(reserves):
-        properties[name] = _slot_schema(SlotSpec(name, "reserve"), explain, reserve=True)
+        properties[name] = _slot_schema(SlotSpec(name, "reserve"), explain, reserve=True, space=space)
     extra = f", plus {reserves} reserve designs that replace any rejected one" if reserves else ""
+    noun = "gripper jaw recipes" if v2 else "gripper finger designs"
     return {
         "type": "function",
         "function": {
             "name": "submit_designs",
-            "description": f"Submit {len(slots)} gripper finger designs for simulation, one per slot{extra}.",
+            "description": f"Submit {len(slots)} {noun} for simulation, one per slot{extra}.",
             "parameters": {
                 "type": "object",
                 "properties": properties,
@@ -896,6 +917,15 @@ class ProposerConfig:
     repairs_per_call: int = 1
     reflections_per_call: int = 1
 
+    @classmethod
+    def for_space(cls, space: str) -> ProposerConfig:
+        """Pre-registered defaults: v1's 0.08 / 0.2 bars, or the v2 bars set by the threshold rule."""
+        if space == V1:
+            return cls()
+        from rtt.search.diversity import EXPLORE_MIN_DISTANCE_V2, MIN_DISTANCE_V2
+
+        return cls(min_distance=MIN_DISTANCE_V2, explore_min_distance=EXPLORE_MIN_DISTANCE_V2)
+
     def to_json(self) -> dict[str, Any]:
         return {
             "islands": self.islands,
@@ -978,6 +1008,78 @@ class _FailureLog:
         return data
 
 
+class _Kit:
+    """The design-space operations the LLM machinery needs.
+
+    For ``box-v1`` every method is the module-level v1 function it always was, so a v1 run
+    is byte for byte unchanged; for v2 the same operations go through the design space.
+    """
+
+    def __init__(self, space: DesignSpace, pattern: re.Pattern[str] = _FORBIDDEN_PROMPT_TEXT) -> None:
+        self.space = space
+        self.v1 = space.name == V1
+        self._ds: DesignSpace | None = None if self.v1 else space
+        self.pattern = pattern
+
+    def tool(self, slots: Sequence[SlotSpec], explain: bool, reserves: int) -> dict[str, Any]:
+        return submit_designs_tool(slots, explain=explain, reserves=reserves, space=self._ds)
+
+    def sampler(self, seed: int, context: Any) -> Any:
+        return self.space.sample_sobol(seed, context)
+
+    def raw_geometry(self, raw: Any) -> dict[str, Any] | None:
+        return _raw_geometry(raw) if self.v1 else self.space.raw_params(raw)
+
+    def params_key(self, geometry: Mapping[str, Any]) -> str:
+        return params_key(geometry, self._ds)
+
+    def parse_slot(self, raw: Any, spec: SlotSpec, context: Any) -> tuple[Any, list[str], dict[str, Any]]:
+        if self.v1:
+            return _parse_slot(raw, spec, context)
+        return _parse_slot_space(raw, spec, context, self.space, self.pattern)
+
+    def nearest(self, design: Any, refs: Sequence[Any], labels: Sequence[str] | None = None) -> Nearest:
+        return nearest(design, refs, labels, space=self._ds)
+
+    def neighbours(
+        self, design: Any, refs: Sequence[Any], labels: Sequence[str] | None, k: int, **kw: Any
+    ) -> list[Nearest]:
+        return neighbours(design, refs, labels, k, space=self._ds, **kw)
+
+    def explore_check(
+        self, design: Any, refs: Sequence[Any], labels: Sequence[str] | None, min_cell_distance: float
+    ) -> tuple[bool, Nearest | None]:
+        return explore_check(design, refs, labels, min_cell_distance, space=self._ds)
+
+    def duplicate(
+        self, design: Any, refs: Sequence[Any], labels: Sequence[str], context: Any
+    ) -> Screened | None:
+        """v2 only: ``duplicate_design`` or ``duplicate_geometry`` against ``refs`` (v1: never)."""
+        if self.v1:
+            return None
+        return screen(design, refs, labels, None, space=self.space, context=context)
+
+    def cell_of(self, design: Any) -> tuple[str, str]:
+        return cell_of(design, self._ds)
+
+    def all_cells(self) -> list[tuple[str, str]]:
+        return all_cells(self._ds)
+
+    def distance_points(self, a: Any, b: Any) -> int:
+        return distance_points(a, b, self._ds)
+
+    def min_points(self, min_distance: float) -> int:
+        if self.v1:
+            return min_points(min_distance)
+        return math.ceil(min_distance * POINTS_PER_RANGE * self.space.n_terms - 1e-9)
+
+    def points_row(self, design: Any) -> str:
+        return points_row(design) if self.v1 else self.space.points_row(design)
+
+    def point_differences(self, a: Any, b: Any) -> str:
+        return _point_differences(a, b) if self.v1 else self.space.point_differences(a, b)
+
+
 class LLMProposer(SearchStrategy):
     """Shared machinery of the LLM arms: calls, validation, repair, diversity, fallback."""
 
@@ -988,18 +1090,26 @@ class LLMProposer(SearchStrategy):
     explain_changes: ClassVar[bool] = False
     #: Whether calls also return ``config.reserves`` reserve designs (arm C).
     uses_reserves: ClassVar[bool] = False
+    #: Follow-up prompt templates (v2 arms use their own under ``prompts/v2/``).
+    repair_template: ClassVar[str] = "repair.md"
+    diversity_template: ClassVar[str] = "diversity.md"
+    #: Rejection reasons the reflection call answers.
+    diversity_reasons: ClassVar[tuple[str, ...]] = DIVERSITY_REASONS
+    #: What no prompt may mention; model text quoted back is scrubbed of it first.
+    forbidden: ClassVar[re.Pattern[str]] = _FORBIDDEN_PROMPT_TEXT
 
     def __init__(self, ctx: RunContext, client: LLMClient, config: ProposerConfig | None = None) -> None:
         super().__init__(ctx)
         self.client = client
-        self.config = config or ProposerConfig()
+        self.config = config or ProposerConfig.for_space(ctx.space.name)
         if self.config.islands < 1:
             raise ValueError("at least one island is needed")
         self.n_reserves = self.config.reserves if self.uses_reserves else 0
         if self.n_reserves < 0:
             raise ValueError("reserves must be >= 0")
-        self.tool = submit_designs_tool(self.slots, explain=self.explain_changes, reserves=self.n_reserves)
-        self.fallback = DesignSampler(derive_seed(ctx.run_seed, "fallback", ctx.arm), ctx.gripper_task)
+        self.kit = _Kit(ctx.space, self.forbidden)
+        self.tool = self.kit.tool(self.slots, self.explain_changes, self.n_reserves)
+        self.fallback = self.kit.sampler(derive_seed(ctx.run_seed, "fallback", ctx.arm), ctx.gripper_task)
         self._disabled: str | None = None
         self._messages: dict[int, list[dict[str, str]]] = {}
         self._failures = _FailureLog(client.cache)
@@ -1083,7 +1193,7 @@ class LLMProposer(SearchStrategy):
             pool.extend(self._absorb_reserves(outcome, island, "repair"))
             self._screen(round_index, broken, pool)
         self._screen(round_index, slots, pool)  # leftover repair reserves, before any reflection call
-        if any(s.proposal is None and s.reason in DIVERSITY_REASONS for s in slots):
+        if any(s.proposal is None and s.reason in self.diversity_reasons for s in slots):
             self._reflect(round_index, island, slots, pool, keep=later_mains)
             self._screen(round_index, slots, pool)  # leftover reflection reserves, before the random fill
         for slot in slots:
@@ -1114,8 +1224,8 @@ class LLMProposer(SearchStrategy):
             raw = outcome.args.get(name)
             if raw is None:
                 continue
-            geometry = _raw_geometry(raw)
-            key = params_key(geometry) if geometry is not None else repr(raw)
+            geometry = self.kit.raw_geometry(raw)
+            key = self.kit.params_key(geometry) if geometry is not None else repr(raw)
             if key in self._seen_reserves:
                 continue
             self._seen_reserves.add(key)
@@ -1126,7 +1236,7 @@ class LLMProposer(SearchStrategy):
                 declared = ("explore", "mutate", "crossover")[min(n_parents, 2)]
             spec = SlotSpec(name, str(declared), n_parents)
             slot = _Slot(island, spec, stage=stage, request_hash=outcome.record.request_hash)
-            design, errors, meta = _parse_slot(raw, spec, self.ctx.gripper_task)
+            design, errors, meta = self.kit.parse_slot(raw, spec, self.ctx.gripper_task)
             slot.raw = geometry
             slot.declared, slot.parents = meta["declared"], meta["parents"]
             if design is None:
@@ -1142,6 +1252,7 @@ class LLMProposer(SearchStrategy):
                     hypothesis=meta["hypothesis"],
                     via=stage,
                     request_hash=outcome.record.request_hash,
+                    notes=meta.get("notes", ()),
                 )
             out.append(slot)
         return out
@@ -1173,7 +1284,7 @@ class LLMProposer(SearchStrategy):
             return True
         return False
 
-    def _reference(self, accepted: Sequence[_Slot], island: int) -> tuple[list[FingerDesign], list[str]]:
+    def _reference(self, accepted: Sequence[_Slot], island: int) -> tuple[list[Any], list[str]]:
         """Designs a new proposal must keep its distance from, labelled as ``island`` sees them."""
         designs = [item.design for item in self.ctx.history]
         labels = [item.label for item in self.ctx.history]
@@ -1191,18 +1302,24 @@ class LLMProposer(SearchStrategy):
         assert slot.proposal is not None
         designs, labels = self._reference(accepted, slot.island)
         design = slot.proposal.design
-        near = nearest(design, designs, labels)
+        near = self.kit.nearest(design, designs, labels)
         reason: str | None = None
-        if near.distance < self.config.min_distance:
+        duplicate = self.kit.duplicate(design, designs, labels, self.ctx.gripper_task)
+        if duplicate is not None:
+            reason, message, near = duplicate.reason, duplicate.message, duplicate.near
+        elif near.distance < self.config.min_distance:
             reason = "too_similar"
             message = f"distance {near.distance:.3f} to {near.label} (needs >= {self.config.min_distance:g})"
         elif slot.spec.operator == "explore" and self.config.explore_min_distance > 0:
-            novel, same_cell = explore_check(design, designs, labels, self.config.explore_min_distance)
+            novel, same_cell = self.kit.explore_check(
+                design, designs, labels, self.config.explore_min_distance
+            )
             if not novel and same_cell is not None:
                 reason, near = "not_novel", same_cell
                 message = (
-                    f"explore in the tried cell {cell_name(cell_of(design))}: distance {near.distance:.3f} to "
-                    f"{near.label} (needs an untried cell or >= {self.config.explore_min_distance:g} within the cell)"
+                    f"explore in the tried cell {cell_name(self.kit.cell_of(design))}: distance "
+                    f"{near.distance:.3f} to {near.label} (needs an untried cell or >= "
+                    f"{self.config.explore_min_distance:g} within the cell)"
                 )
         if reason is None:
             slot.screened = True
@@ -1229,50 +1346,71 @@ class LLMProposer(SearchStrategy):
         slot.rejected = design
         slot.proposal = None
 
-    def _problem(self, slot: _Slot, designs: Sequence[FingerDesign], labels: Sequence[str]) -> str:
+    def _problem(self, slot: _Slot, designs: Sequence[Any], labels: Sequence[str]) -> str:
         """One rejected slot for the reflection prompt: exact neighbours, differences and shortfall."""
         cfg = self.config
+        kit = self.kit
         near = slot.similar
         design = slot.rejected
         parents = f" (parent {' + '.join(slot.parents)})" if slot.parents else ""
         if design is None or near is None or near.index is None:
             return f"- {slot.spec.name}: {'; '.join(slot.errors)}"
-        d_pts = distance_points(design, designs[near.index])
+        d_pts = kit.distance_points(design, designs[near.index])
         if slot.reason == "not_novel":
-            same = [labels[i] for i, ref in enumerate(designs) if cell_of(ref) == cell_of(design)]
-            far = min_points(cfg.explore_min_distance)
+            same = [labels[i] for i, ref in enumerate(designs) if kit.cell_of(ref) == kit.cell_of(design)]
+            far = kit.min_points(cfg.explore_min_distance)
             head = (
-                f"- {slot.spec.name}{parents}: its cell {cell_name(cell_of(design))} already holds {', '.join(same)}; "
-                f"the nearest, {near.label}, is {d_pts} points away, and an explore needs an untried cell or "
-                f"{far} points from each of them (short by {max(1, far - d_pts)})."
+                f"- {slot.spec.name}{parents}: its cell {cell_name(kit.cell_of(design))} already holds "
+                f"{', '.join(same)}; the nearest, {near.label}, is {d_pts} points away, and an explore needs an "
+                f"untried cell or {far} points from each of them (short by {max(1, far - d_pts)})."
+            )
+        elif slot.reason == "duplicate_design":
+            head = (
+                f"- {slot.spec.name}{parents}: the same design as {near.label} once inactive parameters are "
+                "dropped and values are rounded to the grid (0 points apart)."
+            )
+        elif slot.reason == "duplicate_geometry":
+            head = (
+                f"- {slot.spec.name}{parents}: builds exactly the same jaws as {near.label} on every training part "
+                f"({d_pts} points apart, but the differences do not change the geometry)."
             )
         else:
-            need = min_points(cfg.min_distance)
+            need = kit.min_points(cfg.min_distance)
             head = (
                 f"- {slot.spec.name}{parents}: {d_pts} points from {near.label} (needs {need}, short by "
                 f"{max(1, need - d_pts)})."
             )
         claimed = slot.declared.get("same_cell_distances")
         if claimed:
-            head += f' You wrote same_cell_distances "{scrub_model_text(claimed[:120])}".'
+            head += f' You wrote same_cell_distances "{self._scrub(claimed[:120])}".'
         lines = [
             head,
-            f"    yours: {cell_name(cell_of(design))} | {points_row(design)}",
+            f"    yours: {cell_name(kit.cell_of(design))} | {kit.points_row(design)}",
             (
-                f"    {near.label}: {cell_name(cell_of(designs[near.index]))} | {points_row(designs[near.index])}; "
-                f"differs by: {_point_differences(design, designs[near.index])}"
+                f"    {near.label}: {cell_name(kit.cell_of(designs[near.index]))} | "
+                f"{kit.points_row(designs[near.index])}; differs by: "
+                f"{kit.point_differences(design, designs[near.index])}"
             ),
         ]
         limit = 2.5 * cfg.min_distance
         others = [
-            n for n in neighbours(design, designs, labels, 4, max_distance=limit) if n.index != near.index
+            n for n in kit.neighbours(design, designs, labels, 4, max_distance=limit) if n.index != near.index
         ]
         if others:
             lines.append(
-                f"    also within {min_points(limit)} points: "
-                + ", ".join(f"{n.label} {round(1000 * n.distance)}" for n in others[:3])
+                f"    also within {kit.min_points(limit)} points: "
+                + ", ".join(f"{n.label} {self._points(n.distance)}" for n in others[:3])
             )
         return "\n".join(lines)
+
+    def _scrub(self, text: str) -> str:
+        return scrub_model_text(text, self.forbidden)
+
+    def _points(self, distance: float) -> int:
+        """A distance in prompt points (v1: 1000 x distance, as it always printed)."""
+        if self.kit.v1:
+            return round(1000 * distance)
+        return round(distance * POINTS_PER_RANGE * self.ctx.space.n_terms)
 
     def _follow_up_note(self) -> str:
         """What a repair or reflection call should do with the explain fields and the reserves."""
@@ -1295,23 +1433,23 @@ class LLMProposer(SearchStrategy):
         keep: int,
     ) -> None:
         for _ in range(self.config.reflections_per_call):
-            pending = [s for s in slots if s.proposal is None and s.reason in DIVERSITY_REASONS]
+            pending = [s for s in slots if s.proposal is None and s.reason in self.diversity_reasons]
             if not pending:
                 return
             designs, labels = self._reference(self._accepted, island)
             problems = "\n".join(self._problem(s, designs, labels) for s in pending)
             keep_names = [s.spec.name for s in slots if s.proposal is not None]
-            used = {cell_of(d) for d in designs}
-            untried = [cell_name(c) for c in all_cells() if c not in used]
+            used = {self.kit.cell_of(d) for d in designs}
+            untried = [cell_name(c) for c in self.kit.all_cells() if c not in used]
             explore_clause = ""
             if any(s.reason == "not_novel" for s in pending):
                 explore_clause = (
                     ", or is an explore in a cell that is already tested and less than "
-                    f"{min_points(self.config.explore_min_distance)} points from a design there"
+                    f"{self.kit.min_points(self.config.explore_min_distance)} points from a design there"
                 )
             text = prompts.render(
-                "diversity.md",
-                min_points=min_points(self.config.min_distance),
+                self.diversity_template,
+                min_points=self.kit.min_points(self.config.min_distance),
                 explore_clause=explore_clause,
                 problems=problems,
                 untried=", ".join(untried) or "none",
@@ -1330,10 +1468,19 @@ class LLMProposer(SearchStrategy):
         designs, _ = self._reference(accepted, slot.island)
         min_d = self.config.min_distance
         before = self.fallback.rejected
-        try:
-            design = self.fallback.sample(1, accept=lambda d: nearest(d, designs).distance >= min_d)[0]
-        except SamplerExhaustedError:
-            design = self.fallback.sample(1)[0]
+        if self.kit.v1:
+            try:
+                design = self.fallback.sample(1, accept=lambda d: nearest(d, designs).distance >= min_d)[0]
+            except SamplerExhaustedError:
+                design = self.fallback.sample(1)[0]
+        else:  # the shared screen: never a duplicate, and the diversity bar while it can be met
+            from rtt.search.random_search import screen_accept
+
+            space, context = self.ctx.space, self.ctx.gripper_task
+            try:
+                design = self.fallback.sample(1, screen_accept(space, context, lambda: designs, min_d))[0]
+            except SamplerExhaustedError:
+                design = self.fallback.sample(1, screen_accept(space, context, lambda: designs, None))[0]
         self.ctx.budget.sampler_rejections += self.fallback.rejected - before
         self.ctx.budget.fallbacks += 1
         slot.proposal = Proposal(
@@ -1353,7 +1500,7 @@ class LLMProposer(SearchStrategy):
         """One forced tool call, or ``None`` when no call may be made (cap or disabled)."""
         if self._disabled is not None or not self.ctx.budget.take_llm_call(keep=keep):
             return None
-        assert_prompt_clean(messages)
+        assert_prompt_clean(messages, self.forbidden)
         tag = f"{self.ctx.run_id}/round{round_index}/island{island}/{kind}"
         sample = derive_seed(self.ctx.run_seed, self.ctx.arm, round_index, island, kind) % (2**31)
         meta: CallMeta | None = None
@@ -1433,8 +1580,8 @@ class LLMProposer(SearchStrategy):
                 )
                 continue
             raw = outcome.args.get(slot.spec.name)
-            design, errors, meta = _parse_slot(raw, slot.spec, self.ctx.gripper_task)
-            slot.raw = _raw_geometry(raw)
+            design, errors, meta = self.kit.parse_slot(raw, slot.spec, self.ctx.gripper_task)
+            slot.raw = self.kit.raw_geometry(raw)
             slot.declared, slot.parents = meta["declared"], meta["parents"]
             slot.request_hash = outcome.record.request_hash
             if design is None:
@@ -1463,6 +1610,7 @@ class LLMProposer(SearchStrategy):
                 hypothesis=meta["hypothesis"],
                 via=stage,
                 request_hash=outcome.record.request_hash,
+                notes=meta.get("notes", ()),
             )
 
     def _repair_messages(
@@ -1487,9 +1635,9 @@ class LLMProposer(SearchStrategy):
             kept = [s.spec.name for s in slots if s.proposal is not None]
             keep = ", ".join(kept) or "none"
         text = prompts.render(
-            "repair.md",
-            problems=scrub_model_text(problems),
-            previous=scrub_model_text(previous),
+            self.repair_template,
+            problems=self._scrub(problems),
+            previous=self._scrub(previous),
             keep=keep,
             reserves_note=self._follow_up_note(),
         )
@@ -1527,6 +1675,32 @@ def _parse_slot(
     if not result.ok or result.design is None:
         return None, list(result.errors), meta
     return result.design, [], meta
+
+
+def _parse_slot_space(
+    raw: Any,
+    spec: SlotSpec,
+    context: Any,
+    space: DesignSpace,
+    pattern: re.Pattern[str] = _FORBIDDEN_PROMPT_TEXT,
+) -> tuple[Any, list[str], dict[str, Any]]:
+    """:func:`_parse_slot` for a v2 space: ``pad``, ``tip`` and ``params`` through the space's validators."""
+    meta: dict[str, Any] = {"parents": (), "hypothesis": None, "declared": {}, "notes": ()}
+    if not isinstance(raw, Mapping):
+        return None, [f"slot '{spec.name}' is missing or is not an object"], meta
+    hypothesis = raw.get("hypothesis")
+    if isinstance(hypothesis, str) and hypothesis.strip():
+        meta["hypothesis"] = " ".join(hypothesis.split())[:_MAX_HYPOTHESIS_CHARS]
+    meta["parents"] = _parent_labels(raw.get("parents"), pattern)
+    for name in _EXPLAIN_FIELDS:
+        value = raw.get(name)
+        if isinstance(value, str) and value.strip():
+            meta["declared"][name] = " ".join(value.split())[:_MAX_DECLARED_CHARS]
+    check = space.validate(space.slot_mapping(raw), context)
+    meta["notes"] = tuple(check.notes)
+    if not check.ok or check.design is None:
+        return None, list(check.errors), meta
+    return check.design, [], meta
 
 
 # --------------------------------------------------------------------------- arm C

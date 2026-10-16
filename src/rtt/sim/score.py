@@ -24,6 +24,22 @@ before a confirmed success count):
    never counts as a success; the flag itself stays in the episode's flags.
 4. Grasped but the object never reached ``success_lift`` -> ``slip_during_lift``.
 5. Reached ``success_lift`` but never held it for ``success_hold`` -> ``unstable_hold``.
+
+Task v2 (:func:`classify_v2`, spec section 7) scores a *registered grasp*: the v1 lift-and-hold
+criterion above (reported as ``lift_success``) and the registration rule of
+:mod:`rtt.sim.register`. Three failure modes are added (:data:`FAILURE_MODES_V2`), and the
+order of precedence is: the physics flags, ``physics_invalid`` (a MuJoCo state reset in the
+scored part of the episode) then ``physics_unreliable`` (a held episode whose jaw-part
+penetration went above ``checks.held_penetration_max_mm``, 1 mm; founder ruling 4 of
+2026-10-16); then the v1 labels (missed, ejected, slip, unstable); then ``not_registered``
+(lifted and held, but not seated, centred or upright). Both physics flags fail the registered
+and the lift-only criterion alike. ``invalid_build`` marks a design whose jaws could not be
+built for a part (it scores as a failure there, without a simulation).
+
+The scored part of an episode runs up to the check tick at which the outcome is decided; the
+checks never run in the replay-only tail, so every flag and maximum the scorer sees, and the
+``bad_qacc`` count in the record, belong to the scored part. One rule therefore holds in the
+simulator, the search harness and the analysis: the reset counter rose -> ``physics_invalid``.
 """
 
 from __future__ import annotations
@@ -33,7 +49,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Literal
 
-from rtt.sim.checks import FLAG_GRIPPER_ENV, CheckEvent
+from rtt.sim.checks import FLAG_BAD_QACC, FLAG_GRIPPER_ENV, CheckEvent
 from rtt.sim.controller import Phase
 from rtt.sim.task import ScoreConfig
 
@@ -46,6 +62,25 @@ FAILURE_MODES: tuple[FailureMode, ...] = (
     "ejected_on_close",
     "unstable_hold",
     "finger_env_collision",
+)
+
+FailureModeV2 = Literal[
+    "missed_grasp",
+    "slip_during_lift",
+    "ejected_on_close",
+    "unstable_hold",
+    "finger_env_collision",
+    "not_registered",
+    "physics_invalid",
+    "physics_unreliable",
+    "invalid_build",
+]
+FAILURE_MODES_V2: tuple[FailureModeV2, ...] = (
+    *FAILURE_MODES,
+    "not_registered",
+    "physics_invalid",
+    "physics_unreliable",
+    "invalid_build",
 )
 
 _PHASE_MODE: dict[Phase, FailureMode] = {
@@ -124,3 +159,37 @@ def classify(
     if tracker.max_lift < tracker.cfg.success_lift:
         return False, "slip_during_lift"
     return False, "unstable_hold"
+
+
+def classify_v2(
+    events: Sequence[CheckEvent],
+    tracker: LiftTracker,
+    grasped: bool,
+    registered: bool,
+    *,
+    penetration_mm: float = 0.0,
+    held_penetration_max_mm: float = math.inf,
+) -> tuple[bool, bool, FailureModeV2 | None]:
+    """Return ``(success_v2, lift_success, failure_mode)`` for a finished v2 episode.
+
+    ``lift_success`` is the v1 criterion (:func:`classify`, ignoring the v2-only
+    ``bad_qacc`` flag); ``success_v2`` additionally needs ``registered``.
+
+    * Any MuJoCo state reset among ``events`` makes the whole episode ``physics_invalid``:
+      after a reset the trajectory is not physics, so neither success counts. ``events`` hold
+      the scored part of the episode only (the checks stop when the outcome is decided), which
+      is the same window the record's ``bad_qacc`` count covers.
+    * A held episode (the v1 criterion met) whose deepest jaw-part penetration
+      ``penetration_mm`` is above ``held_penetration_max_mm`` is ``physics_unreliable``: the
+      grasp leans on interpenetrating geometry, so neither success counts (ruling 4).
+    """
+    if any(e.flag == FLAG_BAD_QACC for e in events):
+        return False, False, "physics_invalid"
+    lift_success, mode = classify([e for e in events if e.flag != FLAG_BAD_QACC], tracker, grasped)
+    if not lift_success:
+        return False, False, mode
+    if not penetration_mm <= held_penetration_max_mm:  # NaN penetration is unreliable too
+        return False, False, "physics_unreliable"
+    if not registered:
+        return False, True, "not_registered"
+    return True, True, None

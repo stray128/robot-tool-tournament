@@ -22,6 +22,11 @@ Finger collision geoms are the 14 boxes of a :class:`~rtt.design.types.FingerGeo
 inertia are computed from the box volumes and the PLA density and set
 explicitly, so a batched executor can override them per world.
 
+A v2 :class:`~rtt.design.freeform.types.FingerPair` (:func:`build_spec_v2`) puts each jaw's
+exact convex pieces on its own body, one convex mesh geom per piece, with that jaw's own
+mass properties; nothing is mirrored (see :mod:`rtt.sim.fingers_v2`). Everything else in the
+scene is identical to the v1 scene.
+
 Contacts: every pair collides except palm-finger (MuJoCo filters parent-child
 pairs). Palm-object and finger-finger contacts are real; gripper-table contacts
 are simulated and flagged by checks.py, and so is the palm touching a carried
@@ -41,6 +46,7 @@ from __future__ import annotations
 
 import itertools
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import mujoco
 import numpy as np
@@ -48,6 +54,10 @@ import numpy as np
 from rtt.design.types import Box, FingerGeometry
 from rtt.sim import objects as objs
 from rtt.sim.task import TaskConfig
+
+if TYPE_CHECKING:
+    from rtt.design.freeform.types import FingerPair
+    from rtt.sim.fingers_v2 import JawBody
 
 BODY_PALM = "palm"
 BODY_FINGER_LEFT = "finger_left"
@@ -255,14 +265,10 @@ def _add_position_actuator(
     act.forcerange = [-force, force]
 
 
-def _add_finger(
-    palm: mujoco.MjsBody,
-    name: str,
-    boxes: tuple[Box, ...],
-    props: MassProperties,
-    side: float,
-    task: TaskConfig,
-) -> None:
+def _finger_body(
+    palm: mujoco.MjsBody, name: str, props: MassProperties, side: float, task: TaskConfig
+) -> mujoco.MjsBody:
+    """A finger body on its closing slide, with explicit mass properties (no geoms yet)."""
     g = task.gripper
     body = palm.add_body(name=name, pos=[0.0, side * g.open_half_gap, -g.palm_half_size[2]], gravcomp=1.0)
     body.add_joint(
@@ -277,6 +283,10 @@ def _add_finger(
     body.mass = props.mass
     body.ipos = props.com.tolist()
     body.fullinertia = props.fullinertia()
+    return body
+
+
+def _add_box_geoms(body: mujoco.MjsBody, name: str, boxes: tuple[Box, ...]) -> None:
     for i, b in enumerate(boxes):
         body.add_geom(
             name=f"{name}_{i:02d}",
@@ -284,6 +294,36 @@ def _add_finger(
             size=list(b.half_size),
             pos=list(b.center),
             quat=list(b.quat_wxyz),
+            rgba=list(FINGER_RGBA),
+        )
+
+
+def _add_finger(
+    palm: mujoco.MjsBody,
+    name: str,
+    boxes: tuple[Box, ...],
+    props: MassProperties,
+    side: float,
+    task: TaskConfig,
+) -> None:
+    _add_box_geoms(_finger_body(palm, name, props, side, task), name, boxes)
+
+
+def _add_jaw(
+    spec: mujoco.MjSpec, palm: mujoco.MjsBody, name: str, jaw: JawBody, side: float, task: TaskConfig
+) -> None:
+    """A v2 jaw: v1 box geoms when it carries boxes, else one convex mesh geom per piece."""
+    body = _finger_body(palm, name, jaw.props, side, task)
+    if jaw.boxes:
+        _add_box_geoms(body, name, jaw.boxes)
+        return
+    for i, verts in enumerate(jaw.pieces):
+        mesh_name = f"{name}_piece{i:02d}"
+        spec.add_mesh(name=mesh_name, uservert=np.asarray(verts, dtype=np.float64).ravel().tolist())
+        body.add_geom(
+            name=f"{name}_{i:02d}",
+            type=mujoco.mjtGeom.mjGEOM_MESH,
+            meshname=mesh_name,
             rgba=list(FINGER_RGBA),
         )
 
@@ -359,9 +399,8 @@ def _add_object(spec: mujoco.MjSpec, obj: objs.AnyObject, density: float) -> Non
     )
 
 
-def build_spec(finger: FingerGeometry, obj: objs.AnyObject, task: TaskConfig) -> mujoco.MjSpec:
-    """Author the full scene for one finger design and one object."""
-    check_finger_units(finger)
+def _base_spec(task: TaskConfig) -> tuple[mujoco.MjSpec, mujoco.MjsBody]:
+    """Options, defaults, visual assets, lights, table, floor and the palm (no fingers yet)."""
     phys, g = task.physics, task.gripper
     spec = mujoco.MjSpec()
     spec.modelname = "rtt_grasp"
@@ -437,11 +476,12 @@ def build_spec(finger: FingerGeometry, obj: objs.AnyObject, task: TaskConfig) ->
     palm.add_geom(
         name="palm", type=mujoco.mjtGeom.mjGEOM_BOX, size=[px, py, pz], mass=g.palm_mass, rgba=list(PALM_RGBA)
     )
+    return spec, palm
 
-    _add_finger(palm, BODY_FINGER_LEFT, finger.boxes, finger_mass_properties(finger), +1.0, task)
-    mirrored = tuple(mirror_box(b) for b in finger.boxes)
-    _add_finger(palm, BODY_FINGER_RIGHT, mirrored, finger_mass_properties(finger, mirrored=True), -1.0, task)
 
+def _finish_spec(spec: mujoco.MjSpec, obj: objs.AnyObject, task: TaskConfig) -> mujoco.MjSpec:
+    """Grip tendon, jaw coupling, the object and every actuator (after both fingers exist)."""
+    phys, g = task.physics, task.gripper
     tendon = spec.add_tendon(name=GRIP_TENDON)
     tendon.wrap_joint(BODY_FINGER_LEFT, 0.5)
     tendon.wrap_joint(BODY_FINGER_RIGHT, 0.5)
@@ -478,9 +518,43 @@ def build_spec(finger: FingerGeometry, obj: objs.AnyObject, task: TaskConfig) ->
     return spec
 
 
+def build_spec(finger: FingerGeometry, obj: objs.AnyObject, task: TaskConfig) -> mujoco.MjSpec:
+    """Author the full scene for one finger design and one object."""
+    check_finger_units(finger)
+    spec, palm = _base_spec(task)
+    _add_finger(palm, BODY_FINGER_LEFT, finger.boxes, finger_mass_properties(finger), +1.0, task)
+    mirrored = tuple(mirror_box(b) for b in finger.boxes)
+    _add_finger(palm, BODY_FINGER_RIGHT, mirrored, finger_mass_properties(finger, mirrored=True), -1.0, task)
+    return _finish_spec(spec, obj, task)
+
+
 def build_model(
     finger: FingerGeometry, obj: objs.AnyObject, task: TaskConfig
 ) -> tuple[mujoco.MjModel, SceneIds]:
     """Compile the scene and resolve the ids the episode loop needs."""
     model = build_spec(finger, obj, task).compile()
+    return model, SceneIds.resolve(model)
+
+
+def build_spec_v2(pair: FingerPair, obj: objs.AnyObject, task: TaskConfig) -> mujoco.MjSpec:
+    """Author the scored scene for one v2 jaw pair and one object (nothing is mirrored).
+
+    The scene is the v1 scene with the two fingers replaced by the pair's jaws. It carries no
+    visual-only geoms: the render model (:mod:`rtt.render`) is a separate build, so this
+    model, and its hash, are the same whether or not render assets exist.
+    """
+    from rtt.sim.fingers_v2 import jaw_bodies
+
+    left, right = jaw_bodies(pair)
+    spec, palm = _base_spec(task)
+    _add_jaw(spec, palm, BODY_FINGER_LEFT, left, +1.0, task)
+    _add_jaw(spec, palm, BODY_FINGER_RIGHT, right, -1.0, task)
+    return _finish_spec(spec, obj, task)
+
+
+def build_model_v2(
+    pair: FingerPair, obj: objs.AnyObject, task: TaskConfig
+) -> tuple[mujoco.MjModel, SceneIds]:
+    """Compile the v2 scene and resolve the ids the episode loop needs."""
+    model = build_spec_v2(pair, obj, task).compile()
     return model, SceneIds.resolve(model)

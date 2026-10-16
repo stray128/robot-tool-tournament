@@ -20,6 +20,7 @@ import type {
   Job,
   JobsIndex,
   Lane,
+  ObjectSummary,
   ParamSpec,
   PhaseSpan,
   ReplayGeom,
@@ -48,6 +49,9 @@ const FAILURE_MODES: readonly FailureMode[] = [
   "ejected_on_close",
   "unstable_hold",
   "finger_env_collision",
+  "not_registered",
+  "physics_invalid",
+  "invalid_build",
 ];
 
 function describe(v: unknown): string {
@@ -262,12 +266,19 @@ function readTask(n: Node): TaskSummary {
   };
 }
 
+function readObject(n: Node): ObjectSummary {
+  const kind = n.get("kind").oneOf(["box", "cylinder", "capsule", "part"] as const);
+  const size_mm = n.get("size_mm").nums(kind === "box" || kind === "part" ? 3 : 2);
+  if (kind !== "part") return { kind, size_mm };
+  // A v2 part: the id must be the replay header's meta.part_id (checked against the file by lib/data.ts).
+  return { kind, size_mm, part_id: n.get("part_id").nonEmpty(), family: n.get("family").nonEmpty() };
+}
+
 function readLane(n: Node): Lane {
   const o = n.get("outcome");
   const success = o.get("success").bool();
   const failure_mode = o.get("failure_mode").nullable((x) => x.oneOf(FAILURE_MODES));
   if (success === (failure_mode !== null)) o.fail("a success has no failure_mode and a failure has exactly one");
-  const obj = n.get("object");
   return {
     id: slug(n.get("id")),
     replay: dataPath(n.get("replay")),
@@ -275,11 +286,8 @@ function readLane(n: Node): Lane {
     condition: n.get("condition").str(),
     entrant: n.get("entrant").nonEmpty(),
     design_id: slug(n.get("design_id")),
-    object: {
-      kind: obj.get("kind").oneOf(["box", "cylinder", "capsule"] as const),
-      size_mm: obj.get("size_mm").nums(),
-    },
-    controller_setting: n.get("controller_setting").int(),
+    object: readObject(n.get("object")),
+    controller_setting: n.get("controller_setting").nullable((x) => x.int()),
     grasp_height_frac: n.get("grasp_height_frac").nullable((x) => x.unit()),
     seed: n.get("seed").int(),
     n_frames: n.get("n_frames").int(),
@@ -559,7 +567,8 @@ export function parseResults(raw: unknown, file = "results.json"): ResultsIndex 
 
 // ---------------------------------------------------------------- replay headers
 
-function readGeom(n: Node): ReplayGeom {
+/** Validate one v1-style replay geom (shared with the version 2 header parser in lib/replay.ts). */
+export function readGeom(n: Node): ReplayGeom {
   const type = n.get("type").oneOf(["box", "cylinder", "capsule", "plane", "mesh"] as const);
   const geom: ReplayGeom = {
     name: n.get("name").str(),

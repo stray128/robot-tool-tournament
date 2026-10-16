@@ -128,7 +128,9 @@ export default async function BoutPage({ params }: Params) {
             <dd className="num">{task.max_opening_mm} mm</dd>
             <dt className="text-ink-3">Controller</dt>
             <dd>
-              Open loop, grasp-height setting k = {bout.lanes[0]?.grasp_height_frac ?? "n/a"}
+              {bout.lanes.every((l) => l.object.kind === "part")
+                ? "Open loop; each jaw pair's grip height is part of its recipe"
+                : `Open loop, grasp-height setting k = ${bout.lanes[0]?.grasp_height_frac ?? "n/a"}`}
             </dd>
           </dl>
         </div>

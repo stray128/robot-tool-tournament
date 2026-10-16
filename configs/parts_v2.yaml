@@ -1,0 +1,51 @@
+# Parts library v2: the six training parts of train_v2 (configs/suites/train_v2.yaml).
+# Load with rtt.parts.library.load_parts_library(); build with training_parts().
+#
+# Every part is self-modelled (no third-party asset), unbranded and built from exact convex
+# pieces by rtt.parts.library (boxes, prisms, 16-segment wedges for walls and sockets), so
+# the simulated geometry is the designed geometry: no CoACD, no mesh boolean in the hash.
+# Dimensions are millimetres; omitted ones take the family defaults in rtt.parts.library.
+# Round walls are circumscribed polygons: flats sit at the nominal radius.
+#
+# Object frame: metres, z up, bounding box centred on the origin, y the closing axis, the
+# left jaw at +y. Each part keeps the pose it is gripped in (it is not turned to its
+# narrowest extent). The L-bracket's x/y origin is the centre of its standing leg, where the
+# jaws grip it (rtt.parts.library.Shape.origin_xy).
+#
+# Masses at these densities (rtt.parts.materials, handbook values [assumed]):
+# pipe_tee 39.9 g, block 194.4 g, hex_standoff 82.9 g, flanged_bushing 90.9 g, l_bracket 71.6 g,
+# steel_slug 494.8 g (exact, from the pieces). The heaviest is below the 0.917 kg grip cap of heldout_real_v1.
+name: parts_v2
+
+parts:
+  - name: pipe_tee
+    family: pipe_tee
+    material: pvc_white
+    description: 1/2-inch style slip tee lying flat, branch socket toward the left jaw (+y)
+    params: {body_od: 27.0, hub_od: 28.5, socket_id: 21.5, socket_depth: 16.5, hub_length: 6.0,
+             centre_to_end: 30.0, segments: 16}
+  - name: block
+    family: block
+    material: anodised_aluminium
+    description: 30 x 40 x 60 mm block, sharp edges (no lead-in), 40 mm across the jaws
+    params: {x: 30.0, y: 40.0, z: 60.0}
+  - name: hex_standoff
+    family: hex_standoff
+    material: zinc_plated_steel
+    description: standing hex standoff, 17 mm across flats facing the jaws, tapped top hole
+    params: {across_flats: 17.0, length: 45.0, hole_d: 8.5, hole_depth: 12.0}
+  - name: flanged_bushing
+    family: flanged_bushing
+    material: brass
+    description: standing flanged bushing, 20 x 30 mm body under a 36 x 5 mm flange, 12 mm bore
+    params: {od: 20.0, length: 30.0, flange_od: 36.0, flange_thickness: 5.0, bore_d: 12.0, segments: 16}
+  - name: l_bracket
+    family: l_bracket
+    material: stamped_steel
+    description: 40 x 40 mm L-bracket, 30 mm wide, 4 mm wall, lying flat on one leg; the jaws grip the standing leg's edges
+    params: {leg_a: 40.0, leg_b: 40.0, width: 30.0, wall: 4.0}
+  - name: steel_slug
+    family: slug
+    material: ground_steel
+    description: standing round steel slug, 40 mm across, 50 mm tall
+    params: {diameter: 40.0, length: 50.0, segments: 32}

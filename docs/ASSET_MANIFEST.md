@@ -37,7 +37,7 @@ Format version: 1. Owner: the render and replay code (`rtt.render`, `rtt.sim.rep
 | `bytes` | yes | file size in bytes |
 | `role` | yes | `finger_left`, `finger_right`, `gripper_frame`, `carriage`, `object` or `prop` |
 | `license` | yes | SPDX identifier of the asset as shipped, for example `Apache-2.0` or `CC-BY-4.0` |
-| `attribution` | yes | the credit line, exactly as on the credits page and in `docs/ATTRIBUTION.md` |
+| `attribution` | yes | the credit line. Our own assets: `Robot Tool Tournament (Apache-2.0)`. Third-party assets carry the short on-screen credit from `docs/ATTRIBUTION.md`: licence, "modified", and the credits-page anchor that holds the full line (for example `An open-source parallel gripper, CC BY 4.0, modified (full credit: /credits#gripper)`) |
 | `changes` | yes | what we changed from the upstream file, for example `"cut at the carriage interface"`, `"simplified to 50%"`, `"re-encoded as GLB"`. Empty only for our own Apache-2.0 assets |
 | `label` | no | a readable name, for example `"tee, left jaw, flat pad"` |
 | `media_type` | no | `model/gltf-binary` |
@@ -54,11 +54,21 @@ Format version: 1. Owner: the render and replay code (`rtt.render`, `rtt.sim.rep
    object frame.
 3. **Right jaws are their own assets.** A replay places assets with a positive `scale` only
    (the schema enforces it), so a right jaw is never drawn as a mirrored left jaw.
-4. **Encoding.** GLBs are meshopt-compressed, with WebP textures embedded. Scans are
-   simplified to 50%. The uncompressed GLBs are kept locally for offline rendering only.
+4. **Encoding.** `rtt.render.glb` writes deterministic GLBs with quantised attributes
+   (`KHR_mesh_quantization`) and the credit in `asset.copyright`. The web export
+   (`rtt export-web --replay-version 2`, `rtt.render.compress`) serves them
+   meshopt-compressed by `web/scripts/compress_glb.mjs`, with WebP textures and scans
+   simplified to 50%; the id is always the hash of the served file, and the published
+   replay headers point at the served ids. The compressor keeps `asset.copyright` and
+   `asset.extras`, and the export checks it did. Run directories keep the uncompressed
+   GLBs, which the offline renderers (MuJoCo studio, Blender) read. A compressing store
+   keeps the uncompressed GLB under its `raw_root` with the same id.
 5. **Licences.** Every third-party asset (any licence other than our own Apache-2.0) needs
-   a non-empty `changes` list and its `attribution` line (the schema enforces it). Every
-   CC BY asset also appears on the credits page with the same line and a "modified" note.
+   a non-empty `changes` list and its `attribution` line (the schema enforces it). Its
+   `attribution` is the short credit, which links to the full credit line on the credits
+   page and in `docs/ATTRIBUTION.md` (CC BY 4.0 allows credit by link to the full notice).
+   The gripper maker is named only there, in `NOTICE`, the README and
+   `assets/gripper/so_arm_102/SOURCE.md`.
 6. **Privacy.** `uri`, `source.path` and `label` never contain local paths, account or
    resource identifiers. `scripts/leak_check.sh` runs over the manifest like any other file.
 7. **Replays.** A replay's `assets` map holds exactly the entries its `bodies[].visuals` and
@@ -90,7 +100,7 @@ Format version: 1. Owner: the render and replay code (`rtt.render`, `rtt.sim.rep
       "bytes": 48210,
       "role": "gripper_frame",
       "license": "CC-BY-4.0",
-      "attribution": "<upstream author>, <project>, <upstream URL>, CC BY 4.0",
+      "attribution": "An open-source parallel gripper, CC BY 4.0, modified (full credit: /credits#gripper)",
       "changes": ["cut at the carriage interface", "re-posed", "simplified", "re-encoded as GLB"],
       "media_type": "model/gltf-binary",
       "source": {

@@ -30,31 +30,38 @@ import math
 from abc import ABC, abstractmethod
 from collections import Counter
 from collections.abc import Iterable, Iterator, Mapping, Sequence
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from typing import Any, ClassVar, Final, Protocol, runtime_checkable
 
 from rtt.design.schema import GEOMETRY_PARAMS, FingerDesign, GripperTask
 from rtt.llm.cache import canonical_json
+from rtt.search.space import V1, DesignSpace, get_space, space_of
 
 __all__ = [
     "DEFAULT_BUDGET",
     "DEFAULT_LLM_CALL_CAP",
     "DEFAULT_ROUND_SIZE",
     "FAILURE_MODES",
+    "FAILURE_MODES_V2",
     "BudgetError",
     "BudgetLedger",
     "ConditionInfo",
+    "ConditionV2",
     "DesignScore",
     "EpisodeOutcome",
     "Evaluated",
     "Evaluator",
     "EvaluatorInfo",
     "LLMCallRecord",
+    "PartInfo",
+    "PlacementInfo",
     "Proposal",
+    "RegistrationInfo",
     "Rejection",
     "RunContext",
     "RunHistory",
     "SearchStrategy",
+    "V2Info",
     "derive_seed",
     "design_params",
     "round_plan",
@@ -71,6 +78,21 @@ FAILURE_MODES: Final[tuple[str, ...]] = (
     "ejected_on_close",
     "unstable_hold",
     "finger_env_collision",
+)
+
+
+#: v2 failure labels (spec section 7), in order of precedence: the physics flags come first
+#: (``physics_invalid``, a MuJoCo reset; ``physics_unreliable``, a held episode with jaw-part
+#: penetration above 1 mm, founder ruling 4 of 2026-10-16).
+FAILURE_MODES_V2: Final[tuple[str, ...]] = (
+    "physics_invalid",
+    "physics_unreliable",
+    "missed_grasp",
+    "ejected_on_close",
+    "slip_during_lift",
+    "unstable_hold",
+    "finger_env_collision",
+    "not_registered",
 )
 
 
@@ -125,13 +147,165 @@ class EpisodeOutcome:
     max_lift_m: float
     hold_frac: float
     """Longest continuous hold above the success height / the required hold, in [0, 1]."""
+    # v2 only (``None`` for v1 episodes, and then left out of the JSON):
+    lift_success: bool | None = None
+    """v2: lift-and-hold success as in v1, whatever the registration (``success`` is ``success_v2``)."""
+    registered: bool | None = None
+    jam_on_close: bool | None = None
+    """v2: the part stopped more than the seat tolerance short of its seat (``not_registered`` sub-flag)."""
+    off_centre: bool | None = None
+    """v2: seated but outside the centring tolerances (``not_registered`` sub-flag)."""
+    seat_short_mm: float | None = None
+    reg_dx_mm: float | None = None
+    reg_dy_mm: float | None = None
+    reg_dyaw_deg: float | None = None
+    reg_tilt_deg: float | None = None
+    part_id: str | None = None
+    placement: str | None = None
 
     def to_json(self) -> dict[str, Any]:
-        return asdict(self)
+        data = asdict(self)
+        for name in _EPISODE_V2_FIELDS:
+            if data[name] is None:
+                del data[name]
+        return data
 
     @classmethod
     def from_json(cls, data: Mapping[str, Any]) -> EpisodeOutcome:
-        return cls(**{k: data[k] for k in cls.__dataclass_fields__})
+        return cls(
+            **{k: data[k] for k in cls.__dataclass_fields__ if k not in _EPISODE_V2_FIELDS},
+            **{k: data.get(k) for k in _EPISODE_V2_FIELDS},
+        )
+
+
+_EPISODE_V2_FIELDS: Final[tuple[str, ...]] = (
+    "lift_success",
+    "registered",
+    "jam_on_close",
+    "off_centre",
+    "seat_short_mm",
+    "reg_dx_mm",
+    "reg_dy_mm",
+    "reg_dyaw_deg",
+    "reg_tilt_deg",
+    "part_id",
+    "placement",
+)
+
+
+@dataclass(frozen=True)
+class PartInfo:
+    """One v2 training part, as the proposer may see it (never a held-out part).
+
+    Sizes are the part's bounding box in the object frame: x across the jaw, y along the
+    closing axis, z up. ``features`` are plain-language descriptions (sockets, flanges).
+    """
+
+    part_id: str
+    family: str
+    description: str
+    size_mm: tuple[float, float, float]
+    material: str
+    mass_g: float
+    yaw_symmetry: int = 1
+    features: tuple[str, ...] = ()
+    reach_mm: tuple[float, float] | None = None
+    """How far the part's material reaches from its centre plane toward the left and the right
+    jaw (+y, -y) at its narrowest grippable height (the widest point of the narrowest 8 mm band
+    from 3 mm up); ``None`` means half the bounding-box width on both sides."""
+
+    @property
+    def width_across_mm(self) -> float:
+        """Extent along the closing axis (what the jaws close on)."""
+        return float(self.size_mm[1])
+
+    @property
+    def min_reach_mm(self) -> float:
+        """The smaller of the two reaches (half the closing-axis width when not measured)."""
+        if self.reach_mm is None:
+            return self.width_across_mm / 2.0
+        return float(min(self.reach_mm))
+
+
+@dataclass(frozen=True)
+class PlacementInfo:
+    """One v2 placement condition: lateral error across the jaw and yaw error."""
+
+    placement_id: str
+    dx_mm: float
+    dyaw_deg: float = 0.0
+    label: str = ""
+
+
+@dataclass(frozen=True)
+class RegistrationInfo:
+    """The registered-grasp tolerances (spec section 7), measured at end of closing + settle."""
+
+    seat_short_mm: float = 1.0
+    dx_mm: float = 0.75
+    dy_mm: float = 0.75
+    yaw_deg: float = 2.0
+    tilt_deg: float = 3.0
+    tilt_after_hold_deg: float = 5.0
+    settle_s: float = 0.25
+
+
+@dataclass(frozen=True)
+class ConditionV2:
+    """Which part and placement a v2 training condition is."""
+
+    condition_id: str
+    part_id: str
+    placement_id: str
+
+
+@dataclass(frozen=True)
+class V2Info:
+    """v2 facts a search arm may know: training parts, placements, conditions, registration, gripper."""
+
+    parts: tuple[PartInfo, ...]
+    placements: tuple[PlacementInfo, ...]
+    conditions: tuple[ConditionV2, ...]
+    registration: RegistrationInfo = field(default_factory=RegistrationInfo)
+    opening_mm: float = 84.0
+    stroke_mm: float = 42.0
+    grip_force_per_jaw_n: float = 25.0
+    open_clearance_mm: float = 3.0
+    """Each jaw must clear the part by this much at full open, beyond the error envelope."""
+    error_envelope_mm: float = 3.0
+    max_finger_width_mm: float = 40.0
+    max_jaw_mass_g: float = 50.0
+    max_pieces_per_jaw: int = 40
+    min_wall_mm: float = 1.2
+    min_feature_mm: float = 1.6
+    max_body_slope_deg: float = 45.0
+    min_pad_gap_mm: float = 1.0
+    """At the seat, the two pads stay at least this far apart."""
+    q_seat_range_mm: tuple[float, float] = (2.0, 40.0)
+    max_length_mm: float = 110.0
+    palm_clearance_mm: float = 10.0
+    min_table_clearance_mm: float = 2.0
+    min_tip_height_mm: float = 3.0
+    friction_margin_deg: float = 5.0
+    """Margin of the friction rule in the engineering notes (guidance, never a validator)."""
+
+    def part(self, part_id: str) -> PartInfo:
+        for p in self.parts:
+            if p.part_id == part_id:
+                return p
+        raise KeyError(part_id)
+
+    def placement_of(self, condition_id: str) -> str | None:
+        for c in self.conditions:
+            if c.condition_id == condition_id:
+                return c.placement_id
+        return None
+
+    def part_of(self, condition_id: str) -> str | None:
+        for c in self.conditions:
+            if c.condition_id == condition_id:
+                return c.part_id
+        return None
 
 
 @dataclass(frozen=True)
@@ -145,7 +319,8 @@ class EvaluatorInfo:
     executor: str
     conditions: tuple[ConditionInfo, ...]
     controller_settings: tuple[float, ...]
-    """Grasp-height fraction of each controller setting ``k``: where the fingertips stop
+    """v2: empty (the grip height is a recipe parameter). v1: grasp-height fraction of each
+    controller setting ``k``: where the fingertips stop
     within the band they can reach, from the lowest tip height that keeps the palm
     ``palm_clearance_m`` above the object's top up to the top (``k x`` the object
     height for fingers that reach that far)."""
@@ -166,6 +341,13 @@ class EvaluatorInfo:
     jitter_mu_frac: float = 0.10
     palm_clearance_m: float = 0.01
     """Gap the controller keeps between the palm's underside and the object's top."""
+    v2: V2Info | None = None
+    """v2 facts (parts, placements, registration); ``None`` for a v1 evaluator."""
+
+    @property
+    def design_space(self) -> str:
+        """``box-v1`` or ``freeform-v2``."""
+        return V1 if self.v2 is None else "freeform-v2"
 
     @property
     def families(self) -> tuple[str, ...]:
@@ -174,6 +356,8 @@ class EvaluatorInfo:
 
     @property
     def episodes_per_design(self) -> int:
+        if self.v2 is not None:  # one grasp per condition and seed: the grip height is a recipe parameter
+            return len(self.conditions) * self.seeds_per_condition
         return len(self.conditions) * len(self.controller_settings) * self.seeds_per_condition
 
     def condition(self, condition_id: str) -> ConditionInfo:
@@ -183,8 +367,14 @@ class EvaluatorInfo:
         raise KeyError(condition_id)
 
     def to_json(self) -> dict[str, Any]:
-        data = asdict(self)
-        data["gripper_task"] = asdict(self.gripper_task)
+        if self.v2 is None:
+            data = asdict(self)
+            data["gripper_task"] = asdict(self.gripper_task)
+            del data["v2"]
+            return data
+        data = asdict(replace(self, gripper_task=None))  # v2: the context holds the parts themselves
+        to_json = getattr(self.gripper_task, "to_json", None)
+        data["gripper_task"] = to_json() if callable(to_json) else None
         return data
 
 
@@ -208,6 +398,86 @@ class DesignScore:
     """Failure-mode counts per condition at ``best_k`` (conditions with no failure omitted)."""
     n_episodes: int
     episodes: tuple[EpisodeOutcome, ...] = field(default=(), repr=False)
+    # v2 only (``None`` for v1 scores, and then left out of the JSON):
+    lift_success: float | None = None
+    """v2: mean lift-and-hold success whatever the registration (first tie-breaker)."""
+    per_placement: Mapping[str, float] | None = None
+    jam_on_close: int | None = None
+    """v2: episodes where the part jammed short of its seat."""
+    off_centre: int | None = None
+    """v2: episodes seated but outside the centring tolerances."""
+    capture: Mapping[str, tuple[float, float]] | None = None
+    """v2: per part, the static capture prediction ``(no_jam_mm, centring_mm)``."""
+    max_pieces: int | None = None
+    """v2: most convex pieces in one jaw over the training parts."""
+
+    @classmethod
+    def from_episodes_v2(
+        cls,
+        design_id: str,
+        mass_g: float,
+        episodes: Sequence[EpisodeOutcome],
+        *,
+        placements: Mapping[str, str] | None = None,
+        capture: Mapping[str, tuple[float, float]] | None = None,
+        max_pieces: int | None = None,
+    ) -> DesignScore:
+        """v2 aggregation (spec section 7): the score is the mean ``success_v2`` over every episode.
+
+        There is no controller setting to choose (the grip height is a design parameter), so
+        ``best_k`` is 0. ``per_family`` is per part; ``per_placement`` groups episodes by
+        placement (``placements`` maps condition ids to placement ids, else each episode's own
+        ``placement``). Ties break on lift-only success, then lower mass
+        (:meth:`rank_key`).
+        """
+        if not episodes:
+            raise ValueError(f"design {design_id}: no episodes to score")
+
+        def mean(values: Iterable[float]) -> float:
+            items = list(values)
+            return sum(items) / len(items) if items else 0.0
+
+        per_family: dict[str, list[bool]] = {}
+        per_condition: dict[str, list[bool]] = {}
+        per_place: dict[str, list[bool]] = {}
+        condition_failures: dict[str, Counter[str]] = {}
+        for ep in episodes:
+            per_family.setdefault(ep.family, []).append(ep.success)
+            per_condition.setdefault(ep.condition_id, []).append(ep.success)
+            place = (placements or {}).get(ep.condition_id) or ep.placement
+            if place is not None:
+                per_place.setdefault(place, []).append(ep.success)
+            if not ep.success:
+                condition_failures.setdefault(ep.condition_id, Counter())[ep.failure_mode or "unknown"] += 1
+        failure_modes = Counter(ep.failure_mode or "unknown" for ep in episodes if not ep.success)
+        success = mean(float(e.success) for e in episodes)
+        lift = mean(float(e.success if e.lift_success is None else e.lift_success) for e in episodes)
+        return cls(
+            design_id=design_id,
+            mass_g=float(mass_g),
+            success=success,
+            best_k=0,
+            success_by_k=(success,),
+            hold_fraction=mean(e.hold_frac for e in episodes),
+            per_family={f: mean(map(float, v)) for f, v in per_family.items()},
+            per_condition={c: mean(map(float, v)) for c, v in per_condition.items()},
+            failure_modes=dict(sorted(failure_modes.items(), key=lambda kv: (-kv[1], kv[0]))),
+            condition_failures={c: dict(sorted(v.items())) for c, v in condition_failures.items()},
+            n_episodes=len(episodes),
+            episodes=tuple(episodes),
+            lift_success=lift,
+            per_placement={k: mean(map(float, v)) for k, v in per_place.items()},
+            jam_on_close=sum(1 for e in episodes if e.jam_on_close),
+            off_centre=sum(1 for e in episodes if e.off_centre),
+            capture={k: (float(v[0]), float(v[1])) for k, v in capture.items()}
+            if capture is not None
+            else None,
+            max_pieces=max_pieces,
+        )
+
+    @property
+    def is_v2(self) -> bool:
+        return self.lift_success is not None
 
     @classmethod
     def from_episodes(
@@ -257,8 +527,9 @@ class DesignScore:
         )
 
     def rank_key(self) -> tuple[float, float, float]:
-        """Sort key, larger is better: success, then hold fraction, then lower mass."""
-        return (round(self.success, 12), round(self.hold_fraction, 12), -round(self.mass_g, 9))
+        """Sort key, larger is better: success, then hold fraction (v2: lift-only success), then lower mass."""
+        second = self.hold_fraction if self.lift_success is None else self.lift_success
+        return (round(self.success, 12), round(second, 12), -round(self.mass_g, 9))
 
     def to_json(self, *, include_episodes: bool = True) -> dict[str, Any]:
         data = {
@@ -274,6 +545,15 @@ class DesignScore:
             "condition_failures": {k: dict(v) for k, v in self.condition_failures.items()},
             "n_episodes": self.n_episodes,
         }
+        if self.is_v2:
+            data["lift_success"] = self.lift_success
+            data["per_placement"] = dict(self.per_placement or {})
+            data["jam_on_close"] = self.jam_on_close
+            data["off_centre"] = self.off_centre
+            data["capture"] = (
+                {k: list(v) for k, v in self.capture.items()} if self.capture is not None else None
+            )
+            data["max_pieces"] = self.max_pieces
         if include_episodes:
             data["episodes"] = [e.to_json() for e in self.episodes]
         return data
@@ -293,6 +573,16 @@ class DesignScore:
             condition_failures={k: dict(v) for k, v in data["condition_failures"].items()},
             n_episodes=int(data["n_episodes"]),
             episodes=tuple(EpisodeOutcome.from_json(e) for e in data.get("episodes", ())),
+            lift_success=data.get("lift_success"),
+            per_placement=dict(data["per_placement"]) if data.get("per_placement") is not None else None,
+            jam_on_close=data.get("jam_on_close"),
+            off_centre=data.get("off_centre"),
+            capture=(
+                {k: (float(v[0]), float(v[1])) for k, v in data["capture"].items()}
+                if data.get("capture") is not None
+                else None
+            ),
+            max_pieces=data.get("max_pieces"),
         )
 
 
@@ -306,7 +596,7 @@ class Evaluator(Protocol):
     order, and expose only training-suite facts through :meth:`describe`.
     """
 
-    def evaluate(self, designs: Sequence[FingerDesign]) -> list[DesignScore]: ...
+    def evaluate(self, designs: Sequence[Any]) -> list[DesignScore]: ...
 
     def describe(self) -> EvaluatorInfo: ...
 
@@ -325,7 +615,8 @@ class Proposal:
     reflection) and that call's request hash.
     """
 
-    design: FingerDesign
+    design: Any
+    """A :class:`~rtt.design.schema.FingerDesign` (v1) or a v2 recipe or baseline."""
     origin: str
     operator: str | None = None
     island: int | None = None
@@ -335,11 +626,22 @@ class Proposal:
     via: str | None = None
     request_hash: str | None = None
     fallback_reason: str | None = None
+    notes: tuple[str, ...] = ()
+    """v2: what canonicalisation did to the proposal (inactive parameters ignored, values quantised)."""
+
+    @property
+    def space(self) -> DesignSpace:
+        return space_of(self.design)
+
+    @property
+    def design_id(self) -> str:
+        return self.space.design_id(self.design)
 
     def to_json(self) -> dict[str, Any]:
-        return {
-            "design": self.design.model_dump(mode="json"),
-            "design_id": self.design.design_id(),
+        space = self.space
+        data = {
+            "design": space.dump(self.design),
+            "design_id": space.design_id(self.design),
             "origin": self.origin,
             "operator": self.operator,
             "island": self.island,
@@ -350,11 +652,17 @@ class Proposal:
             "request_hash": self.request_hash,
             "fallback_reason": self.fallback_reason,
         }
+        if space.name != V1:
+            data["design_space"] = space.name
+        if self.notes:
+            data["canon_notes"] = list(self.notes)
+        return data
 
     @classmethod
     def from_json(cls, data: Mapping[str, Any]) -> Proposal:
+        space = get_space(data.get("design_space", V1))
         return cls(
-            design=FingerDesign.model_validate(data["design"]),
+            design=space.load(data["design"]),
             origin=str(data["origin"]),
             operator=data.get("operator"),
             island=data.get("island"),
@@ -364,6 +672,7 @@ class Proposal:
             via=data.get("via"),
             request_hash=data.get("request_hash"),
             fallback_reason=data.get("fallback_reason"),
+            notes=tuple(data.get("canon_notes") or ()),
         )
 
 
@@ -382,7 +691,7 @@ class Evaluated:
         return f"d{self.index:02d}"
 
     @property
-    def design(self) -> FingerDesign:
+    def design(self) -> Any:
         return self.proposal.design
 
     def to_json(self, *, include_episodes: bool = True) -> dict[str, Any]:
@@ -487,7 +796,7 @@ class RunHistory:
         return tuple(self._items)
 
     def add(self, round_index: int, proposal: Proposal, score: DesignScore) -> Evaluated:
-        if score.design_id != proposal.design.design_id():
+        if score.design_id != proposal.design_id:
             raise ValueError("score does not belong to the proposed design")
         item = Evaluated(index=len(self._items) + 1, round=round_index, proposal=proposal, score=score)
         self._items.append(item)
@@ -499,7 +808,7 @@ class RunHistory:
                 return item
         return None
 
-    def designs(self) -> list[FingerDesign]:
+    def designs(self) -> list[Any]:
         return [item.design for item in self._items]
 
     def ranked(self, pool: Iterable[Evaluated] | None = None) -> list[Evaluated]:
@@ -626,12 +935,18 @@ class RunContext:
     arm: str
     run_index: int
     run_seed: int
-    gripper_task: GripperTask
+    gripper_task: Any
+    """Validation context: a :class:`~rtt.design.schema.GripperTask` in v1, a
+    :class:`~rtt.search.space_v2.V2Context` (training parts and task) in v2."""
     info: EvaluatorInfo
     budget: BudgetLedger
     history: RunHistory = field(default_factory=RunHistory)
     rejections: list[Rejection] = field(default_factory=list)
     llm_calls: list[LLMCallRecord] = field(default_factory=list)
+    space: DesignSpace = field(default_factory=get_space)
+    shared_min_distance: float | None = None
+    """v2: the diversity bar every arm's designs must clear (spec section 13, step 6), including
+    arm A and the round-0 fill. ``None`` in v1, where only the LLM arms check diversity."""
 
     @property
     def run_id(self) -> str:
@@ -669,6 +984,7 @@ class SearchStrategy(ABC):
         """Receive this run's newly simulated designs (they are already in ``ctx.history``)."""
 
 
-def params_key(params: Mapping[str, Any]) -> str:
+def params_key(params: Mapping[str, Any], space: DesignSpace | None = None) -> str:
     """Canonical JSON of geometry parameters only (for de-duplication and logs)."""
-    return canonical_json({k: params[k] for k in GEOMETRY_PARAMS if k in params})
+    names = GEOMETRY_PARAMS if space is None or space.name == V1 else space.param_names
+    return canonical_json({k: params[k] for k in names if k in params})

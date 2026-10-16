@@ -32,11 +32,15 @@
     "zustand": "5.0.15"
   },
   "devDependencies": {
+    "@gltf-transform/core": "4.5.1",
+    "@gltf-transform/extensions": "4.5.1",
+    "@gltf-transform/functions": "4.5.1",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "20.19.43",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@types/three": "0.186.0",
+    "meshoptimizer": "1.2.0",
     "playwright": "1.61.1",
     "tailwindcss": "4.3.3",
     "typescript": "5.9.3",

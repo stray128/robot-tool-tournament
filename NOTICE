@@ -19,6 +19,13 @@ this repository. They are fetched at run time, reduced to geometry, re-posed to 
 stable resting pose and split into convex pieces for simulation. Per-object credits
 are written with every selection (ATTRIBUTION.md next to selection.json).
 
+From the v2 design space on, unbranded scans may also be published with the web app
+as GLB files (web/public/assets/). These are adaptations under CC BY 4.0. Modified:
+re-posed, split into convex pieces (CoACD, threshold 0.02, seed 0), simplified to 50 %,
+texture coordinates flipped, re-encoded (meshopt geometry, WebP textures). Each such
+asset carries its credit and its list of changes in the asset manifest, in every
+replay that uses it, in docs/ATTRIBUTION.md and on the site's credits page.
+
 Citation:
   @inproceedings{downs2022google,
     title     = {Google Scanned Objects: A High-Quality Dataset of 3D Scanned Household Items},
@@ -29,17 +36,36 @@ Citation:
   }
 
 
-2. Parallel gripper: SO-ARM-102 by Robonine (CERN-OHL-P-2.0 / CC BY 4.0)
+2. Parallel gripper: SO-ARM-102 by Robonine (CC BY 4.0 / CERN-OHL-P-2.0)
 
 The simulated gripper's opening, stroke and frame size, and the "stock" finger
 entrant, were measured from the open-source SO-ARM-102 parallel gripper: Robonine,
-SO-ARM 102, https://github.com/roboninecom/SO-ARM-102, commit 190eb162. Its hardware
-sources are licensed CERN-OHL-P-2.0 and its documentation and simulation files
-CC BY 4.0. The stock entrant is our own box approximation of its finger, and the
-printable jaw in the print pack is drawn from the documented interface dimensions
-only. This repository contains no files from that project. If a later version
-includes or modifies its CAD, that file will carry the CERN-OHL-P-2.0 notice and a
-statement of the modifications, as the licence requires.
+SO-ARM 102, https://github.com/roboninecom/SO-ARM-102, commit
+190eb162c9e59d7f6dceab850ea1b5c6a4539c14. Copyright notice as supplied upstream:
+Copyright (c) 2026 Robonine. Per that project's LICENSING.md and REUSE.toml, its
+simulation files (simulation/, including the URDF meshes) are licensed CC BY 4.0
+(https://creativecommons.org/licenses/by/4.0/), its hardware sources (models/: STEP,
+STL, 3MF) CERN-OHL-P-2.0 (https://ohwr.org/cern_ohl_p_v2.txt), and its software
+Apache-2.0.
+
+v1 (14-box fingers): the stock entrant is our own box approximation of its finger, and
+the printable jaw in the print pack is drawn from the documented interface dimensions
+only. No files from that project are used.
+
+v2 (part-shaped fingers): three of the gripper's CC BY 4.0 simulation meshes
+(simulation/urdf/meshes/link5_1.stl, clamp1_1.stl and clamp2_1.stl) are vendored,
+unmodified, in assets/gripper/so_arm_102/meshes/, with the licence text in
+LICENSE-CC-BY-4.0.txt, their source in SOURCE.md and SHA-256 pins in lock.json
+(scripts/fetch_assets.py fetches and verifies them). They are drawn as visual-only
+geometry, and the v2 stock entrant is the gripper's own blade from those meshes. Files
+derived from them that this repository commits or publishes (the stock blade's convex
+hulls, and the GLB meshes of the gripper frame, carriage and blade used by the web app
+and renders) are adaptations under CC BY 4.0. Modified: cut at the carriage interface,
+re-posed, simplified, split into convex pieces (CoACD, threshold 0.02, seed 0),
+re-encoded as GLB. The scored simulation never collides with these meshes except the
+stock blade's hulls, which are the stock entrant. If a print pack ever includes a clamp
+made from the project's CERN-OHL-P-2.0 STL files, that file will carry the
+CERN-OHL-P-2.0 notice and a statement of the modifications, as the licence requires.
 
 
 3. NVIDIA Nemotron models (used through an API)

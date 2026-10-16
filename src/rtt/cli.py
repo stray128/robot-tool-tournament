@@ -54,6 +54,7 @@ DEFAULT_SUITE = REPO_ROOT / "configs" / "suites" / "train_v1.yaml"
 DEFAULT_COMMITMENT = REPO_ROOT / "configs" / "suites" / "heldout_v1.sha256"
 RUNS_DIR = REPO_ROOT / "runs"
 ARM_CHOICES = ("random", "nemotron", "zeroshot")
+SPACE_CHOICES = ("box-v1", "freeform-v2", "v1", "v2")
 
 
 def _stamp() -> str:
@@ -199,11 +200,13 @@ def _cmd_search(args: argparse.Namespace) -> int:
             spend_cap_usd=args.spend_cap,
             cache_mode=args.cache_mode,
             cache_dir=args.cache,
+            space=args.space,
         )
     )
     m = outcome.manifest
     print(
-        f"search {args.arm}: {m['runs']} runs x {m['budget']} designs, {m['sim']['episodes_simulated']} episodes"
+        f"search {args.arm} ({m.get('design_space', 'box-v1')}): {m['runs']} runs x {m['budget']} designs,"
+        f" {m['sim']['episodes_simulated']} episodes"
     )
     for run in m["per_run"]:
         best = run["best"]
@@ -236,6 +239,7 @@ def _cmd_replay_llm(args: argparse.Namespace) -> int:
             workers=args.workers,
             cache_mode="replay",
             cache_dir=args.source / "llm_cache",
+            space=source.get("design_space") or "box-v1",
         )
     )
     want = {r["run_id"]: r["fingerprint"] for r in source["per_run"]}
@@ -403,8 +407,16 @@ def _cmd_slice(args: argparse.Namespace) -> int:
 def _cmd_export_web(args: argparse.Namespace) -> int:
     from rtt.pipeline.export_web import export_web
 
-    result = export_web(args.runs, args.data_dir, featured=args.featured)
+    result = export_web(
+        args.runs,
+        args.data_dir,
+        featured=args.featured,
+        replay_version=args.replay_version,
+        compress=False if args.no_compress else None,
+    )
     print(result.describe())
+    for rel, size in sorted(result.payload_bytes.items()):
+        print(f"  {rel}: {size:,} bytes")
     return 0 if not result.skipped else 1
 
 
@@ -431,6 +443,8 @@ def job_argv(args: argparse.Namespace) -> list[str] | None:
             return None
         argv += ["--arm", args.arm, "--runs", str(args.runs), "--budget", str(args.budget)]
         argv += ["--spend-cap", f"{args.spend_cap:g}"]
+        if getattr(args, "space", None):
+            argv += ["--space", args.space]
         if args.seeds:
             argv += ["--seeds", args.seeds]
         if args.workers is not None:
@@ -577,6 +591,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="replay: answer every model call from the cache (no key, no spend)",
     )
     se.add_argument("--cache", type=Path, default=None, help="response cache (default OUT/llm_cache)")
+    se.add_argument(
+        "--space",
+        choices=SPACE_CHOICES,
+        default="box-v1",
+        help="design space: box-v1 (train_v1, task_v1) or freeform-v2 (train_v2, task_v2; v1/v2 also accepted)",
+    )
     se.set_defaults(handler=_cmd_search)
 
     rl = sub.add_parser(
@@ -651,18 +671,29 @@ def build_parser() -> argparse.ArgumentParser:
     sl.set_defaults(handler=_cmd_slice)
 
     ew = sub.add_parser("export-web", help="publish run directories into web/public/data")
-    ew.add_argument("runs", type=Path, nargs="+", help="slice, search or held-out run directories")
+    ew.add_argument("runs", type=Path, nargs="+", help="slice, v2 bout, search or held-out run directories")
     ew.add_argument("--data-dir", type=Path, default=REPO_ROOT / "web" / "public" / "data")
     ew.add_argument("--featured", default=None, help="bout id to feature on the landing page")
+    ew.add_argument(
+        "--replay-version",
+        type=int,
+        choices=(1, 2),
+        default=1,
+        help="2: publish replay v2 lanes with meshopt-compressed GLBs (needed for v2 bouts)",
+    )
+    ew.add_argument("--no-compress", action="store_true", help="with --replay-version 2: serve raw GLBs")
     ew.set_defaults(handler=_cmd_export_web)
 
     jb = sub.add_parser(
         "job",
-        help="run smoke / m1 / search as a Nebius Serverless AI Job (waits, records spend, fetches)",
+        help="run smoke / m1 / search / gv4 as a Nebius Serverless AI Job (waits, records spend, fetches)",
         description="Settings come from ~/.config/rtt/nebius.env and image.env; no IDs are stored in the repo.",
     )
-    jb.add_argument("kind", choices=("smoke", "m1", "search"))
+    jb.add_argument("kind", choices=("smoke", "m1", "search", "gv4"))
     jb.add_argument("--arm", choices=ARM_CHOICES, help="search: arm")
+    jb.add_argument(
+        "--space", choices=SPACE_CHOICES, default=None, help="search: design space (default box-v1)"
+    )
     jb.add_argument("--runs", type=int, help="search: independent runs")
     jb.add_argument("--budget", type=int, help="search: designs per run")
     jb.add_argument("--seeds", default=None, help="search: comma-separated run seeds")

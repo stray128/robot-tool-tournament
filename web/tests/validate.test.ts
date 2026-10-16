@@ -1,13 +1,16 @@
-import { copyFileSync, cpSync, mkdtempSync, readFileSync, rmSync, truncateSync } from "node:fs";
+import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, truncateSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
 import { checkDesignFiles, checkReplayFiles } from "@/lib/data";
-import { DataError, parseBouts, parseDesigns, parseJobs, parseReplayHeader, parseResults } from "@/lib/validate";
+import { parseAnyReplayHeader } from "@/lib/replay";
+import { DataError, parseBouts, parseDesigns, parseJobs, parseResults } from "@/lib/validate";
 
 const DATA = path.join(__dirname, "..", "public", "data");
+/** Served GLB assets of version 2 replays, next to the data directory. */
+const ASSETS = path.join(__dirname, "..", "public", "assets");
 const read = (name: string) => JSON.parse(readFileSync(path.join(DATA, name), "utf8"));
 
 describe("published data", () => {
@@ -17,9 +20,26 @@ describe("published data", () => {
     parseJobs(read("jobs.json"));
     parseResults(read("results.json"));
     expect(bouts.bouts.length).toBeGreaterThan(0);
-    // every lane's design id resolves to a design page
+    // every v1 lane's design id resolves to a design page (v2 recipes have no design page yet,
+    // so their lanes, on parts, are shown without a design link)
     const ids = new Set(designs.designs.map((d) => d.id));
-    for (const lane of bouts.bouts.flatMap((b) => b.lanes)) expect(ids.has(lane.design_id)).toBe(true);
+    for (const lane of bouts.bouts.flatMap((b) => b.lanes)) {
+      if (lane.object.kind !== "part") expect(ids.has(lane.design_id)).toBe(true);
+    }
+  });
+
+  it("include a bout of v2 lanes on parts, each naming its part", () => {
+    const lanes = parseBouts(read("bouts.json")).bouts.flatMap((b) => b.lanes);
+    const parts = lanes.filter((l) => l.object.kind === "part");
+    expect(parts.length).toBeGreaterThan(0);
+    for (const lane of parts) {
+      const header = parseAnyReplayHeader(read(`${lane.replay}.json`));
+      expect(header.version).toBe(2);
+      if (header.version !== 2) continue;
+      expect(header.meta.part_id).toBe(lane.object.part_id);
+      expect(header.meta.design_id).toBe(lane.design_id);
+      expect(lane.controller_setting).toBeNull();
+    }
   });
 
   it("only links files that exist", () => {
@@ -29,7 +49,8 @@ describe("published data", () => {
       }
     }
     for (const lane of parseBouts(read("bouts.json")).bouts.flatMap((b) => b.lanes)) {
-      const header = parseReplayHeader(read(`${lane.replay}.json`));
+      // Published lanes may be replay version 1 or 2 (the viewer reads both).
+      const header = parseAnyReplayHeader(read(`${lane.replay}.json`));
       expect(header.n_frames).toBe(lane.n_frames);
     }
   });
@@ -40,6 +61,21 @@ describe("validation errors", () => {
     const doc = read("bouts.json");
     doc.bouts[0].lanes[0].outcome.hold_s = "2";
     expect(() => parseBouts(doc)).toThrow(/bouts\.json: \$\.bouts\[0\]\.lanes\[0\]\.outcome\.hold_s: expected a finite number/);
+  });
+
+  it("read v2 lanes: a part object needs its id and family, and v2 failure modes are known", () => {
+    const doc = read("bouts.json");
+    const lane = doc.bouts[0].lanes[0];
+    lane.object = { kind: "part", size_mm: [36, 36, 35], part_id: "flanged_bushing", family: "flanged_bushing" };
+    lane.controller_setting = null;
+    lane.outcome = { ...lane.outcome, success: false, failure_mode: "not_registered" };
+    const parsed = parseBouts(doc).bouts[0]!.lanes[0]!;
+    expect(parsed.object).toEqual(lane.object);
+    expect(parsed.outcome.failure_mode).toBe("not_registered");
+    delete lane.object.part_id;
+    expect(() => parseBouts(doc)).toThrow(/object\.part_id/);
+    lane.object = { kind: "part", size_mm: [36, 36], part_id: "x", family: "y" };
+    expect(() => parseBouts(doc)).toThrow(/expected 3 numbers/);
   });
 
   it("reject a success that carries a failure mode", () => {
@@ -91,7 +127,7 @@ describe("validation errors", () => {
   it("check mesh geoms' face indices", () => {
     const h = read("replays/m1/straight.json");
     h.bodies[3].geoms[0] = { ...h.bodies[3].geoms[0], type: "mesh", vertices: [0, 0, 0, 1, 0, 0, 0, 1, 0], faces: [0, 1, 3] };
-    expect(() => parseReplayHeader(h)).toThrow(/face index outside/);
+    expect(() => parseAnyReplayHeader(h)).toThrow(/face index outside/);
   });
 });
 
@@ -102,9 +138,13 @@ describe("build-time file checks", () => {
   });
 
   it("fail on a missing, truncated or miscounted replay and a missing print file", () => {
-    const dir = mkdtempSync(path.join(os.tmpdir(), "rtt-data-"));
+    // A site tree like public/: data/ plus the assets/ that version 2 replays draw.
+    const site = mkdtempSync(path.join(os.tmpdir(), "rtt-data-"));
+    const dir = path.join(site, "data");
+    mkdirSync(dir);
     try {
       cpSync(path.join(DATA, "replays"), path.join(dir, "replays"), { recursive: true });
+      if (existsSync(ASSETS)) cpSync(ASSETS, path.join(site, "assets"), { recursive: true });
       const bouts = parseBouts(read("bouts.json"));
       const lane = bouts.bouts[0]!.lanes[0]!;
       const bin = path.join(dir, `${lane.replay}.bin`);
@@ -123,7 +163,7 @@ describe("build-time file checks", () => {
 
       expect(() => checkDesignFiles(parseDesigns(read("designs.json")), dir)).toThrow(/designs\.json: .*files\.stl_left: missing file/);
     } finally {
-      rmSync(dir, { recursive: true, force: true });
+      rmSync(site, { recursive: true, force: true });
     }
   });
 });

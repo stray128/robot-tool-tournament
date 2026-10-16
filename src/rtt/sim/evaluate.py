@@ -7,6 +7,14 @@ executor and returns one flat :class:`EpisodeRecord` per episode, in a fixed ord
 records to the plan's design score: the best controller setting's mean success, ties
 broken by its mean hold fraction, then by lower finger mass.
 
+Task v2 (:func:`evaluate_designs_v2`): every design is compiled against every part of a
+:class:`~rtt.parts.suite.PartSuite` by a builder (default
+:func:`rtt.design.freeform.build_pair`), each pair runs on that part's placements and seeds,
+and every episode becomes an :class:`EpisodeRecordV2` (``RECORD_VERSION_V2 = 2``). A design
+that cannot be built for a part scores ``invalid_build`` failures there without simulating.
+:func:`score_designs_v2` reduces them: score = mean registered-grasp success over every
+episode (no best-of-k), ties broken by lift-only success, then lower mass.
+
 Executors: ``"cpu"`` runs :mod:`rtt.sim.exec_cpu` (a process pool); a
 :class:`~rtt.sim.exec_cpu.CpuExecutor` instance reuses an open pool across calls;
 ``"mjwarp"`` uses ``rtt.sim.exec_mjwarp.run_jobs(jobs, workers)`` when that module is
@@ -16,12 +24,13 @@ present; any callable with the same signature works too. Every executor must ret
 
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import importlib
 import json
 import math
 from collections import Counter, defaultdict
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -342,3 +351,449 @@ def score_designs(records: Sequence[EpisodeRecord]) -> dict[str, DesignScore]:
 def rank_designs(records: Sequence[EpisodeRecord]) -> list[DesignScore]:
     """Design scores, best first (score, then hold fraction, then lower mass, then id)."""
     return sorted(score_designs(records).values(), key=lambda s: (*s.sort_key(), s.design_id))
+
+
+# --------------------------------------------------------------------------- task v2
+
+RECORD_VERSION_V2 = 2
+Builder = Callable[[Any, Any, Any], Any]  # (design, part, task) -> FingerPair
+_GEOMETRY_ID_DOMAIN = b"rtt-freeform-geometry-id/1\n"
+
+
+def suite_parts(suite: Any) -> tuple[Any, ...]:
+    """The distinct parts of a v2 suite (:class:`rtt.parts.suite.PartSuite`), in suite order."""
+    parts = suite.parts
+    return tuple(parts() if callable(parts) else parts)
+
+
+def condition_task_v2(task: TaskConfig, condition: Any) -> TaskConfig:
+    """``task`` for one v2 condition.
+
+    A held-out condition may carry a height error ``err_z`` (m): the part sits that much
+    higher than the controller assumes, so the jaws end up ``err_z`` lower on it. It is
+    applied as ``controller.grasp_z_offset - err_z``; ``task`` is returned unchanged when the
+    condition has none.
+    """
+    err_z = float(getattr(condition, "err_z", 0.0) or 0.0)
+    if err_z == 0.0:
+        return task
+    offset = task.controller.grasp_z_offset - err_z
+    return task.with_overrides(controller={"grasp_z_offset": offset})
+
+
+def suite_geometry_id(hashes: Mapping[str, str]) -> str:
+    """SHA-256 over ``{part_id: geometry_hash}`` (replay ``meta.geometry_id``).
+
+    The generator's definition (:func:`rtt.design.freeform.hashing.geometry_id`) is used when
+    it is installed; the fallback computes the same digest.
+    """
+    try:
+        from rtt.design.freeform.hashing import geometry_id as generator_geometry_id
+    except ImportError:
+        items = sorted(dict(hashes).items())
+        if not items:
+            raise ValueError("geometry_id needs at least one part") from None
+        h = hashlib.sha256(_GEOMETRY_ID_DOMAIN)
+        for part_id, value in items:
+            h.update(f"{part_id}={value}\n".encode())
+        return h.hexdigest()
+    return generator_geometry_id(hashes)
+
+
+@dataclass(frozen=True)
+class EpisodeRecordV2:
+    """One evaluated v2 episode (spec section 7), flat and JSON/Parquet friendly.
+
+    ``success`` is the registered grasp (``success_v2``), ``lift_success`` the v1 lift-and-hold
+    criterion. Registration values are millimetres and degrees at the registration moment
+    (NaN when the episode ended before it; :meth:`to_dict` writes ``None`` for every NaN).
+    ``jam_on_close`` and ``off_centre`` are the registration sub-flags as booleans (also in
+    ``registration_flags``). ``tilt_max_deg`` is the part's largest tilt from vertical before the
+    outcome was decided (the hero rule's visible-failure test). ``hold_creep_mm`` is logged, never
+    scored. ``bad_qacc`` counts
+    MuJoCo state resets in the scored part of the episode (the replay-only tail is never
+    checked); above 0 the episode is ``physics_invalid``. ``geometry_hash`` identifies the jaw pair built for this part (empty
+    for an ``invalid_build``). ``err_z_mm`` is a held-out height error (0 in training).
+    ``wall_time_s`` is the only field that is not deterministic.
+    """
+
+    design_id: str
+    part_id: str
+    condition_id: str
+    seed: int
+    success: bool
+    lift_success: bool
+    failure_mode: str | None
+    registered: bool
+    jam_on_close: bool
+    off_centre: bool
+    seat_short_mm: float
+    reg_dx_mm: float
+    reg_dy_mm: float
+    reg_dyaw_deg: float
+    reg_tilt_deg: float
+    reg_hold_tilt_deg: float
+    tilt_max_deg: float
+    registration_flags: tuple[str, ...]
+    hold_creep_mm: float
+    bad_qacc: int
+    lift: float
+    hold: float
+    hold_frac: float
+    flags: tuple[str, ...]
+    suite: str
+    family: str
+    size_label: str
+    placement_label: str
+    err_z_mm: float
+    finger_mass_g: float
+    q_seat_mm: float
+    tip_height: float
+    palm_gap: float
+    penetration_max: float
+    obj_finger_pen_max: float
+    decided_at: float
+    n_steps: int
+    geometry_hash: str
+    design_space: str
+    task: str
+    task_digest: str
+    executor: str
+    wall_time_s: float = field(compare=False)
+    record_version: int = RECORD_VERSION_V2
+
+    def to_dict(self) -> dict[str, Any]:
+        out = asdict(self)
+        out["flags"] = list(self.flags)
+        out["registration_flags"] = list(self.registration_flags)
+        for key, value in out.items():
+            if isinstance(value, float) and not math.isfinite(value):
+                out[key] = None
+        return out
+
+
+def _condition_fields(condition: Any) -> dict[str, Any]:
+    part = condition.part
+    return {
+        "part_id": str(part.part_id),
+        "condition_id": str(condition.condition_id),
+        "family": str(part.family),
+        "size_label": str(getattr(condition, "size_label", "") or ""),
+        "placement_label": str(getattr(condition, "placement_label", "") or ""),
+        "err_z_mm": 1000.0 * float(getattr(condition, "err_z", 0.0) or 0.0),
+    }
+
+
+def make_record_v2(
+    design_id: str,
+    condition: Any,
+    suite_name: str,
+    result: Any,
+    pair: Any,
+    task: TaskConfig,
+    executor: str,
+) -> EpisodeRecordV2:
+    """Flatten one :class:`~rtt.sim.episode.EpisodeResultV2` into a record."""
+    m = result.metrics
+    reg = result.registration
+    return EpisodeRecordV2(
+        design_id=design_id,
+        seed=result.seed,
+        success=result.success,
+        lift_success=result.lift_success,
+        failure_mode=result.failure_mode,
+        registered=reg.registered,
+        jam_on_close="jam_on_close" in reg.sub_flags,
+        off_centre="off_centre" in reg.sub_flags,
+        seat_short_mm=_finite(reg.seat_short_mm),
+        reg_dx_mm=_finite(reg.dx_mm),
+        reg_dy_mm=_finite(reg.dy_mm),
+        reg_dyaw_deg=_finite(reg.dyaw_deg),
+        reg_tilt_deg=_finite(reg.tilt_deg),
+        reg_hold_tilt_deg=_finite(reg.hold_tilt_deg),
+        tilt_max_deg=_finite(m["tilt_max_deg"]),
+        registration_flags=tuple(reg.sub_flags),
+        hold_creep_mm=_finite(m["hold_creep_mm"]),
+        bad_qacc=int(result.bad_qacc),
+        lift=result.max_lift,
+        hold=result.hold_time,
+        hold_frac=min(1.0, result.hold_time / task.score.success_hold),
+        flags=_flag_names(result),
+        suite=suite_name,
+        finger_mass_g=1000.0 * (pair.left.mass + pair.right.mass),
+        q_seat_mm=1000.0 * pair.q_seat,
+        tip_height=m["tip_height"],
+        palm_gap=m["palm_gap"],
+        penetration_max=m["penetration_max"],
+        obj_finger_pen_max=m["obj_finger_pen_max"],
+        decided_at=_finite(m["decided_at"]),
+        n_steps=result.n_steps,
+        geometry_hash=pair.geometry_hash,
+        design_space="box-v1" if getattr(pair, "boxes", None) is not None else "freeform-v2",
+        task=task.name,
+        task_digest=task_digest(task),
+        executor=executor,
+        wall_time_s=result.wall_time_s,
+        **_condition_fields(condition),
+    )
+
+
+def invalid_record_v2(
+    design_id: str, condition: Any, suite_name: str, seed: int, reason: str, task: TaskConfig
+) -> EpisodeRecordV2:
+    """The record of an episode that could not run: the design has no jaws for this part."""
+    nan = float("nan")
+    return EpisodeRecordV2(
+        design_id=design_id,
+        seed=seed,
+        success=False,
+        lift_success=False,
+        failure_mode="invalid_build",
+        registered=False,
+        jam_on_close=False,
+        off_centre=False,
+        seat_short_mm=nan,
+        reg_dx_mm=nan,
+        reg_dy_mm=nan,
+        reg_dyaw_deg=nan,
+        reg_tilt_deg=nan,
+        reg_hold_tilt_deg=nan,
+        tilt_max_deg=nan,
+        registration_flags=(),
+        hold_creep_mm=nan,
+        bad_qacc=0,
+        lift=0.0,
+        hold=0.0,
+        hold_frac=0.0,
+        flags=(f"invalid_build: {reason}"[:200],),
+        suite=suite_name,
+        finger_mass_g=nan,
+        q_seat_mm=nan,
+        tip_height=nan,
+        palm_gap=nan,
+        penetration_max=nan,
+        obj_finger_pen_max=nan,
+        decided_at=nan,
+        n_steps=0,
+        geometry_hash="",
+        design_space="freeform-v2",
+        task=task.name,
+        task_digest=task_digest(task),
+        executor="none",
+        wall_time_s=0.0,
+        **_condition_fields(condition),
+    )
+
+
+def _default_builder() -> Builder:
+    from rtt.design.freeform import build_pair
+
+    return build_pair
+
+
+def build_pairs(
+    designs: Sequence[Any], parts: Sequence[Any], builder: Builder, task: TaskConfig
+) -> list[dict[str, Any]]:
+    """Per design, ``{part_id: FingerPair, or the build error message}`` (in part order).
+
+    A ``ValueError`` from the builder (the generator's ``InvalidDesign`` is one) means the
+    design has no jaws for that part; any other exception is a bug and propagates. A pair the
+    scene would refuse (:func:`rtt.sim.fingers_v2.check_pair`: not in metres, or a collision
+    piece that is not convex) is caught here too, so it scores ``invalid_build`` with the
+    reason instead of failing the whole batch in a worker.
+    """
+    from rtt.sim.fingers_v2 import check_pair
+
+    out = []
+    for design in designs:
+        built: dict[str, Any] = {}
+        for part in parts:
+            try:
+                pair = builder(design, part, task)
+            except ValueError as exc:
+                built[part.part_id] = str(exc) or type(exc).__name__
+                continue
+            try:
+                check_pair(pair)
+            except ValueError as exc:
+                built[part.part_id] = f"scene_check: {exc}"
+                continue
+            built[part.part_id] = pair
+        out.append(built)
+    return out
+
+
+def _design_id_of(design: Any, built: Mapping[str, Any]) -> str:
+    for pair in built.values():
+        if not isinstance(pair, str):
+            return str(pair.design_id)
+    did = getattr(design, "design_id", None)
+    if callable(did):
+        did = did()
+    if isinstance(did, str) and did:
+        return did
+    try:
+        from rtt.design.freeform.hashing import design_id as generator_design_id
+
+        return str(generator_design_id(design))
+    except (ImportError, TypeError, ValueError):
+        return hashlib.sha256(repr(design).encode()).hexdigest()
+
+
+def evaluate_designs_v2(
+    designs: Sequence[Any],
+    suite: Any,
+    *,
+    builder: Builder | None = None,
+    seeds: Sequence[int] | None = None,
+    executor: Executor = "cpu",
+    workers: int | None = None,
+    task: TaskConfig | None = None,
+) -> list[EpisodeRecordV2]:
+    """Compile every design against every suite part and run every condition and seed.
+
+    ``suite`` is a v2 part suite (:class:`rtt.parts.suite.PartSuite`: conditions with a
+    ``part``, ``placement``, ``seeds``, ``placement_label`` and optional ``err_z``).
+    ``builder`` defaults to :func:`rtt.design.freeform.build_pair`. A design that cannot be
+    built for a part gets ``invalid_build`` records there, without simulating. Records come
+    back ordered by design, condition (suite order), then seed; ``seeds`` replaces each
+    condition's own seeds when given.
+    """
+    from rtt.sim.task import default_task_v2
+
+    task = task or default_task_v2()
+    builder = builder or _default_builder()
+    name, run = _resolve_executor(executor)
+    built = build_pairs(designs, suite_parts(suite), builder, task)
+    jobs: list[EpisodeJob] = []
+    keys: list[tuple[str, Any, Any, TaskConfig]] = []  # (design id, condition, pair, task)
+    out_slots: list[EpisodeRecordV2 | None] = []
+    for design, pairs in zip(designs, built, strict=True):
+        did = _design_id_of(design, pairs)
+        for cond in suite:
+            pair = pairs[cond.part.part_id]
+            ctask = condition_task_v2(task, cond)
+            for seed in seeds if seeds is not None else cond.seeds:
+                if isinstance(pair, str):
+                    out_slots.append(invalid_record_v2(did, cond, suite.name, int(seed), pair, task))
+                    continue
+                jobs.append(EpisodeJob(pair, cond.part, cond.placement, -1, int(seed), task=ctask))
+                keys.append((did, cond, pair, ctask))
+                out_slots.append(None)
+    batch = run(jobs, workers) if jobs else BatchResult([], 0.0, 0, 0)
+    if len(batch.results) != len(jobs):
+        raise RuntimeError(f"executor {name!r} returned {len(batch.results)} results for {len(jobs)} jobs")
+    results = iter(zip(keys, batch.results, strict=True))
+    records: list[EpisodeRecordV2] = []
+    for slot in out_slots:
+        if slot is not None:
+            records.append(slot)
+            continue
+        (did, cond, pair, ctask), res = next(results)
+        records.append(make_record_v2(did, cond, suite.name, res, pair, ctask, name))
+    return records
+
+
+def physics_invalid_share(records: Sequence[EpisodeRecordV2], mode: str = "physics_invalid") -> float:
+    """Share of simulated episodes labelled ``mode``: ``physics_invalid`` (> 1 % is a logged
+    deviation) or ``physics_unreliable`` (held with jaw-part penetration above 1 mm)."""
+    simulated = [r for r in records if r.failure_mode != "invalid_build"]
+    if not simulated:
+        return 0.0
+    return sum(r.failure_mode == mode for r in simulated) / len(simulated)
+
+
+_ARROW_TYPES = {"bool": "bool_", "int": "int64", "float": "float64", "str": "string", "str | None": "string"}
+
+
+def records_v2_to_table(records: Sequence[EpisodeRecordV2]) -> Any:
+    """A ``pyarrow.Table`` with one row per v2 record (schema from the dataclass fields)."""
+    import pyarrow as pa
+
+    fields = []
+    for f in dataclasses.fields(EpisodeRecordV2):
+        if f.type == "tuple[str, ...]":
+            fields.append(pa.field(f.name, pa.list_(pa.string())))
+        else:
+            fields.append(pa.field(f.name, getattr(pa, _ARROW_TYPES[str(f.type)])()))
+    schema = pa.schema(fields)
+    columns: dict[str, list[Any]] = {f.name: [getattr(r, f.name) for r in records] for f in fields}
+    for name in ("flags", "registration_flags"):
+        columns[name] = [list(v) for v in columns[name]]
+    return pa.table(columns, schema=schema)
+
+
+def write_parquet_v2(records: Sequence[EpisodeRecordV2], path: str | Path) -> Path:
+    import pyarrow.parquet as pq
+
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    pq.write_table(records_v2_to_table(records), p, compression="zstd")
+    return p
+
+
+@dataclass(frozen=True)
+class DesignScoreV2:
+    """A v2 design's training score and the breakdown a proposer is shown (spec section 7)."""
+
+    design_id: str
+    score: float  # mean registered-grasp success over every episode
+    lift_score: float  # mean lift-only success (first tie-break, always reported)
+    mass_g: float  # mean jaw-pair mass over the built parts (second tie-break, lower is better)
+    n_episodes: int
+    success_by_part: dict[str, float]
+    lift_by_part: dict[str, float]
+    success_by_placement: dict[str, float]
+    failure_modes: dict[str, int]
+    registration_flags: dict[str, int]  # jam_on_close / off_centre / tilt_after_hold / not_measured
+    flags: dict[str, int]
+    geometry_id: str | None  # over the per-part geometry hashes; None if a part failed to build
+
+    def sort_key(self) -> tuple[float, float, float]:
+        return (-self.score, -self.lift_score, self.mass_g if math.isfinite(self.mass_g) else math.inf)
+
+
+def score_designs_v2(records: Sequence[EpisodeRecordV2]) -> dict[str, DesignScoreV2]:
+    """Reduce v2 records to one :class:`DesignScoreV2` per design (first-seen order).
+
+    Score = mean ``success`` (registered grasp) over every episode; there is no best-of-k.
+    """
+    by_design: dict[str, list[EpisodeRecordV2]] = defaultdict(list)
+    for r in records:
+        by_design[r.design_id].append(r)
+
+    def mean(rs: Sequence[EpisodeRecordV2], attr: str) -> float:
+        return sum(bool(getattr(r, attr)) for r in rs) / len(rs)
+
+    out: dict[str, DesignScoreV2] = {}
+    for did, recs in by_design.items():
+        by_part: dict[str, list[EpisodeRecordV2]] = defaultdict(list)
+        by_place: dict[str, list[EpisodeRecordV2]] = defaultdict(list)
+        hashes: dict[str, str] = {}
+        masses: dict[str, float] = {}
+        for r in recs:
+            by_part[r.part_id].append(r)
+            by_place[r.placement_label].append(r)
+            hashes.setdefault(r.part_id, r.geometry_hash)
+            masses.setdefault(r.part_id, r.finger_mass_g)
+        finite = [m for m in masses.values() if math.isfinite(m)]
+        out[did] = DesignScoreV2(
+            design_id=did,
+            score=mean(recs, "success"),
+            lift_score=mean(recs, "lift_success"),
+            mass_g=sum(finite) / len(finite) if finite else math.nan,
+            n_episodes=len(recs),
+            success_by_part={k: mean(v, "success") for k, v in by_part.items()},
+            lift_by_part={k: mean(v, "lift_success") for k, v in by_part.items()},
+            success_by_placement={k: mean(v, "success") for k, v in by_place.items()},
+            failure_modes=dict(Counter(r.failure_mode for r in recs if r.failure_mode)),
+            registration_flags=dict(Counter(f for r in recs for f in r.registration_flags)),
+            flags=dict(Counter(f.split(":", 1)[0] for r in recs for f in r.flags)),
+            geometry_id=None if any(not h for h in hashes.values()) else suite_geometry_id(hashes),
+        )
+    return out
+
+
+def rank_designs_v2(records: Sequence[EpisodeRecordV2]) -> list[DesignScoreV2]:
+    """v2 design scores, best first (score, lift-only success, lower mass, then id)."""
+    return sorted(score_designs_v2(records).values(), key=lambda s: (*s.sort_key(), s.design_id))

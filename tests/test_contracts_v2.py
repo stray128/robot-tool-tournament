@@ -166,11 +166,11 @@ def test_capture_report_validates_outcomes() -> None:
     assert report.by_error == ((1.0, "jammed"),) and type(report.no_jam_mm) is float
 
 
-def test_build_pair_is_the_frozen_stub() -> None:
+def test_build_pair_keeps_the_frozen_signature() -> None:
     sig = inspect.signature(build_pair)
     assert list(sig.parameters) == ["design", "part", "task"]
     assert sig.return_annotation == "FingerPair"
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(TypeError):
         build_pair(None, None, None)  # type: ignore[arg-type]
 
 

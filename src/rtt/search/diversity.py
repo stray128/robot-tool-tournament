@@ -32,22 +32,34 @@ runs.
 from __future__ import annotations
 
 import math
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Final
+from typing import TYPE_CHECKING, Any, Final
 
 import numpy as np
 
 from rtt.design.distance import design_distance, pairwise_distances
 from rtt.design.schema import CATEGORICAL_OPTIONS, GEOMETRY_PARAMS, PARAM_BOUNDS, FingerDesign
+from rtt.search.space import V1
+
+if TYPE_CHECKING:
+    from rtt.search.space import DesignSpace
 
 __all__ = [
+    "BASELINE_CELL",
     "CELL_PARAMS",
     "EXPLORE_MIN_DISTANCE",
+    "EXPLORE_MIN_DISTANCE_V2",
     "MIN_DISTANCE",
+    "MIN_DISTANCE_V2",
     "NUMERIC_PARAMS",
     "POINTS_PER_RANGE",
+    "SCREEN_REASONS",
+    "THRESHOLD_RULE_SEED",
+    "UNREACHABLE_POINTS",
     "Nearest",
+    "Screened",
+    "ThresholdRule",
     "all_cells",
     "cell_name",
     "cell_of",
@@ -58,11 +70,22 @@ __all__ = [
     "neighbours",
     "passes",
     "points_of",
+    "screen",
     "sequential_nn_distances",
+    "threshold_rule",
     "to_points",
+    "valid_sobol_pool",
 ]
 
 MIN_DISTANCE: Final = 0.08
+#: v2 diversity bar t from :func:`threshold_rule` (at most 1 % of 10k random valid Sobol pairs fall
+#: within t; 63 points), under the full section-13 validators on the six training parts and
+#: task_v2 (gate GV5, 2026-10-16: 2,000 valid of 3,179 draws). Recorded with its input hashes in
+#: ``configs/diversity_v2.json`` (``python -m rtt.search.threshold_v2``); with the schema rules
+#: only, the rule gives 0.080 / 0.17 (``tests/test_search_dedup.py`` pins both).
+MIN_DISTANCE_V2: Final = 0.070
+#: v2 explore bar: the median distance between random valid recipes in the same cell (135 points).
+EXPLORE_MIN_DISTANCE_V2: Final = 0.15
 #: Within-cell distance an ``explore`` design needs when its cell is already tried.
 EXPLORE_MIN_DISTANCE: Final = 0.2
 #: Points spanned by one numeric parameter's range (and charged for one categorical change).
@@ -73,6 +96,10 @@ CELL_PARAMS: Final[tuple[str, str]] = ("inner_face", "tip_profile")
 NUMERIC_PARAMS: Final[tuple[str, ...]] = tuple(p for p in GEOMETRY_PARAMS if p not in CATEGORICAL_OPTIONS)
 
 Cell = tuple[str, str]
+#: Pseudo-cell of a v2 baseline that has no recipe point (the stock blade).
+BASELINE_CELL: Final[Cell] = ("baseline", "baseline")
+#: Distance in points reported for a v2 baseline without a recipe point (it is never too close).
+UNREACHABLE_POINTS: Final = 10**6
 
 
 @dataclass(frozen=True)
@@ -84,14 +111,26 @@ class Nearest:
     distance: float
 
 
+def _metric(space: DesignSpace | None) -> Callable[[Any, Any], float]:
+    """The design distance of ``space`` (v1's :func:`design_distance` when ``space`` is None or v1)."""
+    if space is None or space.name == V1:
+        return design_distance
+    return space.distance
+
+
 def nearest(
-    design: FingerDesign, references: Sequence[FingerDesign], labels: Sequence[str] | None = None
+    design: Any,
+    references: Sequence[Any],
+    labels: Sequence[str] | None = None,
+    *,
+    space: DesignSpace | None = None,
 ) -> Nearest:
     """Nearest neighbour of ``design`` among ``references`` (distance ``inf`` when empty)."""
+    dist = _metric(space)
     best_i: int | None = None
     best_d = float("inf")
     for i, other in enumerate(references):
-        d = design_distance(design, other)
+        d = dist(design, other)
         if d < best_d:
             best_i, best_d = i, d
     label = labels[best_i] if labels is not None and best_i is not None else None
@@ -99,15 +138,17 @@ def nearest(
 
 
 def neighbours(
-    design: FingerDesign,
-    references: Sequence[FingerDesign],
+    design: Any,
+    references: Sequence[Any],
     labels: Sequence[str] | None = None,
     k: int = 3,
     *,
     max_distance: float = math.inf,
+    space: DesignSpace | None = None,
 ) -> list[Nearest]:
     """The ``k`` nearest references (closest first, ties in reference order) within ``max_distance``."""
-    scored = sorted((design_distance(design, other), i) for i, other in enumerate(references))
+    dist = _metric(space)
+    scored = sorted((dist(design, other), i) for i, other in enumerate(references))
     out: list[Nearest] = []
     for d, i in scored[: max(0, k)]:
         if d > max_distance:
@@ -123,12 +164,23 @@ def passes(
     return nearest(design, references).distance >= min_distance
 
 
-def diversity_stats(designs: Sequence[FingerDesign]) -> dict[str, float]:
-    """Mean and minimum pairwise distance of a design set (reported per run)."""
+def diversity_stats(designs: Sequence[Any], *, space: DesignSpace | None = None) -> dict[str, float]:
+    """Mean and minimum pairwise distance of a design set (reported per run).
+
+    In v2, baselines without a recipe point (the stock blade) are left out.
+    """
+    if space is not None and space.name != V1:
+        designs = [d for d in designs if space.cell(d) is not None]
     n = len(designs)
     if n < 2:
         return {"mean_pairwise": 0.0, "min_pairwise": 0.0}
-    dist = pairwise_distances(designs)
+    if space is None or space.name == V1:
+        dist = pairwise_distances(designs)
+    else:
+        dist = np.zeros((n, n))
+        for i in range(n):
+            for j in range(i + 1, n):
+                dist[i, j] = dist[j, i] = space.distance(designs[i], designs[j])
     upper = dist[np.triu_indices(n, k=1)]
     return {"mean_pairwise": float(upper.mean()), "min_pairwise": float(upper.min())}
 
@@ -136,9 +188,15 @@ def diversity_stats(designs: Sequence[FingerDesign]) -> dict[str, float]:
 # --------------------------------------------------------------------------- points and cells
 
 
-def cell_of(design: FingerDesign) -> Cell:
-    """The design's ``(inner_face, tip_profile)`` pair."""
-    return (design.inner_face, design.tip_profile)
+def cell_of(design: Any, space: DesignSpace | None = None) -> Cell:
+    """The design's cell: ``(inner_face, tip_profile)`` in v1, ``(pad, tip)`` in v2.
+
+    A v2 baseline without a recipe point (the stock blade) is in the pseudo-cell
+    :data:`BASELINE_CELL`.
+    """
+    if space is None or space.name == V1:
+        return (design.inner_face, design.tip_profile)
+    return space.cell(design) or BASELINE_CELL
 
 
 def cell_name(cell: Cell) -> str:
@@ -146,8 +204,10 @@ def cell_name(cell: Cell) -> str:
     return f"{cell[0]} + {cell[1]}"
 
 
-def all_cells() -> list[Cell]:
-    """Every ``(inner_face, tip_profile)`` pair, in schema order."""
+def all_cells(space: DesignSpace | None = None) -> list[Cell]:
+    """Every cell, in schema order (v1: ``(inner_face, tip_profile)``; v2: ``(pad, tip)``)."""
+    if space is not None and space.name != V1:
+        return space.cells()
     return [(f, t) for f in CATEGORICAL_OPTIONS["inner_face"] for t in CATEGORICAL_OPTIONS["tip_profile"]]
 
 
@@ -162,16 +222,25 @@ def points_of(design: FingerDesign) -> dict[str, int]:
     return {name: round(to_points(name, getattr(design, name))) for name in NUMERIC_PARAMS}
 
 
-def distance_points(a: FingerDesign, b: FingerDesign) -> int:
-    """Design distance in points: ``1000 x design_distance`` rounded (sum of point differences)."""
-    return round(design_distance(a, b) * POINTS_PER_RANGE * len(GEOMETRY_PARAMS))
+def distance_points(a: Any, b: Any, space: DesignSpace | None = None) -> int:
+    """Design distance in points: ``100 x n_terms x distance`` rounded (sum of point differences).
+
+    v1 has 10 terms (``1000 x design_distance``), v2 has 9. A v2 baseline without a recipe
+    point is infinitely far from everything; it is reported as a large sentinel.
+    """
+    if space is None or space.name == V1:
+        return round(design_distance(a, b) * POINTS_PER_RANGE * len(GEOMETRY_PARAMS))
+    d = space.distance(a, b)
+    return UNREACHABLE_POINTS if math.isinf(d) else round(d * POINTS_PER_RANGE * space.n_terms)
 
 
 def explore_check(
-    design: FingerDesign,
-    references: Sequence[FingerDesign],
+    design: Any,
+    references: Sequence[Any],
     labels: Sequence[str] | None = None,
     min_cell_distance: float = EXPLORE_MIN_DISTANCE,
+    *,
+    space: DesignSpace | None = None,
 ) -> tuple[bool, Nearest | None]:
     """Novelty rule for an ``explore`` design.
 
@@ -179,21 +248,214 @@ def explore_check(
     same-cell reference is at least ``min_cell_distance`` away. Returns
     ``(passes, nearest same-cell reference or None)``.
     """
-    cell = cell_of(design)
-    same = [i for i, ref in enumerate(references) if cell_of(ref) == cell]
+    cell = cell_of(design, space)
+    same = [i for i, ref in enumerate(references) if cell_of(ref, space) == cell]
     if not same:
         return True, None
-    near = nearest(design, [references[i] for i in same])
+    near = nearest(design, [references[i] for i in same], space=space)
     assert near.index is not None
     index = same[near.index]
     found = Nearest(index, labels[index] if labels is not None else None, near.distance)
     return near.distance >= min_cell_distance, found
 
 
-def sequential_nn_distances(designs: Sequence[FingerDesign], start: int = 1) -> list[float]:
+def sequential_nn_distances(
+    designs: Sequence[Any], start: int = 1, *, space: DesignSpace | None = None
+) -> list[float]:
     """For each design from position ``start`` on, its distance to the nearest earlier design.
 
     This is the quantity the diversity check thresholds, so its distribution over
     random runs shows whether :data:`MIN_DISTANCE` is scaled sensibly.
     """
-    return [nearest(designs[i], designs[:i]).distance for i in range(max(1, start), len(designs))]
+    return [
+        nearest(designs[i], designs[:i], space=space).distance for i in range(max(1, start), len(designs))
+    ]
+
+
+# --------------------------------------------------------------------------- v2: duplicates and the threshold rule
+
+#: Rejection reasons of the shared v2 screen, cheapest first (spec section 13, step 6).
+SCREEN_REASONS: Final[tuple[str, ...]] = ("duplicate_design", "duplicate_geometry", "too_similar")
+#: Seed of the scrambled Sobol sample the v2 threshold rule is computed on (never a gate seed).
+THRESHOLD_RULE_SEED: Final = 20261016
+
+
+@dataclass(frozen=True)
+class Screened:
+    """Why a design failed the shared screen: reason, message and the reference it collided with."""
+
+    reason: str
+    message: str
+    near: Nearest
+
+
+def screen(
+    design: Any,
+    references: Sequence[Any],
+    labels: Sequence[str] | None,
+    min_distance: float | None,
+    *,
+    space: DesignSpace,
+    context: Any = None,
+) -> Screened | None:
+    """The v2 duplicate and diversity screen every arm applies (``None`` when ``design`` passes).
+
+    In order: ``duplicate_design`` (same canonical recipe as a reference, i.e. the same
+    ``design_id``), ``duplicate_geometry`` (same ``geometry_id`` on the training parts, when the
+    space can compute it), then ``too_similar`` (closer than ``min_distance``; skipped when
+    ``min_distance`` is None).
+    """
+
+    def label(i: int) -> str | None:
+        return labels[i] if labels is not None else None
+
+    ident = space.design_id(design)
+    for i, ref in enumerate(references):
+        if space.design_id(ref) == ident:
+            return Screened(
+                "duplicate_design",
+                f"identical to {label(i) or 'a tested design'} after canonicalisation (inactive parameters are "
+                "ignored and values are quantised)",
+                Nearest(i, label(i), 0.0),
+            )
+    geometry = space.geometry_id(design, context)
+    if geometry is not None:
+        for i, ref in enumerate(references):
+            if space.geometry_id(ref, context) == geometry:
+                return Screened(
+                    "duplicate_geometry",
+                    f"builds exactly the same jaws as {label(i) or 'a tested design'} on every training part",
+                    Nearest(i, label(i), space.distance(design, ref)),
+                )
+    if min_distance is not None:
+        near = nearest(design, references, labels, space=space)
+        if near.distance < min_distance:
+            return Screened(
+                "too_similar",
+                f"distance {near.distance:.3f} to {near.label} (needs >= {min_distance:g})",
+                near,
+            )
+    return None
+
+
+@dataclass(frozen=True)
+class ThresholdRule:
+    """Result of the pre-registered v2 diversity-threshold rule (spec section 12, D6).
+
+    ``min_distance`` (t) is the largest value with at most ``quantile`` of the random valid
+    pairs strictly closer than t, rounded down to 0.001. ``explore_min_distance`` is the median
+    distance between random valid designs that share a cell: an ``explore`` in a tried cell
+    must sit at least as far from every design there as a typical random design does.
+    """
+
+    min_distance: float
+    explore_min_distance: float
+    quantile: float
+    n_pairs: int
+    pool: int
+    draws: int
+    seed: int
+    pair_quantiles: dict[str, float]
+
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "min_distance": self.min_distance,
+            "explore_min_distance": self.explore_min_distance,
+            "quantile": self.quantile,
+            "n_pairs": self.n_pairs,
+            "pool": self.pool,
+            "draws": self.draws,
+            "seed": self.seed,
+            "pair_quantiles": dict(self.pair_quantiles),
+        }
+
+
+_POOL_SPACE: Any = None
+_POOL_CONTEXT: Any = None
+
+
+def _pool_init(space_name: str, context: Any) -> None:
+    global _POOL_SPACE, _POOL_CONTEXT
+    from rtt.search.space import get_space
+
+    _POOL_SPACE, _POOL_CONTEXT = get_space(space_name), context
+
+
+def _pool_check(raw: dict[str, Any]) -> Any:
+    check = _POOL_SPACE.validate(raw, _POOL_CONTEXT)
+    return check.design if check.ok else None
+
+
+def valid_sobol_pool(
+    space: DesignSpace, context: Any, seed: int, n: int, *, workers: int | None = None, chunk: int = 256
+) -> tuple[list[Any], int]:
+    """The first ``n`` valid designs of the space's Sobol sampler (seed ``seed``) and the draws used.
+
+    The same designs, in the same order, as ``space.sample_sobol(seed, context).sample(n)``:
+    raw draws do not depend on validity, so they are drawn in order and validated in a pool
+    of ``workers`` spawned processes (the geometry validators build every training part),
+    keeping the first ``n`` that pass. ``workers`` of 1 or ``None`` validates in-process.
+    """
+    sampler = space.sample_sobol(seed, context)
+    if not workers or workers <= 1:
+        designs = sampler.sample(n)
+        return designs, int(sampler.draws)
+    import multiprocessing as mp
+
+    out: list[Any] = []
+    draws = 0
+    ctx = mp.get_context("spawn")
+    with ctx.Pool(workers, initializer=_pool_init, initargs=(space.name, context)) as procs:
+        while len(out) < n:
+            batch = [sampler.draw_raw() for _ in range(chunk)]
+            for design in procs.map(_pool_check, batch, chunksize=max(1, chunk // (4 * workers))):
+                draws += 1
+                if design is not None:
+                    out.append(design)
+                    if len(out) == n:
+                        break
+            if draws > 20 * n + 20_000:
+                raise RuntimeError(f"fewer than {n} valid designs in {draws} draws (seed {seed})")
+    return out, draws
+
+
+def threshold_rule(
+    space: DesignSpace,
+    context: Any = None,
+    *,
+    n_pairs: int = 10_000,
+    quantile: float = 0.01,
+    pool: int = 2_000,
+    seed: int = THRESHOLD_RULE_SEED,
+    workers: int | None = None,
+) -> ThresholdRule:
+    """Apply the v2 threshold rule: at most 1 % of 10k random valid Sobol pairs fall within t.
+
+    ``pool`` valid designs are drawn from the space's scrambled Sobol sampler (seed ``seed``,
+    the same validators as every arm, under ``context``) and ``n_pairs`` distinct pairs are
+    drawn uniformly from them with a seeded generator. The pool keeps the rule cheap when the
+    geometry validators are slow; with ``pool >= 2 * n_pairs`` the pairs can be disjoint.
+    ``workers`` validates the draws in parallel (:func:`valid_sobol_pool`; same result).
+    """
+    designs, n_draws = valid_sobol_pool(space, context, seed, pool, workers=workers)
+    rng = np.random.default_rng(seed)
+    i = rng.integers(0, pool, size=n_pairs)
+    j = (i + rng.integers(1, pool, size=n_pairs)) % pool  # j != i
+    dist = np.array([space.distance(designs[a], designs[b]) for a, b in zip(i, j, strict=True)])
+    order = np.sort(dist)
+    k = math.floor(quantile * n_pairs)  # at most k pairs may lie strictly below t
+    t = float(order[min(k, n_pairs - 1)])
+    t = math.floor(t * 1000.0 + 1e-9) / 1000.0
+    same = [d for d, a, b in zip(dist, i, j, strict=True) if space.cell(designs[a]) == space.cell(designs[b])]
+    explore = math.floor(float(np.median(same)) * 100.0 + 1e-9) / 100.0 if same else 0.0
+    qs = {f"p{q:g}": float(np.quantile(dist, q / 100.0)) for q in (0.5, 1, 5, 50)}
+    return ThresholdRule(
+        min_distance=t,
+        explore_min_distance=explore,
+        quantile=quantile,
+        n_pairs=n_pairs,
+        pool=pool,
+        draws=int(n_draws),
+        seed=seed,
+        pair_quantiles=qs,
+    )

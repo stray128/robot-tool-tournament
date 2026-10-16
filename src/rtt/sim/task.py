@@ -4,6 +4,13 @@ Every entrant is evaluated under one :class:`TaskConfig`. The defaults below
 mirror ``configs/task_v1.yaml`` exactly (a test keeps them in sync); load the
 YAML with :func:`load_task` so that tuned values live in one reviewed file.
 
+The v2 task (freeform jaw pairs, ``configs/task_v2.yaml``) is a :class:`TaskV2`: every v1
+section plus ``registration`` (the registered-grasp rule) and ``checks`` (the extra v2
+physics checks). It is a subclass, so every v1 helper accepts it, but its controller has no
+grasp-height grid (``grasp_height_fracs`` is empty): a v2 jaw pair carries its own designed
+grip height. Load it with :func:`load_task_v2`. :class:`TaskConfig` itself is unchanged, so
+``task_v1`` and its digest stay exactly as frozen.
+
 Units are SI throughout (metres, kilograms, seconds, newtons, radians) unless
 a field name says otherwise (``*_deg``).
 """
@@ -23,6 +30,7 @@ import yaml
 from rtt.design.schema import GripperTask
 
 DEFAULT_TASK_PATH = Path(__file__).resolve().parents[3] / "configs" / "task_v1.yaml"
+DEFAULT_TASK_V2_PATH = DEFAULT_TASK_PATH.with_name("task_v2.yaml")
 
 
 @dataclass(frozen=True)
@@ -203,6 +211,66 @@ class TaskConfig:
         return dataclasses.replace(self, **changes)
 
 
+@dataclass(frozen=True)
+class RegistrationConfig:
+    """The registered-grasp rule of task v2 (``rtt.sim.register``; spec D1).
+
+    Registration is measured ``settle_time`` seconds after the grip ramp ends (the end of
+    closing, ``t_close + close_time``), which must be before the lift starts, with the part's
+    pose taken in the palm frame:
+
+    * seated: ``seat_short_mm = q_seat - q <= seat_short_max_mm`` (``q``: mean jaw closure);
+    * centred: ``|dx| <= dx_max_mm`` (across the jaw), ``|dy| <= dy_max_mm`` (closing axis),
+      yaw residual (modulo the part's yaw symmetry) ``<= yaw_max_deg`` and tilt
+      ``<= tilt_max_deg``; a part checks only the axes it declares in ``register_axes``;
+    * upright after the hold: tilt ``<= hold_tilt_max_deg`` when the hold is confirmed.
+
+    ``creep_delay``: seconds after HOLD starts at which the hold-creep reference pose is
+    taken (``hold_creep_mm`` is logged per episode and never scored).
+    """
+
+    settle_time: float = 0.25
+    seat_short_max_mm: float = 1.0
+    dx_max_mm: float = 0.75
+    dy_max_mm: float = 0.75
+    yaw_max_deg: float = 2.0
+    tilt_max_deg: float = 3.0
+    hold_tilt_max_deg: float = 5.0
+    creep_delay: float = 0.2
+
+    def __post_init__(self) -> None:
+        for f in dataclasses.fields(self):
+            value = getattr(self, f.name)
+            if not isinstance(value, int | float) or isinstance(value, bool) or not value >= 0:
+                raise ValueError(f"registration.{f.name} must be a number >= 0, got {value!r}")
+
+
+@dataclass(frozen=True)
+class ChecksConfig:
+    """Extra physics checks of task v2 (``rtt.sim.checks``).
+
+    * ``bad_qacc``: MuJoCo's bad-acceleration (and bad position / velocity) warning counter
+      went up during the scored part of the episode (up to the moment the outcome is decided;
+      the replay-only tail is never checked), i.e. MuJoCo silently reset the simulation; the
+      episode becomes ``physics_invalid``.
+    * ``held_penetration_max_mm``: a held episode (the v1 lift-and-hold criterion met) whose
+      deepest jaw-part penetration over the scored part of the episode exceeds this becomes
+      ``physics_unreliable`` and fails both the registered and the lift-only criterion
+      (founder ruling 4, 2026-10-16: the same rule for every arm and design). ``inf`` turns
+      the rule off.
+    * ``trajectory_hash``: keep a SHA-256 of the state at every check tick (determinism).
+    """
+
+    bad_qacc: bool = True
+    held_penetration_max_mm: float = 1.0
+    trajectory_hash: bool = True
+
+    def __post_init__(self) -> None:
+        v = self.held_penetration_max_mm
+        if not isinstance(v, int | float) or isinstance(v, bool) or not v > 0:
+            raise ValueError(f"checks.held_penetration_max_mm must be a number > 0, got {v!r}")
+
+
 def _build[T](cls: type[T], raw: dict[str, Any] | None, where: str) -> T:
     raw = raw or {}
     fields = {f.name: f for f in dataclasses.fields(cls)}  # type: ignore[arg-type]
@@ -235,6 +303,55 @@ def task_from_dict(raw: dict[str, Any]) -> TaskConfig:
     return TaskConfig(**kwargs)
 
 
+@dataclass(frozen=True)
+class TaskV2(TaskConfig):
+    """Task v2: every :class:`TaskConfig` section plus ``registration`` and ``checks``.
+
+    The controller's grasp-height grid is removed (spec D5): ``grasp_height_fracs`` must be
+    empty, so any v1 code path that would pick a controller setting ``k`` fails loudly instead
+    of silently using a grid. The registration moment (``settle_time`` after the grip ramp)
+    must fall on a control tick inside the squeeze dwell, before the lift.
+    """
+
+    name: str = "task_v2"
+    registration: RegistrationConfig = field(default_factory=RegistrationConfig)
+    checks: ChecksConfig = field(default_factory=ChecksConfig)
+
+    def __post_init__(self) -> None:
+        c = self.controller
+        if c.grasp_height_fracs:
+            raise ValueError(
+                "task v2 has no controller grasp-height grid (the jaw pair sets the grip height); "
+                f"set controller.grasp_height_fracs to [], got {list(c.grasp_height_fracs)}"
+            )
+        settle = self.registration.settle_time
+        if not 0.0 < settle < c.squeeze_time:
+            raise ValueError(
+                f"registration.settle_time ({settle} s) must be inside the squeeze dwell "
+                f"(0, {c.squeeze_time}) so registration is measured before the lift"
+            )
+        ticks = settle / c.control_period
+        if abs(ticks - round(ticks)) > 1e-9:
+            raise ValueError(
+                f"registration.settle_time ({settle} s) must be a multiple of the control period "
+                f"({c.control_period} s)"
+            )
+
+
+_V2_SECTIONS: dict[str, type] = {"registration": RegistrationConfig, "checks": ChecksConfig}
+
+
+def task_v2_from_dict(raw: dict[str, Any]) -> TaskV2:
+    """Build a :class:`TaskV2` from a parsed YAML mapping, rejecting unknown keys."""
+    raw = dict(raw)
+    extra = {k: _build(cls, raw.pop(k, None), k) for k, cls in _V2_SECTIONS.items()}
+    base = task_from_dict(raw)
+    values = {f.name: getattr(base, f.name) for f in dataclasses.fields(TaskConfig)}
+    if "name" not in raw:
+        values["name"] = "task_v2"
+    return TaskV2(**values, **extra)
+
+
 def load_task(path: str | Path | None = None) -> TaskConfig:
     """Load a task YAML (default: ``configs/task_v1.yaml``; built-in defaults if absent)."""
     p = Path(path) if path is not None else DEFAULT_TASK_PATH
@@ -242,6 +359,19 @@ def load_task(path: str | Path | None = None) -> TaskConfig:
         return TaskConfig()
     with open(p, encoding="utf-8") as fh:
         return task_from_dict(yaml.safe_load(fh) or {})
+
+
+def load_task_v2(path: str | Path | None = None) -> TaskV2:
+    """Load a v2 task YAML (default: ``configs/task_v2.yaml``)."""
+    p = Path(path) if path is not None else DEFAULT_TASK_V2_PATH
+    with open(p, encoding="utf-8") as fh:
+        return task_v2_from_dict(yaml.safe_load(fh) or {})
+
+
+@functools.lru_cache(maxsize=1)
+def default_task_v2() -> TaskV2:
+    """The repository's v2 task (``configs/task_v2.yaml``), loaded once per process."""
+    return load_task_v2()
 
 
 @functools.lru_cache(maxsize=1)

@@ -15,7 +15,8 @@ talks to a local API.
 | `/part` | Bring your part: STL drop zone, in-browser preview against the jaw opening, size readout, passcode, Run, and the agent timeline |
 | `/results` | S1, the primary endpoint (best-so-far curves, designs-to-threshold dot plot), H1 held-out success as secondary; stamped `PILOT` or `SYNTHETIC` until the final analysis |
 | `/certificate/<id>` | One design's robustness certificate: placement-error curve, every shake and push, provenance |
-| `/benchmark`, `/bout/<id>`, `/design/<id>`, `/compute`, `/about` | Bouts, designs (now linking their certificate), jobs, method |
+| `/benchmark`, `/bout/<id>`, `/design/<id>`, `/compute`, `/about` | Bouts, designs (now linking their certificate, with studio, x-ray, cutaway and turntable views of the jaws on the part), jobs, method |
+| `/credits` | Third-party models (from `public/assets/manifest.json`), scans, software and fonts, with licences and what was changed. The short credits that assets and replays carry (`... (full credit: /credits#gripper)`, `#gso`) link to these anchors, and every clip that draws a third-party model shows its short credit with that link |
 
 ## Commands
 
@@ -32,8 +33,10 @@ Run from `web/` with Node 20.9 or newer and pnpm.
 | `pnpm dev` | Development server |
 | `pnpm build` | Static export to `out/`; fails if any data file is malformed, a lane's replay is missing or does not match its header, a design links a missing file, a session's part STL is missing, or a certificate does not parse |
 | `pnpm start` | Serve `out/` locally at http://127.0.0.1:4173/ |
-| `pnpm test` | Unit tests (replay decoding, overlays, data validation, session/SSE/STL/certificate/S1 parsers, import scripts) |
+| `pnpm test` | Unit tests (replay decoding, overlays, data validation, session/SSE/STL/certificate/S1 parsers, import scripts). The GLB compression test runs only where the glTF Transform modules are available: in `web/node_modules`, or in the `node_modules` directory named by `RTT_GLTF_MODULES` |
 | `pnpm typecheck` | TypeScript check |
+| `node scripts/compress_glb.mjs SPEC.json [--map MAP.json]` | Meshopt-compress the GLBs a spec lists (WebP textures, optional simplification for scans) and add them to `public/assets/` as `<sha256[:16]>.glb` with their manifest entries; Identical output under a different role, licence, credit, change list or source is refused, and nothing is written unless every input passes. `--check` verifies the manifest against the files without any dependency. Compression needs `@gltf-transform/{core,extensions,functions}` and `meshoptimizer` (and `sharp` for textures), from `web/node_modules` or `--modules DIR` |
+| `node scripts/smoke_v2.mjs` | After `pnpm build`: the v2 look in headless Chromium. A v1 bout still plays; the published bout of v2 lanes (`--v2-bout ID`, default the first bout of v2 parts) plays every lane under its own label and replay (design and part checked), with GLB decoding, captions, offset readouts, x-ray and collision toggles, the 300 000-byte payload per lane, credit links and no maker name on the page; then the design views and the credits page. Screenshots go to `.smoke/v2/` |
 | `pnpm smoke` | After `pnpm build`: open every page in headless Chromium at 1280 px and 375 px; fail on console errors, horizontal scroll, replays that do not load or missing canvases. On `/part` it also drops the example STL (a preview canvas and size readout must appear) and plays the first demo session to its end (an illustrative session must be labelled illustrative, never recorded). Screenshots go to `.smoke/` |
 
 For a GitHub Pages project site, build with `NEXT_PUBLIC_BASE_PATH=/<repo-name>`.
@@ -59,6 +62,8 @@ importer and a later Nebius export can share the same files.
 | `public/data/sessions/<id>.json` | Grasp Engineer sessions played by `/part`, in the agent's own format (see below); `kind` is `recorded` or `illustrative`, and an illustrative one is stamped as such. The committed `demo-dumbbell.json` is illustrative |
 | `public/data/sessions/parts/*.stl` | The example part of each session (binary STL, mm) |
 | `public/data/replays/**/<stem>.{json,bin}` | Replays as written by `src/rtt/sim/replay.py`: float32 `[frames x bodies x 7]` poses `(px, py, pz, qx, qy, qz, qw)` at 30 fps, MuJoCo Z-up. The viewer rotates its root group by -90 degrees about X once; nothing else converts axes |
+| `public/data/replays/**/<stem>.json` (version 2) | The header of `src/rtt/sim/replay_v2.schema.json`, validated by `lib/replay.ts`: the same pose payload, bodies drawn from GLB assets (`bodies[].visuals`, positive scale only, so a right jaw is its own asset), optional v1-style geoms as the collision overlay, `meta` (design space, design, geometry and part ids), `provenance` (the caption) and an optional `<stem>.ovl.bin` of float16 readouts. The viewer reads versions 1 and 2 |
+| `public/assets/<id>.glb`, `public/assets/manifest.json` | Content-addressed GLB assets (`id` = sha256[:16]), meshopt-compressed, Z-up metres in the body frame (no rotation, no mirroring), shared by every replay; the manifest format is `docs/ASSET_MANIFEST.md`. The build checks that every asset a replay draws is served with the listed size and sha256. Draco-compressed files are refused: no decoder is shipped and none is fetched from a CDN |
 | `public/data/designs/<id>/` | `finger-left.stl`, `finger-right.stl` (mm) and `gripper.glb` (m, already Y-up, so not rotated) |
 
 Provenance chips render only what the data says: a lane or certificate from a local run

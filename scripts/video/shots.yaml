@@ -1,0 +1,65 @@
+# The 10-second hook (visual upgrade spec, section 10). Real replays only: every panel is
+# rendered from a recorded replay by rtt.render.playback and carries the burned-in caption
+# "simulation replay · MuJoCo · run <id> · design <id>" (plus "product mode" where it applies).
+#
+# Render with:
+#   MUJOCO_GL=egl python scripts/video/overlay.py hook scripts/video/shots.yaml \
+#       --replays REPLAYS.json --out hook.mp4
+# REPLAYS.json maps every {key} below to {"stem": <replay path without extension>,
+# "assets": <asset store directory>}. The keys are filled in once the hero rule (spec
+# section 8) has picked the heroes; a failure is never staged.
+#
+# Shot fields:
+#   seconds       duration of the shot
+#   layout        single | triptych | sequence | card
+#   view          a named studio view (wide, close, side, detail, xray) or
+#                 {offset: [x, y, z], distance, azimuth, elevation, fovy}
+#   frames        "all" (the replay's own clock, resampled to the shot), or [start, stop]
+#                 in seconds of replay time
+#   turntable     degrees the camera orbits during the shot (sequence panels)
+#   readout       {channel, format}: a per-frame value from the replay's .ovl.bin
+#                 (offset_mm, seat_short_mm, hold_s, n_contacts); {start} is the first value
+#   label, tint   triptych panel title and border colour (red, amber, green)
+
+fps: 30
+size: [1280, 720]
+
+shots:
+  - id: macro
+    seconds: 3.0
+    layout: single
+    replay: hero_tee_designed_err2
+    view: close
+    frames: [1.0, 4.0]
+    readout: {channel: offset_mm, format: "{start:.1f} -> {value:.2f} mm"}
+
+  - id: triptych
+    seconds: 3.0
+    layout: triptych
+    frames: [1.0, 4.0]
+    view: close
+    panels:
+      - {replay: hero_tee_stock_err2, label: "stock", tint: red}
+      - replay: hero_tee_imprint_err2
+        label: "configurator imprint"
+        tint: amber
+        readout: {channel: seat_short_mm, format: "{value:.1f} mm short"}
+      - {replay: hero_tee_designed_err2, label: "designed", tint: green}
+
+  - id: same_recipe
+    seconds: 3.0
+    layout: sequence
+    view: close
+    turntable: 90
+    panels:
+      - {replay: recipe_tee}
+      - {replay: recipe_block}
+      - {replay: recipe_hex_standoff}
+      - {replay: recipe_bushing}
+      - {replay: recipe_l_bracket}
+      - {replay: recipe_slug}
+
+  - id: title
+    seconds: 1.0
+    layout: card
+    text: "Fingers designed by NVIDIA Nemotron. Tested in simulation on Nebius."

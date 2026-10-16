@@ -1,0 +1,168 @@
+# Task v2: freeform jaw pairs (exact convex pieces), registered-grasp scoring.
+# Loaded by rtt.sim.task.load_task_v2(); the TaskV2 dataclass defaults plus the
+# overrides below are kept in sync by tests/test_sim_freeform.py.
+# Units: SI (m, kg, s, N, rad) unless the key says otherwise.
+#
+# What changes from task_v1 (spec 2026-10-16 sections 6-8, decisions D1 and D5):
+# - controller.grasp_height_fracs is empty: the k = 3 grasp-height grid is removed. Every
+#   v2 jaw pair carries its designed tip height (FingerPair.tip_height); the controller
+#   lowers the palm until the jaws' lowest point is there.
+# - jitter: +-0.5 mm, +-1 deg, +-10 % mu (v1: +-2 mm, +-3 deg). At +-2 mm the jitter alone
+#   would decide registration.
+# - registration: the registered-grasp rule (rtt.sim.register). Measured 0.25 s after the
+#   grip ramp ends, before the lift: seated (q_seat - q <= 1.0 mm) and centred in the palm
+#   frame (|dx|, |dy| <= 0.75 mm, yaw <= 2 deg modulo the part's symmetry, tilt <= 3 deg),
+#   then tilt <= 5 deg when the hold is confirmed. Tolerances may change only once, during
+#   GV3 on the screening sample, and are then frozen in PREREG.
+# - checks.bad_qacc: MuJoCo's bad-acceleration warning (a silent NaN reset) during the scored
+#   part of the episode makes it physics_invalid.
+# - checks.held_penetration_max_mm: a held episode whose deepest jaw-part penetration is above
+#   1 mm is physics_unreliable, a failure on both criteria (founder ruling 4, 2026-10-16).
+# Gripper, score and robustness values are task_v1's, unchanged. Physics is task_v1's except
+# two settings, both founder rulings of 2026-10-16 (Addendum D), declared in docs/DEVIATIONS.md:
+# - timestep 1 ms (ruling 3) for every v2 episode, against task_v1's 2 ms. At 2 ms the mesh-mesh
+#   contacts of v2 jaws and parts gave 2-3 mm penetrations and outcomes that changed with the
+#   step (1 ms vs 2 ms parity 88-96 % on 180-216 episodes, gate GV2, docs/BENCH_V2.md).
+#   The control period stays 2 ms (two physics steps per tick), as in every parity run.
+# - native_ccd true (ruling 2), against the rule of spec section 6, which kept it off: on/off
+#   parity was 98.5 % on the v1 parity set and 84-93 % on v2 episodes, below the rule's 99 %,
+#   but the v2 disagreements were mostly libccd failing where native and a 1 ms step agree,
+#   and the lip-edge regression that turned it off in task_v1 does not occur on v2 meshes.
+name: task_v2
+
+physics:
+  timestep: 0.001               # 1 ms (ruling 3); task_v1 runs at 2 ms
+  integrator: implicitfast
+  cone: elliptic
+  impratio: 10.0
+  condim: 4
+  friction: 0.3                 # sliding mu (G3, 2026-10-15): bare PETG-CF pads, low end of 0.3-0.5 [A]; the object geom has priority
+  torsional_friction: 0.001     # m (G3): mu x ~3 mm effective patch radius; 0.005 let any finger resist any twist
+  rolling_friction: 0.0001
+  contact_solref: [0.004, 1.0]
+  contact_solimp: [0.95, 0.99, 0.001, 0.5, 2.0]
+  limit_solref: [0.004, 1.0]
+  iterations: 100
+  ls_iterations: 50
+  native_ccd: true              # MuJoCo's native convex collision (ruling 2); see the header and docs/BENCH_V2.md
+  multi_ccd: true               # several contact points per convex pair (a cylinder stands on 4-5, not 1)
+  object_density: 1200.0        # kg/m^3 (G3): solid plastic parts; a suite size may set its own material
+  table_top_z: 0.0
+  table_half_size: [0.4, 0.4, 0.375]
+
+gripper:
+  # Open-source parallel gripper match (2026-10-15; Addendum A move 3). Rack and pinion,
+  # two moving jaws on rods, 18-tooth m0.8 pinion (pitch radius 7.2 mm) on a 12 V
+  # serial-bus servo. Sources: the gripper's CAD/URDF at a pinned commit (attribution
+  # in README); [S] sourced, [D] measured/derived, [A] assumed.
+  # - Opening: CAD hard stops give 42.0 mm travel per jaw and a 0 mm closed gap, i.e.
+  #   an 84 mm maximum opening [D]. The docs say 85 mm and the URDF limit gives 83 mm;
+  #   84 mm is the physical stop. stroke = open_half_gap = 0.042.
+  # - Grip force F = 50 N, i.e. F/2 = 25 N squeeze per jaw [D + A]: stall torque
+  #   (22-30 kg cm) through the 7.2 mm pinion at ~59 % efficiency gives 88-120 N per jaw,
+  #   but the stock torque limit is 50 % and the servo's overload protection drops to
+  #   ~25 % within a 2 s hold, i.e. 22-31 N per jaw sustained. 90-120 N is the
+  #   unprotected 50 % regime (a robustness sweep point, not the default).
+  # - Palm = the gripper frame, 47.6 (x) x 128 (y) x 24 (z) mm [D]; its underside is
+  #   the frame's front face, where the fingers' roots mount (finger length is measured
+  #   from there; the stock finger is 62.5 mm below it).
+  # - Not modelled: the sim uses one mu (0.3, physics.friction) for pad and object, the
+  #   low end of bare PETG-CF's 0.3-0.5 [A]; the stock finger touches only on its 22 mm pad, the box
+  #   approximation along its full length; jaw no-load speed is ~34 mm/s [D], the
+  #   close ramp below commands ~52 mm/s (the force limit, not speed, governs contact).
+  palm_half_size: [0.024, 0.064, 0.012]
+  palm_mass: 0.4
+  open_half_gap: 0.042          # finger root offset at full open: 84 mm gap for a face at local y = 0
+  stroke: 0.042                 # per finger; closure q = 0 open .. 0.042 closed (closed gap 0)
+  grip_force: 50.0              # F: grip actuator force limit on the mean-closure tendon (F/2 squeeze per finger)
+  grip_kp: 4000.0
+  grip_kv: 100.0                # overdamped: an unobstructed jaw snaps shut at <= ~0.4 m/s
+  grip_overdrive: 0.01          # close target past full stroke, so the servo always saturates at F
+  finger_armature: 0.02
+  finger_damping: 2.0
+  xy_kp: 2000.0
+  xy_kv: 80.0
+  xy_force: 100.0
+  z_kp: 4000.0
+  z_kv: 120.0
+  z_force: 150.0
+  yaw_kp: 20.0
+  yaw_kv: 1.0
+  yaw_torque: 15.0
+  slide_armature: 0.05
+  yaw_armature: 0.001
+  equality_solref: [0.004, 1.0]
+
+controller:
+  grasp_height_fracs: []        # v2: no grid; the jaw pair's designed tip height is used (D5)
+  grasp_z_offset: 0.0
+  min_tip_clearance: 0.003
+  palm_clearance: 0.01          # generator and validator rule (palm >= 10 mm above the part top); not enforced by the controller
+  approach_offset: 0.08
+  approach_clearance: 0.02
+  settle_time: 0.3
+  descend_time: 1.0
+  close_time: 1.0
+  squeeze_time: 0.3
+  lift_height: 0.15
+  lift_time: 1.5
+  open_target: -0.002
+  control_period: 0.002         # 500 Hz: two physics steps at the 1 ms timestep (unchanged from task_v1)
+
+score:
+  success_lift: 0.10
+  success_hold: 2.0
+  max_time: 12.0
+  check_period: 0.01
+  finger_table_force_max: 5.0   # N, palm or finger against table/floor
+  palm_contact_force_max: 0.2   # N, palm against the object during LIFT/HOLD -> palm_contact flag
+  penetration_max: 0.002
+  speed_cap: 5.0
+  eject_dist: 0.025
+  eject_speed: 1.0
+  off_table_drop: 0.05
+  grasp_min_squeeze_frac: 0.25
+  grasp_max_press_down_ratio: 1.0  # per finger at lift start: downward push / squeeze above this -> missed_grasp (finger on top)
+  fail_settle_time: 1.0
+  record_tail: 0.5
+
+jitter:
+  pos: 0.0005                   # +-0.5 mm object x/y
+  yaw_deg: 1.0                  # +-1 deg object yaw
+  mu_frac: 0.10                 # +-10 % object friction
+
+robustness:                     # certificate tests (rtt.sim.certify); jitter is off in all of them
+  # Magnitudes chosen 2026-10-15 on the 4 entrants x 6 training objects x k 0/1 (48 grasps,
+  # 1 ms; docs/BENCH.md): shakes from 10 mm @ 3 Hz to 20 mm @ 6 Hz (up to 2.9 g) failed at most
+  # 2/48 (1 fails undisturbed; mu 0.8 and F 50 N hold far more), while a push at the object's
+  # top failed 7-11/48 at 0.6 N s and 1-2/48 at 0.3 N s.
+  placement_errors_mm: [1.0, 2.0, 3.0]   # object offset from the aimed pose: 0, +-1, +-2, +-3 mm along x and y
+  shake_axes: [x, y, z]         # gripper frame: x finger width, y closing axis, z up
+  shake_amplitude: 0.01         # m, commanded palm displacement amplitude
+  shake_frequency: 5.0          # Hz: peak commanded acceleration (2 pi f)^2 A = 9.9 m/s^2 (~1 g)
+  shake_cycles: 5               # 1.0 s of shaking
+  shake_ramp_cycles: 0.5        # raised-cosine amplitude ramp at both ends
+  push_axes: [x, y]             # horizontal push direction in the gripper frame
+  push_impulse: 0.5             # N s (a 25 N force for 20 ms; 1.7 m/s for a free 0.3 kg object)
+  push_duration: 0.02           # s
+  push_at_top: true             # acts at the object's top, twisting it in the grasp
+  perturb_delay: 0.2            # s after the palm reaches the lift height
+  post_perturb_hold: 1.0        # s the object must stay lifted after the perturbation ends
+
+replay:
+  fps: 30
+
+registration:                   # registered-grasp rule (rtt.sim.register; D1)
+  settle_time: 0.25             # s after the grip ramp ends (t_close + close_time); the lift starts 0.3 s after it
+  seat_short_max_mm: 1.0        # q_seat - q, mean jaw closure
+  dx_max_mm: 0.75               # across the jaw (palm x)
+  dy_max_mm: 0.75               # closing axis (palm y)
+  yaw_max_deg: 2.0              # modulo the part's yaw_symmetry
+  tilt_max_deg: 3.0
+  hold_tilt_max_deg: 5.0        # when the 2 s hold is confirmed
+  creep_delay: 0.2              # s after HOLD starts: hold-creep reference (logged, never scored)
+
+checks:
+  bad_qacc: true                # MuJoCo bad qacc / qvel / qpos reset in the scored window -> physics_invalid
+  held_penetration_max_mm: 1.0  # held, but jaw-part penetration above this -> physics_unreliable (ruling 4)
+  trajectory_hash: true         # sha256 of the state at every check tick (determinism gates)

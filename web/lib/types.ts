@@ -54,6 +54,115 @@ export interface ReplayHeader {
   meta: Record<string, unknown>;
 }
 
+// ---------------------------------------------------------------- replays, version 2
+
+/*
+ * Version 2 of the replay header (src/rtt/sim/replay_v2.schema.json). The pose
+ * payload is unchanged from version 1; bodies are drawn from content-addressed GLB
+ * assets, and the v1 primitive geoms become an optional collision overlay.
+ */
+
+/** What an asset is for in the scene. */
+export type AssetRole = "finger_left" | "finger_right" | "gripper_frame" | "carriage" | "object" | "prop";
+
+/** Where an asset came from: a pinned upstream file, or our own generator. */
+export type AssetSource =
+  | { kind: "upstream"; url: string; sha256: string; commit?: string; path?: string }
+  | { kind: "generated"; generator: string };
+
+/** One content-addressed GLB, as listed in the asset manifest and copied into replay headers. */
+export interface ReplayAsset {
+  /** `assets/<id>.glb`, relative to the site root. */
+  uri: string;
+  sha256: string;
+  bytes: number;
+  role: AssetRole;
+  /** SPDX identifier of the asset as shipped. */
+  license: string;
+  /** The credit line, exactly as on the credits page. */
+  attribution: string;
+  /** What was changed from the upstream file; non-empty for every third-party asset. */
+  changes: string[];
+  label?: string;
+  media_type?: "model/gltf-binary";
+  /** Scanned objects only: a brand mark is visible on the texture. */
+  brand_visible?: boolean;
+  source?: AssetSource;
+}
+
+/** An asset placed in a body frame (or the world frame, for static visuals). Scale is never negative. */
+export interface ReplayVisual {
+  asset: string;
+  pos: Vec3;
+  quat_xyzw: Quat;
+  scale: Vec3;
+}
+
+export interface ReplayBodyV2 extends ReplayBody {
+  visuals: ReplayVisual[];
+}
+
+export interface ReplayMetaV2 extends Record<string, unknown> {
+  design_space: string;
+  design_id: string;
+  /** sha256 over the training-part geometry hashes; null for designs without one (v1). */
+  geometry_id: string | null;
+  part_id: string;
+}
+
+export interface ReplayProvenance {
+  source: "simulation";
+  engine: "mujoco";
+  engine_version: string;
+  run_id: string;
+  /** Git commit of the code that ran the episode, `+dirty` when the tree was modified. */
+  code_version: string;
+  /** Options outside the scored space were used; clips then say "product mode". */
+  product_mode: boolean;
+  episode?: string;
+  suite?: string;
+  condition?: string;
+  seed?: number;
+  task_sha256?: string;
+  record_version?: number;
+  created_utc?: string;
+}
+
+export type OverlayChannel = "offset_mm" | "seat_short_mm" | "hold_s" | "n_contacts";
+
+/** Per-frame readouts in `<stem>.ovl.bin`: little-endian float16 [frames x channels]. */
+export interface ReplayOverlays {
+  bin: string;
+  dtype: "float16";
+  byte_order: "little";
+  channels: OverlayChannel[];
+}
+
+export interface ReplayHeaderV2 {
+  format: "rtt-replay";
+  version: 2;
+  fps: number;
+  dtype: "float32";
+  byte_order: "little";
+  up_axis: "z";
+  units: "m";
+  /** Every body carries `geoms` (empty when the header has no collision overlay for it). */
+  bodies: ReplayBodyV2[];
+  /** v1-style static geoms (table, floor); empty when absent. */
+  static: ReplayGeom[];
+  static_visuals: ReplayVisual[];
+  assets: Record<string, ReplayAsset>;
+  n_frames: number;
+  n_bodies: number;
+  bin: string;
+  meta: ReplayMetaV2;
+  provenance: ReplayProvenance;
+  overlays: ReplayOverlays | null;
+}
+
+/** A replay header of either supported version. */
+export type AnyReplayHeader = ReplayHeader | ReplayHeaderV2;
+
 // ---------------------------------------------------------------- provenance
 
 export type FailureMode =
@@ -61,7 +170,11 @@ export type FailureMode =
   | "slip_during_lift"
   | "ejected_on_close"
   | "unstable_hold"
-  | "finger_env_collision";
+  | "finger_env_collision"
+  // task v2 (registered grasp, src/rtt/sim/score.py FAILURE_MODES_V2)
+  | "not_registered"
+  | "physics_invalid"
+  | "invalid_build";
 
 /** Where the physics ran. Only `nebius` runs are scored results. */
 export type ComputeProvenance =
@@ -124,9 +237,13 @@ export interface TaskSummary {
 }
 
 export interface ObjectSummary {
-  kind: "box" | "cylinder" | "capsule";
-  /** Object-frame extents in mm (box: x y z; cylinder/capsule: diameter, length). */
+  /** `part`: a v2 part (procedural industrial part or scan) with its own GLB, named by `part_id`. */
+  kind: "box" | "cylinder" | "capsule" | "part";
+  /** Object-frame extents in mm (box and part: x y z; cylinder/capsule: diameter, length). */
   size_mm: number[];
+  /** Parts only: the part's id (the replay header's `meta.part_id`) and family. */
+  part_id?: string;
+  family?: string;
 }
 
 export interface LaneOutcome {
@@ -150,7 +267,8 @@ export interface Lane {
   entrant: string;
   design_id: string;
   object: ObjectSummary;
-  controller_setting: number;
+  /** Index into the v1 task's grasp heights; null for v2 lanes (the grip height is part of the recipe). */
+  controller_setting: number | null;
   grasp_height_frac: number | null;
   seed: number;
   n_frames: number;
