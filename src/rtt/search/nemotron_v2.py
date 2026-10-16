@@ -90,9 +90,10 @@ __all__ = [
     "require_v2",
 ]
 
-#: Held-out vocabulary, the secrets folder, and the unseen held-out part families.
+#: Held-out vocabulary, the secrets folder, the unseen held-out part families and the held-out
+#: procedural part ids (``hp2-<index>-<family>``, track O).
 FORBIDDEN_PROMPT_TEXT_V2: Final = re.compile(
-    r"held[\s_-]?out|secrets?[/\\]|\belbows?\b|\bspur\b|\bgears?\b", re.IGNORECASE
+    r"held[\s_-]?out|secrets?[/\\]|\belbows?\b|\bspur\b|\bgears?\b|\bhp2-\d", re.IGNORECASE
 )
 #: v2 rejection reasons the reflection call answers.
 DIVERSITY_REASONS_V2: Final[tuple[str, ...]] = (*DIVERSITY_REASONS, "duplicate_design", "duplicate_geometry")

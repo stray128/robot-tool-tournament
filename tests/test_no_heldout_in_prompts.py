@@ -17,6 +17,7 @@ import pytest
 from rtt.llm.client import TokenBucket
 from rtt.search.fakes import FakeEvaluator, ScriptedProposer
 from rtt.search.nemotron import make_proposer_client
+from rtt.search.nemotron_v2 import FORBIDDEN_PROMPT_TEXT_V2
 from rtt.search.runner import run_search
 from rtt.store.vault import HeldoutVault, seed_sha256
 
@@ -150,19 +151,25 @@ def test_v2_prompts_name_only_training_parts_and_their_dimensions(recorded_v2) -
 
 
 def test_v2_held_out_parts_from_track_o_never_appear(recorded_v2) -> None:
+    """Track O's held-out procedural parts (drawn from the secret): no name, id or size reaches a prompt."""
     heldout = pytest.importorskip("rtt.parts.heldout")
-    make = getattr(heldout, "heldout_parts", None) or getattr(heldout, "generate", None)
+    make = getattr(heldout, "heldout_procedural_suite", None)
     if make is None:
-        pytest.skip("rtt.parts.heldout has no heldout_parts(seed) generator yet")
-    try:
-        parts = list(make(SEED))
-    except (TypeError, ValueError) as exc:
-        pytest.skip(f"held-out generator API differs: {exc}")
+        pytest.skip("rtt.parts.heldout has no heldout_procedural_suite(secret) yet")
+    suite = make(SEED, n=40)
     texts = _texts(recorded_v2["payloads"])
-    for part in parts:
-        size = " / ".join(f"{1000.0 * v:.1f}".rstrip("0").rstrip(".") for v in part.size)
+    assert texts
+    from rtt.search.fakes_v2 import DEFAULT_FAKE_PARTS_V2
+
+    training_sizes = {" / ".join(f"{v:g}" for v in p.size_mm) for p in DEFAULT_FAKE_PARTS_V2}
+    for cond in suite:
+        part = cond.part
+        size = " / ".join(f"{round(1000.0 * float(v), 1):g}" for v in part.size)
         for text in texts:
-            assert str(part.part_id) not in text and size not in text
+            assert str(part.part_id) not in text and cond.condition_id not in text
+            if size not in training_sizes:
+                assert size not in text, (part.part_id, size)
+        assert FORBIDDEN_PROMPT_TEXT_V2.search(str(part.part_id))  # the guard would refuse the id itself
 
 
 def test_v2_guard_refuses_a_misconfigured_training_suite(tmp_path) -> None:
