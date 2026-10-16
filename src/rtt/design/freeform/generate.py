@@ -853,7 +853,7 @@ def _seat_checks(plan: PairPlan, jaws: dict[str, JawBuild]) -> None:
 # ----------------------------------------------------------------------------- public
 
 
-_CACHE: dict[tuple[str, str, str, str], PairBuild] = {}
+_CACHE: dict[tuple[Any, ...], PairBuild] = {}
 _CACHE_MAX = 512
 
 
@@ -875,7 +875,9 @@ def _gripper_digest(task: Any) -> str:
 def build_pair_full(design: Any, part: Any, task: Any, *, use_cache: bool = True) -> PairBuild:
     """Plan and build one (design, part) pair; raises :class:`~rtt.design.freeform.validate.InvalidDesign`.
 
-    Cached per (generator version, design id, part geometry sha, gripper digest).
+    Cached per (generator version, design id, part geometry sha, part id, part features,
+    gripper digest, canonicalisation log): two parts with the same geometry under different
+    names (or sockets) get their own pair, and every recipe gets its own repair notes.
     """
     from rtt.design.freeform.hashing import GENERATOR_VERSION
     from rtt.design.freeform.hashing import design_id as _design_id
@@ -885,11 +887,20 @@ def build_pair_full(design: Any, part: Any, task: Any, *, use_cache: bool = True
     if getattr(design, "kind", None) == "stock":
         raise TypeError("the stock baseline has no generator build; use build_pair")
     did = _design_id(design)
-    key = (GENERATOR_VERSION, did, str(getattr(part, "geometry_sha256", id(part))), _gripper_digest(task))
-    if use_cache and key in _CACHE:
-        return _CACHE[key]
     t0 = time.perf_counter()
     spec, repairs = design_spec(design)
+    part_id = str(getattr(part, "part_id", None) or getattr(part, "name", ""))
+    key = (
+        GENERATOR_VERSION,
+        did,
+        str(getattr(part, "geometry_sha256", id(part))),
+        part_id,
+        repr(tuple(getattr(part, "features", ()) or ())),
+        _gripper_digest(task),
+        repairs,
+    )
+    if use_cache and key in _CACHE:
+        return _CACHE[key]
     plan = plan_pair(spec, part, task, design_id=did, repairs=repairs)
     build = build_from_plan(plan, t_start=t0)
     if use_cache:

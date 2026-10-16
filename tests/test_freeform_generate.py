@@ -406,6 +406,23 @@ def test_build_is_cached_and_deterministic() -> None:
     assert a.pair.capture == b.pair.capture
 
 
+def test_cache_keeps_part_ids_and_repair_notes_apart() -> None:
+    """Same geometry under another name, or a recipe that differs only in an inactive value,
+    hits the geometry but never another build's part id or canonicalisation notes."""
+    import dataclasses
+
+    tee = mvp_tee()
+    twin = dataclasses.replace(tee, name="tee_twin")
+    flat = RECIPES["flat"]
+    assert build_pair(flat, tee, TASK).part_id == tee.part_id
+    assert build_pair(flat, twin, TASK).part_id == "tee_twin"
+    noisy = FingerRecipe(**dict(BASE, pad="flat", tip="blunt", pad_depth_mm=5.0))
+    a, b = build_pair(noisy, steel_slug(), TASK), build_pair(flat, steel_slug(), TASK)
+    assert a.design_id == b.design_id and a.geometry_hash == b.geometry_hash
+    assert any("pad_depth_mm is inactive" in n for n in a.auto_repairs)
+    assert not any("inactive" in n for n in b.auto_repairs)
+
+
 _HASH_SCRIPT = r"""
 import json, sys
 sys.path.insert(0, sys.argv[1])
