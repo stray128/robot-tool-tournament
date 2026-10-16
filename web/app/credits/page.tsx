@@ -42,14 +42,32 @@ function Section({ id, title, children }: { id: string; title: string; children:
   );
 }
 
+/**
+ * Licence texts for the licences of shipped third-party material. CC BY 4.0 (section
+ * 3(a)(1)(C)) requires the credit to carry the licence's URI or a link to it.
+ */
+const LICENCE_URLS: Record<string, string> = {
+  "CC-BY-4.0": "https://creativecommons.org/licenses/by/4.0/",
+  "CERN-OHL-P-2.0": "https://ohwr.org/cern_ohl_p_v2.txt",
+};
+
 function Credit({ name, licence, children }: { name: ReactNode; licence: string; children?: ReactNode }) {
+  const href = LICENCE_URLS[licence];
   return (
     <div className="grid gap-x-4 gap-y-1 border-b border-rule pb-3 sm:grid-cols-[minmax(0,1fr)_9rem]">
       <div className="min-w-0">
         <p className="text-ink">{name}</p>
         {children ? <div className="mt-1 grid gap-1 text-sm">{children}</div> : null}
       </div>
-      <p className="num text-sm text-ink sm:text-right">{licence}</p>
+      <p className="num text-sm text-ink sm:text-right">
+        {href ? (
+          <a className="link" href={href} rel="noreferrer license">
+            {licence}
+          </a>
+        ) : (
+          licence
+        )}
+      </p>
     </div>
   );
 }
@@ -203,6 +221,10 @@ export default function CreditsPage() {
           licence="CC-BY-4.0"
         >
           <p>
+            Copyright (c) 2026 Robonine. Licensed under{" "}
+            <Ext href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</Ext>, provided as is, without warranties.
+          </p>
+          <p>
             Its simulation meshes (<span className="num">simulation/urdf/meshes</span>, commit{" "}
             <span className="num">190eb162</span>) are the source of the gripper frame and jaw carriages drawn in replays, and
             of the stock finger entrant. In replays and videos it is called &ldquo;an open-source parallel gripper&rdquo;.
@@ -231,6 +253,10 @@ export default function CreditsPage() {
           }
           licence="CC-BY-4.0"
         >
+          <p>
+            Licensed under <Ext href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</Ext>, provided as is, without
+            warranties.
+          </p>
           <p>
             Used for held-out test objects and props, through the MuJoCo models by Kevin Zakka (
             <Ext href="https://github.com/kevinzakka/mujoco_scanned_objects">kevinzakka/mujoco_scanned_objects</Ext>, commit{" "}

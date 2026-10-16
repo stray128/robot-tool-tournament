@@ -14,7 +14,8 @@
  *     budget (300 000 bytes);
  *   - design pages show the studio views (x-ray, cutaway, turntable) without errors;
  *   - a v2 lane that draws third-party models links their short credits to the credits page;
- *   - /credits/ lists the third-party credits and has the anchors short credits point at;
+ *   - /credits/ lists the third-party credits, links the CC BY 4.0 licence, carries the
+ *     gripper's copyright notice and has the anchors short credits point at;
  *   - no page has console errors or horizontal scroll at 1280 and 375 px.
  * The default fixture is tests/fixtures/replay_v2 (Apache-2.0 geometry made from a
  * recorded v1 episode). Screenshots go to --shots (default web/.smoke/v2).
@@ -252,6 +253,11 @@ for (const vp of [
     for (const anchor of ["gripper", "gso"]) {
       if (!(await page.locator(`#${anchor}`).count())) problems.push(`credits page has no #${anchor} anchor`);
     }
+    // CC BY 4.0 credits must carry a link to the licence and the upstream copyright notice.
+    if (!(await page.locator('a[href="https://creativecommons.org/licenses/by/4.0/"]').count())) {
+      problems.push("credits page does not link the CC BY 4.0 licence");
+    }
+    if (!m.text.includes("Copyright (c) 2026 Robonine")) problems.push("credits page lacks the gripper's copyright notice");
     if (m.scrollWidth > m.innerWidth) problems.push(`horizontal scroll ${m.scrollWidth} > ${m.innerWidth}`);
     await page.screenshot({ path: path.join(values.shots, `${vp.name}-credits.png`), fullPage: true });
     record(`${vp.name} credits`, [...errors, ...problems]);
