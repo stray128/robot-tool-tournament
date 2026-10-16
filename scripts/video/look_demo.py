@@ -117,7 +117,9 @@ def main(argv: list[str] | None = None) -> int:
     wide, xray = "wide", "xray"
     phases = {p["name"]: p for p in task_summary(default_task())["phases"]}
     grasp = round(phases["lift"]["start_s"] * 30) - 2  # jaws closed and squeezing, part on the mat
-    close = View((0.0, 0.0, 0.030), 0.24, 215.0, -14.0, 30.0)
+    hold = round(phases["hold"]["start_s"] * 30) + 27  # lifted and held, about 5 s in
+    # a little above the jaws, so the frame, both carriages and the floor shadow are in shot
+    close = View((0.0, 0.0, 0.040), 0.32, 228.0, -14.0, 30.0)
     t0 = time.perf_counter()
     stills = {}
     slug, block, peg = replays["stock_slug"], replays["stock_block"], replays["concave_peg"]
@@ -142,7 +144,12 @@ def main(argv: list[str] | None = None) -> int:
         )
     )
     stills.update(
-        render_stills(peg, store, {"hero_close_concave_peg": {"frame": grasp, "view": close}}, args.docs)
+        render_stills(
+            peg,
+            store,
+            {"hero_close_concave_peg": {"frame": min(hold, peg.n_frames - 1), "view": close}},
+            args.docs,
+        )
     )
     still_s = time.perf_counter() - t0
     t0 = time.perf_counter()
