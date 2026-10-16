@@ -18,13 +18,14 @@ from freeform_fixtures import (
     flat,
     gv1_designs,
     imprint_configurator,
+    imprint_swept,
     training_parts,
 )
 from rtt.sim.controller import plan_grasp_v2
 from rtt.sim.episode import run_episode_v2
 from rtt.sim.gates_v2 import FIDELITY_TOL_MM, run_gv1
 from rtt.sim.objects import Placement
-from rtt.sim.register import probe_first_contact, seat_clearance
+from rtt.sim.register import lateral_clearance, probe_first_contact, seat_clearance
 from rtt.sim.scene import build_model_v2
 from rtt.sim.task import load_task_v2
 
@@ -46,6 +47,21 @@ def test_the_simulated_imprint_clearance_is_the_designed_one(part) -> None:
         assert 0.4 - FIDELITY_TOL_MM <= probe[side][1] * 1000 <= 1.0 + FIDELITY_TOL_MM
     for q in probe["first_contact"]:
         assert (q - pair.q_seat) * 1000 == pytest.approx(0.0, abs=FIDELITY_TOL_MM)
+
+
+@pytest.mark.parametrize(("design", "side_mm"), [(imprint_configurator, 0.4), (imprint_swept, 2.4)])
+def test_the_lateral_slide_at_the_seat_is_the_side_clearance_on_straight_sides(design, side_mm) -> None:
+    # the closing-axis check above cannot see a side wall that is too far out; this can
+    blk = block()
+    pair = build_fixture_pair(design(**FINE), blk, TASK)
+    obj = blk.to_mesh_object()
+    model, ids = build_model_v2(pair, obj, TASK)
+    plan = plan_grasp_v2(pair, obj, Placement(), TASK)
+    plus, minus = lateral_clearance(model, ids, plan, obj, pair.q_seat)
+    assert plus * 1000 == pytest.approx(side_mm, abs=FIDELITY_TOL_MM)
+    assert minus * 1000 == pytest.approx(side_mm, abs=FIDELITY_TOL_MM)
+    # with the jaws past the seat the part is held, so it cannot slide at all
+    assert lateral_clearance(model, ids, plan, obj, pair.q_seat + 0.0002) == (0.0, 0.0)
 
 
 def test_a_flat_pad_touches_at_its_seat_with_no_clearance() -> None:

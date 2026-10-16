@@ -11,7 +11,10 @@ GV1:
 * **clearance**: in the compiled scored scene, MuJoCo's own distance between each imprint jaw
   and its centred part at closure ``q_seat - clearance`` equals the designed clearance within
   0.05 mm, and each jaw's first contact is at ``q_seat`` within 0.05 mm (the pads conform to
-  the collision pieces the simulator sees);
+  the collision pieces the simulator sees). This measures the gap along the closing axis, and
+  a side wall closer than the clearance; a side wall that is too far out does not show in it.
+  The report therefore also gives, as a diagnostic, how far the part slides across the jaw at
+  the seat before a side wall touches (``lateral_slide_mm``);
 * **zero-error registration**: both imprints register in >= 95 % of zero-error episodes on
   every part. Zero error means no placement error and no position or yaw jitter (the friction
   jitter stays on); the same episodes with the full task jitter are reported as a diagnostic.
@@ -70,7 +73,7 @@ from rtt.sim.controller import plan_grasp_v2
 from rtt.sim.episode import EpisodeResult, run_episode, run_episode_v2
 from rtt.sim.exec_cpu import CpuExecutor, EpisodeJob
 from rtt.sim.fingers_v2 import check_pair, jaw_mass_properties, lowest_point
-from rtt.sim.register import seat_clearance
+from rtt.sim.register import lateral_clearance, seat_clearance
 from rtt.sim.scene import build_model_v2
 from rtt.sim.task import TaskConfig, TaskV2, default_task_v2
 
@@ -318,10 +321,15 @@ def run_gv1(
             worst_gap, worst_seat = max(worst_gap, gap_err), max(worst_seat, seat_err)
             ok = gap_err <= FIDELITY_TOL_MM and seat_err <= FIDELITY_TOL_MM
             clearance_ok &= ok
+            lateral = lateral_clearance(model, ids, plan, obj, pair.q_seat)
             report["clearance"][cell] = {
                 "designed_mm": clearance * 1000.0,
                 "simulated_mm": [round(g * 1000.0, 4) for g in gaps],
                 "first_contact_minus_q_seat_mm": [round((q - pair.q_seat) * 1000.0, 4) for q in contacts],
+                # diagnostic, not a criterion: how far the part slides across the jaw at the
+                # seat before a side wall touches (= the side clearance for sides that run
+                # along the closing axis, more on curved sides; a swept imprint adds its sweep)
+                "lateral_slide_mm": [round(v * 1000.0, 4) if math.isfinite(v) else None for v in lateral],
                 "passed": ok,
             }
             for s in range(seeds):

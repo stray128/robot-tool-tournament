@@ -355,3 +355,55 @@ def seat_clearance(
             out[key].append(scene.distance(side, q_seat - g))
     out["first_contact"] = [scene.first_contact(0), scene.first_contact(1)]
     return out
+
+
+def lateral_clearance(
+    model: mujoco.MjModel,
+    ids: SceneIds,
+    plan: GraspPlan,
+    obj: objs.AnyObject,
+    q_seat: float,
+    reach: float = 0.006,
+    backoff: float = 1e-6,
+    tol: float = 1e-6,
+    table_top_z: float = 0.0,
+) -> tuple[float, float]:
+    """How far (m) the part can slide across the jaw (palm +x, then -x) at the seat before
+    either jaw touches it (gate GV1 diagnostic).
+
+    Both jaws stand ``backoff`` short of ``q_seat``, so the faces they seat on do not touch,
+    and the part is moved along palm x by bisection on MuJoCo's signed distance. For a
+    straight-walled imprint on a part whose sides run along the closing axis (a block) this is
+    the designed side clearance; on curved sides it is larger. ``inf`` if nothing touches
+    within ``reach``.
+    """
+    scene = ProbeScene.pose(model, ids, plan, obj, objs.Placement(plan.x, plan.y, plan.yaw), table_top_z)
+    d = scene.data
+    d.qpos[ids.finger_qpos] = max(0.0, q_seat - backoff)
+    home = d.qpos[ids.object_qpos : ids.object_qpos + 3].copy()
+    across = np.array([math.cos(plan.yaw), math.sin(plan.yaw), 0.0])  # palm x in the world
+    jaw_geoms = np.concatenate(scene.jaw_geoms)
+
+    def touching(offset: float) -> bool:
+        d.qpos[ids.object_qpos : ids.object_qpos + 3] = home + offset * across
+        mujoco.mj_kinematics(scene.model, d)
+        return any(
+            mujoco.mj_geomDistance(scene.model, d, int(g1), int(g2), 0.01, None) <= 0.0
+            for g1 in jaw_geoms
+            for g2 in ids.object_geoms
+        )
+
+    out = []
+    for sign in (1.0, -1.0):
+        if touching(0.0):
+            out.append(0.0)
+            continue
+        if not touching(sign * reach):
+            out.append(math.inf)
+            continue
+        lo, hi = 0.0, reach
+        while hi - lo > tol:
+            mid = 0.5 * (lo + hi)
+            lo, hi = (lo, mid) if touching(sign * mid) else (mid, hi)
+        out.append(hi)
+    return out[0], out[1]
