@@ -20,8 +20,10 @@ import {
   placedCorners,
   readGlb,
   referencedAssets,
+  replayCredits,
   replayPayload,
   sha256Hex,
+  splitCredit,
   unsupportedExtensions,
   verifyAsset,
 } from "@/lib/assets";
@@ -169,6 +171,37 @@ describe("manifest", () => {
     });
     expect(groups).toHaveLength(1);
     expect(groups[0]).toMatchObject({ count: 2, roles: ["gripper_frame", "carriage"], changes: ["cut", "re-encoded as GLB", "re-posed"] });
+  });
+
+  it("splits a short credit from the credits-page anchor it points at", () => {
+    const gripper = "An open-source parallel gripper, CC BY 4.0, modified (full credit: /credits#gripper)";
+    expect(splitCredit(gripper)).toEqual({ text: "An open-source parallel gripper, CC BY 4.0, modified", anchor: "gripper" });
+    expect(splitCredit("Google Scanned Objects, CC BY 4.0, modified (full credit: /credits/#gso)").anchor).toBe("gso");
+    expect(splitCredit("Example Author, Example Gripper, CC BY 4.0")).toEqual({
+      text: "Example Author, Example Gripper, CC BY 4.0",
+      anchor: null,
+    });
+  });
+
+  it("lists each third-party credit a replay draws once, and none for our own assets", () => {
+    const short = "An open-source parallel gripper, CC BY 4.0, modified (full credit: /credits#gripper)";
+    const cc = (role: ReplayAsset["role"]): ReplayAsset => ({
+      ...entryFor(boxGlb())[1],
+      role,
+      license: "CC-BY-4.0",
+      attribution: short,
+      changes: ["re-encoded as GLB"],
+    });
+    expect(replayCredits({ a: cc("gripper_frame"), b: cc("carriage"), c: entryFor(boxGlb())[1] })).toEqual([
+      { text: "An open-source parallel gripper, CC BY 4.0, modified", anchor: "gripper" },
+    ]);
+    expect(replayCredits(fixtureHeader().assets).every((c) => c.text.length > 0)).toBe(true);
+    expect(replayCredits({ c: entryFor(boxGlb())[1] })).toEqual([]);
+  });
+
+  it("the credits page has the anchors short credits point at", () => {
+    const page = readFileSync(path.join(WEB, "app", "credits", "page.tsx"), "utf8");
+    for (const anchor of ["gripper", "gso", "models"]) expect(page).toContain(`id="${anchor}"`);
   });
 });
 

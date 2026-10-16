@@ -178,7 +178,9 @@ export interface CreditGroup {
 /** Group a manifest's third-party assets by credit line (our own assets are covered by the repo licence). */
 export function creditGroups(assets: Record<string, ReplayAsset>): CreditGroup[] {
   const groups = new Map<string, CreditGroup>();
-  for (const asset of Object.values(assets)) {
+  // The asset with the longest list of changes first, so its order sets the group's.
+  const ordered = Object.values(assets).sort((a, b) => b.changes.length - a.changes.length);
+  for (const asset of ordered) {
     if (!isThirdParty(asset)) continue;
     const key = `${asset.attribution}\u0000${asset.license}`;
     const g = groups.get(key) ?? { attribution: asset.attribution, license: asset.license, roles: [], changes: [], count: 0 };
@@ -188,6 +190,30 @@ export function creditGroups(assets: Record<string, ReplayAsset>): CreditGroup[]
     groups.set(key, g);
   }
   return [...groups.values()].sort((a, b) => a.attribution.localeCompare(b.attribution));
+}
+
+const FULL_CREDIT_RE = /\s*\(full credit: \/credits\/?#([A-Za-z0-9_-]+)\)\s*$/;
+
+/**
+ * A short credit line split into its text and the credits-page anchor it points at.
+ * Third-party assets carry a short credit ending "(full credit: /credits#gripper)"
+ * (docs/ASSET_MANIFEST.md); the full line is on the credits page under that anchor.
+ */
+export function splitCredit(attribution: string): { text: string; anchor: string | null } {
+  const m = FULL_CREDIT_RE.exec(attribution);
+  return m ? { text: attribution.slice(0, m.index), anchor: m[1]! } : { text: attribution, anchor: null };
+}
+
+/** The third-party credits a replay draws, once each, for the caption under a clip. */
+export function replayCredits(assets: Record<string, ReplayAsset>): { text: string; anchor: string | null }[] {
+  const seen = new Set<string>();
+  const out: { text: string; anchor: string | null }[] = [];
+  for (const a of Object.values(assets)) {
+    if (!isThirdParty(a) || seen.has(a.attribution)) continue;
+    seen.add(a.attribution);
+    out.push(splitCredit(a.attribution));
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------- URLs and payload
