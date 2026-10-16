@@ -88,7 +88,8 @@ def test_simulator_held_out_conditions_never_appear(recorded) -> None:
 
 # --------------------------------------------------------------------------- freeform-v2: parts, families, dimensions
 
-UNSEEN_FAMILIES = re.compile(r"\belbows?\b|\bspur\b|\bgears?\b", re.IGNORECASE)
+# Between any non-alphanumerics, so snake_case ids (pipe_elbow, spur_gear) count too.
+UNSEEN_FAMILIES = re.compile(r"(?<![a-z0-9])(?:elbows?|spur|gears?)(?![a-z0-9])", re.IGNORECASE)
 
 
 @pytest.fixture(scope="module")
@@ -170,6 +171,16 @@ def test_v2_held_out_parts_from_track_o_never_appear(recorded_v2) -> None:
             if size not in training_sizes:
                 assert size not in text, (part.part_id, size)
         assert FORBIDDEN_PROMPT_TEXT_V2.search(str(part.part_id))  # the guard would refuse the id itself
+    from rtt.parts.library import training_parts
+
+    seen = {str(p.family) for p in training_parts()}
+    unseen = {str(c.part.family) for c in suite} - seen
+    assert unseen  # the unseen families are drawn
+    for family in unseen:  # their own identifiers (snake_case) are refused too, not only the prose
+        assert FORBIDDEN_PROMPT_TEXT_V2.search(family), family
+        assert FORBIDDEN_PROMPT_TEXT_V2.search(family.replace("_", " ")), family
+    for family in seen:
+        assert not FORBIDDEN_PROMPT_TEXT_V2.search(family), family
 
 
 def test_v2_guard_refuses_a_misconfigured_training_suite(tmp_path) -> None:

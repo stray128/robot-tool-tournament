@@ -92,9 +92,15 @@ __all__ = [
 ]
 
 #: Held-out vocabulary, the secrets folder, the unseen held-out part families and the held-out
-#: procedural part ids (``hp2-<index>-<family>``, track O).
+#: procedural part ids (``hp2-<index>-<family>``, track O). Family words are matched between any
+#: non-alphanumeric characters, so track O's identifiers (``pipe_elbow``, ``spur_gear``) are
+#: refused as well as prose ("a spur gear"); ``\b`` alone misses them, because ``_`` is a word
+#: character.
 FORBIDDEN_PROMPT_TEXT_V2: Final = re.compile(
-    r"held[\s_-]?out|secrets?[/\\]|\belbows?\b|\bspur\b|\bgears?\b|\bhp2-\d", re.IGNORECASE
+    r"held[\s_-]?out|secrets?[/\\]"
+    r"|(?<![a-z0-9])(?:elbows?|spur|gears?)(?![a-z0-9])|pipe[\s_-]?elbow|spur[\s_-]?gear"
+    r"|(?<![a-z0-9])hp2[-_]\d",
+    re.IGNORECASE,
 )
 #: v2 rejection reasons the reflection call answers.
 DIVERSITY_REASONS_V2: Final[tuple[str, ...]] = (*DIVERSITY_REASONS, "duplicate_design", "duplicate_geometry")

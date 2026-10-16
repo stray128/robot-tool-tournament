@@ -217,8 +217,21 @@ def test_invalid_slot_is_repaired_with_the_v2_messages() -> None:
 def test_the_v2_guard_refuses_held_out_families_and_scrubs_model_text() -> None:
     for word in ("a pipe elbow", "spur gear", "Gears", "held-out"):
         assert FORBIDDEN_PROMPT_TEXT_V2.search(word)
+    # Track O's identifiers for the unseen families are snake_case ('_' is a word character).
+    for word in ("| pipe_elbow |", "family spur_gear", "SpurGear", "hp2-007-pipe_elbow_c1", "hp2_007"):
+        assert FORBIDDEN_PROMPT_TEXT_V2.search(word), word
     for word in ("pipe tee", "flanged bushing", "steel slug", "engineering", "L-bracket"):
         assert not FORBIDDEN_PROMPT_TEXT_V2.search(word)
+    for word in (
+        "pipe_tee",
+        "flanged_bushing",
+        "hex_standoff",
+        "l_bracket",
+        "steel_slug",
+        "gearbox",
+        "spurious",
+    ):
+        assert not FORBIDDEN_PROMPT_TEXT_V2.search(word), word
     ctx, items = v2_round0()
     proposer = NemotronProposerV2(ctx, client_for(ReplyTransport()))
     with pytest.raises(PromptLeakError):
