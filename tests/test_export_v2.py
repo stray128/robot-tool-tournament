@@ -166,6 +166,7 @@ def test_print_pack_v2_ships_watertight_upright_jaws(pair: Any, tmp_path: Path) 
         assert mount.is_watertight and mount.bounds[1][2] > m.bounds[1][2]
         doc = read_glb(read[f"{side}.glb"])
         assert doc.extras["role"] == f"finger_{side}"
+        assert doc.extras["license"] == "CC0-1.0" and "CC0-1.0" in doc.copyright  # one licence per file
         assert manifest["files"][f"{side}.stl"]["jaw_frame_sha256"] == getattr(fp, side).print_mesh_sha
     assert meshes["left"].volume != pytest.approx(0.0)
     attribution = read["ATTRIBUTION.txt"].decode()

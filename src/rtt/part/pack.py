@@ -405,6 +405,10 @@ no file from that project is included in this pack.
 """
 
 
+# the pack's GLBs are generated files like its STLs, so they carry the pack's licence (CC0-1.0)
+_PACK_GLB_CREDIT: Final = "Robot Tool Tournament print pack, generated jaw (CC0-1.0)"
+
+
 def _print_upright(mesh_mm: trimesh.Trimesh) -> trimesh.Trimesh:
     """Root plane on the bed, tip up: a 180 degree turn about x (a rotation, never a mirror)."""
     out = mesh_mm.copy()
@@ -505,7 +509,7 @@ def make_print_pack_v2(
         (pack / f"{side}.glb").write_bytes(
             glb.glb_bytes(
                 [glb.mesh_from_trimesh(jaw_m, mat.FINGER_DESIGNED, name=f"{side}_jaw")],
-                copyright=glb.OURS_ATTRIBUTION,
+                copyright=_PACK_GLB_CREDIT,
                 extras={"license": "CC0-1.0", "role": f"finger_{side}", "design_id": pair.design_id},
             )
         )
