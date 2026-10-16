@@ -43,8 +43,9 @@ entrant, were measured from the open-source SO-ARM-102 parallel gripper: Robonin
 SO-ARM 102, https://github.com/roboninecom/SO-ARM-102, commit
 190eb162c9e59d7f6dceab850ea1b5c6a4539c14. Per that project's LICENSING.md and
 REUSE.toml, its simulation files (simulation/, including the URDF meshes) are licensed
-CC BY 4.0, its hardware sources (models/: STEP, STL, 3MF) CERN-OHL-P-2.0, and its
-software Apache-2.0.
+CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/), its hardware sources (models/:
+STEP, STL, 3MF) CERN-OHL-P-2.0 (https://ohwr.org/cern_ohl_p_v2.txt), and its software
+Apache-2.0.
 
 v1 (14-box fingers): the stock entrant is our own box approximation of its finger, and
 the printable jaw in the print pack is drawn from the documented interface dimensions
