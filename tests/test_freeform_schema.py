@@ -98,6 +98,26 @@ def test_active_parameters_are_required_inactive_ones_optional() -> None:
     FingerRecipe(**dict(BASE, pad="flat", pad_depth_mm=12.0, wall_draft_deg=45.0, clearance_mm=1.0))
 
 
+def test_inactive_values_are_ignored_even_outside_the_bounds() -> None:
+    """Spec section 12: only active parameters are required; inactive ones are ignored and logged."""
+    from rtt.design.freeform.canon import canonicalize
+    from rtt.design.freeform.hashing import design_id
+
+    flat = FingerRecipe(**dict(BASE, pad="flat"))
+    odd = FingerRecipe(
+        **dict(BASE, pad="flat", pad_depth_mm=20.0, wall_draft_deg=80.0, clearance_mm=0.05, tip_size_mm=9.0)
+    )
+    assert design_id(odd) == design_id(flat)
+    _, log = canonicalize(odd)
+    assert len(log) == 4 and all("inactive" in line for line in log)
+    with pytest.raises(ValidationError, match="pad_depth_mm must be in"):
+        FingerRecipe(**dict(CONFORM, pad_depth_mm=16.0))  # active: the bound binds
+    with pytest.raises(ValidationError, match="finite"):
+        FingerRecipe(**dict(BASE, pad="flat", pad_depth_mm=float("nan")))
+    props = recipe_json_schema()["properties"]["pad_depth_mm"]["anyOf"]
+    assert {"type": "number", "minimum": 0.0, "maximum": 15.0}.items() <= props[0].items()
+
+
 def test_inactive_params_table() -> None:
     assert set(inactive_params("flat", "blunt")) == {
         "pad_depth_mm",

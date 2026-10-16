@@ -19,7 +19,8 @@ parameter           inactive when                fixed value
 ``tip_size_mm``     ``tip == "blunt"``           0
 ==================  ===========================  ==============================
 
-Only active parameters are required. Strategy rules (checked on the quantised values):
+Only active parameters are required; an inactive value is ignored (any finite number, even
+outside the bounds) and canonicalisation logs its reset. Strategy rules (checked on the quantised values):
 ``v_funnel`` needs a draft in [15, 70] degrees and a depth of at least 3 mm, ``conform``
 needs a depth of at least 1 mm and ``hook`` needs a tip size of at least 2 mm. Two fit rules
 follow from the tip geometry: a hook (height ``min(tip_size, 4)`` plus its protrusion under a
@@ -207,8 +208,19 @@ def _bounded(name: str) -> Any:
 
 
 def _optional_bounded(name: str) -> Any:
+    """A parameter that can be inactive: its bounds bind only when it is active.
+
+    An inactive value is ignored (canonicalisation resets it and logs that), so it is not
+    rejected for lying outside the bounds; the JSON schema still advertises the bounds.
+    """
     lo, hi = PARAM_BOUNDS[name]
-    return Field(default=None, ge=lo, le=hi, description=DESCRIPTIONS[name])
+
+    def advertise(schema: dict[str, Any]) -> None:
+        for branch in schema.get("anyOf", [schema]):
+            if branch.get("type") == "number":
+                branch.update(minimum=lo, maximum=hi)
+
+    return Field(default=None, description=DESCRIPTIONS[name], json_schema_extra=advertise)
 
 
 class FingerRecipe(BaseModel):
@@ -249,6 +261,17 @@ class FingerRecipe(BaseModel):
                 f"pad={self.pad}, tip={self.tip} needs {', '.join(missing)} (only inactive parameters may be "
                 f"left out)"
             )
+        for k in FIXED_VALUES:
+            v = getattr(self, k)
+            if v is None:
+                continue
+            if not math.isfinite(v):
+                raise ValueError(f"{k} must be a finite number, got {v}")
+            lo, hi = PARAM_BOUNDS[k]
+            if k not in inactive and not lo <= v <= hi:
+                raise ValueError(
+                    f"{k} must be in [{lo:g}, {hi:g}] for pad={self.pad}, tip={self.tip}, got {v:g}"
+                )
         values = quantized_values(self)
         problem = strategy_violation(values)
         if problem:
