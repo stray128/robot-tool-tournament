@@ -1,0 +1,267 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:rtt:schema:replay-header:2",
+  "title": "RTT replay header, version 2",
+  "description": "The <stem>.json header of a v2 episode replay. Poses live in <stem>.bin with the v1 layout: little-endian float32 [frames x bodies x 7], each body frame's world pose (px, py, pz, qx, qy, qz, qw), Z up, metres. Bodies are drawn from content-addressed GLB assets placed in the body frame; v1-style primitive geoms are optional and serve as the collision overlay. Readers accept version 1 (the v1 header) and version 2 (this schema).",
+  "$comment": "Rules JSON Schema cannot express, checked by the writer's tests: n_bodies == len(bodies); the .bin file holds n_frames * n_bodies * 7 float32 values; every visual's asset is a key of assets; each asset key equals sha256[:16] and its uri equals 'assets/' + key + '.glb'; sha256 and bytes match the file; the overlay sidecar, when present, holds n_frames * len(channels) float16 values.",
+  "type": "object",
+  "required": [
+    "format",
+    "version",
+    "fps",
+    "dtype",
+    "byte_order",
+    "layout",
+    "pose_fields",
+    "up_axis",
+    "units",
+    "n_frames",
+    "n_bodies",
+    "bin",
+    "assets",
+    "bodies",
+    "meta",
+    "provenance"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "format": {"const": "rtt-replay"},
+    "version": {"const": 2},
+    "fps": {"type": "integer", "minimum": 1, "maximum": 1000},
+    "dtype": {"const": "float32"},
+    "byte_order": {"const": "little"},
+    "layout": {"const": ["frames", "bodies", "pose"]},
+    "pose_fields": {"const": ["px", "py", "pz", "qx", "qy", "qz", "qw"]},
+    "up_axis": {"const": "z"},
+    "units": {"const": "m"},
+    "n_frames": {"type": "integer", "minimum": 1},
+    "n_bodies": {"type": "integer", "minimum": 1},
+    "bin": {
+      "description": "File name of the pose sidecar, next to the header.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*\\.bin$"
+    },
+    "assets": {
+      "description": "Every asset the replay draws, keyed by asset id (sha256[:16] of the file). Entries are copied verbatim from the asset manifest.",
+      "type": "object",
+      "propertyNames": {"$ref": "#/$defs/asset_id"},
+      "additionalProperties": {"$ref": "#/$defs/asset"}
+    },
+    "bodies": {
+      "description": "One entry per posed body, in the order of the pose sidecar's body axis.",
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/body"}
+    },
+    "static": {
+      "description": "v1-style static geoms (table, floor), optional.",
+      "type": "array",
+      "items": {"$ref": "#/$defs/geom"}
+    },
+    "static_visuals": {
+      "description": "Assets placed in the world frame that never move (props).",
+      "type": "array",
+      "items": {"$ref": "#/$defs/visual"}
+    },
+    "meta": {"$ref": "#/$defs/meta"},
+    "provenance": {"$ref": "#/$defs/provenance"},
+    "overlays": {"$ref": "#/$defs/overlays"}
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "asset_id": {
+      "description": "The first 16 hex characters of the asset file's sha256.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{16}$"
+    },
+    "slug": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$"},
+    "vec3": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {"type": "number"}
+    },
+    "quat_xyzw": {
+      "description": "Unit quaternion, x y z w order (three.js).",
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {"type": "number"}
+    },
+    "asset": {
+      "description": "One content-addressed file (a GLB with embedded textures).",
+      "type": "object",
+      "required": ["uri", "sha256", "bytes", "role", "license", "attribution", "changes"],
+      "additionalProperties": false,
+      "properties": {
+        "uri": {
+          "description": "Path relative to the site root.",
+          "type": "string",
+          "pattern": "^assets/[0-9a-f]{16}\\.glb$"
+        },
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "bytes": {"type": "integer", "minimum": 1},
+        "role": {
+          "enum": ["finger_left", "finger_right", "gripper_frame", "carriage", "object", "prop"]
+        },
+        "license": {
+          "description": "SPDX licence identifier of the asset as shipped.",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9.+-]*$"
+        },
+        "attribution": {
+          "description": "The credit line, exactly as on the credits page.",
+          "type": "string",
+          "minLength": 1
+        },
+        "changes": {
+          "description": "What was changed from the upstream file. Required (non-empty) for every third-party asset.",
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "label": {"type": "string", "minLength": 1},
+        "media_type": {"const": "model/gltf-binary"},
+        "brand_visible": {
+          "description": "Scanned objects only: whether a brand mark is visible. Hero shots use false only.",
+          "type": "boolean"
+        },
+        "source": {"$ref": "#/$defs/source"}
+      },
+      "if": {"properties": {"license": {"const": "Apache-2.0"}}},
+      "then": {},
+      "else": {"properties": {"changes": {"minItems": 1}}}
+    },
+    "source": {
+      "description": "Where the asset came from: an upstream file pinned by sha256, or our own generator.",
+      "type": "object",
+      "required": ["kind"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {"enum": ["upstream", "generated"]},
+        "url": {"type": "string", "pattern": "^https://"},
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{7,40}$"},
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "generator": {"type": "string", "minLength": 1}
+      },
+      "if": {"properties": {"kind": {"const": "upstream"}}},
+      "then": {"required": ["url", "sha256"]},
+      "else": {"required": ["generator"]}
+    },
+    "visual": {
+      "description": "An asset placed in a body frame (or the world frame for static_visuals). The right jaw is its own asset: scale is positive, never a mirror.",
+      "type": "object",
+      "required": ["asset", "pos", "quat_xyzw", "scale"],
+      "additionalProperties": false,
+      "properties": {
+        "asset": {"$ref": "#/$defs/asset_id"},
+        "pos": {"$ref": "#/$defs/vec3"},
+        "quat_xyzw": {"$ref": "#/$defs/quat_xyzw"},
+        "scale": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {"type": "number", "exclusiveMinimum": 0}
+        }
+      }
+    },
+    "geom": {
+      "description": "A v1-style primitive or convex mesh geom (see rtt.sim.replay, version 1).",
+      "type": "object",
+      "required": ["name", "type", "pos", "quat_xyzw", "rgba"],
+      "properties": {
+        "name": {"type": "string"},
+        "type": {"enum": ["box", "cylinder", "capsule", "mesh", "plane"]},
+        "pos": {"$ref": "#/$defs/vec3"},
+        "quat_xyzw": {"$ref": "#/$defs/quat_xyzw"},
+        "rgba": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {"type": "number", "minimum": 0, "maximum": 1}
+        }
+      }
+    },
+    "body": {
+      "type": "object",
+      "required": ["name", "visuals"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {"$ref": "#/$defs/slug"},
+        "visuals": {"type": "array", "items": {"$ref": "#/$defs/visual"}},
+        "geoms": {
+          "description": "v1-style collision geoms, optional: the collision overlay.",
+          "type": "array",
+          "items": {"$ref": "#/$defs/geom"}
+        }
+      },
+      "anyOf": [
+        {"properties": {"visuals": {"minItems": 1}}},
+        {"required": ["geoms"], "properties": {"geoms": {"minItems": 1}}}
+      ]
+    },
+    "meta": {
+      "description": "What was simulated. Writers may add further keys (metrics, phases).",
+      "type": "object",
+      "required": ["design_space", "design_id", "geometry_id", "part_id"],
+      "properties": {
+        "design_space": {"$ref": "#/$defs/slug"},
+        "design_id": {"type": "string", "minLength": 1},
+        "geometry_id": {
+          "description": "sha256 over the training-part geometry hashes; null for designs without one (v1).",
+          "anyOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]
+        },
+        "part_id": {"$ref": "#/$defs/slug"}
+      }
+    },
+    "provenance": {
+      "description": "Where the replay came from; the burned-in caption is built from it.",
+      "type": "object",
+      "required": ["source", "engine", "engine_version", "run_id", "code_version", "product_mode"],
+      "additionalProperties": false,
+      "properties": {
+        "source": {"const": "simulation"},
+        "engine": {"const": "mujoco"},
+        "engine_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+        "run_id": {"$ref": "#/$defs/slug"},
+        "code_version": {
+          "description": "Git commit of the code that ran the episode; '+dirty' if the tree was modified.",
+          "type": "string",
+          "pattern": "^[0-9a-f]{7,40}(\\+dirty)?$"
+        },
+        "product_mode": {
+          "description": "True for product-mode episodes (options outside the scored space); clips then say 'product mode'.",
+          "type": "boolean"
+        },
+        "episode": {"type": "string", "minLength": 1},
+        "suite": {"$ref": "#/$defs/slug"},
+        "condition": {"type": "string", "minLength": 1},
+        "seed": {"type": "integer", "minimum": 0},
+        "task_sha256": {"$ref": "#/$defs/sha256"},
+        "record_version": {"type": "integer", "minimum": 1},
+        "created_utc": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"
+        }
+      }
+    },
+    "overlays": {
+      "description": "Optional per-frame readouts in <stem>.ovl.bin: little-endian float16 [frames x channels], same frame clock as the poses.",
+      "type": "object",
+      "required": ["bin", "dtype", "byte_order", "layout", "channels"],
+      "additionalProperties": false,
+      "properties": {
+        "bin": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*\\.ovl\\.bin$"},
+        "dtype": {"const": "float16"},
+        "byte_order": {"const": "little"},
+        "layout": {"const": ["frames", "channels"]},
+        "channels": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["offset_mm", "seat_short_mm", "hold_s", "n_contacts"]}
+        }
+      }
+    }
+  }
+}
