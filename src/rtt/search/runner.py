@@ -48,7 +48,7 @@ from rtt.search.base import (
     RunContext,
     SearchStrategy,
 )
-from rtt.search.diversity import EXPLORE_MIN_DISTANCE_V2, MIN_DISTANCE_V2, diversity_stats
+from rtt.search.diversity import diversity_stats
 from rtt.search.nemotron import LLMProposer, NemotronProposer, ProposerConfig, prompt_spec_hashes
 from rtt.search.random_search import RandomSearch, round0_designs
 from rtt.search.select import FrozenDesign, freeze_top1, write_frozen
@@ -112,13 +112,7 @@ class SearchConfig:
     @classmethod
     def for_space(cls, space: str) -> SearchConfig:
         """The pre-registered defaults of ``space`` (v2: the rule-set diversity and explore bars)."""
-        if space == V1:
-            return cls()
-        return cls(
-            proposer=ProposerConfig(
-                min_distance=MIN_DISTANCE_V2, explore_min_distance=EXPLORE_MIN_DISTANCE_V2
-            )
-        )
+        return cls() if space == V1 else cls(proposer=ProposerConfig.for_space(space))
 
     def to_json(self) -> dict[str, Any]:
         data = asdict(self)
@@ -362,7 +356,7 @@ def run_search(
         "config": config.to_json(),
         "model": _model_facts(llm_client) if strategies[0].uses_llm else None,
         "provider": PROVIDER if strategies[0].uses_llm else None,
-        "prompt_hashes": _prompt_hashes(design_space.name) if strategies[0].uses_llm else None,
+        "prompt_hashes": _prompt_hashes(design_space.name, info) if strategies[0].uses_llm else None,
         "design_space": design_space.name,
     }
     write_manifest(out / "manifest.json", {**base_manifest, "status": "running"})
@@ -526,12 +520,12 @@ def _context_json(task: Any) -> Any:
     return to_json() if callable(to_json) else repr(task)
 
 
-def _prompt_hashes(space: str) -> dict[str, str]:
+def _prompt_hashes(space: str, info: Any) -> dict[str, str]:
     if space == V1:
         return prompt_spec_hashes()
     from rtt.search.nemotron_v2 import prompt_spec_hashes_v2
 
-    return prompt_spec_hashes_v2()
+    return prompt_spec_hashes_v2(info)
 
 
 def _sampler_stats(strategy: SearchStrategy) -> dict[str, Any] | None:
@@ -579,7 +573,7 @@ def _design_row_v2(
         "request_hash": proposal["request_hash"],
         "hypothesis": proposal["hypothesis"],
         "name": design.get("name"),
-        "baseline": design.get("baseline"),
+        "baseline_kind": design.get("baseline"),
     }
     for key in SCORED_PARAMS:
         row[key] = point.get(key) if point else None

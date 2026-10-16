@@ -209,15 +209,20 @@ class PromptLeakError(RuntimeError):
     """A prompt mentioned held-out material; it is never sent."""
 
 
-def assert_prompt_clean(messages: Sequence[Mapping[str, Any]]) -> None:
-    """Refuse any message text that refers to the held-out suite or the secrets folder."""
+def assert_prompt_clean(
+    messages: Sequence[Mapping[str, Any]], pattern: re.Pattern[str] = _FORBIDDEN_PROMPT_TEXT
+) -> None:
+    """Refuse any message text that refers to the held-out suite or the secrets folder.
+
+    v2 arms pass a stricter ``pattern`` that also refuses the unseen held-out part families.
+    """
     for message in messages:
         content = message.get("content")
-        if isinstance(content, str) and _FORBIDDEN_PROMPT_TEXT.search(content):
+        if isinstance(content, str) and pattern.search(content):
             raise PromptLeakError("prompt refers to held-out material; refusing to send it")
 
 
-def scrub_model_text(text: str) -> str:
+def scrub_model_text(text: str, pattern: re.Pattern[str] = _FORBIDDEN_PROMPT_TEXT) -> str:
     """Model-authored text made safe to quote in a later prompt.
 
     The model never sees held-out material, but its own words can still trip the
@@ -226,7 +231,7 @@ def scrub_model_text(text: str) -> str:
     before it is quoted back, so only text this code writes can trigger
     :class:`PromptLeakError`.
     """
-    return _FORBIDDEN_PROMPT_TEXT.sub("[removed]", text)
+    return pattern.sub("[removed]", text)
 
 
 def _json_safe(value: Any) -> Any:
@@ -260,12 +265,12 @@ def _raw_geometry(raw: Any) -> dict[str, Any] | None:
     return _json_safe({k: raw[k] for k in GEOMETRY_PARAMS if k in raw})
 
 
-def _parent_labels(parents: Any) -> tuple[str, ...]:
+def _parent_labels(parents: Any, pattern: re.Pattern[str] = _FORBIDDEN_PROMPT_TEXT) -> tuple[str, ...]:
     """The first two parent labels the model gave, scrubbed, single-line and bounded."""
     if not isinstance(parents, list):
         return ()
     labels = (" ".join(str(p).split())[:_MAX_PARENT_CHARS] for p in parents if isinstance(p, str | int))
-    return tuple(scrub_model_text(label) for label in labels)[:2]
+    return tuple(scrub_model_text(label, pattern) for label in labels)[:2]
 
 
 # --------------------------------------------------------------------------- tool schema
@@ -912,6 +917,15 @@ class ProposerConfig:
     repairs_per_call: int = 1
     reflections_per_call: int = 1
 
+    @classmethod
+    def for_space(cls, space: str) -> ProposerConfig:
+        """Pre-registered defaults: v1's 0.08 / 0.2 bars, or the v2 bars set by the threshold rule."""
+        if space == V1:
+            return cls()
+        from rtt.search.diversity import EXPLORE_MIN_DISTANCE_V2, MIN_DISTANCE_V2
+
+        return cls(min_distance=MIN_DISTANCE_V2, explore_min_distance=EXPLORE_MIN_DISTANCE_V2)
+
     def to_json(self) -> dict[str, Any]:
         return {
             "islands": self.islands,
@@ -1001,10 +1015,11 @@ class _Kit:
     is byte for byte unchanged; for v2 the same operations go through the design space.
     """
 
-    def __init__(self, space: DesignSpace) -> None:
+    def __init__(self, space: DesignSpace, pattern: re.Pattern[str] = _FORBIDDEN_PROMPT_TEXT) -> None:
         self.space = space
         self.v1 = space.name == V1
         self._ds: DesignSpace | None = None if self.v1 else space
+        self.pattern = pattern
 
     def tool(self, slots: Sequence[SlotSpec], explain: bool, reserves: int) -> dict[str, Any]:
         return submit_designs_tool(slots, explain=explain, reserves=reserves, space=self._ds)
@@ -1019,9 +1034,9 @@ class _Kit:
         return params_key(geometry, self._ds)
 
     def parse_slot(self, raw: Any, spec: SlotSpec, context: Any) -> tuple[Any, list[str], dict[str, Any]]:
-        return (
-            _parse_slot(raw, spec, context) if self.v1 else _parse_slot_space(raw, spec, context, self.space)
-        )
+        if self.v1:
+            return _parse_slot(raw, spec, context)
+        return _parse_slot_space(raw, spec, context, self.space, self.pattern)
 
     def nearest(self, design: Any, refs: Sequence[Any], labels: Sequence[str] | None = None) -> Nearest:
         return nearest(design, refs, labels, space=self._ds)
@@ -1080,17 +1095,19 @@ class LLMProposer(SearchStrategy):
     diversity_template: ClassVar[str] = "diversity.md"
     #: Rejection reasons the reflection call answers.
     diversity_reasons: ClassVar[tuple[str, ...]] = DIVERSITY_REASONS
+    #: What no prompt may mention; model text quoted back is scrubbed of it first.
+    forbidden: ClassVar[re.Pattern[str]] = _FORBIDDEN_PROMPT_TEXT
 
     def __init__(self, ctx: RunContext, client: LLMClient, config: ProposerConfig | None = None) -> None:
         super().__init__(ctx)
         self.client = client
-        self.config = config or ProposerConfig()
+        self.config = config or ProposerConfig.for_space(ctx.space.name)
         if self.config.islands < 1:
             raise ValueError("at least one island is needed")
         self.n_reserves = self.config.reserves if self.uses_reserves else 0
         if self.n_reserves < 0:
             raise ValueError("reserves must be >= 0")
-        self.kit = _Kit(ctx.space)
+        self.kit = _Kit(ctx.space, self.forbidden)
         self.tool = self.kit.tool(self.slots, self.explain_changes, self.n_reserves)
         self.fallback = self.kit.sampler(derive_seed(ctx.run_seed, "fallback", ctx.arm), ctx.gripper_task)
         self._disabled: str | None = None
@@ -1365,7 +1382,7 @@ class LLMProposer(SearchStrategy):
             )
         claimed = slot.declared.get("same_cell_distances")
         if claimed:
-            head += f' You wrote same_cell_distances "{scrub_model_text(claimed[:120])}".'
+            head += f' You wrote same_cell_distances "{self._scrub(claimed[:120])}".'
         lines = [
             head,
             f"    yours: {cell_name(kit.cell_of(design))} | {kit.points_row(design)}",
@@ -1385,6 +1402,9 @@ class LLMProposer(SearchStrategy):
                 + ", ".join(f"{n.label} {self._points(n.distance)}" for n in others[:3])
             )
         return "\n".join(lines)
+
+    def _scrub(self, text: str) -> str:
+        return scrub_model_text(text, self.forbidden)
 
     def _points(self, distance: float) -> int:
         """A distance in prompt points (v1: 1000 x distance, as it always printed)."""
@@ -1480,7 +1500,7 @@ class LLMProposer(SearchStrategy):
         """One forced tool call, or ``None`` when no call may be made (cap or disabled)."""
         if self._disabled is not None or not self.ctx.budget.take_llm_call(keep=keep):
             return None
-        assert_prompt_clean(messages)
+        assert_prompt_clean(messages, self.forbidden)
         tag = f"{self.ctx.run_id}/round{round_index}/island{island}/{kind}"
         sample = derive_seed(self.ctx.run_seed, self.ctx.arm, round_index, island, kind) % (2**31)
         meta: CallMeta | None = None
@@ -1616,8 +1636,8 @@ class LLMProposer(SearchStrategy):
             keep = ", ".join(kept) or "none"
         text = prompts.render(
             self.repair_template,
-            problems=scrub_model_text(problems),
-            previous=scrub_model_text(previous),
+            problems=self._scrub(problems),
+            previous=self._scrub(previous),
             keep=keep,
             reserves_note=self._follow_up_note(),
         )
@@ -1658,7 +1678,11 @@ def _parse_slot(
 
 
 def _parse_slot_space(
-    raw: Any, spec: SlotSpec, context: Any, space: DesignSpace
+    raw: Any,
+    spec: SlotSpec,
+    context: Any,
+    space: DesignSpace,
+    pattern: re.Pattern[str] = _FORBIDDEN_PROMPT_TEXT,
 ) -> tuple[Any, list[str], dict[str, Any]]:
     """:func:`_parse_slot` for a v2 space: ``pad``, ``tip`` and ``params`` through the space's validators."""
     meta: dict[str, Any] = {"parents": (), "hypothesis": None, "declared": {}, "notes": ()}
@@ -1667,7 +1691,7 @@ def _parse_slot_space(
     hypothesis = raw.get("hypothesis")
     if isinstance(hypothesis, str) and hypothesis.strip():
         meta["hypothesis"] = " ".join(hypothesis.split())[:_MAX_HYPOTHESIS_CHARS]
-    meta["parents"] = _parent_labels(raw.get("parents"))
+    meta["parents"] = _parent_labels(raw.get("parents"), pattern)
     for name in _EXPLAIN_FIELDS:
         value = raw.get(name)
         if isinstance(value, str) and value.strip():
