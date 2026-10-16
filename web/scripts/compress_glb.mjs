@@ -66,6 +66,16 @@ function fail(message) {
   process.exit(1);
 }
 
+/** Fields that say what an asset is and who made it; identical bytes must agree on all of them. */
+const CREDIT_KEYS = ["role", "license", "attribution", "changes", "source"];
+
+/** JSON with sorted object keys, for comparing entries. */
+function canonical(v) {
+  if (Array.isArray(v)) return `[${v.map(canonical).join(",")}]`;
+  if (v && typeof v === "object") return `{${Object.keys(v).sort().map((k) => `${JSON.stringify(k)}:${canonical(v[k])}`).join(",")}}`;
+  return JSON.stringify(v ?? null);
+}
+
 function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
@@ -163,6 +173,7 @@ async function compress() {
 
   const manifest = readManifest();
   const map = {};
+  const files = new Map();
   mkdirSync(outDir, { recursive: true });
   for (const input of spec.inputs) {
     const where = `input ${JSON.stringify(input.key ?? input.file)}`;
@@ -184,7 +195,6 @@ async function compress() {
     const out = await io.writeBinary(doc);
     const sha = sha256(out);
     const id = sha.slice(0, 16);
-    writeFileSync(path.join(outDir, `${id}.glb`), out);
     const entry = {
       uri: `assets/${id}.glb`,
       sha256: sha,
@@ -205,10 +215,17 @@ async function compress() {
     }
     const problems = entryProblems(id, entry);
     if (problems.length) fail(`${where}: ${problems.join("; ")}`);
+    // The same bytes are stored once; they cannot carry two different credits.
+    const old = manifest.assets[id];
+    const differs = old && CREDIT_KEYS.filter((k) => canonical(old[k]) !== canonical(entry[k]));
+    if (differs?.length) fail(`${where}: assets/${id}.glb is already listed with a different ${differs.join(", ")}`);
     manifest.assets[id] = entry;
     map[input.key] = id;
+    files.set(id, out);
     console.log(`${input.key}: ${raw.byteLength} -> ${out.byteLength} bytes, assets/${id}.glb`);
   }
+  // Nothing is written until every input has passed, so a failed run leaves no stray file.
+  for (const [id, out] of files) writeFileSync(path.join(outDir, `${id}.glb`), out);
   writeManifest(manifest);
   if (values.map) writeFileSync(path.resolve(values.map), `${JSON.stringify(map, null, 2)}\n`);
 }

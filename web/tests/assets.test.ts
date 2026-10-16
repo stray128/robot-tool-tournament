@@ -264,6 +264,95 @@ describe("compress_glb --check", () => {
   });
 });
 
+/**
+ * Compression itself needs @gltf-transform/* and meshoptimizer, which are not web/
+ * dependencies yet: this runs when web/node_modules has them, or when
+ * RTT_GLTF_MODULES names a node_modules directory that does.
+ */
+const GLTF_MODULES =
+  process.env.RTT_GLTF_MODULES ?? (existsSync(path.join(WEB, "node_modules", "@gltf-transform", "core")) ? "" : null);
+
+describe.skipIf(GLTF_MODULES === null)("compress_glb compression", () => {
+  it("meshopt-compresses, content-addresses and credits each input; the site decodes the result", async () => {
+    const dir = mkdtempSync(path.join(os.tmpdir(), "rtt-compress-"));
+    try {
+      const half = [0.012, 0.004, 0.03];
+      const centre = [0.001, 0.0044, -0.03];
+      const box = (name: string, h: number[], c: number[]) =>
+        new Uint8Array(
+          writeGlb({
+            meshes: [{ name, primitives: [{ ...boxMesh(h, c), material: 0 }] }],
+            materials: [{ name: "pla", baseColorFactor: hexToLinear("#e8742a") }],
+          }),
+        );
+      writeFileSync(path.join(dir, "jaw.glb"), box("jaw", half, centre));
+      writeFileSync(path.join(dir, "carriage.glb"), box("carriage", [0.02, 0.01, 0.01], [0, 0.01, 0.005]));
+      const upstream = { kind: "upstream", url: "https://example.org/gripper", sha256: "c".repeat(64) };
+      const spec: { inputs: Record<string, unknown>[] } = {
+        inputs: [
+          {
+            key: "ours",
+            file: "jaw.glb",
+            role: "finger_left",
+            license: "Apache-2.0",
+            attribution: "Robot Tool Tournament (Apache-2.0)",
+            changes: [],
+          },
+          {
+            key: "theirs",
+            file: "carriage.glb",
+            role: "carriage",
+            license: "CC-BY-4.0",
+            attribution: "Example gripper, CC BY 4.0, modified (full credit: /credits#gripper)",
+            changes: ["cut at the jaw root plane"],
+            source: upstream,
+            simplify: 0.5,
+          },
+        ],
+      };
+      writeFileSync(path.join(dir, "spec.json"), JSON.stringify(spec));
+      const out = path.join(dir, "assets");
+      const args = [COMPRESS, path.join(dir, "spec.json"), "--out-dir", out, "--map", path.join(dir, "map.json")];
+      if (GLTF_MODULES) args.push("--modules", GLTF_MODULES);
+      const r = spawnSync(process.execPath, args, { encoding: "utf8" });
+      expect(r.status, r.stderr).toBe(0);
+
+      const manifest = parseAssetManifest(JSON.parse(readFileSync(path.join(out, "manifest.json"), "utf8")));
+      const map = JSON.parse(readFileSync(path.join(dir, "map.json"), "utf8")) as Record<string, string>;
+      const ours = manifest.assets[map.ours!]!;
+      const theirs = manifest.assets[map.theirs!]!;
+      expect(ours.changes).toEqual([]);
+      expect(theirs.changes).toEqual(["cut at the jaw root plane", "re-encoded as GLB", "simplified to 50%"]);
+      expect(theirs.source).toEqual(upstream);
+      const check = spawnSync(process.execPath, [COMPRESS, "--check", "--out-dir", out], { encoding: "utf8" });
+      expect(check.status, check.stderr).toBe(0);
+
+      const lib = new AssetLibrary({
+        base: "",
+        fetch: async (url) => new Response(new Uint8Array(readFileSync(path.join(dir, url.replace(/^\/+/, ""))))),
+      });
+      const loaded = await lib.load(map.ours!, ours);
+      expect(loaded.info.extensionsRequired).toContain("EXT_meshopt_compression");
+      // Same box in the same place (nothing rotated or mirrored), within quantisation error.
+      for (let k = 0; k < 3; k++) {
+        expect(loaded.box.min[k]!).toBeCloseTo(centre[k]! - half[k]!, 4);
+        expect(loaded.box.max[k]!).toBeCloseTo(centre[k]! + half[k]!, 4);
+      }
+
+      // Re-running with the same credits is a no-op; the same bytes under another credit are refused.
+      const again = spawnSync(process.execPath, args, { encoding: "utf8" });
+      expect(again.status, again.stderr).toBe(0);
+      spec.inputs.push({ ...spec.inputs[0]!, key: "relabelled", license: "CC-BY-4.0", changes: ["cut"] });
+      writeFileSync(path.join(dir, "spec.json"), JSON.stringify(spec));
+      const clash = spawnSync(process.execPath, args, { encoding: "utf8" });
+      expect(clash.status).toBe(1);
+      expect(clash.stderr).toMatch(/already listed with a different license, changes/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("URLs, payload and brand screen", () => {
   it("prefixes the base path", () => {
     expect(assetUrl({ uri: "assets/0123456789abcdef.glb" }, "")).toBe("/assets/0123456789abcdef.glb");
