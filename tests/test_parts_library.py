@@ -403,3 +403,17 @@ def test_mirror_y_is_exact_and_flips_the_jaw_sides(parts: dict[str, PartSpec]) -
     bracket = parts["l_bracket"]
     assert lib.mirror_y(bracket).geometry_sha256 != bracket.geometry_sha256  # asymmetric in y
     assert lib.mirror_y(parts["block"]).size == parts["block"].size
+
+
+def test_package_exports_resolve() -> None:
+    """Every name in ``rtt.parts.__all__`` resolves (the lazy ones on first use), including
+    the helpers other tracks are told to import from the package (``mirror_y`` for the
+    right jaw)."""
+    import rtt.parts as parts_pkg
+
+    for name in parts_pkg.__all__:
+        assert getattr(parts_pkg, name) is not None, name
+    assert parts_pkg.mirror_y is lib.mirror_y
+    assert parts_pkg.part_from_mesh_object is lib.part_from_mesh_object
+    with pytest.raises(AttributeError):
+        _ = parts_pkg.no_such_name
