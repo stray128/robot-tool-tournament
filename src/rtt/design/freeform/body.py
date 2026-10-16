@@ -288,28 +288,27 @@ def rounded_rect(x0: float, x1: float, y0: float, y1: float, r: float, n_arc: in
     """CCW rounded rectangle in (x, y), ``4 * (n_arc + 1)`` points."""
     r = max(0.0, min(r, (x1 - x0) / 2.0 - 1e-9, (y1 - y0) / 2.0 - 1e-9))
     a = np.radians(90.0 * np.arange(n_arc + 1) / n_arc)
-    ca, sa = np.cos(a), np.sin(a)
-    out = []
-    for cx, cy, k in ((x1 - r, y0 + r, 3), (x1 - r, y1 - r, 0), (x0 + r, y1 - r, 1), (x0 + r, y0 + r, 2)):
-        c, s = np.cos(k * math.pi / 2), np.sin(k * math.pi / 2)
-        out.append(np.stack([cx + r * (c * ca - s * sa), cy + r * (s * ca + c * sa)], axis=1))
-    return np.concatenate(out)
+    centres = np.array([(x1 - r, y0 + r), (x1 - r, y1 - r), (x0 + r, y1 - r), (x0 + r, y0 + r)])
+    start = np.radians([270.0, 0.0, 90.0, 180.0])[:, None] + a[None, :]
+    pts = centres[:, None, :] + r * np.stack([np.cos(start), np.sin(start)], axis=-1)
+    return pts.reshape(-1, 2)
 
 
 def loft_mesh(sections: list[np.ndarray], zs: list[float]) -> tuple[np.ndarray, np.ndarray]:
     """Closed tube mesh through stacked CCW (x, y) sections of equal size at heights ``zs``."""
     k = len(sections[0])
-    verts = np.concatenate([np.column_stack([s, np.full(k, z)]) for s, z in zip(sections, zs, strict=True)])
-    faces: list[tuple[int, int, int]] = []
     m = len(sections)
-    for s in range(m - 1):
-        a0, b0 = s * k, (s + 1) * k
-        for i in range(k):
-            j = (i + 1) % k
-            faces.append((a0 + i, a0 + j, b0 + j))
-            faces.append((a0 + i, b0 + j, b0 + i))
+    verts = np.concatenate([np.column_stack([s, np.full(k, z)]) for s, z in zip(sections, zs, strict=True)])
+    i = np.arange(k)
+    j = (i + 1) % k
+    a0 = (np.arange(m - 1) * k)[:, None]
+    b0 = a0 + k
+    side = np.stack(
+        [np.stack([a0 + i, a0 + j, b0 + j], axis=-1), np.stack([a0 + i, b0 + j, b0 + i], axis=-1)], axis=2
+    ).reshape(-1, 3)
+    fan = np.arange(1, k - 1)
     top = (m - 1) * k
-    for i in range(1, k - 1):
-        faces.append((0, i + 1, i))
-        faces.append((top, top + i, top + i + 1))
-    return verts, np.array(faces, dtype=np.int64)
+    bottom = np.stack([np.zeros_like(fan), fan + 1, fan], axis=1)
+    cap = np.stack([top + np.zeros_like(fan), top + fan, top + fan + 1], axis=1)
+    caps = np.stack([bottom, cap], axis=1).reshape(-1, 3)
+    return verts, np.concatenate([side, caps]).astype(np.int64)

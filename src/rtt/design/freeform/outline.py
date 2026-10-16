@@ -85,6 +85,24 @@ class PartGeometry:
         size = tuple(float(s) for s in hi - lo)
         return PartGeometry(hs, float(hi[2]), size, verts, ea, eb)  # type: ignore[arg-type]
 
+    @functools.cached_property
+    def packed(self) -> _Packed:
+        """Every piece's halfspaces in flat arrays, grouped by piece (for vectorised queries)."""
+        return _pack(self.pieces)
+
+    @functools.cached_property
+    def upper_chains(self) -> tuple[tuple[np.ndarray, np.ndarray], ...]:
+        """Per piece, the upper chain of its x-y projection (largest y at every x)."""
+        out = []
+        for h in self.pieces:
+            p2 = h.vertices[:, :2]
+            try:
+                poly = p2[ConvexHull(p2).vertices]
+            except QhullError:  # degenerate projection (a piece seen edge-on): use its points
+                poly = p2
+            out.append(_upper_chain(poly[np.lexsort((-poly[:, 1], poly[:, 0]))]))
+        return tuple(out)
+
     def mirrored(self) -> PartGeometry:
         """The part mirrored across the closing axis (y -> -y)."""
         m = np.array([1.0, -1.0, 1.0])
@@ -92,6 +110,44 @@ class PartGeometry:
             PieceH(h.normals * m, h.offsets.copy(), h.vertices * m, h.edges.copy()) for h in self.pieces
         )
         return PartGeometry._assemble(hs)
+
+
+@dataclass(frozen=True, eq=False)
+class _Packed:
+    """Every piece's halfspaces in padded ``(P, F)`` arrays, split by the sign of their y normal.
+
+    Padding never binds: an extra upper bound at ``+inf``, an extra lower bound at ``-inf`` and
+    an extra y-parallel face that every point satisfies.
+    """
+
+    up: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]  # nx, ny, nz, b (n_y > 0)
+    down: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]  # n_y < 0
+    flat: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]  # n_y = 0
+    lo: np.ndarray  # (P, 3) piece bounding boxes
+    hi: np.ndarray
+
+
+def _pack(pieces: tuple[PieceH, ...]) -> _Packed:
+    kinds = {"up": [], "down": [], "flat": []}  # type: dict[str, list[tuple[np.ndarray, np.ndarray]]]
+    for h in pieces:
+        ny = h.normals[:, 1]
+        kinds["up"].append((h.normals[ny > 1e-12], h.offsets[ny > 1e-12]))
+        kinds["down"].append((h.normals[ny < -1e-12], h.offsets[ny < -1e-12]))
+        kinds["flat"].append((h.normals[np.abs(ny) <= 1e-12], h.offsets[np.abs(ny) <= 1e-12]))
+
+    def pad(items: list[tuple[np.ndarray, np.ndarray]], ny_pad: float) -> tuple[np.ndarray, ...]:
+        width = max(len(b) for _, b in items) + 1
+        n = np.zeros((len(items), width, 3))
+        n[:, :, 1] = ny_pad
+        b = np.full((len(items), width), np.inf)
+        for i, (nn, bb) in enumerate(items):
+            n[i, : len(bb)] = nn
+            b[i, : len(bb)] = bb
+        return n[:, :, 0].copy(), n[:, :, 1].copy(), n[:, :, 2].copy(), b
+
+    lo = np.stack([h.vertices.min(axis=0) for h in pieces])
+    hi = np.stack([h.vertices.max(axis=0) for h in pieces])
+    return _Packed(pad(kinds["up"], 1.0), pad(kinds["down"], -1.0), pad(kinds["flat"], 0.0), lo, hi)
 
 
 @functools.lru_cache(maxsize=64)
@@ -118,33 +174,52 @@ def part_geometry(part: object) -> tuple[PartGeometry, PartGeometry]:
 
 
 def envelope(g: PartGeometry, xs: np.ndarray, zs: np.ndarray) -> np.ndarray:
-    """``(len(xs), len(zs))``: the part's largest y at each (x, z), ``-inf`` where it is absent."""
+    """``(len(xs), len(zs))``: the part's largest y at each (x, z), ``-inf`` where it is absent.
+
+    Per piece the line ``(x, ., z)`` meets it on ``[max of the lower bounds, min of the upper
+    bounds]`` when that is non-empty and no face parallel to y excludes the line. Only the
+    (x, piece) pairs inside a piece's x extent are evaluated, all at once.
+    """
     xs = np.asarray(xs, float)
     zs = np.asarray(zs, float)
     best = np.full((len(xs), len(zs)), _NEG)
-    for h in g.pieces:
-        lo, hi = h.vertices.min(axis=0), h.vertices.max(axis=0)
-        ix = np.flatnonzero((xs >= lo[0] - 1e-12) & (xs <= hi[0] + 1e-12))
-        iz = np.flatnonzero((zs >= lo[2] - 1e-12) & (zs <= hi[2] + 1e-12))
-        if not len(ix) or not len(iz):
-            continue
-        n, b = h.normals, h.offsets
-        ny = n[:, 1]
-        X = xs[ix][:, None, None]
-        Z = zs[iz][None, :, None]
-        up, lo_, flat = ny > 1e-12, ny < -1e-12, np.abs(ny) <= 1e-12
+    if not len(xs) or not len(zs):
+        return best
+    pk = g.packed
+    order = np.argsort(xs, kind="stable")
+    sx = xs[order]
+    i0 = np.searchsorted(sx, pk.lo[:, 0] - 1e-12, side="left")
+    i1 = np.searchsorted(sx, pk.hi[:, 0] + 1e-12, side="right")
+    cnt = np.maximum(i1 - i0, 0)
+    total = int(cnt.sum())
+    if total == 0:
+        return best
+    piece = np.repeat(np.arange(len(cnt)), cnt)
+    pos = np.repeat(i0, cnt) + (np.arange(total) - np.repeat(np.cumsum(cnt) - cnt, cnt))
+    xi = order[pos]
+    width = max(pk.up[0].shape[1], pk.down[0].shape[1], pk.flat[0].shape[1])
+    chunk = max(1, 1_000_000 // (len(zs) * width))
+    Z = zs[None, :, None]
+    n_pieces = len(cnt)
+    dense = np.full((n_pieces, len(xs), len(zs)), _NEG) if n_pieces * best.size <= 4_000_000 else None
+    for s0 in range(0, total, chunk):
+        pc = piece[s0 : s0 + chunk]
+        X = xs[xi[s0 : s0 + chunk]][:, None, None]
 
-        def rhs(m: np.ndarray, b=b, n=n, X=X, Z=Z) -> np.ndarray:
-            return b[m][None, None, :] - n[m, 0][None, None, :] * X - n[m, 2][None, None, :] * Z
+        def rhs(group: tuple[np.ndarray, ...], pc: np.ndarray = pc, X: np.ndarray = X) -> np.ndarray:
+            nx, _, nz, b = group
+            return b[pc][:, None, :] - nx[pc][:, None, :] * X - nz[pc][:, None, :] * Z
 
-        ymax = np.min(rhs(up) / ny[up], axis=-1) if up.any() else np.full((len(ix), len(iz)), np.inf)
-        ymin = np.max(rhs(lo_) / ny[lo_], axis=-1) if lo_.any() else np.full((len(ix), len(iz)), _NEG)
-        ok = ymax >= ymin - _EPS
-        if flat.any():
-            ok &= np.all(rhs(flat) >= -1e-11, axis=-1)
-        sub = best[np.ix_(ix, iz)]
-        best[np.ix_(ix, iz)] = np.where(ok, np.maximum(sub, ymax), sub)
-    return best
+        ymax = np.min(rhs(pk.up) / pk.up[1][pc][:, None, :], axis=2)
+        ymin = np.max(rhs(pk.down) / pk.down[1][pc][:, None, :], axis=2)
+        ok = (ymax >= ymin - _EPS) & np.all(rhs(pk.flat) >= -1e-11, axis=2)
+        ok &= (zs[None, :] >= pk.lo[pc, 2][:, None] - 1e-12) & (zs[None, :] <= pk.hi[pc, 2][:, None] + 1e-12)
+        vals = np.where(ok, ymax, _NEG)
+        if dense is not None:  # each (piece, x) pair occurs once
+            dense[pc, xi[s0 : s0 + chunk]] = vals
+        else:
+            np.maximum.at(best, xi[s0 : s0 + chunk], vals)
+    return dense.max(axis=0) if dense is not None else best
 
 
 def slice_points(g: PartGeometry, z: float) -> np.ndarray:
@@ -316,15 +391,7 @@ def column_max(g: PartGeometry, xs: np.ndarray) -> np.ndarray:
     dx = float(xs[1] - xs[0])
     bounds = np.concatenate([xs - dx / 2.0, [xs[-1] + dx / 2.0]])
     out = np.full(len(xs), _NEG)
-    for h in g.pieces:
-        p2 = h.vertices[:, :2]
-        try:
-            hull = ConvexHull(p2)
-            poly = p2[hull.vertices]
-        except QhullError:  # degenerate projection (a piece seen edge-on): use its points
-            poly = p2
-        order = np.lexsort((-poly[:, 1], poly[:, 0]))
-        chain_x, chain_y = _upper_chain(poly[order])
+    for chain_x, chain_y in g.upper_chains:
         inside = (bounds >= chain_x[0]) & (bounds <= chain_x[-1])
         yb = np.where(inside, np.interp(bounds, chain_x, chain_y), _NEG)
         cell = np.maximum(yb[:-1], yb[1:])
