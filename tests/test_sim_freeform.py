@@ -160,3 +160,117 @@ def test_millimetre_jaws_are_rejected() -> None:
         check_pair_units(pair)
     with pytest.raises(ValueError, match="metres"):
         build_spec_v2(pair, TEE.to_mesh_object(), TASK)
+
+
+# --------------------------------------------------------------------------- evaluation and certificate
+
+
+def _suite(parts, placements, seeds=(0,), err_z=0.0):
+    from freeform_fixtures import fixture_suite
+
+    return fixture_suite(parts, placements, seeds, err_z=err_z)
+
+
+def test_evaluate_designs_v2_records_every_episode_and_invalid_builds() -> None:
+    from rtt.sim.evaluate import RECORD_VERSION_V2, evaluate_designs_v2, score_designs_v2
+
+    blk, tee = block(), TEE
+    suite = _suite([blk, tee], {"c0": Placement(), "c1": Placement(err_x=0.002)})
+
+    def builder(design, part, task):
+        if design.pad == "flat" and part.part_id == tee.part_id:
+            raise ValueError("planted: no flat jaws for the tee")
+        return build_fixture_pair(design, part, task)
+
+    designs = [conform(), conform(pad="flat", clearance_mm=0.0, pad_depth_mm=0.0, wall_draft_deg=0.0)]
+    records = evaluate_designs_v2(designs, suite, builder=builder, workers=2, task=TASK)
+    assert len(records) == len(designs) * len(suite)
+    assert [r.design_id for r in records[:4]] == [designs[0].design_id()] * 4
+    assert all(r.record_version == RECORD_VERSION_V2 and r.task == "task_v2" for r in records)
+    invalid = [r for r in records if r.failure_mode == "invalid_build"]
+    assert len(invalid) == 2 and all(r.part_id == tee.part_id and not r.success for r in invalid)
+    assert invalid[0].flags[0].startswith("invalid_build: planted")
+    sim = [r for r in records if r.failure_mode != "invalid_build"]
+    assert all(r.geometry_hash and r.design_space == "freeform-v2" for r in sim)
+    assert all(r.success <= r.lift_success and r.success == r.registered for r in sim)
+    assert all(r.jam_on_close == ("jam_on_close" in r.registration_flags) for r in sim)
+    d = sim[0].to_dict()
+    assert d["registration_flags"] == list(sim[0].registration_flags) and d["record_version"] == 2
+    scores = score_designs_v2(records)
+    good, partial = scores[designs[0].design_id()], scores[designs[1].design_id()]
+    assert good.n_episodes == partial.n_episodes == 4
+    assert good.geometry_id is not None and partial.geometry_id is None
+    assert partial.failure_modes.get("invalid_build") == 2
+    assert set(good.success_by_part) == {blk.part_id, tee.part_id}
+
+
+def test_v2_records_write_none_for_unmeasured_values_and_round_trip_through_parquet(tmp_path) -> None:
+    import pyarrow.parquet as pq
+
+    from rtt.sim.evaluate import invalid_record_v2, records_v2_to_table, write_parquet_v2
+
+    suite = _suite([block()], {"c0": Placement()})
+    rec = invalid_record_v2("ab" * 32, suite.conditions[0], suite.name, 3, "planted", TASK)
+    d = rec.to_dict()
+    assert d["seat_short_mm"] is None and d["finger_mass_g"] is None and d["failure_mode"] == "invalid_build"
+    table = records_v2_to_table([rec, rec])
+    assert table.num_rows == 2 and table.schema.field("registration_flags").type.value_type == "string"
+    path = write_parquet_v2([rec], tmp_path / "v2.parquet")
+    back = pq.read_table(path).to_pylist()[0]
+    assert back["design_id"] == rec.design_id and back["flags"] == list(rec.flags)
+
+
+def test_rank_designs_v2_breaks_ties_on_lift_then_mass() -> None:
+    import dataclasses
+
+    from rtt.sim.evaluate import invalid_record_v2, rank_designs_v2
+
+    cond = _suite([block()], {"c0": Placement()}).conditions[0]
+    base = invalid_record_v2("0" * 64, cond, "s", 0, "x", TASK)
+
+    def rec(did: str, success: bool, lift: bool, mass: float):
+        return dataclasses.replace(
+            base, design_id=did, success=success, lift_success=lift, finger_mass_g=mass,
+            failure_mode=None if success else "not_registered", geometry_hash="f" * 64,
+        )  # fmt: skip
+
+    records = [
+        rec("a", True, True, 90.0), rec("a", False, False, 90.0),
+        rec("b", True, True, 80.0), rec("b", False, True, 80.0),
+        rec("c", True, True, 70.0), rec("c", False, True, 70.0),
+    ]  # fmt: skip
+    assert [s.design_id for s in rank_designs_v2(records)] == ["c", "b", "a"]
+
+
+def test_a_height_error_lowers_the_jaws_on_the_part() -> None:
+    from rtt.sim.evaluate import condition_task_v2
+
+    cond = _suite([block()], {"c0": Placement()}, err_z=0.0015).conditions[0]
+    task = condition_task_v2(TASK, cond)
+    assert task.controller.grasp_z_offset == pytest.approx(-0.0015)
+    assert condition_task_v2(TASK, _suite([block()], {"c0": Placement()}).conditions[0]) is TASK
+    pair = build_fixture_pair(conform(), block(), TASK)
+    plan = plan_grasp_v2(pair, block().to_mesh_object(), Placement(), task)
+    assert plan.tip_height == pytest.approx(pair.tip_height - 0.0015)
+
+
+def test_certify_v2_reports_held_and_registered_per_test() -> None:
+    from rtt.sim.certify import certify_v2
+
+    blk = block()
+    pair = build_fixture_pair(conform(), blk, TASK)
+    small = TASK.with_overrides(
+        robustness={"placement_errors_mm": (2.0,), "shake_axes": ("x",), "push_axes": ("y",)}
+    )
+    cert = certify_v2(pair, blk, task=small, workers=2)
+    names = [t.name for t in cert.tests]
+    assert names[0] == "nominal" and len(names) == 1 + 4 + 1 + 1
+    assert set(cert.held_scores) == set(cert.registered_scores) == {"placement", "shake", "push"}
+    assert all(t.registered <= t.held for t in cert.tests)
+    nominal = cert.tests[0]
+    assert nominal.held and nominal.registered and nominal.offset_mm < 0.75
+    assert cert.registered_tolerance_mm["x"] in (0.0, 2.0)
+    d = cert.to_dict()
+    assert d["registered"].endswith(f"/{len(names)}") and d["settings"]["jitter"] == "off"
+    assert d["settings"]["registration"]["seat_short_max_mm"] == 1.0
+    assert d["part_id"] == blk.part_id and d["geometry_hash"] == pair.geometry_hash

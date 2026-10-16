@@ -504,3 +504,94 @@ def build_fixture_pair(design: FixtureRecipe, part: PartSpec, task: TaskConfig) 
         build_s=0.0,
         auto_repairs=("test fixture builder",),
     )
+
+
+# --------------------------------------------------------------------------- gate inputs
+
+#: Outline sampling fine enough that the fixture's pads match the parts within 0.02 mm, so the
+#: fidelity gate measures the simulator, not this fixture's sampling (0.1 mm / 25 rows leaves
+#: the tee's pocket wall 0.31 mm from the part instead of 0.40 mm).
+FINE = {"grid_mm": 0.02, "z_rows": 101}
+
+
+def gv1_designs() -> dict[str, tuple[FixtureRecipe, float]]:
+    """GV1 imprints: name -> (recipe, designed clearance in m)."""
+    return {
+        "imprint_configurator": (imprint_configurator(**FINE), 0.0004),
+        "imprint_swept": (imprint_swept(**FINE), 0.0004),
+    }
+
+
+def gv2_designs() -> dict[str, FixtureRecipe]:
+    """GV2: one design per pad strategy, all 40 mm wide so each builds on every part."""
+    return {
+        "flat": flat(finger_width_mm=40.0),
+        "conform": conform(finger_width_mm=40.0),
+        "v_funnel": v_funnel(finger_width_mm=40.0),
+    }
+
+
+def determinism_designs() -> dict[str, FixtureRecipe]:
+    """GV2 determinism: ten distinct designs covering every pad strategy and the imprints."""
+    return {
+        **gv2_designs(),
+        "imprint_configurator": imprint_configurator(),
+        "imprint_swept": imprint_swept(),
+        "conform_d0": conform(wall_draft_deg=0.0, pad_depth_mm=6.0),
+        "conform_d45_low": conform(wall_draft_deg=45.0, grip_height_frac=0.3, pad_height_mm=12.0),
+        "v_funnel_30": v_funnel(wall_draft_deg=30.0, pad_depth_mm=8.0, finger_width_mm=36.0),
+        "flat_narrow_high": flat(finger_width_mm=16.0, grip_height_frac=0.7, pad_height_mm=10.0),
+        "conform_wide_clear": conform(clearance_mm=1.2, pad_depth_mm=8.0, finger_width_mm=40.0),
+    }
+
+
+# --------------------------------------------------------------------------- suites
+
+
+@dataclass(frozen=True, eq=False)
+class FixtureCondition:
+    """The shape of :class:`rtt.parts.suite.PartCondition` (the parts track's suite type)."""
+
+    condition_id: str
+    part: PartSpec
+    placement: object
+    seeds: tuple[int, ...]
+    placement_label: str = ""
+    size_label: str = ""
+    err_z: float = 0.0
+
+    @property
+    def family(self) -> str:
+        return self.part.family
+
+
+@dataclass(frozen=True)
+class FixtureSuite:
+    """The shape of :class:`rtt.parts.suite.PartSuite`: ``parts()`` is a method there too."""
+
+    name: str
+    conditions: tuple[FixtureCondition, ...]
+
+    def __iter__(self):
+        return iter(self.conditions)
+
+    def __len__(self) -> int:
+        return len(self.conditions)
+
+    def parts(self) -> tuple[PartSpec, ...]:
+        seen: dict[str, PartSpec] = {}
+        for c in self.conditions:
+            seen.setdefault(c.part.name, c.part)
+        return tuple(seen.values())
+
+
+def fixture_suite(
+    parts, placements: dict, seeds: tuple[int, ...] = (0,), name: str = "fixture_v2", err_z=0.0
+):
+    """Every part x placement with the same ``seeds``."""
+    conds = [
+        FixtureCondition(f"{name}/{p.part_id}/{label}", p, pl, tuple(seeds), label, "train", err_z)
+        for p in parts
+        for label, pl in placements.items()
+    ]
+    return FixtureSuite(name, tuple(conds))
