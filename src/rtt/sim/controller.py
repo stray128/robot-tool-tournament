@@ -26,6 +26,11 @@ above the object's top.
 
 During HOLD an optional :class:`~rtt.sim.perturb.Shake` moves the palm target
 sinusoidally around the hold pose (robustness tests).
+
+Task v2 (:func:`plan_grasp_v2`) has no grasp-height grid: a jaw pair carries its designed
+tip height, and the palm goes down until the jaws' lowest point is there (plus the task's
+``grasp_z_offset``, used by the deliberate-failure gate cases). The phase timing, approach
+and lift are the v1 ones, identical for every design.
 """
 
 from __future__ import annotations
@@ -33,6 +38,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from enum import IntEnum
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -41,6 +47,9 @@ from rtt.sim import objects as objs
 from rtt.sim.perturb import Shake, axis_vector
 from rtt.sim.scene import PALM_XY_LIMIT, finger_tip_depth
 from rtt.sim.task import TaskConfig
+
+if TYPE_CHECKING:
+    from rtt.design.freeform.types import FingerPair
 
 
 class Phase(IntEnum):
@@ -109,19 +118,44 @@ def plan_grasp(
     target is wrapped to [-pi, pi] (the same closing axis), so any placement yaw
     stays inside the palm's yaw range.
     """
+    _check_reach(placement)
+    h = objs.height(obj)
+    reach = finger_tip_depth(finger)
+    floor = reach_floor(reach, h, task)
+    band_tip = floor + grasp_fraction(setting, task) * (h - floor)
+    return _plan(task, placement, h, reach, band_tip, floor)
+
+
+def _check_reach(placement: objs.Placement) -> None:
     if max(abs(placement.x), abs(placement.y)) > PALM_XY_LIMIT:
         raise ValueError(
             f"placement ({placement.x}, {placement.y}) is outside the palm's +-{PALM_XY_LIMIT} m reach"
         )
+
+
+def plan_grasp_v2(
+    pair: FingerPair, obj: objs.AnyObject, placement: objs.Placement, task: TaskConfig
+) -> GraspPlan:
+    """Controller targets for a v2 jaw pair: the jaws' lowest point goes to ``pair.tip_height``.
+
+    ``reach_floor`` is reported as for v1 (the lowest palm-clear tip height for the pair's
+    ``finger_length``) but not applied: the generator's validators keep the palm clear.
+    Raises ``ValueError`` for a placement outside the palm's x/y travel.
+    """
+    _check_reach(placement)
+    h = objs.height(obj)
+    reach = float(pair.finger_length)
+    return _plan(task, placement, h, reach, float(pair.tip_height), reach_floor(reach, h, task))
+
+
+def _plan(
+    task: TaskConfig, placement: objs.Placement, h: float, reach: float, tip_target: float, floor: float
+) -> GraspPlan:
+    """Shared plan arithmetic: the tip goes to ``tip_target`` (+ ``grasp_z_offset``)."""
     c, g = task.controller, task.gripper
     table = task.physics.table_top_z
-    h = objs.height(obj)
-    reach = finger_tip_depth(finger)
     root_below_palm = g.palm_half_size[2] + reach  # palm origin to finger tip
-
-    floor = reach_floor(reach, h, task)
-    band_tip = floor + grasp_fraction(setting, task) * (h - floor)
-    tip = max(c.min_tip_clearance, band_tip + c.grasp_z_offset)
+    tip = max(c.min_tip_clearance, tip_target + c.grasp_z_offset)
     approach_tip = max(tip + c.approach_offset, h + c.approach_clearance)
     grasp_z = table + tip + root_below_palm
     approach_z = table + approach_tip + root_below_palm
