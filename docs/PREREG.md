@@ -302,12 +302,13 @@ It is also an **imprint hero** when:
 - **(b)** the configurator imprint shows a seat shortfall of at least 2 mm or a planar
   offset of at least 1 mm on at least 4 of the 6 non-zero translation errors.
 
-Scans with visible branding never qualify. With several episodes per condition, a
-condition shows a property only if a strict majority of its episodes do; ties count
-against qualification. A `physics_invalid` episode never counts as a stock or imprint
-failure, and never as a designed pass. A value that was not measured (no registration
-pose, shortfall or tilt in the record) counts against qualification too: it is never a
-designed pass, an imprint jam or a visible failure.
+Scans with visible branding never qualify, and every part needs a recorded brand-screen
+verdict. With several episodes per condition, a condition shows a property only if a
+strict majority of its episodes do; ties count against qualification. A
+`physics_invalid` episode never counts as a stock or imprint failure, and never as a
+designed pass. A value that was not measured (no registration pose, shortfall or tilt in
+the record) counts against qualification too: it is never a designed pass, an imprint
+jam or a visible failure.
 
 Heroes are labelled "showcase parts chosen because the stock finger fails". Expected: the
 tee, the block, the steel slug and one unbranded scanned object. If fewer than 3 qualify,

@@ -9,7 +9,7 @@ across the jaw (palm x), and a 5 degree yaw at zero offset; 7 conditions in all.
 translation errors are the "non-zero errors" of criterion (b).
 
 **A part is a hero** when it passes the brand screen (scans with visible branding never
-qualify) and
+qualify, and a part without a recorded brand-screen verdict is refused) and
 
 * **(a) the stock blade fails**: ``success_v2`` fails on at least 4 of the 7 conditions,
   and the failure is *visible* on at least 2 of the 7: a slip during the lift, an ejection
@@ -350,9 +350,18 @@ def apply_hero_rule(verdicts: Sequence[PartVerdict], rule: HeroRule | None = Non
 
 
 def _screen_from_json(data: Mapping[str, Any], rule: HeroRule) -> HeroScreen:
-    """``{"parts": [{"part_id", "eligible", "stock": [rec], "imprint": [rec] | null, "designed": {id: [rec]}}]}``."""
+    """``{"parts": [{"part_id", "eligible", "stock": [rec], "imprint": [rec] | null, "designed": {id: [rec]}}]}``.
+
+    ``eligible`` (the brand screen's verdict) is required for every part: a part whose brand
+    screen is not recorded is refused, never assumed clean.
+    """
     verdicts = []
     for part in data["parts"]:
+        eligible = part.get("eligible")
+        if eligible is not True and eligible is not False:
+            raise ValueError(
+                f"part {part.get('part_id')!r}: 'eligible' (the brand screen verdict) must be true or false"
+            )
         imprint = part.get("imprint")
         verdicts.append(
             evaluate_part(
@@ -360,7 +369,7 @@ def _screen_from_json(data: Mapping[str, Any], rule: HeroRule) -> HeroScreen:
                 [ScreenEpisode.from_record(r) for r in part["stock"]],
                 {k: [ScreenEpisode.from_record(r) for r in v] for k, v in part["designed"].items()},
                 None if imprint is None else [ScreenEpisode.from_record(r) for r in imprint],
-                eligible=bool(part.get("eligible", True)),
+                eligible=eligible,
                 rule=rule,
             )
         )

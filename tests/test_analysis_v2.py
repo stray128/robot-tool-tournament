@@ -779,12 +779,14 @@ def test_hero_cli_round_trip(tmp_path: Path) -> None:
         "parts": [
             {
                 "part_id": "tee",
+                "eligible": True,
                 "stock": recs(_stock_fails(5, 3)),
                 "imprint": recs(_imprint(5)),
                 "designed": {"d": recs(_eps())},
             },
             {
                 "part_id": "hex",
+                "eligible": True,
                 "stock": recs(_stock_fails(1, 0)),
                 "imprint": None,
                 "designed": {"d": recs(_eps())},
@@ -800,6 +802,11 @@ def test_hero_cli_round_trip(tmp_path: Path) -> None:
         and out["imprint_heroes"] == ["tee"]
         and out["hook_mode"] == "offset_contrast_only"
     )
+    # a part without a recorded brand-screen verdict is refused, never assumed clean
+    del screen["parts"][0]["eligible"]
+    f.write_text(json.dumps(screen))
+    with pytest.raises(ValueError, match="brand screen"):
+        hero_rule.main([str(f)])
 
 
 # --------------------------------------------------------------------------- hygiene
