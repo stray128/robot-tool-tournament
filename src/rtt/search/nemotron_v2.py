@@ -38,6 +38,7 @@ import re
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any, Final
 
+from rtt.design.freeform.types import CARRIAGE_INNER_Y
 from rtt.llm.cache import canonical_json
 from rtt.search import prompts
 from rtt.search.base import Evaluated, EvaluatorInfo, Rejection, V2Info
@@ -255,11 +256,14 @@ def notes_values(info: EvaluatorInfo) -> dict[str, str]:
     mu = info.friction
     max_draft = math.floor(90.0 - math.degrees(math.atan(mu)) - v2.friction_margin_deg + 1e-9)
     max_error = max((abs(p.dx_mm) for p in v2.placements), default=0.0)
-    margin = v2.open_clearance_mm + v2.error_envelope_mm
+    lo, hi = v2.q_seat_range_mm
+    # At seat the jaw origin sits q_seat in from full open and its innermost point on the carriage
+    # inner face, so q_seat <= hi keeps that point at least opening/2 + inner face - hi from the centre.
+    inner = v2.opening_mm / 2.0 + 1000.0 * CARRIAGE_INNER_Y - hi
     caps = []
     for part in v2.parts:
-        cap = (v2.opening_mm - part.width_across_mm) / 2.0 - margin
-        caps.append(f"{part.part_id} {_num(math.floor(cap * 10.0) / 10.0)} mm")
+        cap = part.width_across_mm / 2.0 - inner
+        caps.append(f"{part.part_id} {_num(max(0.0, math.floor(cap * 10.0 + 1e-9) / 10.0))} mm")
     return {
         "mu": _num(mu),
         "margin_deg": _num(v2.friction_margin_deg),
@@ -268,9 +272,9 @@ def notes_values(info: EvaluatorInfo) -> dict[str, str]:
         "jitter_mm": _num(info.jitter_pos_mm),
         "error_band_mm": _num(max_error + info.jitter_pos_mm),
         "opening_mm": _num(v2.opening_mm),
-        "open_clear_mm": _num(v2.open_clearance_mm),
-        "envelope_mm": _num(v2.error_envelope_mm),
-        "open_margin_mm": _num(margin),
+        "min_seat_mm": _num(lo),
+        "max_seat_mm": _num(hi),
+        "inner_mm": _num(round(inner, 2)),
         "stroke_caps": ", ".join(caps) or "no training parts",
         "min_wall_mm": _num(v2.min_wall_mm),
         "min_feature_mm": _num(v2.min_feature_mm),

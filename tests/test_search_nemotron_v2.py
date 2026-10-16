@@ -138,7 +138,8 @@ def test_the_engineering_notes_block_is_shared_by_c_and_z_and_hashed(prompts_c_a
     info = FakeEvaluatorV2(0).describe()
     notes = render_notes(info)
     assert "keep wall_draft_deg at or below about 68 deg" in notes
-    assert "capture range of at least 3.5 mm" in notes and "l_bracket 16 mm" in notes
+    assert "capture range of at least 3.5 mm" in notes and "at least 2.4 mm from the part's centre" in notes
+    assert "hex_standoff 6.1 mm" in notes and "l_bracket 17.6 mm" in notes  # w/2 - 2.4 mm
     assert "guidance only: the validator does not enforce them" in notes
     for arm in ("nemotron", "zeroshot"):
         for payload in prompts_c_and_z[arm]:
