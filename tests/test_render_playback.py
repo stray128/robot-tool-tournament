@@ -137,3 +137,52 @@ def test_studio_renders_stills_and_a_clip(run: dict[str, Any], tmp_path: Path) -
     assert wide.std() > 10  # a lit scene, not a blank frame
     clip = playback.render_video(replay, store, tmp_path / "clip.mp4", start=0, stop=12, cfg=SMALL)
     assert clip.stat().st_size > 1000
+
+
+def test_rig_and_views_turn_with_the_palm(run: dict[str, Any]) -> None:
+    from dataclasses import replace
+
+    from rtt.render.studio import AUTHORED_PALM_YAW_DEG, VIEWS, align_to_palm, free_camera
+
+    replay = run["v2"]
+    cfg = align_to_palm(SMALL, replay.header, replay.frames)
+    # the episode ran at placement yaw 0: the rig turns by -180 deg from the authored palm yaw
+    assert abs(abs(cfg.rig_yaw_deg) - AUTHORED_PALM_YAW_DEG) < 1e-6
+    frames = replay.frames.copy()
+    frames[:, 0, 3:] = [0.0, 0.0, 1.0, 0.0]  # palm yawed by 180 deg: no turn needed
+    assert align_to_palm(SMALL, replay.header, frames).rig_yaw_deg == pytest.approx(0.0, abs=1e-6)
+    scene = build_render_scene(replay.header, run["store"], replace(SMALL, rig_yaw_deg=90.0))
+    cam = free_camera(scene, "detail", (0.0, 0.0, 0.0))
+    v = VIEWS["detail"]
+    assert cam.azimuth == pytest.approx(v.azimuth + 90.0)
+    assert cam.lookat[0] == pytest.approx(-v.offset[1]) and cam.lookat[1] == pytest.approx(v.offset[0])
+    key = scene.model.light_dir[0]
+    base = build_render_scene(replay.header, run["store"], SMALL).model.light_dir[0]
+    assert key == pytest.approx([-base[1], base[0], base[2]], abs=1e-9)
+
+
+def test_iter_frames_refuses_without_a_headless_backend(
+    run: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("MUJOCO_GL", "glfw")
+    with pytest.raises(RuntimeError, match="MUJOCO_GL"):
+        next(playback.iter_frames(run["v2"], run["store"], [{"frame": 0}]))
+
+
+def test_blender_hero_helpers_run_without_blender(run: dict[str, Any], tmp_path: Path) -> None:
+    from rtt.render import blender_hero
+    from rtt.sim.replay import write_replay
+
+    write_replay(run["v2"], tmp_path / "r")
+    header, poses = blender_hero.load_replay(tmp_path / "r")
+    assert poses.shape == (header["n_frames"], 4, 7)
+    assert np.array_equal(poses, run["v2"].frames)
+    assert blender_hero.blender_quat([0.1, 0.2, 0.3, 0.9]) == (0.9, 0.1, 0.2, 0.3)
+    assert blender_hero.caption(header) == playback.caption_text(header, offline=True)
+    aid = next(iter(header["assets"]))
+    assert blender_hero.asset_path(run["store"].root, aid) == run["store"].path(aid)
+    with pytest.raises(FileNotFoundError):
+        blender_hero.asset_path(tmp_path, aid)
+    with pytest.raises(ValueError, match="replay v2"):
+        write_replay(run["v1"], tmp_path / "v1")
+        blender_hero.load_replay(tmp_path / "v1")

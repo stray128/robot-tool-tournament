@@ -24,7 +24,7 @@ from __future__ import annotations
 import functools
 import io
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Final
 
 import mujoco
@@ -41,6 +41,7 @@ __all__ = [
     "RenderScene",
     "StudioConfig",
     "View",
+    "align_to_palm",
     "build_render_scene",
     "free_camera",
     "make_renderer",
@@ -61,17 +62,17 @@ class StudioConfig:
     shadowsize: int = 8192
     floor_rgb: tuple[float, float, float] = (0.66, 0.66, 0.67)
     mat_rgb: tuple[float, float, float] = (0.70, 0.72, 0.74)
-    mat_size: tuple[float, float] | None = (0.34, 0.26)  # half extents of the work mat (m)
-    mat_offset: tuple[float, float] = (0.02, 0.03)
+    mat_size: tuple[float, float] | None = (0.45, 0.35)  # half extents of the work mat (m)
+    mat_offset: tuple[float, float] = (0.0, 0.0)
     grid_contrast: float = 0.86
     grid_repeat: float = 50.0  # checker repeats per metre (2 squares each): a 10 mm grid
     sky_top: tuple[float, float, float] = (0.90, 0.90, 0.91)
     sky_bottom: tuple[float, float, float] = (0.80, 0.80, 0.81)
-    key_dir: tuple[float, float, float] = (-0.45, 0.55, -1.0)
-    key: float = 0.62
-    fill: float = 0.22
+    key_dir: tuple[float, float, float] = (-0.75, -0.55, -1.2)  # from the cameras' right, high
+    key: float = 0.58
+    fill: float = 0.34
     rim: float = 0.55
-    ambient: float = 0.25
+    ambient: float = 0.32
     soft: float = 0.12  # key light bulb radius (soft shadow edge)
     shadowclip: float = 1.6
     fogstart: float = 2.0
@@ -79,6 +80,7 @@ class StudioConfig:
     max_edge: float = 0.0025  # subdivide CAD triangles to this edge length (m)
     crease_deg: float = 28.0
     collision_overlay: bool = False  # also draw the v1 geoms of v2 bodies (group 3)
+    rig_yaw_deg: float = 0.0  # turn the whole light rig about z (playback aligns it with the palm)
 
 
 @dataclass(frozen=True)
@@ -92,12 +94,15 @@ class View:
     fovy: float
 
 
+# Views and the light rig are authored for a palm yawed by AUTHORED_PALM_YAW_DEG (the frame's
+# camera plate then faces away from the cameras); playback turns both with the replay's palm.
+AUTHORED_PALM_YAW_DEG: Final = 180.0
 VIEWS: Final = {
-    "wide": View((0.0, 0.0, 0.085), 0.46, 215.0, -20.0, 36.0),
-    "close": View((0.0, 0.0, 0.010), 0.26, 212.0, -10.0, 30.0),
+    "wide": View((0.0, 0.0, 0.070), 0.36, 215.0, -18.0, 36.0),
+    "close": View((0.0, 0.0, 0.012), 0.21, 212.0, -8.0, 30.0),
     "side": View((0.0, 0.0, 0.015), 0.30, 180.0, -4.0, 30.0),
     "detail": View((0.0, -0.024, -0.020), 0.16, 238.0, -3.0, 32.0),
-    "xray": View((0.0, 0.0, 0.004), 0.20, 200.0, -8.0, 30.0),  # used with the x-ray look
+    "xray": View((0.0, 0.0, 0.004), 0.26, 205.0, -6.0, 30.0),  # used with the x-ray look
 }
 
 
@@ -332,14 +337,20 @@ class _Builder:
                 group=GROUP_VISUAL,
             )
             self._visual_only(work)
+        c, s_ = np.cos(np.radians(cfg.rig_yaw_deg)), np.sin(np.radians(cfg.rig_yaw_deg))
+        turn = np.array([[c, -s_, 0.0], [s_, c, 0.0], [0.0, 0.0, 1.0]])
+
+        def rig(v: Sequence[float]) -> list[float]:
+            return (turn @ np.asarray(v, dtype=np.float64)).tolist()
+
         key_dir = np.array(cfg.key_dir, dtype=np.float64)
         key_dir /= np.linalg.norm(key_dir)
         directional = mujoco.mjtLightType.mjLIGHT_DIRECTIONAL
         w.add_light(
             name="key",
             type=directional,
-            pos=(-key_dir * 2.0).tolist(),
-            dir=key_dir.tolist(),
+            pos=rig(-key_dir * 2.0),
+            dir=rig(key_dir),
             castshadow=True,
             diffuse=[cfg.key * c for c in (1.0, 0.97, 0.92)],
             specular=[0.35] * 3,
@@ -348,16 +359,16 @@ class _Builder:
         w.add_light(
             name="fill",
             type=directional,
-            pos=[-1.5, -0.9, 1.0],
-            dir=[0.8, 0.45, -0.55],
+            pos=rig([-1.5, -0.9, 1.0]),
+            dir=rig([0.8, 0.45, -0.55]),
             castshadow=False,
             diffuse=[cfg.fill * c for c in (0.92, 0.96, 1.0)],
             specular=[0.03] * 3,
         )
         w.add_light(
             name="rim",
-            pos=[-0.55, -0.45, 0.45],
-            dir=[0.55, 0.45, -0.3],
+            pos=rig([-0.55, -0.45, 0.45]),
+            dir=rig([0.55, 0.45, -0.3]),
             castshadow=False,
             diffuse=[cfg.rim] * 3,
             specular=[0.9] * 3,
@@ -464,15 +475,44 @@ def build_render_scene(
 # --------------------------------------------------------------------------- cameras and renderer
 
 
+def turned(view: View, yaw_deg: float) -> View:
+    """``view`` turned about the world z axis by ``yaw_deg`` (azimuth and offset)."""
+    c, s = np.cos(np.radians(yaw_deg)), np.sin(np.radians(yaw_deg))
+    ox, oy, oz = view.offset
+    return View(
+        (c * ox - s * oy, s * ox + c * oy, oz),
+        view.distance,
+        view.azimuth + yaw_deg,
+        view.elevation,
+        view.fovy,
+    )
+
+
 def free_camera(scene: RenderScene, view: View | str, target: Sequence[float]) -> mujoco.MjvCamera:
-    """A free camera for ``view`` aimed at ``target`` + the view's offset; sets the model's fovy."""
-    v = VIEWS[view] if isinstance(view, str) else view
+    """A free camera for ``view`` aimed at ``target`` + the view's offset; sets the model's fovy.
+
+    The view is turned by the scene's ``rig_yaw_deg``, so cameras and lights stay together."""
+    v = turned(VIEWS[view] if isinstance(view, str) else view, scene.cfg.rig_yaw_deg)
     cam = mujoco.MjvCamera()
     cam.type = mujoco.mjtCamera.mjCAMERA_FREE
     cam.lookat[:] = np.asarray(target, dtype=np.float64) + np.asarray(v.offset)
     cam.distance, cam.azimuth, cam.elevation = v.distance, v.azimuth, v.elevation
     scene.model.vis.global_.fovy = v.fovy
     return cam
+
+
+def align_to_palm(cfg: StudioConfig, header: Mapping[str, Any], frames: np.ndarray) -> StudioConfig:
+    """``cfg`` with the rig (and so every view) turned to the replay's palm yaw at frame 0.
+
+    Views are authored for a palm at ``AUTHORED_PALM_YAW_DEG``; a replay whose palm faces
+    another way is framed the same way relative to the gripper."""
+    names = [b["name"] for b in header["bodies"]]
+    if "palm" not in names:
+        return cfg
+    x, y, z, w = (float(c) for c in np.asarray(frames[0][names.index("palm")][3:], dtype=np.float64))
+    yaw = np.degrees(np.arctan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z)))
+    delta = (yaw - AUTHORED_PALM_YAW_DEG + 180.0) % 360.0 - 180.0
+    return replace(cfg, rig_yaw_deg=cfg.rig_yaw_deg + float(delta))
 
 
 def make_renderer(scene: RenderScene) -> tuple[mujoco.Renderer, mujoco.MjvOption]:

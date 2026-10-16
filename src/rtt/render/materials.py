@@ -87,7 +87,7 @@ class Look:
         gloss = 1.0 - self.roughness
         return {
             "rgba": list(self.rgba),
-            "specular": round(0.12 + 0.28 * gloss + 0.35 * self.metallic * gloss, 4),
+            "specular": round(0.12 + 0.22 * gloss + 0.18 * self.metallic * gloss, 4),
             "shininess": round(0.05 + 0.6 * gloss * gloss, 4),
             "reflectance": 0.0,  # MuJoCo reflects only on planes; meshes stay matte
             "metallic": self.metallic,

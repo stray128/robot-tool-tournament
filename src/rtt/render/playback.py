@@ -17,7 +17,7 @@ in-process when ``MUJOCO_GL`` is ``egl`` or ``osmesa`` and otherwise in a fresh 
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from contextlib import nullcontext
 from pathlib import Path
 from typing import Any, Final
@@ -33,6 +33,7 @@ __all__ = [
     "apply_frame",
     "burn_caption",
     "caption_text",
+    "iter_frames",
     "pose_residual",
     "render_stills",
     "render_video",
@@ -114,7 +115,9 @@ def burn_caption(img: np.ndarray, text: str, *, readout: str | None = None) -> n
     im = Image.fromarray(np.ascontiguousarray(img)).convert("RGBA")
     layer = Image.new("RGBA", im.size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(layer)
-    small = ImageFont.load_default(size=max(10, round(h / 42)))
+    w = img.shape[1]
+    # 1/42 of the height, shrunk to fit narrow panels (a glyph is about 0.52 em wide)
+    small = ImageFont.load_default(size=max(8, min(round(h / 42), int(0.9 * w / (0.52 * max(1, len(text)))))))
     pad = max(4, round(h / 90))
     x0, y1 = pad * 2, h - pad * 2
     box = draw.textbbox((0, 0), text, font=small)
@@ -164,13 +167,17 @@ def _stills_impl(
     cfg: StudioConfig | None,
     caption: bool,
     looks: Mapping[str, Any] | None,
+    align: bool = True,
 ) -> dict[str, str]:
     import imageio.v2 as imageio
     import mujoco
 
-    from rtt.render.studio import build_render_scene, free_camera, make_renderer, render_flags
+    from rtt.render.studio import align_to_palm, build_render_scene, free_camera, make_renderer, render_flags
     from rtt.render.xray import xray
 
+    cfg = cfg or StudioConfig()
+    if align:
+        cfg = align_to_palm(cfg, replay.header, replay.frames)
     scene = build_render_scene(replay.header, assets, cfg, looks=looks)
     data = mujoco.MjData(scene.model)
     r, opt = make_renderer(scene)
@@ -218,13 +225,17 @@ def _video_impl(
     quality: int,
     looks: Mapping[str, Any] | None,
     xray_on: bool,
+    align: bool = True,
 ) -> str:
     import imageio.v2 as imageio
     import mujoco
 
-    from rtt.render.studio import build_render_scene, free_camera, make_renderer, render_flags
+    from rtt.render.studio import align_to_palm, build_render_scene, free_camera, make_renderer, render_flags
     from rtt.render.xray import set_alpha
 
+    cfg = cfg or StudioConfig()
+    if align:
+        cfg = align_to_palm(cfg, replay.header, replay.frames)
     scene = build_render_scene(replay.header, assets, cfg, looks=looks)
     if xray_on:
         set_alpha(scene, ("object",), 0.35)
@@ -257,6 +268,59 @@ def _video_impl(
     return path
 
 
+def iter_frames(
+    replay: Replay,
+    assets: AssetStore | None,
+    plan: Sequence[Mapping[str, Any]],
+    *,
+    cfg: StudioConfig | None = None,
+    caption: bool = True,
+    looks: Mapping[str, Any] | None = None,
+    align: bool = True,
+) -> Iterator[np.ndarray]:
+    """Render a frame plan in this process (``MUJOCO_GL`` must be ``egl`` or ``osmesa``).
+
+    Each plan entry is a shot dict as for :func:`render_stills` (``frame``, ``view``,
+    ``target``, ``follow``, ``xray``, ``readout``). Used by the video tools to compose
+    sequences (turntables, triptychs) without passing frames between processes.
+    """
+    import os
+
+    import mujoco
+
+    from rtt.render.studio import align_to_palm, build_render_scene, free_camera, make_renderer, render_flags
+    from rtt.render.xray import xray
+    from rtt.sim.render import BACKENDS
+
+    if os.environ.get("MUJOCO_GL", "").lower() not in BACKENDS:
+        raise RuntimeError(
+            "iter_frames renders in-process: set MUJOCO_GL=egl (or osmesa) before importing mujoco"
+        )
+    cfg = cfg or StudioConfig()
+    if align:
+        cfg = align_to_palm(cfg, replay.header, replay.frames)
+    scene = build_render_scene(replay.header, assets, cfg, looks=looks)
+    data = mujoco.MjData(scene.model)
+    r, opt = make_renderer(scene)
+    text = caption_text(replay.header)
+    try:
+        for shot in plan:
+            i = int(shot.get("frame", 0)) % replay.n_frames
+            apply_frame(scene, data, replay.frames[i])
+            view = _resolve_view(shot.get("view", "close"))
+            cam = free_camera(
+                scene, view, _target(replay, i, shot.get("target", "object"), float(shot.get("follow", 0.0)))
+            )
+            ctx = xray(scene) if shot.get("xray") else nullcontext()
+            with ctx:
+                r.update_scene(data, camera=cam, scene_option=opt)
+                render_flags(r)
+                img = r.render()
+            yield burn_caption(img, text, readout=shot.get("readout")) if caption else img
+    finally:
+        r.close()
+
+
 def render_stills(
     replay: Replay,
     assets: AssetStore | None,
@@ -266,13 +330,24 @@ def render_stills(
     cfg: StudioConfig | None = None,
     caption: bool = True,
     looks: Mapping[str, Any] | None = None,
+    align: bool = True,
 ) -> dict[str, Path]:
     """Render named stills; each shot is ``{"frame": i, "view": name, "target": "object" |
-    "rest" | xyz, "follow": f, "xray": bool, "readout": str}``. Returns label -> PNG path."""
+    "rest" | xyz, "follow": f, "xray": bool, "readout": str}``. Returns label -> PNG path.
+
+    With ``align`` (default) the light rig and the views turn with the replay's palm yaw."""
     from rtt.sim.render import call_with_gl
 
     written = call_with_gl(
-        "rtt.render.playback:_stills_impl", replay, assets, dict(shots), str(out_dir), cfg, caption, looks
+        "rtt.render.playback:_stills_impl",
+        replay,
+        assets,
+        dict(shots),
+        str(out_dir),
+        cfg,
+        caption,
+        looks,
+        align,
     )
     return {k: Path(v) for k, v in written.items()}
 
@@ -292,6 +367,7 @@ def render_video(
     quality: int = 7,
     looks: Mapping[str, Any] | None = None,
     xray: bool = False,
+    align: bool = True,
 ) -> Path:
     """Render frames ``start:stop`` of a replay to an H.264 MP4 with the caption burned in."""
     from rtt.sim.render import call_with_gl
@@ -312,5 +388,6 @@ def render_video(
             quality,
             looks,
             xray,
+            align,
         )
     )
