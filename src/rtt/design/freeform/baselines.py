@@ -175,7 +175,7 @@ def _stock_jaw_geometry(baseline: Baseline) -> tuple[Any, Any] | None:
         return None
     try:
         return stock_jaws(REPO / baseline.hulls)
-    except Exception:  # the vendored blade meshes are absent: use the hull union instead
+    except (OSError, RuntimeError, ValueError):  # no vendored blade meshes: use the hull union
         return None
 
 

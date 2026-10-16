@@ -225,10 +225,14 @@ def _plane_crossings(
 
 
 def _band_points(g: PartGeometry, z_lo: float, z_hi: float) -> np.ndarray:
-    """``(m, 2)`` (x, y): piece vertices inside the band and edge crossings of its two planes."""
+    """``(m, 3)``: piece vertices inside the band and the edge crossings of its two planes."""
     v = g.vertices
     m = (v[:, 2] >= z_lo - 1e-12) & (v[:, 2] <= z_hi + 1e-12)
-    return np.concatenate([v[m, :2], slice_points(g, z_lo), slice_points(g, z_hi)])
+    pts = [v[m]]
+    for z in (z_lo, z_hi):
+        sp = slice_points(g, z)
+        pts.append(np.column_stack([sp, np.full(len(sp), z)]))
+    return np.concatenate(pts)
 
 
 def band_max_cells(g: PartGeometry, bounds: np.ndarray, z_lo: float, z_hi: float) -> np.ndarray:
@@ -267,27 +271,42 @@ def cell_outline(
     return band_max_cells(g, bounds, z_lo, z_hi)
 
 
-def polyline_gap(g: PartGeometry, xk: np.ndarray, yk: np.ndarray, z_lo: float, z_hi: float) -> float:
-    """Exact smallest ``face(x) - y`` over the part's material in the band, for ``x`` in the polyline's range.
+def polyline_gap(
+    g: PartGeometry,
+    xk: np.ndarray,
+    yk: np.ndarray,
+    z_lo: float,
+    z_hi: float,
+    kz: float = 0.0,
+    z_ref: float = 0.0,
+) -> float:
+    """Exact smallest ``face(x) + kz (z - z_ref) - y`` over the part's material in the band.
 
-    ``face`` is the polyline through ``(xk, yk)``. On each of its segments ``face(x) - y`` is
-    linear, so its minimum over the clipped part is at a vertex of the part clipped by the
-    segment's x slab and the band (see :func:`band_max_cells`). ``inf`` if the part is absent.
+    ``face`` is the polyline through ``(xk, yk)``, for ``x`` in its range; ``kz`` tilts the face
+    in height (``-1`` for a 45-degree bevel that recedes below ``z_ref``, ``+1`` for one that
+    recedes above it). On each segment the objective is linear, so its minimum over the part
+    clipped by the segment's x slab and the band is at a vertex of the clipped part (see
+    :func:`band_max_cells`). ``inf`` if the part is absent.
     """
     xk = np.asarray(xk, dtype=np.float64)
     yk = np.asarray(yk, dtype=np.float64)
+    if z_hi < z_lo:
+        return np.inf
     best = np.inf
     pts = _band_points(g, z_lo, z_hi)
     m = (pts[:, 0] >= xk[0] - 1e-12) & (pts[:, 0] <= xk[-1] + 1e-12)
     if m.any():
-        best = min(best, float(np.min(np.interp(pts[m, 0], xk, yk) - pts[m, 1])))
+        q = pts[m]
+        best = min(best, float(np.min(np.interp(q[:, 0], xk, yk) + kz * (q[:, 2] - z_ref) - q[:, 1])))
     j, p = _plane_crossings(g, xk, z_lo, z_hi)
     if len(j):
-        best = min(best, float(np.min(yk[j] - p[:, 1])))
-    env = envelope(g, xk, np.array([z_lo, z_hi])).max(axis=1)
+        best = min(best, float(np.min(yk[j] + kz * (p[:, 2] - z_ref) - p[:, 1])))
+    zs = np.array([z_lo, z_hi])
+    env = envelope(g, xk, zs)
     fin = np.isfinite(env)
     if fin.any():
-        best = min(best, float(np.min(yk[fin] - env[fin])))
+        obj = yk[:, None] + kz * (zs[None, :] - z_ref) - env
+        best = min(best, float(np.min(obj[fin])))
     return best
 
 

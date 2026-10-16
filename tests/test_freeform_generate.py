@@ -16,7 +16,7 @@ from scipy.spatial import ConvexHull
 
 from freeform_parts import block, flanged_bushing, mvp_tee, socket_hub, steel_slug, training_parts
 from rtt.design.freeform import CARRIAGE_INNER_Y, FingerPair, JawGeometry, build_pair
-from rtt.design.freeform.baselines import build_entrant, load_entrants_v2
+from rtt.design.freeform.baselines import REPO, build_entrant, load_entrants_v2
 from rtt.design.freeform.generate import build_pair_full
 from rtt.design.freeform.hashing import design_id
 from rtt.design.freeform.outline import part_geometry
@@ -336,7 +336,10 @@ def test_entrants_build_and_carry_their_rules() -> None:
         flat = build_entrant(entrants["flat"], part, TASK)
         assert flat.design_id == design_id(entrants["flat"].recipe) and flat.part_id == part.name
         stock = build_entrant(entrants["stock"], part, TASK)
-        assert stock.boxes is not None and len(stock.boxes) == 14  # v1 box fallback until the hulls land
+        if (REPO / entrants["stock"].hulls).is_file():  # the vendored blade hulls
+            assert stock.boxes is None and stock.left.n_pieces <= 40
+        else:  # the v1 box approximation until the hulls are vendored
+            assert stock.boxes is not None and len(stock.boxes) == 14
         assert stock.q_seat > 0 and stock.left.n_pieces == stock.right.n_pieces
 
 

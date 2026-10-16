@@ -59,7 +59,15 @@ from rtt.design.freeform.pad import (
     rib_excess,
     simplify_upper,
 )
-from rtt.design.freeform.tip import MIN_LAND, Piece, hook_height, hook_pieces, pad_strips, piece_from_sections
+from rtt.design.freeform.tip import (
+    HOOK_OVERLAP,
+    MIN_LAND,
+    Piece,
+    hook_height,
+    hook_pieces,
+    pad_strips,
+    piece_from_sections,
+)
 from rtt.design.freeform.types import (
     CARRIAGE_INNER_Y,
     MAX_PAD_SEGMENTS,
@@ -229,10 +237,30 @@ def _configurator_depth(p_left: np.ndarray, p_right: np.ndarray, task: Any) -> f
     return max(0.004, min(0.4 * half_extent, stroke_cap))
 
 
-def _contact_gap(g: PartGeometry, xk: np.ndarray, yk: np.ndarray, band: tuple[float, float]) -> float:
-    """How far the face is from first contact with the part, along the closing axis (exact)."""
-    gap = polyline_gap(g, xk, yk, band[0], band[1])
+def _floor_gap(gap: float) -> float:
     return float(np.floor(gap * 10**_DEC + 1e-6) / 10**_DEC)  # rounded down: never past contact
+
+
+def _contact_gap(
+    g: PartGeometry, xk: np.ndarray, yk: np.ndarray, band: tuple[float, float], chamfer: float = 0.0
+) -> float:
+    """How far the face is from first contact with the part, along the closing axis (exact).
+
+    A chamfer bevels the face back by ``(band bottom + chamfer - z)`` below the chamfer top.
+    """
+    lo, hi = band
+    if chamfer <= 0.0:
+        return _floor_gap(polyline_gap(g, xk, yk, lo, hi))
+    zc = min(lo + chamfer, hi)
+    gap = min(polyline_gap(g, xk, yk, zc, hi), polyline_gap(g, xk, yk, lo, zc, kz=-1.0, z_ref=zc))
+    return _floor_gap(gap)
+
+
+def _hook_gap(g: PartGeometry, xk: np.ndarray, hk: np.ndarray, z0: float, hh: float, top: float) -> float:
+    """First contact of the hook: its front is vertical up to ``z0 + hh``, then recedes at 45 degrees."""
+    zr = z0 + hh
+    gap = min(polyline_gap(g, xk, hk, z0, zr), polyline_gap(g, xk, hk, zr, max(zr, top), kz=1.0, z_ref=zr))
+    return _floor_gap(gap)
 
 
 def clearance_floor(
@@ -275,7 +303,8 @@ def _plan_face(
     yk = _snap_up(yk)
     fs = np.interp(xs, xk, yk)
     fin = np.isfinite(p)
-    gap = _contact_gap(g, xk, yk, band)
+    chamfer = _snap(spec.tip_size) if spec.tip == "chamfer" else 0.0
+    gap = _contact_gap(g, xk, yk, band, chamfer)
     return JawPlan(
         side=side,
         geometry=g,
@@ -301,7 +330,8 @@ def _plan_hook(jaw: JawPlan, spec: PairSpec, tip_height: float) -> None:
     jaw.hook_floor = floor
     jaw.hook_h = hh
     if np.any(hk < jaw.yk):  # the hook can be the first contact (for example under a V)
-        jaw.gap = min(jaw.gap, _contact_gap(jaw.geometry, jaw.xk, hk, (tip_height, top)))
+        reach = tip_height + min(spec.pad_height, hh + spec.tip_size + HOOK_OVERLAP)
+        jaw.gap = min(jaw.gap, _hook_gap(jaw.geometry, jaw.xk, hk, tip_height, _snap(hh), reach))
 
 
 def plan_pair(
