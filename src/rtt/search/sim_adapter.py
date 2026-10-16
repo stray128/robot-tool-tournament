@@ -200,15 +200,33 @@ def _attr(obj: Any, path: str, default: Any) -> Any:
     return obj
 
 
+def _feature_text(f: Any) -> str:
+    """A part feature in words: kind, name, which way it opens and its size (``mm``)."""
+    facing = f.facing() if hasattr(f, "facing") else None
+    if facing:
+        where = f" facing the {facing} jaw"
+    else:
+        ax = [float(v) for v in f.axis]
+        i = max(range(3), key=lambda k: abs(ax[k]))
+        sign = "+" if ax[i] > 0 else "-"
+        where = (
+            (" opening up" if ax[i] > 0 else " opening down")
+            if i == 2
+            else f" opening toward {sign}{'xy'[i]}"
+        )
+    if f.kind == "flange":
+        side = (
+            " at the bottom" if float(f.axis[2]) < 0 else (" at the top" if float(f.axis[2]) > 0 else where)
+        )
+        return f"flange '{f.name}'{side}, radius {_mm(f.radius)} mm, {_mm(f.depth)} mm thick"
+    return f"{f.kind} '{f.name}'{where}, radius {_mm(f.radius)} mm, {_mm(f.depth)} mm deep"
+
+
 def part_info_from_spec(spec: Any) -> Any:
     """A :class:`~rtt.search.base.PartInfo` (what a prompt may say) from a track-O ``PartSpec``."""
     from rtt.search.base import PartInfo
 
-    features = []
-    for f in getattr(spec, "features", ()):
-        facing = f.facing() if hasattr(f, "facing") else None
-        where = f" facing the {facing} jaw" if facing else ""
-        features.append(f"{f.kind} '{f.name}'{where}, radius {_mm(f.radius)} mm, {_mm(f.depth)} mm deep")
+    features = [_feature_text(f) for f in getattr(spec, "features", ())]
     size = tuple(1000.0 * float(v) for v in spec.size)
     return PartInfo(
         part_id=str(spec.part_id),
