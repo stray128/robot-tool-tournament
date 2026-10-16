@@ -206,11 +206,22 @@ class PartInfo:
     mass_g: float
     yaw_symmetry: int = 1
     features: tuple[str, ...] = ()
+    reach_mm: tuple[float, float] | None = None
+    """How far the part's material reaches from its centre plane toward the left and the right
+    jaw (+y, -y) at its narrowest grippable height (the widest point of the narrowest 8 mm band
+    from 3 mm up); ``None`` means half the bounding-box width on both sides."""
 
     @property
     def width_across_mm(self) -> float:
         """Extent along the closing axis (what the jaws close on)."""
         return float(self.size_mm[1])
+
+    @property
+    def min_reach_mm(self) -> float:
+        """The smaller of the two reaches (half the closing-axis width when not measured)."""
+        if self.reach_mm is None:
+            return self.width_across_mm / 2.0
+        return float(min(self.reach_mm))
 
 
 @dataclass(frozen=True)

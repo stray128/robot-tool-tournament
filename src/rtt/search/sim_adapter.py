@@ -222,12 +222,72 @@ def _feature_text(f: Any) -> str:
     return f"{f.kind} '{f.name}'{where}, radius {_mm(f.radius)} mm, {_mm(f.depth)} mm deep"
 
 
+#: Heights the jaws can grip from (the controller's minimum tip clearance) and the shortest pad band.
+_REACH_FROM_M = 0.003
+_REACH_BAND_M = 0.008
+
+
+def part_reach(pieces: Sequence[Any], step: float = 0.0005) -> tuple[float, float] | None:
+    """How far a part reaches toward the left (+y) and right (-y) jaw at its narrowest band, in m.
+
+    The part's convex pieces are sliced every ``step`` from the table up; within each 8 mm band
+    (the shortest pad) starting 3 mm or more above the table the reach is the widest slice, and
+    the result is the narrowest band. A side with no material in some band (the jaw would have
+    to cross the centre plane) gives a negative reach. ``None`` when the pieces are degenerate.
+    """
+    import numpy as np
+    from scipy.spatial import ConvexHull, QhullError
+
+    hulls = []
+    for piece in pieces:
+        v = np.asarray(piece, dtype=np.float64)
+        try:
+            simplices = ConvexHull(v).simplices
+        except (QhullError, ValueError):
+            continue
+        edges = {
+            tuple(sorted((int(a), int(b))))
+            for tri in simplices
+            for a, b in ((tri[0], tri[1]), (tri[1], tri[2]), (tri[0], tri[2]))
+        }
+        hulls.append((v, np.array(sorted(edges))))
+    if not hulls:
+        return None
+    z0 = min(float(v[:, 2].min()) for v, _ in hulls)
+    z1 = max(float(v[:, 2].max()) for v, _ in hulls)
+    zs = np.arange(z0 + _REACH_FROM_M, z1 + 1e-12, step)
+    left = np.full(len(zs), -np.inf)
+    right = np.full(len(zs), -np.inf)
+    for v, edges in hulls:
+        a, b = v[edges[:, 0]], v[edges[:, 1]]
+        for k, z in enumerate(zs):
+            lo, hi = np.minimum(a[:, 2], b[:, 2]), np.maximum(a[:, 2], b[:, 2])
+            hit = (lo <= z) & (hi >= z)
+            if not np.any(hit):
+                continue
+            aa, bb = a[hit], b[hit]
+            dz = bb[:, 2] - aa[:, 2]
+            t = np.where(np.abs(dz) > 1e-15, (z - aa[:, 2]) / np.where(np.abs(dz) > 1e-15, dz, 1.0), 0.0)
+            ys = np.concatenate(
+                [aa[:, 1] + t * (bb[:, 1] - aa[:, 1]), aa[np.abs(dz) <= 1e-15, 1], bb[np.abs(dz) <= 1e-15, 1]]
+            )
+            left[k] = max(left[k], float(ys.max()))
+            right[k] = max(right[k], float(-ys.min()))
+    n = max(1, round(_REACH_BAND_M / step))
+    if len(zs) <= n:
+        return float(left.max()), float(right.max())
+    band_left = [float(left[i : i + n + 1].max()) for i in range(len(zs) - n)]
+    band_right = [float(right[i : i + n + 1].max()) for i in range(len(zs) - n)]
+    return min(band_left), min(band_right)
+
+
 def part_info_from_spec(spec: Any) -> Any:
     """A :class:`~rtt.search.base.PartInfo` (what a prompt may say) from a track-O ``PartSpec``."""
     from rtt.search.base import PartInfo
 
     features = [_feature_text(f) for f in getattr(spec, "features", ())]
     size = tuple(1000.0 * float(v) for v in spec.size)
+    reach = part_reach(getattr(spec, "pieces", ()) or ())
     return PartInfo(
         part_id=str(spec.part_id),
         family=str(spec.family),
@@ -237,6 +297,7 @@ def part_info_from_spec(spec: Any) -> Any:
         mass_g=round(1000.0 * float(spec.mass), 1),
         yaw_symmetry=int(spec.yaw_symmetry),
         features=tuple(features),
+        reach_mm=None if reach is None else (round(1000.0 * reach[0], 1), round(1000.0 * reach[1], 1)),
     )
 
 

@@ -262,7 +262,7 @@ def notes_values(info: EvaluatorInfo) -> dict[str, str]:
     inner = v2.opening_mm / 2.0 + 1000.0 * CARRIAGE_INNER_Y - hi
     caps = []
     for part in v2.parts:
-        cap = part.width_across_mm / 2.0 - inner
+        cap = part.min_reach_mm - inner
         caps.append(f"{part.part_id} {_num(max(0.0, math.floor(cap * 10.0 + 1e-9) / 10.0))} mm")
     return {
         "mu": _num(mu),

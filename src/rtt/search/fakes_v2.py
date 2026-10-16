@@ -63,8 +63,9 @@ __all__ = [
     "stub_entrants",
 ]
 
-#: The v2 training parts (spec section 8) with track O's sizes, masses and features
-#: (``rtt.parts.library`` at the time of writing): x across the jaw, y closing axis, z up.
+#: The v2 training parts (spec section 8) with track O's sizes, masses, features and reaches
+#: (``rtt.parts.library`` at the time of writing): x across the jaw, y closing axis, z up. The
+#: L-bracket keeps the symmetric reach the spec intends (track O's current one is (20, -16)).
 DEFAULT_FAKE_PARTS_V2: Final[tuple[PartInfo, ...]] = (
     PartInfo(
         "pipe_tee",
@@ -79,6 +80,7 @@ DEFAULT_FAKE_PARTS_V2: Final[tuple[PartInfo, ...]] = (
             "socket 'run_socket_pos' opening toward +x, radius 10.8 mm, 16.5 mm deep",
             "socket 'run_socket_neg' opening toward -x, radius 10.8 mm, 16.5 mm deep",
         ),
+        (22.1, 20.7),
     ),
     PartInfo(
         "block",
@@ -111,6 +113,7 @@ DEFAULT_FAKE_PARTS_V2: Final[tuple[PartInfo, ...]] = (
             "socket 'bore' opening up, radius 6 mm, 35 mm deep",
             "flange 'flange' at the bottom, radius 18 mm, 5 mm thick",
         ),
+        (10.0, 10.0),
     ),
     PartInfo(
         "l_bracket",

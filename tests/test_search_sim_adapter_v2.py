@@ -15,13 +15,14 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import pytest
 from scipy.spatial import ConvexHull
 
 from rtt.design.freeform.types import CaptureReport, FingerPair, JawGeometry
 from rtt.parts import Feature, Material, PartSpec
 from rtt.search.fakes_v2 import stub_entrants
 from rtt.search.runner import run_search
-from rtt.search.sim_adapter import SimEvaluatorV2, episode_from_record_v2
+from rtt.search.sim_adapter import SimEvaluatorV2, episode_from_record_v2, part_info_from_spec
 from rtt.search.space import V2, get_space
 
 SPACE = get_space(V2)
@@ -294,3 +295,21 @@ def test_the_runner_drives_a_v2_search_on_the_adapter(tmp_path: Path) -> None:
     assert len(ctx.history) == 16 and out.manifest["design_space"] == V2
     assert out.manifest["evaluator"]["episodes_per_design"] == 16
     assert out.runs[0].frozen.design_space == V2
+
+
+def test_part_reach_slices_the_pieces_band_by_band() -> None:
+    from rtt.search.sim_adapter import part_reach
+
+    box = _corners((-0.02, -0.015, 0.0), (0.02, 0.015, 0.06))
+    assert part_reach([box]) == pytest.approx((0.015, 0.015))
+    # A flanged body: the 10 mm body above a 5 mm flange of radius 18 mm sets the reach.
+    flange = _corners((-0.018, -0.018, 0.0), (0.018, 0.018, 0.005))
+    body = _corners((-0.01, -0.01, 0.005), (0.01, 0.01, 0.035))
+    assert part_reach([flange, body]) == pytest.approx((0.01, 0.01))
+    # An L lying flat with its 4 mm leg at the +y edge: the right jaw finds no material above the base.
+    base = _corners((-0.015, -0.02, 0.0), (0.015, 0.016, 0.004))
+    leg = _corners((-0.015, 0.016, 0.0), (0.015, 0.02, 0.04))
+    left, right = part_reach([base, leg])
+    assert left == pytest.approx(0.02) and right == pytest.approx(-0.016)
+    info = part_info_from_spec(PARTS[0])
+    assert info.reach_mm == (15.0, 15.0) and info.min_reach_mm == 15.0
