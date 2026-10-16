@@ -5,14 +5,15 @@
  * validates them; a missing or malformed file fails the build with the file and
  * JSON path in the message. The files the indexes point at are checked too: every
  * lane's replay header must parse and match its payload size and frame count (a
- * version 2 header also its overlay sidecar and every GLB asset it draws), and
- * every design's print files must exist. Only import this from server code.
+ * version 2 header also its overlay sidecar and every GLB asset it draws, which must
+ * be a GLB the browser can decode), and every design's print files must exist. Only import this from server code.
  */
 
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 
+import { readGlb, unsupportedExtensions } from "./assets";
 import { type CertificateDoc, parseCertificateDoc } from "./certificate";
 import { parseRecordedSession, type RecordedSession, SessionError, type SessionSummary, summarizeSession } from "./session";
 import { isV2, parseAnyReplayHeader, referencedAssetFiles } from "./replay";
@@ -77,6 +78,17 @@ export function checkReplayFiles(index: BoutsIndex, dataDir: string = DATA_DIR):
           const content = readFileSync(file);
           if (content.byteLength !== bytes || createHash("sha256").update(content).digest("hex") !== sha256) {
             throw new DataError("bouts.json", where, `${uri} does not match the size and sha256 its replay lists`);
+          }
+          // The same container and extension checks the browser runs (lib/assets.ts verifyAsset),
+          // so a file the page would refuse (Draco, not a GLB) fails the build instead.
+          let missing: string[];
+          try {
+            missing = unsupportedExtensions(readGlb(content.buffer.slice(content.byteOffset, content.byteOffset + content.byteLength)).json);
+          } catch (err) {
+            throw new DataError("bouts.json", where, `${uri}: ${err instanceof Error ? err.message : String(err)}`);
+          }
+          if (missing.length > 0) {
+            throw new DataError("bouts.json", where, `${uri} needs ${missing.join(", ")}, which this site does not decode`);
           }
         }
       }

@@ -457,4 +457,60 @@ describe("build-time replay check (lib/data.ts)", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  /** Re-serialise a GLB with an edited JSON chunk (padded with spaces to 4 bytes). */
+  function editGlbJson(glb: Buffer, edit: (json: Record<string, unknown>) => void): Buffer {
+    const jsonLen = glb.readUInt32LE(12);
+    const json = JSON.parse(glb.subarray(20, 20 + jsonLen).toString("utf8")) as Record<string, unknown>;
+    edit(json);
+    let text = JSON.stringify(json);
+    while (Buffer.byteLength(text) % 4) text += " ";
+    const jsonChunk = Buffer.from(text, "utf8");
+    const rest = glb.subarray(20 + jsonLen);
+    const head = Buffer.alloc(20);
+    head.writeUInt32LE(0x46546c67, 0);
+    head.writeUInt32LE(2, 4);
+    head.writeUInt32LE(20 + jsonChunk.byteLength + rest.byteLength, 8);
+    head.writeUInt32LE(jsonChunk.byteLength, 12);
+    head.writeUInt32LE(0x4e4f534a, 16);
+    return Buffer.concat([head, jsonChunk, rest]);
+  }
+
+  /** Replace asset `oldId` of the lane by `bytes`, re-addressed, in the header and on disk. */
+  function swapAsset(dir: string, data: string, oldId: string, bytes: Buffer): void {
+    const sha = createHash("sha256").update(bytes).digest("hex");
+    const id = sha.slice(0, 16);
+    writeFileSync(path.join(dir, "assets", `${id}.glb`), bytes);
+    const file = path.join(data, "replays", "v2", "sample.json");
+    const h = JSON.parse(readFileSync(file, "utf8"));
+    h.assets[id] = { ...h.assets[oldId], uri: `assets/${id}.glb`, sha256: sha, bytes: bytes.byteLength };
+    delete h.assets[oldId];
+    for (const b of h.bodies) for (const v of b.visuals) if (v.asset === oldId) v.asset = id;
+    writeFileSync(file, JSON.stringify(h));
+  }
+
+  it("fails the build on a served GLB the browser cannot decode (Draco, or not a GLB)", () => {
+    const { dir, data, index } = site();
+    try {
+      const h = JSON.parse(readFileSync(path.join(data, "replays", "v2", "sample.json"), "utf8"));
+      const oldId = Object.keys(h.assets)[0]!;
+      const original = readFileSync(path.join(dir, "assets", `${oldId}.glb`));
+      const draco = editGlbJson(original, (j) => {
+        j.extensionsUsed = ["KHR_draco_mesh_compression"];
+        j.extensionsRequired = ["KHR_draco_mesh_compression"];
+      });
+      swapAsset(dir, data, oldId, draco);
+      expect(() => checkReplayFiles(index, data)).toThrow(/KHR_draco_mesh_compression/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+    const second = site();
+    try {
+      const h = JSON.parse(readFileSync(path.join(second.data, "replays", "v2", "sample.json"), "utf8"));
+      swapAsset(second.dir, second.data, Object.keys(h.assets)[0]!, Buffer.from("not a glb, just some bytes"));
+      expect(() => checkReplayFiles(second.index, second.data)).toThrow(/not a GLB/);
+    } finally {
+      rmSync(second.dir, { recursive: true, force: true });
+    }
+  });
 });
