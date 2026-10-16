@@ -578,6 +578,15 @@ class SimEvaluatorV2:
         scores: dict[str, DesignScore] = {}
         for i, (design_id, design) in enumerate(unique.items()):
             chunk = records[i * self.n_per_design : (i + 1) * self.n_per_design]
+            # Records are matched to designs by position; a record that names another design means
+            # the simulator returned them in another order, and its scores would land on the wrong design.
+            expected = {design_id, self.space.design_id(self.space.buildable(design))}
+            named = {str(_get(r, "design_id")) for r in chunk if _get(r, "design_id")}
+            if named - expected:
+                raise RuntimeError(
+                    f"the v2 simulator's records for design {design_id[:12]} name design(s) "
+                    f"{sorted(x[:12] for x in named - expected)}: records are not in design order"
+                )
             episodes = [episode_from_record_v2(r, part_of, placement_of) for r in chunk]
             pairs = {}
             for part in self.parts:

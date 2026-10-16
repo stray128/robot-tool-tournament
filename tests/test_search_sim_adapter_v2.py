@@ -256,6 +256,20 @@ def test_a_record_count_mismatch_is_refused() -> None:
         ev.evaluate(SPACE.sample_sobol(2, None).sample(1))
 
 
+def test_records_in_another_design_order_are_refused() -> None:
+    """Scores are matched to designs by position, so records that name another design must stop the run."""
+    import pytest
+
+    def reversed_designs(designs, suite, **kwargs):  # type: ignore[no-untyped-def]
+        return fake_simulator(list(reversed(designs)), suite, **kwargs)
+
+    ev = SimEvaluatorV2(
+        SUITE, "task-v2", evaluate_records=reversed_designs, builder=fake_build, task_hash="t"
+    )
+    with pytest.raises(RuntimeError, match="not in design order"):
+        ev.evaluate(SPACE.sample_sobol(3, None).sample(2))
+
+
 def test_record_conversion_prefers_success_v2_and_derives_flags() -> None:
     record = {
         "condition_id": "block_a_c1",
