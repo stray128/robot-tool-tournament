@@ -269,3 +269,41 @@ def test_v2_runs_record_v2_prompt_hashes(tmp_path: Path) -> None:
     assert "template:v2/proposer_user.md" in hashes and "engineering_notes" in hashes
     assert out.manifest["gripper_task"]["design_space"] == V2
     assert out.manifest["entrants"][0]["name"] == "stock"
+
+
+def test_probe_v2_offline_scores_slots_and_replays_without_calls(tmp_path) -> None:
+    """The GV5 probe harness on a scripted model: 5 calls, 20 slots, then a free replay."""
+    from rtt.llm.client import TokenBucket
+    from rtt.search.probe_v2 import run_probe
+
+    model = ScriptedProposerV2(5, invalid_rate=0.25, similar_rate=0.2)
+    report = run_probe(tmp_path, transport=model, limiter=TokenBucket(1e12))
+    assert model.calls == 5 and report["slots"] == 20 and len(report["calls"]) == 5
+    assert report["validators"] == "schema" and report["live_calls_ledger_total"] == 5
+    assert report["live_cost_usd_ledger_total"] == pytest.approx(report["cost_usd_this_report"], abs=1e-6)
+    for call in report["calls"]:
+        assert call["ok"] and call["valid_primary"] <= 4 and call["valid_reserves"] <= 4
+        assert call["accepted_after_reserves"] <= call["valid_after_reserves"] <= 4
+        assert call["needs_repair"] == (call["valid_after_reserves"] < 4)
+    rate = sum(c["valid_after_reserves"] for c in report["calls"]) / 20
+    assert report["valid_after_reserves_rate"] == rate
+    repairs = sum(c["needs_repair"] for c in report["calls"])
+    assert report["pass"] == (rate >= 0.9 and repairs <= 1)
+
+    class NoNetwork:
+        def chat_completions(self, payload, timeout_s):  # type: ignore[no-untyped-def]
+            raise AssertionError("no API call is allowed during replay")
+
+    again = run_probe(tmp_path, mode="replay", transport=NoNetwork(), limiter=TokenBucket(1e12))
+    keys = (
+        "valid_primary",
+        "valid_reserves",
+        "valid_after_reserves",
+        "accepted_after_reserves",
+        "errors",
+        "cells",
+    )
+    assert [{k: c[k] for k in keys} for c in again["calls"]] == [
+        {k: c[k] for k in keys} for c in report["calls"]
+    ]
+    assert all(c["cached"] for c in again["calls"]) and again["live_calls_ledger_total"] == 5
