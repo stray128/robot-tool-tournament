@@ -273,3 +273,39 @@ def test_cli_spend_and_parser(tmp_path: Path, monkeypatch, capsys) -> None:
     # a run without settings fails cleanly, naming the missing variables
     assert cloud_main(["run", "m1", "--dry-run"]) == 2
     assert "RTT_IMAGE" in capsys.readouterr().err
+
+
+def test_v2_search_and_gv4_entry_args() -> None:
+    """``--space freeform-v2`` reaches the container; GV4 needs no key and no search arguments."""
+    from rtt.cloud.runs import needs_token_factory
+
+    search = SearchJobArgs(arm="random", runs=3, budget=40, seeds="101,102,103", space="freeform-v2")
+    args = entry_args("search", "s-v2", search=search)
+    assert args[args.index("--space") + 1] == "freeform-v2"
+    assert "--space" not in entry_args(
+        "search", "s-v1", search=SearchJobArgs(arm="random", runs=1, budget=40)
+    )
+    assert entry_args("gv4", "gv4-x") == ["-m", "rtt.cloud.entry", "gv4", "--out", "/out/runs/gv4-x"]
+    assert not needs_token_factory("gv4")
+    assert job_spec_for(CONFIG, "gv4", "gv4-x").env_secrets == {}
+
+
+def test_verify_run_checks_the_gv4_report(tmp_path: Path) -> None:
+    from rtt.cloud.runs import verify_run
+
+    report = {"schema": "rtt.gv4/1", "episodes": 1, "records": [{"digest": "a"}], "records_sha256": "x"}
+    (tmp_path / "gv4.json").write_text(json.dumps(report))
+    size = (tmp_path / "gv4.json").stat().st_size
+    manifest = {
+        "kind": "gv4",
+        "exit_status": 0,
+        "files": ["gv4.json", "manifest.json"],
+        "publish": {"bytes": size},
+        "result": {"records_sha256": "x"},
+    }
+    (tmp_path / "manifest.json").write_text(json.dumps(manifest))
+    assert verify_run(tmp_path).ok
+    manifest["result"]["records_sha256"] = "y"
+    (tmp_path / "manifest.json").write_text(json.dumps(manifest))
+    check = verify_run(tmp_path)
+    assert not check.ok and any("digest" in p for p in check.problems)

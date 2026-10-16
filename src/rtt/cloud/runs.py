@@ -24,7 +24,7 @@ LOCAL_RUNS = REPO_ROOT / "runs" / "cloud"
 DEFAULT_LEDGER = LOCAL_RUNS / "spend.jsonl"
 CONTAINER_PYTHON = "/app/.venv/bin/python"
 MOUNT = "/out"
-KINDS = ("m1", "probe", "search")
+KINDS = ("m1", "probe", "search", "gv4")
 LAUNCHER = "nebius-serverless-jobs"
 LLM_ARMS = frozenset({"nemotron", "zeroshot"})
 """Search arms that call Token Factory from inside the job."""
@@ -41,10 +41,13 @@ class SearchJobArgs:
     executor: str = "cpu"
     workers: int | None = None
     spend_cap_usd: float = 2.0
+    space: str | None = None  # box-v1 (default) or freeform-v2
 
     def argv(self) -> list[str]:
         args = ["--arm", self.arm, "--runs", str(self.runs), "--budget", str(self.budget)]
         args += ["--executor", self.executor, "--spend-cap", f"{self.spend_cap_usd:g}"]
+        if self.space:
+            args += ["--space", self.space]
         if self.seeds:
             args += ["--seeds", self.seeds]
         if self.workers:
@@ -109,6 +112,8 @@ def entry_args(
         if search is None:
             raise ValueError("a search job needs SearchJobArgs")
         return args + search.argv()
+    if kind == "gv4":  # gate GV4 (rtt.sim.gv4) on every vCPU of the job
+        return args
     if kind == "m1":
         args += ["--seed", str(seed)]
         if not video:
@@ -248,7 +253,23 @@ def verify_run(run_dir: str | Path, expect_video: bool | None = None) -> RunChec
         problems += _verify_m1(root, manifest, expect_video)
     elif manifest.get("kind") == "search":
         problems += _verify_search(root)
+    elif manifest.get("kind") == "gv4":
+        problems += _verify_gv4(root, manifest)
     return RunCheck(not problems, tuple(problems), manifest)
+
+
+def _verify_gv4(root: Path, manifest: Mapping[str, Any]) -> Sequence[str]:
+    """A GV4 job's ``gv4.json`` holds the episodes and the records digest its manifest names."""
+    report = _read_json(root / "gv4.json")
+    if report is None:
+        return ["missing or unreadable gv4.json"]
+    result = manifest.get("result") or {}
+    problems = []
+    if len(report.get("records") or ()) != report.get("episodes") or not report.get("episodes"):
+        problems.append("gv4.json: record count does not match its episode count")
+    if result.get("records_sha256") != report.get("records_sha256"):
+        problems.append("gv4.json: records digest differs from the manifest's")
+    return problems
 
 
 def _read_json(path: Path) -> Any:

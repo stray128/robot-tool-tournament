@@ -27,7 +27,7 @@ GV3_SEED ?= 20261020
 
 .PHONY: help sync test lint format m1 probe-llm calibrate slice search web web-build demo \
         leak-check hooks image image-dirty push nebius-smoke nebius-m1 serve part-demo \
-        prereg-rules gv6 gv0 gv1 gv2 gv3 gvh v2-bout
+        prereg-rules gv6 gv0 gv1 gv2 gv3 gvh gv4 diversity-v2 v2-bout
 
 help:
 	@echo "make sync         install the locked dependencies plus dev tools (uv sync --extra dev)"
@@ -42,6 +42,8 @@ help:
 	@echo "make gv1 / gv2    gates GV1 (fidelity, fairness) and GV2 (physics) on the generator and parts library"
 	@echo "make gv3          gate GV3 on the screening sample (GV3_SEED; LOG=<calibration_log.json> to record it)"
 	@echo "make gvh          gate GV-H, the hero screen (after gv3; reads its report)"
+	@echo "make gv4          gate GV4 laptop side: the parity episodes (then: rtt job gv4, python -m rtt.sim.gv4 compare)"
+	@echo "make diversity-v2 the v2 diversity bars under the full validators -> configs/diversity_v2.json"
 	@echo "make v2-bout      three train_v2 episodes end to end: replay v2, GLBs and the GV-F stills"
 	@echo "make slice        vertical slice: one live Nemotron round (spend cap 0.20 USD), replays, web data"
 	@echo "make search       one search arm (ARM=random|nemotron|zeroshot RUNS=1 BUDGET=40 OUT=...)"
@@ -106,6 +108,12 @@ gv3:
 
 gvh:
 	$(PY) -m rtt.analysis.gvh_run --gv3 $(GATES_OUT)/gv3 --out $(GATES_OUT)/gvh --workers $(WORKERS)
+
+gv4:
+	$(PY) -m rtt.sim.gv4 run --out $(GATES_OUT)/gv4/laptop.json --workers $(WORKERS)
+
+diversity-v2:
+	$(PY) -m rtt.search.threshold_v2 --workers $(WORKERS)
 
 v2-bout:
 	$(PY) scripts/v2_bout.py --out $(GATES_OUT)/bout --stills $(GATES_OUT)/bout/stills

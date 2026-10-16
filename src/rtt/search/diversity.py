@@ -74,16 +74,18 @@ __all__ = [
     "sequential_nn_distances",
     "threshold_rule",
     "to_points",
+    "valid_sobol_pool",
 ]
 
 MIN_DISTANCE: Final = 0.08
-#: v2 diversity bar t from :func:`threshold_rule` (1 % of 10k random valid Sobol pairs fall within
-#: t; 72 points). [derived] with the schema rules only (the stub and track G's schema agree):
-#: recompute with the full section-13 validators on the training parts before PREREG
-#: (``tests/test_search_dedup.py`` pins the rule's output).
-MIN_DISTANCE_V2: Final = 0.080
-#: v2 explore bar: the median distance between random valid recipes in the same cell (153 points).
-EXPLORE_MIN_DISTANCE_V2: Final = 0.17
+#: v2 diversity bar t from :func:`threshold_rule` (at most 1 % of 10k random valid Sobol pairs fall
+#: within t; 63 points), under the full section-13 validators on the six training parts and
+#: task_v2 (gate GV5, 2026-10-16: 2,000 valid of 3,179 draws). Recorded with its input hashes in
+#: ``configs/diversity_v2.json`` (``python -m rtt.search.threshold_v2``); with the schema rules
+#: only, the rule gives 0.080 / 0.17 (``tests/test_search_dedup.py`` pins both).
+MIN_DISTANCE_V2: Final = 0.070
+#: v2 explore bar: the median distance between random valid recipes in the same cell (135 points).
+EXPLORE_MIN_DISTANCE_V2: Final = 0.15
 #: Within-cell distance an ``explore`` design needs when its cell is already tried.
 EXPLORE_MIN_DISTANCE: Final = 0.2
 #: Points spanned by one numeric parameter's range (and charged for one categorical change).
@@ -368,6 +370,55 @@ class ThresholdRule:
         }
 
 
+_POOL_SPACE: Any = None
+_POOL_CONTEXT: Any = None
+
+
+def _pool_init(space_name: str, context: Any) -> None:
+    global _POOL_SPACE, _POOL_CONTEXT
+    from rtt.search.space import get_space
+
+    _POOL_SPACE, _POOL_CONTEXT = get_space(space_name), context
+
+
+def _pool_check(raw: dict[str, Any]) -> Any:
+    check = _POOL_SPACE.validate(raw, _POOL_CONTEXT)
+    return check.design if check.ok else None
+
+
+def valid_sobol_pool(
+    space: DesignSpace, context: Any, seed: int, n: int, *, workers: int | None = None, chunk: int = 256
+) -> tuple[list[Any], int]:
+    """The first ``n`` valid designs of the space's Sobol sampler (seed ``seed``) and the draws used.
+
+    The same designs, in the same order, as ``space.sample_sobol(seed, context).sample(n)``:
+    raw draws do not depend on validity, so they are drawn in order and validated in a pool
+    of ``workers`` spawned processes (the geometry validators build every training part),
+    keeping the first ``n`` that pass. ``workers`` of 1 or ``None`` validates in-process.
+    """
+    sampler = space.sample_sobol(seed, context)
+    if not workers or workers <= 1:
+        designs = sampler.sample(n)
+        return designs, int(sampler.draws)
+    import multiprocessing as mp
+
+    out: list[Any] = []
+    draws = 0
+    ctx = mp.get_context("spawn")
+    with ctx.Pool(workers, initializer=_pool_init, initargs=(space.name, context)) as procs:
+        while len(out) < n:
+            batch = [sampler.draw_raw() for _ in range(chunk)]
+            for design in procs.map(_pool_check, batch, chunksize=max(1, chunk // (4 * workers))):
+                draws += 1
+                if design is not None:
+                    out.append(design)
+                    if len(out) == n:
+                        break
+            if draws > 20 * n + 20_000:
+                raise RuntimeError(f"fewer than {n} valid designs in {draws} draws (seed {seed})")
+    return out, draws
+
+
 def threshold_rule(
     space: DesignSpace,
     context: Any = None,
@@ -376,6 +427,7 @@ def threshold_rule(
     quantile: float = 0.01,
     pool: int = 2_000,
     seed: int = THRESHOLD_RULE_SEED,
+    workers: int | None = None,
 ) -> ThresholdRule:
     """Apply the v2 threshold rule: at most 1 % of 10k random valid Sobol pairs fall within t.
 
@@ -383,9 +435,9 @@ def threshold_rule(
     the same validators as every arm, under ``context``) and ``n_pairs`` distinct pairs are
     drawn uniformly from them with a seeded generator. The pool keeps the rule cheap when the
     geometry validators are slow; with ``pool >= 2 * n_pairs`` the pairs can be disjoint.
+    ``workers`` validates the draws in parallel (:func:`valid_sobol_pool`; same result).
     """
-    sampler = space.sample_sobol(seed, context)
-    designs = sampler.sample(pool)
+    designs, n_draws = valid_sobol_pool(space, context, seed, pool, workers=workers)
     rng = np.random.default_rng(seed)
     i = rng.integers(0, pool, size=n_pairs)
     j = (i + rng.integers(1, pool, size=n_pairs)) % pool  # j != i
@@ -403,7 +455,7 @@ def threshold_rule(
         quantile=quantile,
         n_pairs=n_pairs,
         pool=pool,
-        draws=int(sampler.draws),
+        draws=int(n_draws),
         seed=seed,
         pair_quantiles=qs,
     )

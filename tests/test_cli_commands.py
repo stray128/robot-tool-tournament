@@ -167,3 +167,26 @@ def test_job_search_defaults_to_the_uk_south2_cpu_target() -> None:
     joined = " ".join(argv)
     assert "--target uks2-cpu" in joined and "--vcpus 32" in joined and "--no-fallback" in joined
     assert "--workers 30" in joined and "--seeds 1,2,3" in joined
+
+
+def test_job_search_forwards_the_design_space() -> None:
+    from rtt.cli import job_argv
+
+    parser = build_parser()
+    args = parser.parse_args(
+        ["job", "search", "--arm", "nemotron", "--runs", "2", "--budget", "40", "--space", "freeform-v2"]
+    )
+    argv = job_argv(args)
+    assert argv is not None and argv[argv.index("--space") + 1] == "freeform-v2"
+    args = parser.parse_args(["job", "gv4", "--vcpus", "32", "--no-fallback"])
+    argv = job_argv(args)
+    assert argv is not None and argv[:2] == ["run", "gv4"] and "--space" not in argv
+
+
+def test_search_space_names_and_aliases() -> None:
+    from rtt.pipeline.search import parse_space
+
+    assert parse_space(None) == "box-v1" and parse_space("v1") == "box-v1"
+    assert parse_space("v2") == "freeform-v2" and parse_space("freeform-v2") == "freeform-v2"
+    with pytest.raises(ValueError, match="--space"):
+        parse_space("v3")

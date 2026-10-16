@@ -476,6 +476,14 @@ class SimEvaluatorV2:
         self._evaluate = evaluate_records
         self._builder = builder
         self.executor = executor
+        # as SimEvaluator: a CpuExecutor pool is the "cpu" executor of record in manifests
+        self.executor_name = (
+            executor
+            if isinstance(executor, str)
+            else "cpu"
+            if hasattr(executor, "run")
+            else type(executor).__name__
+        )
         self.workers = workers
         if task_hash is None:
             try:
@@ -517,7 +525,7 @@ class SimEvaluatorV2:
             raise ValueError("every v2 training condition must have the same number of jitter seeds")
         task = self.task
         return EvaluatorInfo(
-            executor=self.executor if isinstance(self.executor, str) else type(self.executor).__name__,
+            executor=self.executor_name,
             conditions=tuple(conditions),
             controller_settings=(),
             seeds_per_condition=seeds.pop(),

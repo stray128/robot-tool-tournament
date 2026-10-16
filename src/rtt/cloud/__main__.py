@@ -4,7 +4,7 @@ Commands:
 
 * ``capacity``: for each target, which platforms can take a job now (GPU capacity
   advice, CPU vCPU quota) and what they cost.
-* ``run {m1,probe,search}``: submit a run in the pinned image (``RTT_IMAGE``) on a
+* ``run {m1,probe,search,gv4}``: submit a run in the pinned image (``RTT_IMAGE``) on a
   :class:`~rtt.cloud.nebius_jobs.Target`, pick the first platform with capacity, cancel
   and fall back if provisioning stalls, wait, record the spend, fetch ``runs/<run_id>/``
   from that region's bucket to ``runs/cloud/<run_id>/`` and verify it. The default target
@@ -210,6 +210,7 @@ def cmd_run(ctx: Context, args: argparse.Namespace) -> int:
             seeds=args.seeds,
             spend_cap_usd=args.spend_cap,
             workers=args.workers,
+            space=args.space,
         )
     first = _resolve_target(args)
     chain = [first]
@@ -450,6 +451,12 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--runs", type=int, help="search: independent runs")
     run.add_argument("--budget", type=int, help="search: designs per run")
     run.add_argument("--seeds", default=None, help="search: comma-separated run seeds (default 1..runs)")
+    run.add_argument(
+        "--space",
+        choices=("box-v1", "freeform-v2", "v1", "v2"),
+        default=None,
+        help="search: design space (default box-v1; freeform-v2 is the v2 protocol)",
+    )
     run.add_argument("--workers", type=int, default=None, help="search: CPU processes (default: all vCPUs)")
     run.add_argument("--spend-cap", type=float, default=2.0, help="search: live model spend cap, USD")
     run.add_argument("--platform", help="force one platform (no fallback), e.g. cpu-d3 or gpu-h100-sxm")

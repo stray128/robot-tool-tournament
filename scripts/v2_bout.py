@@ -24,7 +24,8 @@ site as a bout of v2 lanes (GLBs meshopt-compressed) and check it in a browser::
 ``--spec FILE`` replaces the default episodes: a JSON list of objects with ``stem``,
 ``design`` (an entrant name, or a recipe as a JSON object), ``part``, ``placement`` (a
 ``train_v2`` label) and optionally ``label`` (the lane's title) and ``still`` (``{"label", "view", "frame": "grasp" | "hold",
-"xray"}``). A JSON summary (outcomes, registration, pose residuals, payload sizes) is printed.
+"xray"}``), or an object ``{"title", "summary", "episodes": [...]}`` that also names the bout.
+A JSON summary (outcomes, registration, pose residuals, payload sizes) is printed.
 """
 
 from __future__ import annotations
@@ -194,7 +195,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.spec is None:
         episodes, title, text = EPISODES, TITLE, SUMMARY
     else:
-        episodes, title, text = tuple(json.loads(args.spec.read_text(encoding="utf-8"))), None, None
+        spec = json.loads(args.spec.read_text(encoding="utf-8"))
+        if isinstance(spec, dict):
+            episodes, title, text = tuple(spec["episodes"]), spec.get("title"), spec.get("summary")
+        else:
+            episodes, title, text = tuple(spec), None, None
     summary = run(args.out, episodes, args.run_id, title=title, summary=text)
     if args.stills is not None:
         t0 = time.perf_counter()

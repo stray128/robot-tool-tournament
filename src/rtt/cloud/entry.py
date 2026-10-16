@@ -8,9 +8,12 @@ Kinds:
 * ``probe``: records the job environment only (GPU and driver, the OpenGL renderer that
   headless rendering gets, Warp's CUDA devices) in ``probe.json`` and ``manifest.json``.
 * ``search``: runs ``rtt search`` (:func:`rtt.pipeline.search.run_search_command`) with the
-  given arm, runs and budget on the job's CPUs; the search's own outputs (its
-  ``manifest.json``, histories, Parquet tables, frozen picks and, for the LLM arms, the
-  response cache and spend ledger) go to ``search/``, the job manifest to the top level.
+  given arm, runs, budget and design space (``--space freeform-v2`` for the v2 protocol) on
+  the job's CPUs; the search's own outputs (its ``manifest.json``, histories, Parquet tables,
+  frozen picks and, for the LLM arms, the response cache and spend ledger) go to
+  ``search/``, the job manifest to the top level.
+* ``gv4``: gate GV4 (:mod:`rtt.sim.gv4`): builds and simulates the fixed v2 parity episodes
+  on the job's CPUs and writes ``gv4.json``, which the laptop compares with its own run.
 
 Every file is first written to a local stage directory and then copied whole to
 ``--out``: the bucket mount rejects seeks (MP4 muxing) and renames (see :func:`publish`).
@@ -439,21 +442,28 @@ def run_search_job(
     spend_cap_usd: float = 2.0,
     argv: Sequence[str] = (),
     stage_dir: str | Path | None = None,
+    space: str | None = None,
 ) -> tuple[dict[str, Any], int]:
     """Run one search (staged locally, like :func:`run_m1`); return the manifest and status."""
-    from rtt.pipeline.search import SearchRequest, parse_seeds, run_search_command
+    from rtt.parts.library import DEFAULT_PARTS_FILE
+    from rtt.parts.suite import DEFAULT_TRAIN_V2
+    from rtt.pipeline.search import SearchRequest, parse_seeds, parse_space, run_search_command
     from rtt.sim.conditions import DEFAULT_TRAIN_SUITE
-    from rtt.sim.task import DEFAULT_TASK_PATH
+    from rtt.sim.task import DEFAULT_TASK_PATH, DEFAULT_TASK_V2_PATH
 
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     stage = _stage_for(out, stage_dir)
     manifest = base_manifest("search", out, argv)
     run_seeds = parse_seeds(seeds, runs)
+    design_space = parse_space(space)
+    v2 = design_space == "freeform-v2"
     manifest["executor"] = executor
     manifest["inputs"] = {
-        "task_sha256": file_sha256(DEFAULT_TASK_PATH),
-        "suite_sha256": file_sha256(DEFAULT_TRAIN_SUITE),
+        "design_space": design_space,
+        "task_sha256": file_sha256(DEFAULT_TASK_V2_PATH if v2 else DEFAULT_TASK_PATH),
+        "suite_sha256": file_sha256(DEFAULT_TRAIN_V2 if v2 else DEFAULT_TRAIN_SUITE),
+        **({"parts_sha256": file_sha256(DEFAULT_PARTS_FILE)} if v2 else {}),
         "arm": arm,
         "runs": runs,
         "budget": budget,
@@ -476,6 +486,7 @@ def run_search_job(
                 executor=executor,
                 workers=workers,
                 spend_cap_usd=spend_cap_usd,
+                space=design_space,
             )
         )
         search = outcome.manifest
@@ -489,6 +500,54 @@ def run_search_job(
             "llm": search.get("llm"),
         }
         status = 0 if search.get("status") == "complete" else 1
+    except Exception:  # noqa: BLE001 - record the failure in the manifest, then exit 2
+        manifest["error"] = traceback.format_exc()[-4000:]
+        print(manifest["error"], file=sys.stderr, flush=True)
+    try:
+        manifest = _finish(manifest, stage, out, t0, t_env, status)
+    finally:
+        if stage_dir is None:
+            shutil.rmtree(stage, ignore_errors=True)
+    return manifest, manifest["exit_status"]
+
+
+def run_gv4_job(
+    out_dir: str | Path,
+    workers: int | None = None,
+    argv: Sequence[str] = (),
+    stage_dir: str | Path | None = None,
+) -> tuple[dict[str, Any], int]:
+    """Gate GV4's parity episodes on the job's CPUs (:func:`rtt.sim.gv4.run_parity`), staged
+    like :func:`run_m1`; ``gv4.json`` is compared with the laptop's report afterwards."""
+    from rtt.parts.library import DEFAULT_PARTS_FILE
+    from rtt.parts.suite import DEFAULT_TRAIN_V2
+    from rtt.sim.gv4 import run_parity
+    from rtt.sim.task import DEFAULT_TASK_V2_PATH
+
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    stage = _stage_for(out, stage_dir)
+    manifest = base_manifest("gv4", out, argv)
+    manifest["inputs"] = {
+        "task_sha256": file_sha256(DEFAULT_TASK_V2_PATH),
+        "suite_sha256": file_sha256(DEFAULT_TRAIN_V2),
+        "parts_sha256": file_sha256(DEFAULT_PARTS_FILE),
+    }
+    t0 = time.time()
+    manifest["started_at"] = utc_iso(t0)
+    manifest["environment"] = environment(probe_gl=False, probe_warp=False)
+    t_env = time.time()
+    status = 2
+    try:
+        report = run_parity(workers)
+        write_json(stage / "gv4.json", report)
+        manifest["result"] = {
+            "episodes": report["episodes"],
+            "records_sha256": report["records_sha256"],
+            "designs": [{k: d[k] for k in ("label", "score")} for d in report["designs"]],
+            "timing_s": report["timing_s"],
+        }
+        status = 0
     except Exception:  # noqa: BLE001 - record the failure in the manifest, then exit 2
         manifest["error"] = traceback.format_exc()[-4000:]
         print(manifest["error"], file=sys.stderr, flush=True)
@@ -538,7 +597,13 @@ def build_parser() -> argparse.ArgumentParser:
     search.add_argument("--executor", default="cpu", choices=("cpu", "mjwarp"))
     search.add_argument("--workers", type=int, default=None)
     search.add_argument("--spend-cap", type=float, default=2.0, help="live model spend cap, USD")
-    for p in (m1, probe, search):
+    search.add_argument(
+        "--space", default=None, choices=("box-v1", "freeform-v2", "v1", "v2"), help="design space"
+    )
+    gv4 = sub.add_parser("gv4", help="gate GV4: the v2 parity episodes, gv4.json and manifest.json")
+    gv4.add_argument("--out", type=Path, required=True)
+    gv4.add_argument("--workers", type=int, default=None)
+    for p in (m1, probe, search, gv4):
         p.add_argument(
             "--stage",
             type=Path,
@@ -572,7 +637,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             spend_cap_usd=args.spend_cap,
             argv=args_list,
             stage_dir=args.stage,
+            space=args.space,
         )
+    elif args.kind == "gv4":
+        manifest, status = run_gv4_job(args.out, workers=args.workers, argv=args_list, stage_dir=args.stage)
     else:
         manifest, status = run_probe(
             args.out, probe_warp=not args.no_warp, argv=args_list, stage_dir=args.stage

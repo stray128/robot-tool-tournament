@@ -168,12 +168,14 @@ def test_screen_order_duplicate_design_then_geometry_then_distance() -> None:
     assert screen(far, [blunt, near], None, MIN_DISTANCE_V2, space=SPACE, context=ctx) is None
 
 
+#: The rule's bars with the schema rules only (no training parts): the stub mirrors track G's
+#: schema rules, so these hold with or without G.
+SCHEMA_ONLY_BARS = (0.080, 0.17)
+
+
 def test_threshold_rule_reproduces_the_pinned_bars() -> None:
     rule = threshold_rule(SPACE, None)
-    # The stub mirrors track G's schema rules, so the schema-only rule gives the same bars with or
-    # without G. They are re-derived with the full section-13 validators on the training parts
-    # before PREREG.
-    assert (rule.min_distance, rule.explore_min_distance) == (MIN_DISTANCE_V2, EXPLORE_MIN_DISTANCE_V2)
+    assert (rule.min_distance, rule.explore_min_distance) == SCHEMA_ONLY_BARS
     assert rule.n_pairs == 10_000 and rule.quantile == 0.01
     # The rule's own property: at most 1 % of the random valid pairs fall within t.
     designs = SPACE.sample_sobol(rule.seed, None).sample(rule.pool)
@@ -183,6 +185,33 @@ def test_threshold_rule_reproduces_the_pinned_bars() -> None:
     d = np.array([SPACE.distance(designs[a], designs[b]) for a, b in zip(i, j, strict=True)])
     assert (d < rule.min_distance).mean() <= 0.01
     assert MIN_DISTANCE_V2 * 9 < 1.0  # below one categorical switch, so different cells always pass
+
+
+def test_scored_bars_are_the_recorded_rule_on_the_training_parts() -> None:
+    """The bars the arms use are the rule's output under the full validators (GV5), recorded with
+    the hashes of the inputs it depends on; a change to those inputs needs a new recording."""
+    import hashlib
+    import json
+
+    from rtt.search.threshold_v2 import DEFAULT_OUT
+
+    rec = json.loads(DEFAULT_OUT.read_text(encoding="utf-8"))
+    assert (rec["min_distance"], rec["explore_min_distance"]) == (MIN_DISTANCE_V2, EXPLORE_MIN_DISTANCE_V2)
+    assert rec["n_pairs"] == 10_000 and rec["quantile"] == 0.01 and rec["pool"] == 2_000
+    assert rec["pair_quantiles"]["p1"] >= MIN_DISTANCE_V2  # at most 1 % of the pairs within t
+    assert rec["generator_version"] == track_g().generator_version
+    root = DEFAULT_OUT.parents[1]
+    for rel, digest in rec["inputs_sha256"].items():
+        assert hashlib.sha256((root / rel).read_bytes()).hexdigest() == digest, rel
+
+
+def test_parallel_valid_pool_matches_the_sequential_sampler() -> None:
+    from rtt.search.diversity import valid_sobol_pool
+
+    seq, n_seq = valid_sobol_pool(SPACE, None, 123, 40)
+    par, n_par = valid_sobol_pool(SPACE, None, 123, 40, workers=2, chunk=16)
+    assert n_seq == n_par
+    assert [SPACE.design_id(d) for d in seq] == [SPACE.design_id(d) for d in par]
 
 
 def test_llm_duplicates_are_rejected_named_and_reflected() -> None:

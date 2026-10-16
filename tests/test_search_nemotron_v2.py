@@ -131,7 +131,7 @@ def test_arm_c_prompt_has_every_v2_section(prompts_c_and_z) -> None:
         assert marker in elites
     scores = [int(m) for m in re.findall(r"^d\d\d \[[^]]+\] score (\d+)%", elites, re.MULTILINE)]
     assert scores == sorted(scores) and len(scores) == 8  # worst first, best last
-    assert "at least 72 points" in text and "duplicates" in text
+    assert "at least 63 points" in text and "duplicates" in text
 
 
 def test_the_engineering_notes_block_is_shared_by_c_and_z_and_hashed(prompts_c_and_z) -> None:

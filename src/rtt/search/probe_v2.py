@@ -20,6 +20,11 @@ Every response is cached and every call ledgered under ``--out``; ``--replay`` r
 report from the cache with no API key and no spend. ``--cap-usd`` is a hard cap on all live
 calls in this probe's ledger (default $0.30).
 
+``--real`` (gate GV5) makes each call the exact arm-C round-1 prompt of a run: the six
+training parts and ``task_v2`` in the prompt, the entrants of ``configs/entrants_v2.yaml`` and
+the four screened Sobol recipes in round 0, round 0 scored by the CPU simulator on
+``train_v2`` (``--workers``), and every slot checked by the full section-13 validators.
+
 The slots are checked with the schema rules (bounds, strategy and fit rules, quantisation).
 The report keeps every slot as the model sent it, so ``--recheck-geometry`` can re-validate
 them later with track G's section-13 validators on track O's training parts under track S's
@@ -27,6 +32,7 @@ task_v2, with no model call (``report_geometry.json``).
 
 Usage::
 
+    python -m rtt.search.probe_v2 --live --real --workers 14 --cap-usd 0.10   # GV5: the real round-1 prompt
     python -m rtt.search.probe_v2 --live                # 5 live calls (cache first), cap $0.30
     python -m rtt.search.probe_v2 --replay              # the same report from the cache, $0
     python -m rtt.search.probe_v2 --recheck-geometry    # the slots against the geometry validators
@@ -99,14 +105,54 @@ def geometry_context() -> Any:
     return V2Context(parts=tuple(training_parts()), task=default_task_v2(), label="train_v2")
 
 
-def _probe_call(seed: int, client: Any, config: ProposerConfig) -> CallResult:
+class _RealRound0:
+    """Round 0 of each probe seed on the real training suite, scored once for all seeds."""
+
+    def __init__(self, seeds: tuple[int, ...], config: ProposerConfig, workers: int | None) -> None:
+        from rtt.search.runner import DEFAULT_ENTRANTS_V2, _load_entrants_v2
+        from rtt.search.sim_adapter import SimEvaluatorV2
+        from rtt.sim.exec_cpu import CpuExecutor
+
+        space = get_space(V2)
+        pool = CpuExecutor(workers)
+        try:
+            ev = SimEvaluatorV2(executor=pool, workers=workers)
+            self.info = ev.describe()
+            entrants = _load_entrants_v2(DEFAULT_ENTRANTS_V2)
+            self.round0 = {
+                seed: round0_designs(
+                    entrants, seed, 8, self.info.gripper_task, space=space, min_distance=config.min_distance
+                )
+                for seed in seeds
+            }
+            unique: dict[str, Any] = {}
+            for props in self.round0.values():
+                for prop in props:
+                    unique.setdefault(space.design_id(prop.design), prop.design)
+            scored = ev.evaluate(list(unique.values()))
+            self.scores = dict(zip(unique, scored, strict=True))
+        finally:
+            pool.close()
+
+    def evaluate(self, designs: list[Any]) -> list[Any]:
+        space = get_space(V2)
+        return [self.scores[space.design_id(d)] for d in designs]
+
+
+def _probe_call(
+    seed: int, client: Any, config: ProposerConfig, real: _RealRound0 | None = None
+) -> CallResult:
     space = get_space(V2)
-    ev = FakeEvaluatorV2(0)
-    info = ev.describe()
+    ev: Any = real if real is not None else FakeEvaluatorV2(0)
+    info = real.info if real is not None else ev.describe()
     ctx = RunContext("nemotron", 0, seed, info.gripper_task, info, BudgetLedger(40, 8, 8, 16), space=space,
                      shared_min_distance=config.min_distance)  # fmt: skip
-    r0 = round0_designs(
-        stub_entrants(), seed, 8, info.gripper_task, space=space, min_distance=config.min_distance
+    r0 = (
+        real.round0[seed]
+        if real is not None
+        else round0_designs(
+            stub_entrants(), seed, 8, info.gripper_task, space=space, min_distance=config.min_distance
+        )
     )
     ctx.budget.charge(0, 8)
     items = [ctx.history.add(0, p, s) for p, s in zip(r0, ev.evaluate([p.design for p in r0]), strict=True)]
@@ -188,8 +234,14 @@ def run_probe(
     cap_usd: float = 0.30,
     transport: Any = None,
     limiter: Any = None,
+    real: bool = False,
+    workers: int | None = None,
 ) -> dict[str, Any]:
-    """Run (or replay) the probe and write ``<out>/report.json``; returns the report."""
+    """Run (or replay) the probe and write ``<out>/report.json``; returns the report.
+
+    ``real``: the training parts, the entrants and simulator-scored round 0 (see the module
+    docstring); the slots then pass the full section-13 validators.
+    """
     out.mkdir(parents=True, exist_ok=True)
     client = make_proposer_client(
         out / "cache",
@@ -200,7 +252,9 @@ def run_probe(
         limiter=limiter,
     )  # type: ignore[arg-type]
     config = ProposerConfig.for_space(V2)
-    calls = [_probe_call(derive_seed(seed, "probe-v2") % (2**31), client, config) for seed in seeds]
+    run_seeds = tuple(derive_seed(seed, "probe-v2") % (2**31) for seed in seeds)
+    round0 = _RealRound0(run_seeds, config, workers) if real else None
+    calls = [_probe_call(seed, client, config, round0) for seed in run_seeds]
     slots = 4 * len(calls)
     valid = sum(c.valid_after_reserves for c in calls)
     repairs = sum(1 for c in calls if c.needs_repair)
@@ -220,8 +274,17 @@ def run_probe(
         "live_cost_usd_ledger_total": round(sum(float(r.cost_usd or 0.0) for r in ledger if not r.cached), 6),
         "live_calls_ledger_total": sum(1 for r in ledger if not r.cached),
         "cap_usd": cap_usd,
-        "validators": "schema",
-        "note": "Round-0 scores in the prompts come from the synthetic FakeEvaluatorV2; the probe measures output validity.",
+        "validators": "schema + geometry (section 13 on the training parts, task_v2)" if real else "schema",
+        "context": "real" if real else "fake",
+        "note": (
+            "Each call is arm C's round-1 prompt: the training parts, the v2 entrants and round 0 scored by the"
+            " CPU simulator on train_v2."
+            if real
+            else "Round-0 scores in the prompts come from the synthetic FakeEvaluatorV2; the probe measures"
+            " output validity."
+        ),
+        "min_distance": config.min_distance,
+        "explore_min_distance": config.explore_min_distance,
     }
     write_json_atomic(out / "report.json", report)
     return report
@@ -297,6 +360,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     parser.add_argument("--cap-usd", type=float, default=0.30)
+    parser.add_argument(
+        "--real", action="store_true", help="the real parts, entrants and simulator-scored round 0 (GV5)"
+    )
+    parser.add_argument("--workers", type=int, default=None, help="--real: CPU workers for round 0")
     args = parser.parse_args(argv)
     if args.recheck_geometry:
         source = json.loads((args.out / "report.json").read_text(encoding="utf-8"))
@@ -312,7 +379,13 @@ def main(argv: list[str] | None = None) -> int:
         json.dump({k: report[k] for k in (*keys, "rejections_by_stage")}, sys.stdout, indent=1)
         sys.stdout.write("\n")
         return 0 if report["pass"] else 1
-    report = run_probe(args.out, mode="replay" if args.replay else "readwrite", cap_usd=args.cap_usd)
+    report = run_probe(
+        args.out,
+        mode="replay" if args.replay else "readwrite",
+        cap_usd=args.cap_usd,
+        real=args.real,
+        workers=args.workers,
+    )
     keys = (
         "validators",
         "valid_primary_rate",

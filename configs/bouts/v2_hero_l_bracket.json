@@ -1,0 +1,42 @@
+{
+ "title": "L-bracket 3 mm off centre: the imprint stops short, a drafted V-funnel centres it",
+ "summary": "Three recorded episodes of the v2 training suite (train_v2), all on the L-bracket at placement c2 (the part 3 mm off centre across the jaw), each the condition's first jitter seed: the stock blade, the configurator imprint and a drafted V-funnel recipe (design sobol_00 of the GV3 calibration sample, a random design, not a search result). The hero screen found no part where the stock blade fails visibly, so this is the offset contrast the hero rule prescribes: the stock blade holds the bracket where it landed, the imprint jams short of its seat, and the V-funnel's drafted walls pull the bracket to centre. Single episodes, not a score. Replayed from the recordings, never re-simulated.",
+ "episodes": [
+  {
+   "stem": "stock_l_bracket_c2",
+   "design": "stock",
+   "part": "l_bracket",
+   "placement": "c2",
+   "label": "Stock blade",
+   "still": {"label": "hero_wide_stock_l_bracket", "view": "wide", "frame": "hold"}
+  },
+  {
+   "stem": "imprint_l_bracket_c2",
+   "design": "imprint_configurator",
+   "part": "l_bracket",
+   "placement": "c2",
+   "label": "Configurator imprint",
+   "still": {"label": "hero_xray_imprint_l_bracket", "view": "xray", "frame": "grasp", "xray": true}
+  },
+  {
+   "stem": "vfunnel_l_bracket_c2",
+   "design": {
+    "pad": "v_funnel",
+    "tip": "chamfer",
+    "grip_height_frac": 0.74,
+    "pad_height_mm": 23.3,
+    "finger_width_mm": 24.0,
+    "pad_depth_mm": 6.3,
+    "wall_draft_deg": 58.0,
+    "clearance_mm": 0.2,
+    "tip_size_mm": 1.5,
+    "locator": "none",
+    "body_style": "windowed"
+   },
+   "part": "l_bracket",
+   "placement": "c2",
+   "label": "Drafted V-funnel (calibration design sobol_00)",
+   "still": {"label": "hero_close_vfunnel_l_bracket", "view": "close", "frame": "hold"}
+  }
+ ]
+}
