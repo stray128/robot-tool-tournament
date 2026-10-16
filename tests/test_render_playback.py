@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import json
 import os
 from pathlib import Path
 from typing import Any
@@ -186,6 +187,11 @@ def test_blender_hero_helpers_run_without_blender(run: dict[str, Any], tmp_path:
     with pytest.raises(ValueError, match="replay v2"):
         write_replay(run["v1"], tmp_path / "v1")
         blender_hero.load_replay(tmp_path / "v1")
+    branded = json.loads((tmp_path / "r.json").read_text(encoding="utf-8"))
+    branded["assets"][aid]["brand_visible"] = True
+    (tmp_path / "r.json").write_text(json.dumps(branded), encoding="utf-8")
+    with pytest.raises(ValueError, match="brand"):
+        blender_hero.load_replay(tmp_path / "r")
 
 
 def test_blender_rig_turns_like_the_studio(run: dict[str, Any]) -> None:
@@ -197,3 +203,23 @@ def test_blender_rig_turns_like_the_studio(run: dict[str, Any]) -> None:
     assert turn == pytest.approx(align_to_palm(SMALL, replay.header, replay.frames).rig_yaw_deg)
     assert blender_hero.turn_xy((1.0, 0.0, 0.5), 90.0) == pytest.approx((0.0, 1.0, 0.5))
     assert blender_hero.turn_xy((2.0, 1.0, 0.0), 180.0, centre=(1.0, 1.0)) == pytest.approx((0.0, 1.0, 0.0))
+
+
+def test_renders_refuse_a_branded_scan(run: dict[str, Any], tmp_path: Path) -> None:
+    """Brand rule: no asset marked brand_visible: true in a still, a clip or a hook frame."""
+    import copy
+
+    v2 = run["v2"]
+    assert playback.brand_screen(v2.header) == []
+    branded = copy.deepcopy(v2)
+    obj = next(v["asset"] for b in branded.header["bodies"] if b["name"] == "object" for v in b["visuals"])
+    branded.header["assets"][obj]["brand_visible"] = True
+    assert playback.brand_screen(branded.header) == [obj]
+    shot = {"s": {"frame": 0, "view": "wide"}}
+    with pytest.raises(ValueError, match="brand"):
+        playback.render_stills(branded, run["store"], shot, tmp_path)
+    with pytest.raises(ValueError, match="brand"):
+        playback.render_video(branded, run["store"], tmp_path / "x.mp4")
+    with pytest.raises(ValueError, match="brand"):
+        next(playback.iter_frames(branded, run["store"], [{"frame": 0}]))
+    assert not any(tmp_path.iterdir())

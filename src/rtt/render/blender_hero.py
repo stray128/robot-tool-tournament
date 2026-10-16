@@ -41,6 +41,9 @@ def load_replay(stem: str | Path) -> tuple[dict[str, Any], np.ndarray]:
     header = json.loads(stem.with_suffix(".json").read_text(encoding="utf-8"))
     if header.get("format") != "rtt-replay" or header.get("version") != 2:
         raise ValueError(f"{stem}: Blender hero renders need a replay v2 header")
+    branded = sorted(a for a, e in header.get("assets", {}).items() if e.get("brand_visible") is True)
+    if branded:  # the brand rule: hero shots show unbranded parts or brand_visible: false scans
+        raise ValueError(f"{stem}: draws assets with a visible brand mark {branded}; not a hero replay")
     poses = np.frombuffer((stem.parent / header["bin"]).read_bytes(), dtype="<f4")
     return header, poses.reshape(header["n_frames"], header["n_bodies"], 7)
 

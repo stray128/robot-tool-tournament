@@ -10,6 +10,10 @@ Every still and clip carries a burned-in caption built from the replay's provena
 (:func:`caption_text`): "simulation replay · MuJoCo · run <id> · design <id>", plus
 "product mode" for product-mode episodes and "rendered offline" for offline renderers.
 
+Brand rule (spec section 8): hero shots and published clips never show a scan marked
+``brand_visible: true``. The render entry points refuse a replay that draws one
+(:func:`brand_screen`) unless ``allow_brands=True`` is passed for a private check.
+
 MuJoCo picks its OpenGL backend when it is first imported. The public render functions run
 in-process when ``MUJOCO_GL`` is ``egl`` or ``osmesa`` and otherwise in a fresh subprocess
 (:func:`rtt.sim.render.call_with_gl`), like the v1 MP4 renderer.
@@ -31,6 +35,7 @@ from rtt.sim.replay import Replay
 __all__ = [
     "CAPTION_SEPARATOR",
     "apply_frame",
+    "brand_screen",
     "burn_caption",
     "caption_text",
     "iter_frames",
@@ -84,6 +89,23 @@ def body_track(replay: Replay, body: str = "object") -> np.ndarray:
     """``(n_frames, 3)`` world positions of one replay body."""
     names = [b["name"] for b in replay.header["bodies"]]
     return np.asarray(replay.frames[:, names.index(body), :3], dtype=np.float64)
+
+
+# --------------------------------------------------------------------------- brand screen
+
+
+def brand_screen(header: Mapping[str, Any]) -> list[str]:
+    """Ids of the assets in a replay header that are marked ``brand_visible: true``."""
+    return sorted(aid for aid, e in (header.get("assets") or {}).items() if e.get("brand_visible") is True)
+
+
+def _check_brands(header: Mapping[str, Any], allow_brands: bool) -> None:
+    bad = [] if allow_brands else brand_screen(header)
+    if bad:
+        raise ValueError(
+            f"replay draws assets with a visible brand mark {bad}; hero shots and clips use "
+            "unbranded parts or brand_visible: false scans (pass allow_brands=True for a private check)"
+        )
 
 
 # --------------------------------------------------------------------------- captions
@@ -277,6 +299,7 @@ def iter_frames(
     caption: bool = True,
     looks: Mapping[str, Any] | None = None,
     align: bool = True,
+    allow_brands: bool = False,
 ) -> Iterator[np.ndarray]:
     """Render a frame plan in this process (``MUJOCO_GL`` must be ``egl`` or ``osmesa``).
 
@@ -292,6 +315,7 @@ def iter_frames(
     from rtt.render.xray import xray
     from rtt.sim.render import BACKENDS
 
+    _check_brands(replay.header, allow_brands)
     if os.environ.get("MUJOCO_GL", "").lower() not in BACKENDS:
         raise RuntimeError(
             "iter_frames renders in-process: set MUJOCO_GL=egl (or osmesa) before importing mujoco"
@@ -331,6 +355,7 @@ def render_stills(
     caption: bool = True,
     looks: Mapping[str, Any] | None = None,
     align: bool = True,
+    allow_brands: bool = False,
 ) -> dict[str, Path]:
     """Render named stills; each shot is ``{"frame": i, "view": name, "target": "object" |
     "rest" | xyz, "follow": f, "xray": bool, "readout": str}``. Returns label -> PNG path.
@@ -338,6 +363,7 @@ def render_stills(
     With ``align`` (default) the light rig and the views turn with the replay's palm yaw."""
     from rtt.sim.render import call_with_gl
 
+    _check_brands(replay.header, allow_brands)
     written = call_with_gl(
         "rtt.render.playback:_stills_impl",
         replay,
@@ -368,10 +394,12 @@ def render_video(
     looks: Mapping[str, Any] | None = None,
     xray: bool = False,
     align: bool = True,
+    allow_brands: bool = False,
 ) -> Path:
     """Render frames ``start:stop`` of a replay to an H.264 MP4 with the caption burned in."""
     from rtt.sim.render import call_with_gl
 
+    _check_brands(replay.header, allow_brands)
     return Path(
         call_with_gl(
             "rtt.render.playback:_video_impl",
