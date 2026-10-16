@@ -351,6 +351,8 @@ def lift_to_v2(
 
 # --------------------------------------------------------------------------- freeform (v2) episodes
 
+MAX_JAW_EXTENT_M: Final = 0.25  # a jaw is at most 110 mm long and 40 mm wide; mm meshes fail this
+
 GSO_PIECES_CHANGES: Final = (
     "convex decomposition for collision (CoACD 0.02, seed 0), drawn untextured",
     "re-posed into the object frame",
@@ -471,6 +473,7 @@ def lift_freeform_to_v2(
       (argument, else the recorded meta's, else null). The pair's own hash stays in
       ``meta.geometry_hash``.
     """
+    import numpy as np
     import trimesh
 
     from rtt.design.freeform.types import DESIGN_SPACE
@@ -493,6 +496,12 @@ def lift_freeform_to_v2(
             mesh = jaw_meshes[i] if jaw_meshes is not None else glb.mesh_from_pieces(jaw.pieces)
             if not isinstance(mesh, trimesh.Trimesh):
                 raise TypeError("jaw_meshes must be two trimesh.Trimesh (metres, jaw frames)")
+            reach = float(np.abs(mesh.bounds).max())
+            if reach > MAX_JAW_EXTENT_M:
+                raise ValueError(
+                    f"the {side} jaw mesh reaches {reach:g} from its frame origin; jaw_meshes are in "
+                    "metres (scale a millimetre print STL by 1e-3)"
+                )
             finger = _own_asset(
                 store,
                 mesh,

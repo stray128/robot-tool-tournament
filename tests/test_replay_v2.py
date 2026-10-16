@@ -337,6 +337,17 @@ def test_freeform_lift_draws_each_jaw_and_the_part_from_their_pieces(episode: An
         lift_freeform_to_v2(
             v1, store, pair, overlays={"hold_s": np.zeros(n + 1)}, run_id="r", code_version="1234567"
         )
+    mm = [glb_mesh_mm(getattr(pair, side).pieces) for side in ("left", "right")]
+    with pytest.raises(ValueError, match="metres"):  # a print STL loaded in millimetres
+        lift_freeform_to_v2(v1, store, pair, jaw_meshes=tuple(mm), run_id="r", code_version="1234567")
+
+
+def glb_mesh_mm(pieces: Any) -> Any:
+    from rtt.render.glb import mesh_from_pieces
+
+    mesh = mesh_from_pieces(pieces)
+    mesh.apply_scale(1000.0)
+    return mesh
 
 
 def test_freeform_lift_draws_a_stock_pair_with_the_blade_cad(episode: Any, tmp_path: Path) -> None:
