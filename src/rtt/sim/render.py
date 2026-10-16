@@ -8,10 +8,16 @@ otherwise each attempt runs in a fresh Python subprocess with
 
 Rendering replays the recorded ``qpos`` trajectory (``EpisodeResult.qpos``),
 so it never re-simulates and cannot change an outcome.
+
+:func:`call_with_gl` applies the same backend rule to any rendering function (the v2
+studio renderer in :mod:`rtt.render.playback` uses it): it calls ``module:function`` in
+this process when a headless backend is already selected, otherwise in a fresh subprocess
+per backend, passing arguments and the result by pickle.
 """
 
 from __future__ import annotations
 
+import importlib
 import os
 import pickle
 import subprocess
@@ -19,6 +25,7 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -147,9 +154,48 @@ def render_mp4(
     raise RuntimeError("offscreen rendering failed with every backend:\n" + "\n".join(errors))
 
 
+def _resolve(target: str) -> Any:
+    module, _, name = target.partition(":")
+    if not module.startswith("rtt.") or not name:
+        raise ValueError(f"call_with_gl targets an rtt function as 'module:function', got {target!r}")
+    return getattr(importlib.import_module(module), name)
+
+
+def call_with_gl(target: str, *args: Any, **kwargs: Any) -> Any:
+    """Call ``target`` (``"rtt.module:function"``) where MuJoCo can render offscreen.
+
+    In-process if ``MUJOCO_GL`` is ``egl`` or ``osmesa``; otherwise in a subprocess with
+    ``MUJOCO_GL=egl``, then ``osmesa``. Arguments and the return value must pickle.
+    """
+    fn = _resolve(target)
+    if os.environ.get("MUJOCO_GL", "").lower() in BACKENDS:
+        return fn(*args, **kwargs)
+    errors = []
+    with tempfile.TemporaryDirectory(prefix="rtt-gl-") as tmp:
+        job_file, out_file = Path(tmp) / "call.pkl", Path(tmp) / "result.pkl"
+        job_file.write_bytes(pickle.dumps((target, args, kwargs)))
+        for backend in BACKENDS:
+            env = dict(os.environ, MUJOCO_GL=backend, PYOPENGL_PLATFORM=backend)
+            proc = subprocess.run(
+                [sys.executable, "-m", "rtt.sim.render", "--call", str(job_file), str(out_file)],
+                env=env,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if proc.returncode == 0 and out_file.exists():
+                return pickle.loads(out_file.read_bytes())  # written by our own subprocess
+            errors.append(f"[{backend}] {(proc.stderr or proc.stdout)[-2000:].strip()}")
+    raise RuntimeError(f"{target}: offscreen rendering failed with every backend:\n" + "\n".join(errors))
+
+
 def _main(argv: list[str]) -> int:
+    if len(argv) == 3 and argv[0] == "--call":
+        target, args, kwargs = pickle.loads(Path(argv[1]).read_bytes())  # written by call_with_gl
+        Path(argv[2]).write_bytes(pickle.dumps(_resolve(target)(*args, **kwargs)))
+        return 0
     if len(argv) != 1:
-        print("usage: python -m rtt.sim.render JOB.pkl", file=sys.stderr)
+        print("usage: python -m rtt.sim.render JOB.pkl | --call CALL.pkl RESULT.pkl", file=sys.stderr)
         return 2
     job = pickle.loads(Path(argv[0]).read_bytes())  # written by render_mp4 in this package
     _render_in_process(job)
