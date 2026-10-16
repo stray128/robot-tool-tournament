@@ -14,7 +14,7 @@
  * per-frame readouts as float16.
  */
 
-import { matching, onlyKeys, readAssetId, readAssetMap } from "./assets";
+import { matching, onlyKeys, readAssetId, readAssetMap, referencedAssets } from "./assets";
 import { holdTrack, liftTrack, POSE_STRIDE, referenceFrame } from "./track.mjs";
 import type {
   AnyReplayHeader,
@@ -286,6 +286,14 @@ export function isV2(header: AnyReplayHeader): header is ReplayHeaderV2 {
   return header.version === 2;
 }
 
+/** The asset files a version 2 header draws (for build-time checks). */
+export function referencedAssetFiles(header: ReplayHeaderV2): { id: string; uri: string; bytes: number; sha256: string }[] {
+  return referencedAssets(header).map((id) => {
+    const a = header.assets[id]!;
+    return { id, uri: a.uri, bytes: a.bytes, sha256: a.sha256 };
+  });
+}
+
 /** IEEE 754 half-precision bits to a number. */
 export function halfToFloat(h: number): number {
   const sign = h & 0x8000 ? -1 : 1;
@@ -464,9 +472,9 @@ export class Replay {
    * Tight box containing every drawn body over the whole recording (static geoms
    * excluded): each geom's corner points, moved by the body pose of every frame.
    * `extra(b)` adds body-frame points for body `b`, such as the corners of the GLB
-   * assets a version 2 body draws.
+   * assets a version 2 body draws. `frames` limits the sweep to [first, last].
    */
-  bounds(extra?: (body: number) => number[][]): Bounds {
+  bounds(extra?: (body: number) => number[][], frames?: [number, number]): Bounds {
     const min: [number, number, number] = [Infinity, Infinity, Infinity];
     const max: [number, number, number] = [-Infinity, -Infinity, -Infinity];
     const { n_frames, bodies } = this.header;
@@ -475,7 +483,9 @@ export class Replay {
       const local = body.geoms.filter((g) => !isParkedGeom(g)).flatMap(geomPoints);
       if (extra) local.push(...extra(b));
       if (local.length === 0) return;
-      for (let f = 0; f < n_frames; f++) {
+      const first = Math.max(0, Math.floor(frames?.[0] ?? 0));
+      const last = Math.min(n_frames - 1, Math.ceil(frames?.[1] ?? n_frames - 1));
+      for (let f = first; f <= last; f++) {
         const o = f * this.stride + b * POSE_STRIDE;
         const q = this.frames.subarray(o + 3, o + 7);
         for (const point of local) {

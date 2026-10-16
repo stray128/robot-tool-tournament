@@ -4,7 +4,8 @@
  * Reads public/data/*.json from disk (the same files the browser can fetch) and
  * validates them; a missing or malformed file fails the build with the file and
  * JSON path in the message. The files the indexes point at are checked too: every
- * lane's replay header must parse and match its payload size and frame count, and
+ * lane's replay header must parse and match its payload size and frame count (a
+ * version 2 header also its overlay sidecar and every GLB asset it draws), and
  * every design's print files must exist. Only import this from server code.
  */
 
@@ -14,9 +15,10 @@ import path from "node:path";
 
 import { type CertificateDoc, parseCertificateDoc } from "./certificate";
 import { parseRecordedSession, type RecordedSession, SessionError, type SessionSummary, summarizeSession } from "./session";
+import { isV2, parseAnyReplayHeader, referencedAssetFiles } from "./replay";
 import { POSE_STRIDE } from "./track.mjs";
 import type { Bout, BoutsIndex, Design, DesignsIndex, JobsIndex, ResultsIndex } from "./types";
-import { DataError, parseBouts, parseDesigns, parseJobs, parseReplayHeader, parseResults } from "./validate";
+import { DataError, parseBouts, parseDesigns, parseJobs, parseResults } from "./validate";
 
 const DATA_DIR = path.join(process.cwd(), "public", "data");
 
@@ -48,7 +50,7 @@ export function checkReplayFiles(index: BoutsIndex, dataDir: string = DATA_DIR):
       const where = `$.bouts[${b}].lanes[${l}].replay`;
       const headerFile = path.join(dataDir, `${lane.replay}.json`);
       if (!existsSync(headerFile)) throw new DataError("bouts.json", where, `missing replay header ${lane.replay}.json`);
-      const header = parseReplayHeader(JSON.parse(readFileSync(headerFile, "utf8")), `${lane.replay}.json`);
+      const header = parseAnyReplayHeader(JSON.parse(readFileSync(headerFile, "utf8")), `${lane.replay}.json`);
       const binFile = path.join(path.dirname(headerFile), header.bin);
       if (!existsSync(binFile)) throw new DataError("bouts.json", where, `missing replay payload ${header.bin}`);
       const expected = header.n_frames * header.n_bodies * POSE_STRIDE * 4;
@@ -58,6 +60,25 @@ export function checkReplayFiles(index: BoutsIndex, dataDir: string = DATA_DIR):
       }
       if (header.n_frames !== lane.n_frames) {
         throw new DataError("bouts.json", where, `replay has ${header.n_frames} frames; the lane says ${lane.n_frames}`);
+      }
+      if (isV2(header)) {
+        if (header.overlays) {
+          const ovl = path.join(path.dirname(headerFile), header.overlays.bin);
+          const want = header.n_frames * header.overlays.channels.length * 2;
+          if (!existsSync(ovl)) throw new DataError("bouts.json", where, `missing replay overlays ${header.overlays.bin}`);
+          if (statSync(ovl).size !== want) {
+            throw new DataError("bouts.json", where, `${header.overlays.bin} is ${statSync(ovl).size} bytes; its header implies ${want}`);
+          }
+        }
+        // Assets are served from the site root (public/assets), next to public/data.
+        for (const { id, uri, bytes, sha256 } of referencedAssetFiles(header)) {
+          const file = path.join(dataDir, "..", uri);
+          if (!existsSync(file)) throw new DataError("bouts.json", where, `replay draws asset ${id}, but ${uri} is missing`);
+          const content = readFileSync(file);
+          if (content.byteLength !== bytes || createHash("sha256").update(content).digest("hex") !== sha256) {
+            throw new DataError("bouts.json", where, `${uri} does not match the size and sha256 its replay lists`);
+          }
+        }
       }
     }),
   );

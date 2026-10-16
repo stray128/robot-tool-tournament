@@ -32,6 +32,21 @@
         "generator": "tests/fixtures/replay_v2/make_fixture.mjs"
       }
     },
+    "894c91f30c343e92": {
+      "uri": "assets/894c91f30c343e92.glb",
+      "sha256": "894c91f30c343e92981ff067712415dcd23202269bcdd8451b7017b39055f36b",
+      "bytes": 1984,
+      "role": "object",
+      "license": "Apache-2.0",
+      "attribution": "Robot Tool Tournament (Apache-2.0)",
+      "changes": [],
+      "label": "box 90 x 40 x 120 mm",
+      "media_type": "model/gltf-binary",
+      "source": {
+        "kind": "generated",
+        "generator": "tests/fixtures/replay_v2/make_fixture.mjs"
+      }
+    },
     "c8b622d10d363f11": {
       "uri": "assets/c8b622d10d363f11.glb",
       "sha256": "c8b622d10d363f11e4f80bc74cac6034781744f41b60cf5981e48c0b9028e6a7",
@@ -41,21 +56,6 @@
       "attribution": "Robot Tool Tournament (Apache-2.0)",
       "changes": [],
       "label": "straight entrant, left jaw",
-      "media_type": "model/gltf-binary",
-      "source": {
-        "kind": "generated",
-        "generator": "tests/fixtures/replay_v2/make_fixture.mjs"
-      }
-    },
-    "f9d13fa997c7f6e5": {
-      "uri": "assets/f9d13fa997c7f6e5.glb",
-      "sha256": "f9d13fa997c7f6e5d4e8e338309710ce4559facc20d01ef68b2f3e01321c0065",
-      "bytes": 1984,
-      "role": "object",
-      "license": "Apache-2.0",
-      "attribution": "Robot Tool Tournament (Apache-2.0)",
-      "changes": [],
-      "label": "box 90 x 40 x 120 mm",
       "media_type": "model/gltf-binary",
       "source": {
         "kind": "generated",

@@ -1,10 +1,12 @@
 import { createHash } from "node:crypto";
-import { readdirSync, readFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { placedCorners } from "@/lib/assets";
+import { checkReplayFiles } from "@/lib/data";
 import {
   decodeFrames,
   decodeOverlays,
@@ -18,7 +20,7 @@ import {
   ReplayFormatError,
   replayCaption,
 } from "@/lib/replay";
-import type { ReplayHeaderV2 } from "@/lib/types";
+import type { BoutsIndex, ReplayHeaderV2 } from "@/lib/types";
 import { DataError } from "@/lib/validate";
 
 const WEB = path.join(__dirname, "..");
@@ -408,5 +410,44 @@ describe("bounds with asset boxes", () => {
     const buf = readFileSync(path.join(FIXTURE, h.bin));
     const frames = decodeFrames(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength), h);
     expect(frames.length).toBe(h.n_frames * h.n_bodies * 7);
+  });
+});
+
+describe("build-time replay check (lib/data.ts)", () => {
+  /** A site tree with the v2 fixture as one lane: public/data/replays/v2/ and public/assets/. */
+  function site(): { dir: string; data: string; index: BoutsIndex } {
+    const dir = mkdtempSync(path.join(os.tmpdir(), "rtt-site-"));
+    const data = path.join(dir, "data");
+    mkdirSync(path.join(data, "replays", "v2"), { recursive: true });
+    for (const f of ["sample.json", "sample.bin", "sample.ovl.bin"]) cpSync(path.join(FIXTURE, f), path.join(data, "replays", "v2", f));
+    cpSync(path.join(FIXTURE, "assets"), path.join(dir, "assets"), { recursive: true });
+    const index = { bouts: [{ lanes: [{ replay: "replays/v2/sample", n_frames: 182 }] }] } as unknown as BoutsIndex;
+    return { dir, data, index };
+  }
+
+  it("accepts a v2 lane whose overlays and assets are all served", () => {
+    const { dir, data, index } = site();
+    try {
+      expect(() => checkReplayFiles(index, data)).not.toThrow();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("fails the build on a missing or altered asset, or a short overlay file", () => {
+    const { dir, data, index } = site();
+    try {
+      const glb = readdirSync(path.join(dir, "assets")).find((f) => f.endsWith(".glb"))!;
+      const original = readFileSync(path.join(dir, "assets", glb));
+      writeFileSync(path.join(dir, "assets", glb), Buffer.concat([original, Buffer.from([0])]));
+      expect(() => checkReplayFiles(index, data)).toThrow(/does not match the size and sha256/);
+      rmSync(path.join(dir, "assets", glb));
+      expect(() => checkReplayFiles(index, data)).toThrow(/is missing/);
+      writeFileSync(path.join(dir, "assets", glb), original);
+      writeFileSync(path.join(data, "replays", "v2", "sample.ovl.bin"), Buffer.alloc(10));
+      expect(() => checkReplayFiles(index, data)).toThrow(/sample\.ovl\.bin is 10 bytes/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

@@ -43,7 +43,7 @@ const parked = (g) => g.type === "box" && g.half_size.every((h) => Math.abs(h) <
 const MATERIALS = {
   finger: { name: "pla_orange", baseColorFactor: hexToLinear("#e8742a"), metallicFactor: 0, roughnessFactor: 0.55 },
   palm: { name: "anodised_dark", baseColorFactor: hexToLinear("#3a3f47"), metallicFactor: 0.3, roughnessFactor: 0.45 },
-  object: { name: "aluminium", baseColorFactor: hexToLinear("#b8bcc2"), metallicFactor: 0.6, roughnessFactor: 0.35 },
+  object: { name: "aluminium", baseColorFactor: hexToLinear("#c3c7cc"), metallicFactor: 0.25, roughnessFactor: 0.4 },
 };
 const ROLES = { palm: "gripper_frame", finger_left: "finger_left", finger_right: "finger_right", object: "object" };
 const LABELS = {
