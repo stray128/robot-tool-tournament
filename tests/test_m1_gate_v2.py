@@ -26,6 +26,7 @@ from freeform_fixtures import (
 )
 from rtt.sim.episode import EpisodeResultV2
 from rtt.sim.gates_v2 import (
+    DECLARED_GV2,
     GV2_PLACEMENTS,
     HEAVY_FACTOR,
     LOW_MU,
@@ -57,6 +58,10 @@ def test_deliberate_failures_fail_for_the_right_reason() -> None:
     for label, case in report["cases"].items():
         assert case["passed"], (label, case)
     assert report["cases"]["too_high/block_30x40x60"]["failure_mode"] == "missed_grasp"
+    # the low-friction case accepts any failure mode (integration ruling, 2026-10-16)
+    assert report["cases"]["low_friction/block_30x40x60"]["expected"] == "any failure mode"
+    for p in ("block_30x40x60", "steel_slug_40"):
+        assert not report["cases"][f"low_friction/{p}"]["held_raw"]
     assert report["low_friction_supported"] == []  # prisms: nothing to rest on
     assert report["passed"]
 
@@ -144,6 +149,40 @@ def test_matrix_stats_counts_only_held_episodes_for_creep_and_held_penetration()
     assert s["failure_modes"] == {"not_registered": 1, "slip_during_lift": 1}
 
 
+def test_matrix_stats_keep_physics_unreliable_episodes_visible() -> None:
+    """Ruling 4: a held episode above 1 mm is scored physics_unreliable (not held, not
+    registered); the gate still counts it as held before the rule, for penetration and creep."""
+    unreliable = EpisodeResultV2(
+        success=False,
+        failure_mode="physics_unreliable",
+        max_lift=0.15,
+        hold_time=2.0,
+        metrics={"obj_finger_pen_max": 0.0016, "hold_creep_mm": 0.4},
+        flags=(),
+        seed=0,
+        controller_setting=-1,
+        n_steps=1,
+        wall_time_s=0.0,
+        lift_success=False,
+    )
+    s = matrix_stats([_fake(True, True, 0.2, 0.1), unreliable])
+    assert s["held_rate"] == pytest.approx(0.5) and s["held_raw_rate"] == pytest.approx(1.0)
+    assert s["physics_unreliable"] == 1 and s["pen_held_over_1mm"] == 1
+    assert s["pen_scored_success_over_1mm"] == 0 and s["creep_max_mm"] == pytest.approx(0.4)
+
+
+def test_stock_blade_criterion_is_measured_on_the_pad_contact_zone() -> None:
+    """Ruling 5 (D9): the hulls match the blade on its contact pad; the whole-face bulge lies
+    on recessed arms at least 2 mm behind the contact plane and is reported only."""
+    from rtt.sim.gates_v2 import stock_blade_check
+
+    out = stock_blade_check()
+    assert out["passed"] and out["bulge_pad_mm"] <= out["limit_mm"] == 0.2
+    assert out["bulge_whole_face_mm"] > out["limit_mm"]  # what the ruling settles
+    for side in out["sides"].values():
+        assert side["over_limit_min_recess_mm"] is None or side["over_limit_min_recess_mm"] >= 2.0
+
+
 def test_native_ccd_rule_needs_every_condition() -> None:
     lips = {"v1_regression_reproduced": True, "v2_analogues_fixed_with_native": True}
     assert native_ccd_rule(1.0, 0.995, lips)["switch_to_native"]
@@ -204,10 +243,17 @@ def test_gv2_quick_run_on_two_parts() -> None:
         parity_timestep=False,
         native_ccd_parity=False,
         fresh_processes=0,
-        cost_samples=0,
+        cost_samples=2,
     )
     m = report["matrix"]
     assert m["episodes"] == 2 * 2 * len(GV2_PLACEMENTS)
+    passed = report["passed"]
+    assert passed["timestep_1ms"] and TASK.physics.timestep == 0.001  # ruling 3 replaces the parity
+    assert "timestep_parity" not in passed
+    # the cost criterion is reported, and a miss is a declared deviation, never the gate's verdict
+    assert DECLARED_GV2 == {"cost"} and report["cost"]["ratio"] > 0
+    assert report["declared_misses"] == ([] if passed["cost"] else ["cost"])
+    assert passed["all"] == all(v for k, v in passed.items() if k not in ("all", *DECLARED_GV2))
     assert m["bad_qacc"] == 0 and not m["invalid_builds"]
     assert m["finger_length_vs_lowest_point_max_mm"] < 1e-3
     assert set(m["by_cell"]) == {f"{d}/{p.part_id}" for d in designs for p in parts}

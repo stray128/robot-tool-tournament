@@ -17,23 +17,36 @@ GV1:
   the seat before a side wall touches (``lateral_slide_mm``);
 * **zero-error registration**: both imprints register in >= 95 % of zero-error episodes on
   every part. Zero error means no placement error and no position or yaw jitter (the friction
-  jitter stays on); the same episodes with the full task jitter are reported as a diagnostic.
+  jitter stays on); the same episodes with the full task jitter are reported as a diagnostic;
+* **stock blade** (when asked for; the command line does): the committed blade hulls stand at
+  most 0.2 mm proud of the real blade on its contact pad (:func:`rtt.render.gripper.stock_blade_report`,
+  ``bulge_pad_mm``). Founder ruling 5 (decision D9, 2026-10-16) measures the bulge on the pad
+  contact zone only; the whole-face figure is reported beside it.
 
 GV2:
 
 * the strategy matrix (each design x each part x the train_v2 placements x 2 seeds): no MuJoCo
-  resets, object-jaw penetration <= 1 mm in held episodes and p99 <= 2 mm overall, hold creep
-  p95 <= 0.5 mm in held episodes;
-* deliberate failures fail: the tips 30 mm above the part's top, mu 0.05 on a copy of every
-  part made heavier than the friction capacity, and the part widened past the open jaws;
-* 1 ms vs 2 ms: >= 99 % identical outcomes (registered and held) over >= 200 v2 episodes;
+  resets, no scored success (registered or lift-only) with object-jaw penetration above 1 mm,
+  penetration p99 <= 2 mm overall, hold creep p95 <= 0.5 mm in held episodes. Under founder
+  ruling 4 (2026-10-16) a held episode above 1 mm is scored ``physics_unreliable`` (a failure),
+  so the first criterion holds by the scoring rule; the report counts those episodes
+  (``pen_held_over_1mm``, held before the rule) so the rule's reach stays visible;
+* deliberate failures fail: the tips 30 mm above the part's top (``missed_grasp``), mu 0.05 on
+  a copy of every part made heavier than the friction capacity (any failure mode; the
+  integration ruling of 2026-10-16), and the part widened past the open jaws;
+* timestep: the task runs at 1 ms (founder ruling 3), which replaces the spec's 1 ms vs 2 ms
+  parity criterion; the matrix is re-run at 2 ms and the agreement reported as a diagnostic;
 * ``native_ccd`` (spec section 6): outcome agreement on and off on the v1 parity set (200
   episodes) and on the same >= 200 v2 episodes, the lip-edge-normal regression (reproduced on
   v1 box lips with a primitive cylinder; v2 analogues with a mesh cylinder on box lips and on
-  convex-mesh lips), and the rule's verdict; the task's setting is the recorded decision;
+  convex-mesh lips), and the rule's verdict; the task's setting is the recorded decision
+  (native on by founder ruling 2, a declared deviation from the rule);
 * asymmetric jaws compile with their own mass properties;
 * determinism: identical trajectory hashes for 10 designs over 3 fresh processes;
 * cost: the v2 median episode CPU time is <= 1.5x the v1 median (interleaved, same process).
+  A miss is accepted as a declared deviation (:data:`DECLARED_GV2`): the founder accepted the
+  cost of the 1 ms step. The report gives the measured multiple; ``all`` leaves declared
+  criteria out and ``declared_misses`` lists them.
 
 Command line, with builder, parts and designs given as ``module:function``::
 
@@ -87,6 +100,11 @@ PARITY_MIN = 0.99
 PARITY_MIN_EPISODES = 200
 DETERMINISM_MIN_DESIGNS = 10  # spec GV2: 10 designs x 3 fresh processes
 COST_RATIO_MAX = 1.5
+#: GV2 criteria whose miss is a declared deviation rather than a gate failure (Addendum D).
+DECLARED_GV2: frozenset[str] = frozenset({"cost"})
+#: The v2 timestep set by founder ruling 3, and the step the timestep diagnostic compares with.
+TIMESTEP_V2 = 0.001
+TIMESTEP_COARSE = 0.002
 TOO_HIGH = 0.03  # m above the part's top
 LOW_MU = 0.05
 HEAVY_FACTOR = 2.0  # the low-friction copy weighs this many times the friction capacity
@@ -225,9 +243,20 @@ def matrix_jobs(
     return keys, jobs
 
 
+def held_raw(r: EpisodeResult) -> bool:
+    """Lifted and held by the v1 criterion, before the penetration rule (``physics_unreliable``
+    is only ever given to such an episode)."""
+    return bool(getattr(r, "lift_success", r.success)) or r.failure_mode == "physics_unreliable"
+
+
 def matrix_stats(results: Sequence[EpisodeResult]) -> dict[str, Any]:
-    """Penetration, creep, resets and rates of a set of v2 episodes."""
-    held = [r for r in results if r.lift_success]
+    """Penetration, creep, resets and rates of a set of v2 episodes.
+
+    ``held`` is the scored lift-only result; ``held_raw`` the v1 criterion before the
+    penetration rule. Penetration and creep in held episodes are measured over ``held_raw``.
+    """
+    held = [r for r in results if held_raw(r)]
+    scored = [r for r in results if r.lift_success]
     pen_held = [r.metrics["obj_finger_pen_max"] * 1000.0 for r in held]
     pen_all = [r.metrics["obj_finger_pen_max"] * 1000.0 for r in results]
     creep = [r.metrics["hold_creep_mm"] for r in held]
@@ -240,9 +269,14 @@ def matrix_stats(results: Sequence[EpisodeResult]) -> dict[str, Any]:
         "episodes": n,
         "bad_qacc": int(sum(r.bad_qacc for r in results)),
         "registered_rate": sum(r.success for r in results) / n if n else math.nan,
-        "held_rate": len(held) / n if n else math.nan,
+        "held_rate": len(scored) / n if n else math.nan,
+        "held_raw_rate": len(held) / n if n else math.nan,
+        "physics_unreliable": sum(r.failure_mode == "physics_unreliable" for r in results),
         "pen_held_max_mm": max(pen_held) if pen_held else math.nan,
         "pen_held_over_1mm": sum(v > PEN_HELD_MAX_MM for v in pen_held),
+        "pen_scored_success_over_1mm": sum(
+            r.metrics["obj_finger_pen_max"] * 1000.0 > PEN_HELD_MAX_MM for r in scored
+        ),
         "pen_registered_over_1mm": sum(
             r.metrics["obj_finger_pen_max"] * 1000.0 > PEN_HELD_MAX_MM for r in results if r.success
         ),
@@ -259,14 +293,23 @@ def _cells(keys: Sequence[tuple[str, str, str, int]], results: Sequence[EpisodeR
     for (dname, part_id, _, _), r in zip(keys, results, strict=True):
         cell = by_cell.setdefault(
             f"{dname}/{part_id}",
-            {"episodes": 0, "registered": 0, "held": 0, "modes": {}, "pen_max_mm": 0.0, "creep_max_mm": 0.0},
+            {
+                "episodes": 0,
+                "registered": 0,
+                "held": 0,
+                "held_raw": 0,
+                "modes": {},
+                "pen_max_mm": 0.0,
+                "creep_max_mm": 0.0,
+            },
         )
         cell["episodes"] += 1
         cell["registered"] += int(r.success)
         cell["held"] += int(r.lift_success)
+        cell["held_raw"] += int(held_raw(r))
         cell["pen_max_mm"] = max(cell["pen_max_mm"], round(r.metrics["obj_finger_pen_max"] * 1000.0, 3))
         creep = r.metrics["hold_creep_mm"]
-        if r.lift_success and math.isfinite(creep):
+        if held_raw(r) and math.isfinite(creep):
             cell["creep_max_mm"] = max(cell["creep_max_mm"], round(creep, 3))
         if r.failure_mode:
             cell["modes"][r.failure_mode] = cell["modes"].get(r.failure_mode, 0) + 1
@@ -284,8 +327,10 @@ def run_gv1(
     *,
     seeds: int = GV1_SEEDS,
     workers: int | None = None,
+    stock_blade: bool = False,
 ) -> dict[str, Any]:
-    """GV1 (module docstring). ``imprints``: name -> (design, designed clearance in m)."""
+    """GV1 (module docstring). ``imprints``: name -> (design, designed clearance in m);
+    ``stock_blade`` adds the stock-blade hull check (needs the vendored gripper meshes)."""
     task = task or default_task_v2()
     report: dict[str, Any] = {
         "gate": "GV1",
@@ -367,8 +412,55 @@ def run_gv1(
         "clearance": clearance_ok and bool(report["clearance"]),
         "zero_error_registration": reg_ok and bool(cells) and not report["invalid_builds"],
     }
+    if stock_blade:
+        report["stock_blade"] = stock_blade_check()
+        report["passed"]["stock_blade_pad_bulge"] = report["stock_blade"]["passed"]
     report["passed"]["all"] = all(report["passed"].values())
     return report
+
+
+def stock_blade_check() -> dict[str, Any]:
+    """GV1's stock-blade criterion: the blade hulls on the contact pad (founder ruling 5, D9).
+
+    The criterion is ``bulge_pad_mm`` <= 0.2 mm: how far the collision hulls stand proud of
+    the real blade where a part can touch it (inner-face points within 1 mm of the frontmost
+    point). The whole-face bulge, and how far behind the contact plane its over-limit points
+    sit, are reported beside it.
+    """
+    from rtt.render.gripper import BULGE_LIMIT_MM, stock_blade_report
+
+    rep = stock_blade_report()
+    sides = {
+        side: {
+            k: rep[side][k]
+            for k in (
+                "pieces",
+                "convex",
+                "stale_inputs",
+                "bulge_mm",
+                "bulge_pad_mm",
+                "inset_pad_mm",
+                "pad_area_mm2",
+                "over_limit_mm2",
+                "over_limit_min_recess_mm",
+            )
+        }
+        for side in ("left", "right")
+    }
+    ok = bool(
+        rep["pad_ok"]
+        and rep["pieces_ok"]
+        and all(v["convex"] and not v["stale_inputs"] for v in sides.values())
+    )
+    return {
+        "hulls_sha256": rep["hulls_sha256"],
+        "limit_mm": BULGE_LIMIT_MM,
+        "bulge_pad_mm": rep["bulge_pad_mm"],
+        "bulge_whole_face_mm": rep["bulge_mm"],
+        "measured_on": "pad contact zone (founder ruling 5, decision D9)",
+        "sides": sides,
+        "passed": ok,
+    }
 
 
 # --------------------------------------------------------------------------- GV2 pieces
@@ -401,6 +493,10 @@ def part_rests_on_jaws(
     return False
 
 
+#: The low-friction case accepts any failure mode (integration ruling, 2026-10-16).
+ANY_FAILURE: frozenset[str] = frozenset({"*"})
+
+
 def deliberate_failures(
     builder: Builder, parts: Sequence[Any], design: Any, task: TaskV2, workers: int | None = None
 ) -> dict[str, Any]:
@@ -409,9 +505,10 @@ def deliberate_failures(
     * ``too_high``: the tips 30 mm above the part's top (``grasp_z_offset``): ``missed_grasp``.
     * ``low_friction``: mu 0.05 on a copy of the part ``HEAVY_FACTOR`` times heavier than what
       both jaws can carry by friction at that mu (the same geometry, so the same jaws): it
-      must slip, unless the part can rest on the jaws (:func:`part_rests_on_jaws`; then the
-      case is reported as ``supported`` and not counted). At least half the parts must be
-      tested.
+      must fail, in any failure mode (a slip, a drop, an ejection on closing or a physics
+      flag all mean it was not carried), unless the part can rest on the jaws
+      (:func:`part_rests_on_jaws`; then the case is reported as ``supported`` and not
+      counted). At least half the parts must be tested. ``held_raw`` is reported per case.
     * ``too_wide``: the part widened along the closing axis so it is 5 mm wider than the open
       jaws on each side: the jaws come down on it.
     """
@@ -438,7 +535,7 @@ def deliberate_failures(
             supported.append(part.part_id)
             expect.append(set())
         else:
-            expect.append({"slip_during_lift", "missed_grasp", "unstable_hold"})
+            expect.append(ANY_FAILURE)
         width = part.size[1]
         wide = scale_part(part, (1.0, (width + 2.0 * pair.q_seat + WIDE_MARGIN) / width, 1.0), part.name)
         jobs.append(EpisodeJob(pair, wide, objs.Placement(), -1, 0, task=task))
@@ -447,13 +544,18 @@ def deliberate_failures(
     results = _run(jobs, workers)
     cases = {}
     for label, want, r in zip(labels, expect, results, strict=True):
-        row: dict[str, Any] = {"failure_mode": r.failure_mode, "lift_success": bool(r.lift_success)}
+        row: dict[str, Any] = {
+            "failure_mode": r.failure_mode,
+            "lift_success": bool(r.lift_success),
+            "held_raw": held_raw(r),
+        }
         if not want:
             row.update(supported=True, passed=True)
         else:
+            failed = (not r.success) and (not r.lift_success) and r.failure_mode is not None
             row.update(
-                expected=sorted(want),
-                passed=(not r.success) and (not r.lift_success) and r.failure_mode in want,
+                expected="any failure mode" if want is ANY_FAILURE else sorted(want),
+                passed=failed and (want is ANY_FAILURE or r.failure_mode in want),
             )
         cases[label] = row
     n_parts = sum(label.startswith("too_high/") for label in labels)
@@ -741,7 +843,9 @@ def run_gv2(
     passed = {
         "matrix_builds": not invalid and bool(m_res),
         "bad_qacc_zero": stats["bad_qacc"] == 0,
-        "penetration_held": stats["pen_held_over_1mm"] == 0,
+        # ruling 4: a held episode above 1 mm scores physics_unreliable, so no scored success
+        # may carry such a penetration; pen_held_over_1mm counts the episodes the rule caught
+        "penetration_held": stats["pen_scored_success_over_1mm"] == 0,
         "penetration_p99": bool(stats["pen_p99_mm"] <= PEN_P99_MAX_MM),
         "creep_p95": bool(stats["creep_p95_mm"] <= CREEP_P95_MAX_MM),
     }
@@ -770,15 +874,17 @@ def run_gv2(
     report["asymmetric_jaws"] = {"pairs": asym, "own_mass_properties": all(v["own"] for v in asym.values())}
     passed["asymmetric_jaws"] = bool(asym) and report["asymmetric_jaws"]["own_mass_properties"]
 
+    # Founder ruling 3: every v2 episode runs at 1 ms, which replaces the 1 ms vs 2 ms parity
+    # criterion. The matrix is re-run at the coarser step as a diagnostic only.
+    passed["timestep_1ms"] = math.isclose(task.physics.timestep, TIMESTEP_V2, rel_tol=0, abs_tol=1e-12)
     if parity_timestep:
-        fine = _run(_with_physics(jobs, timestep=0.001), workers)
-        report["timestep_parity"] = {
-            "timesteps_s": [0.001, task.physics.timestep],
-            **_agreement(fine, results),
+        other_dt = TIMESTEP_COARSE if task.physics.timestep < TIMESTEP_COARSE else TIMESTEP_V2
+        coarse = _run(_with_physics(jobs, timestep=other_dt), workers)
+        report["timestep_sensitivity"] = {
+            "criterion": "replaced by founder ruling 3 (1 ms for every v2 episode); diagnostic only",
+            "timesteps_s": [task.physics.timestep, other_dt],
+            **_agreement(results, coarse),
         }
-        passed["timestep_parity"] = (
-            len(jobs) >= PARITY_MIN_EPISODES and report["timestep_parity"]["outcome_agreement"] >= PARITY_MIN
-        )
     if native_ccd_parity:
         other = _run(_with_physics(jobs, native_ccd=not task.physics.native_ccd), workers)
         off, on = (other, results) if task.physics.native_ccd else (results, other)
@@ -802,6 +908,11 @@ def run_gv2(
         v2 = nccd["v2_off_vs_on"]
         nccd["rule"] = native_ccd_rule(v1_agree, v2["outcome_agreement"], lips, v1_n, v2["n"])
         nccd["decision"] = task.physics.native_ccd
+        nccd["decision_basis"] = (
+            "the rule of spec section 6"
+            if task.physics.native_ccd == nccd["rule"]["switch_to_native"]
+            else "founder ruling 2 (2026-10-16): native collision on for v2, a declared deviation from the rule"
+        )
         report["native_ccd"] = nccd
         passed["native_ccd_decision_recorded"] = True
     if fresh_processes:
@@ -815,8 +926,10 @@ def run_gv2(
         )
     if cost_samples:
         report["cost"] = cost_ratio(jobs, cost_samples)
+        report["cost"]["limit"] = COST_RATIO_MAX
         passed["cost"] = report["cost"]["ratio"] <= COST_RATIO_MAX
-    passed["all"] = all(passed.values())
+    report["declared_misses"] = sorted(k for k in DECLARED_GV2 if passed.get(k) is False)
+    passed["all"] = all(v for k, v in passed.items() if k not in DECLARED_GV2)
     report["passed"] = passed
     report["wall_s"] = time.perf_counter() - t0
     return report
@@ -939,6 +1052,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--seeds", type=int, default=None, help="gv1: seeds per cell; gv2: seeds per condition"
     )
     parser.add_argument("--quick", action="store_true", help="gv2: matrix, failures and mass checks only")
+    parser.add_argument(
+        "--skip-stock-blade", action="store_true", help="gv1: leave out the stock-blade hull check"
+    )
     parser.add_argument("--out", type=Path, default=None, help="write the JSON report here")
     args = parser.parse_args(argv)
     from rtt.sim.task import load_task_v2
@@ -948,7 +1064,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         task = task.with_overrides(physics={"native_ccd": args.native_ccd == "true"})
     builder, parts, designs = _load(args.builder), _load(args.parts)(), _load(args.designs)()
     if args.gate == "gv1":
-        report = run_gv1(builder, parts, designs, task, seeds=args.seeds or GV1_SEEDS, workers=args.workers)
+        report = run_gv1(
+            builder,
+            parts,
+            designs,
+            task,
+            seeds=args.seeds or GV1_SEEDS,
+            workers=args.workers,
+            stock_blade=not args.skip_stock_blade,
+        )
     else:
         quick: dict[str, Any] = {}
         if args.quick:
