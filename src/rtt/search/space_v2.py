@@ -533,10 +533,26 @@ class V2Context:
             object.__setattr__(self, "part_ids", tuple(str(p.part_id) for p in self.parts))
 
     def remember_pair(self, design_id: str, part_id: str, pair: Any) -> None:
+        # The LLM arms' runs ask in threads and share this context, so another thread may evict
+        # an entry between two of these steps; a missing key is then simply a cache miss.
         self.pairs[(design_id, part_id)] = pair
-        self.pairs.move_to_end((design_id, part_id))
-        while len(self.pairs) > PAIR_CACHE:
-            self.pairs.popitem(last=False)
+        try:
+            self.pairs.move_to_end((design_id, part_id))
+            while len(self.pairs) > PAIR_CACHE:
+                self.pairs.popitem(last=False)
+        except KeyError:
+            pass
+
+    def recall_pair(self, design_id: str, part_id: str) -> Any | None:
+        """The cached pair, or ``None`` (also when another thread evicted it a moment ago)."""
+        key = (design_id, part_id)
+        pair = self.pairs.get(key)
+        if pair is not None:
+            try:
+                self.pairs.move_to_end(key)
+            except KeyError:
+                pass
+        return pair
 
     def to_json(self) -> dict[str, Any]:
         """Manifest summary (part ids only: the parts are hashed into the suite hash)."""
@@ -858,9 +874,8 @@ class FreeformSpaceV2:
         if task is None:
             raise ValueError("building a v2 jaw pair needs the task (V2Context.task)")
         key = (self.design_id(design), str(part.part_id))
-        cached = context.pairs.get(key) if isinstance(context, V2Context) else None
+        cached = context.recall_pair(*key) if isinstance(context, V2Context) else None
         if cached is not None:
-            context.pairs.move_to_end(key)
             return cached
         pair = build(self.buildable(design), part, task)
         if isinstance(context, V2Context):

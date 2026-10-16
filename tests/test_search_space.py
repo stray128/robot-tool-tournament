@@ -354,3 +354,20 @@ def test_a_generator_crash_rejects_the_design_instead_of_ending_the_run(monkeypa
     check = V2S.validate(recipe, ctx)
     assert not check.ok and check.stage == "build" and check.metrics == {"generator_error": 1.0}
     assert check.errors[0].startswith("generator_error:") and "did not converge" in check.errors[0]
+
+
+def test_pair_cache_survives_an_eviction_by_another_thread() -> None:
+    """The LLM arms' runs ask in threads on one shared context: a key evicted mid-step is a miss, not a crash."""
+    from collections import OrderedDict
+
+    from rtt.search.space_v2 import V2Context
+
+    class Racy(OrderedDict):
+        def move_to_end(self, key, last=True):  # another thread popped it a moment ago
+            raise KeyError(key)
+
+    ctx = V2Context()
+    object.__setattr__(ctx, "pairs", Racy())
+    ctx.remember_pair("d", "p", "pair")
+    assert ctx.recall_pair("d", "p") == "pair"
+    assert ctx.recall_pair("d", "other") is None
