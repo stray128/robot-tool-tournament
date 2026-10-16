@@ -492,7 +492,8 @@ def check_header(
 def write_replay(replay: Replay, stem: str | Path) -> tuple[Path, Path]:
     """Write ``<stem>.bin`` and ``<stem>.json`` (and ``<stem>.ovl.bin`` for a v2 replay with
     overlays); returns the pose and header paths. A v2 header is checked first
-    (:func:`check_header`) and nothing is written if it breaks a rule."""
+    (:func:`check_header`) and nothing is written if it breaks a rule; it is written as
+    compact JSON, since it is part of every lane's download."""
     stem = Path(stem)
     bin_path, json_path = stem.with_suffix(".bin"), stem.with_suffix(".json")
     frames = np.ascontiguousarray(replay.frames, dtype="<f4")
@@ -516,7 +517,11 @@ def write_replay(replay: Replay, stem: str | Path) -> tuple[Path, Path]:
     bin_path.write_bytes(frames.tobytes())
     if ovl_path is not None:
         ovl_path.write_bytes(np.ascontiguousarray(replay.overlays, dtype="<f2").tobytes())
-    json_path.write_text(json.dumps(header, indent=1) + "\n", encoding="utf-8")
+    if int(header.get("version", VERSION_V1)) == VERSION:  # compact: the header is part of the web payload
+        text = json.dumps(header, separators=(",", ":"), ensure_ascii=False)
+    else:  # version 1 headers keep their layout byte for byte (the F1 fallback)
+        text = json.dumps(header, indent=1)
+    json_path.write_text(text + "\n", encoding="utf-8")
     return bin_path, json_path
 
 

@@ -20,7 +20,8 @@ from rtt.part.pack import PACK_V2_FILES, make_print_pack_v2
 from rtt.pipeline.export_web import export_web
 from rtt.pipeline.replays import lift_to_v2
 from rtt.pipeline.slice import SliceConfig, read_slice, run_slice
-from rtt.render.glb import AssetStore, read_glb
+from rtt.render.compress import compression_available
+from rtt.render.glb import AssetStore, read_glb, read_glb_json
 from rtt.render.gripper import load_lock
 from rtt.search.fakes import ScriptedProposer
 from rtt.search.nemotron import make_proposer_client
@@ -32,7 +33,10 @@ from schema_lite import Validator
 
 REPO = Path(__file__).resolve().parents[1]
 VALIDATOR = Validator(json.loads((REPO / "src" / "rtt" / "sim" / "replay_v2.schema.json").read_text()))
-HERO_PAYLOAD_BYTES = 300 * 1024  # GV-R: a hero replay with its GLBs, before web compression
+HERO_PAYLOAD_BYTES = 300_000  # GV-R: one lane's download (header, poses, overlays, GLBs) as served
+needs_compressor = pytest.mark.skipif(
+    not compression_available(), reason="GLB compression needs node and web/node_modules (pnpm install)"
+)
 
 
 @pytest.fixture(scope="module")
@@ -49,14 +53,24 @@ def slice_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
 def _payload(data: Path, assets: Path, lane: dict[str, Any]) -> int:
     header = json.loads((data / f"{lane['replay']}.json").read_text())
     files = [data / f"{lane['replay']}.json", data / f"{lane['replay']}.bin"]
+    if header.get("overlays"):
+        files.append(data / f"{lane['replay']}.ovl.bin")
     files += [assets / f"{aid}.glb" for aid in header["assets"]]
     return sum(f.stat().st_size for f in files)
 
 
+@needs_compressor
 def test_export_v2_lifts_lanes_and_publishes_assets(slice_dir: Path, tmp_path: Path) -> None:
     data, assets = tmp_path / "public" / "data", tmp_path / "public" / "assets"
     result = export_web([slice_dir], data, replay_version=2)
     assert result.replays == 5 and result.assets
+    assert set(result.payload_bytes) == {
+        lane["replay"] for lane in json.loads((data / "bouts.json").read_text())["bouts"][0]["lanes"]
+    }
+    for aid in result.assets:  # served meshopt-compressed, credit kept in the file
+        doc = read_glb_json((assets / f"{aid}.glb").read_bytes())
+        assert "EXT_meshopt_compression" in doc["extensionsRequired"]
+        assert doc["asset"]["copyright"]
     manifest = json.loads((assets / "manifest.json").read_text())
     assert set(result.assets) <= set(manifest["assets"])
     bout = json.loads((data / "bouts.json").read_text())["bouts"][0]
@@ -72,7 +86,7 @@ def test_export_v2_lifts_lanes_and_publishes_assets(slice_dir: Path, tmp_path: P
         licences = {e["role"]: e["license"] for e in fingers}
         stock = lane["entrant"] == "stock"
         assert licences["finger_left"] == ("CC-BY-4.0" if stock else "Apache-2.0")
-        assert _payload(data, assets, lane) <= HERO_PAYLOAD_BYTES
+        assert _payload(data, assets, lane) == result.payload_bytes[lane["replay"]] <= HERO_PAYLOAD_BYTES
     # the default export is unchanged: version 1 headers, no assets
     v1 = export_web([slice_dir], tmp_path / "v1" / "data")
     lane = json.loads((tmp_path / "v1" / "data" / "bouts.json").read_text())["bouts"][0]["lanes"][0]
@@ -90,11 +104,129 @@ def test_v2_run_directories_export_with_their_own_assets(slice_dir: Path, tmp_pa
     store.write_manifest()
     with pytest.raises(ValueError, match="replay_version=2"):
         export_web([run], tmp_path / "a" / "data")
-    result = export_web([run], tmp_path / "b" / "data", replay_version=2)
-    assert result.replays == 5 and set(result.assets) <= set(store.entries)
+    result = export_web([run], tmp_path / "b" / "data", replay_version=2, compress=False)
+    assert result.replays == 5 and set(result.assets) <= set(store.entries)  # served raw: the store's ids
     (run / "assets" / f"{result.assets[0]}.glb").write_bytes(b"tampered")
     with pytest.raises(ValueError, match="does not match"):
-        export_web([run], tmp_path / "c" / "data", replay_version=2)
+        export_web([run], tmp_path / "c" / "data", replay_version=2, compress=False)
+
+
+# --------------------------------------------------------------------------- v2 bouts
+
+BOUT_EPISODES = (
+    {"stem": "flat_block_c1", "design": "flat", "part": "block", "placement": "c1"},
+    {
+        "stem": "stock_block_c1",
+        "design": "stock",
+        "part": "block",
+        "placement": "c1",
+        "label": "Stock blade, as shipped",
+    },
+)
+
+
+@pytest.fixture(scope="module")
+def bout_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    from rtt.pipeline.replays import record_bout_v2
+
+    out = tmp_path_factory.mktemp("bout") / "v2-test-bout"
+    record_bout_v2(out, BOUT_EPISODES, run_id="v2-test-bout", title="Two v2 jaws", summary="Test bout.")
+    return out
+
+
+def test_record_bout_v2_writes_lanes_with_scored_outcomes(bout_dir: Path) -> None:
+    doc = json.loads((bout_dir / "bout.json").read_text())
+    assert doc["format"] == "rtt-bout" and doc["version"] == 2 and doc["run_id"] == "v2-test-bout"
+    assert [lane["stem"] for lane in doc["lanes"]] == ["flat_block_c1", "stock_block_c1"]
+    flat, stock = doc["lanes"]
+    assert flat["label"] == "Flat pad" and stock["label"] == "Stock blade, as shipped"
+    assert flat["condition"] == "block, 2 mm off centre across the jaw"
+    for lane in doc["lanes"]:
+        header = read_replay(bout_dir / lane["stem"]).header
+        assert header["version"] == 2 and VALIDATOR.errors(header) == []
+        assert (
+            header["meta"]["design_id"] == lane["design_id"] and header["meta"]["part_id"] == lane["part_id"]
+        )
+        assert (
+            header["meta"]["success"] == lane["success"]
+            and header["meta"]["failure_mode"] == lane["failure_mode"]
+        )
+        assert header["provenance"]["condition"] == lane["condition_id"] == "train_v2/block/c1"
+        text = (bout_dir / f"{lane['stem']}.json").read_text()
+        assert (
+            text == json.dumps(json.loads(text), separators=(",", ":"), ensure_ascii=False) + "\n"
+        )  # compact
+
+
+@needs_compressor
+def test_export_v2_bout_publishes_labelled_part_lanes_within_budget(bout_dir: Path, tmp_path: Path) -> None:
+    data, assets = tmp_path / "public" / "data", tmp_path / "public" / "assets"
+    with pytest.raises(ValueError, match="replay_version=2"):
+        export_web([bout_dir], data)
+    result = export_web([bout_dir], data, replay_version=2)
+    bout = json.loads((data / "bouts.json").read_text())["bouts"][0]
+    assert (
+        bout["id"] == "v2-test-bout" and bout["title"] == "Two v2 jaws" and bout["task"]["name"] == "task_v2"
+    )
+    manifest = json.loads((assets / "manifest.json").read_text())["assets"]
+    labels = {lane["id"]: lane["label"] for lane in bout["lanes"]}
+    assert labels == {"flat_block_c1": "Flat pad", "stock_block_c1": "Stock blade, as shipped"}
+    for lane in bout["lanes"]:
+        assert lane["object"]["kind"] == "part" and lane["object"]["part_id"] == "block"
+        assert lane["controller_setting"] is None and lane["outcome"]["source"] == "scorer"
+        header = json.loads((data / f"{lane['replay']}.json").read_text())
+        assert VALIDATOR.errors(header) == []
+        assert header["meta"]["design_id"] == lane["design_id"]  # the label describes this replay
+        assert _payload(data, assets, lane) == result.payload_bytes[lane["replay"]] <= HERO_PAYLOAD_BYTES
+        for aid, entry in header["assets"].items():
+            blob = (assets / f"{aid}.glb").read_bytes()
+            assert hashlib.sha256(blob).hexdigest() == entry["sha256"] and entry["attribution"]
+            assert manifest[aid] == entry
+            assert "EXT_meshopt_compression" in read_glb_json(blob)["extensionsRequired"]
+        jaws = {b["name"]: b for b in header["bodies"]}
+        if lane["entrant"] == "stock":  # the blade's 80 hulls are not published; the CAD is drawn
+            assert "geoms" not in jaws["finger_left"] and "geoms" not in jaws["finger_right"]
+            assert header["meta"]["collision_overlay_omitted"] == ["finger_left", "finger_right"]
+        else:
+            assert jaws["finger_left"]["geoms"] and jaws["finger_right"]["geoms"]
+
+
+def test_export_v2_bout_refuses_a_lane_labelled_for_another_replay(bout_dir: Path, tmp_path: Path) -> None:
+    run = tmp_path / "swapped"
+    shutil.copytree(bout_dir, run)
+    doc = json.loads((run / "bout.json").read_text())
+    doc["lanes"][0]["stem"], doc["lanes"][1]["stem"] = doc["lanes"][1]["stem"], doc["lanes"][0]["stem"]
+    (run / "bout.json").write_text(json.dumps(doc))
+    with pytest.raises(ValueError, match="another lane's label"):
+        export_web([run], tmp_path / "data", replay_version=2, compress=False)
+
+
+def test_export_v2_refuses_a_lane_over_the_payload_budget(bout_dir: Path, tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="byte budget"):
+        export_web([bout_dir], tmp_path / "data", replay_version=2, compress=False, payload_budget=50_000)
+    assert not (tmp_path / "data" / "bouts.json").exists()  # nothing half-published
+
+
+@needs_compressor
+def test_compression_is_deterministic_and_keeps_each_credit(bout_dir: Path) -> None:
+    from rtt.render.compress import compress_assets, remap_header_assets
+
+    store = AssetStore(bout_dir / "assets")
+    raw = {aid: (store.path(aid).read_bytes(), store.entry(aid)) for aid in sorted(store.entries)}
+    first, again = compress_assets(raw), compress_assets(raw)
+    assert {k: v[0] for k, v in first.items()} == {k: v[0] for k, v in again.items()}
+    assert sum(len(b) for b, _ in first.values()) < 0.6 * sum(len(b) for b, _ in raw.values())
+    for aid, (blob, entry) in first.items():
+        for key in ("role", "license", "attribution", "changes", "source"):
+            assert entry[key] == raw[aid][1][key]
+        doc = read_glb_json(blob)
+        assert doc["asset"]["copyright"] == entry["attribution"]
+        assert doc["asset"]["extras"]["license"] == entry["license"]
+    header = read_replay(bout_dir / "stock_block_c1").header
+    remap_header_assets(header, first)
+    served = {e["sha256"][:16] for _, e in first.values()}
+    assert set(header["assets"]) <= served
+    assert all(v["asset"] in header["assets"] for b in header["bodies"] for v in b["visuals"])
 
 
 # --------------------------------------------------------------------------- print pack v2

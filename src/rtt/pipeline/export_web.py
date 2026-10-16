@@ -24,10 +24,24 @@ With ``replay_version=2`` every lane is published as a replay v2 header
 (``src/rtt/sim/replay_v2.schema.json``): v1 replays are lifted on the way
 (:func:`rtt.pipeline.replays.lift_to_v2`: the open-source gripper's frame and carriages,
 each jaw's own asset, the stock entrant drawn with the stock blade's CAD), v2 replays are
-copied with their overlay sidecar, and every GLB they draw is copied, sha256-checked, into
-``assets_dir`` (default ``web/public/assets``) with its entry merged into that directory's
-``manifest.json``. A run directory that holds v2 replays keeps their asset store in
+copied with their overlay sidecar, and every GLB they draw is sha256-checked, meshopt-compressed
+(:func:`rtt.render.compress.compress_assets`, the web build's own compressor; ``compress=False``
+serves the raw files) and written to ``assets_dir`` (default ``web/public/assets``) with its
+entry merged into that directory's ``manifest.json``; the published headers point at the
+served ids. A run directory that holds v2 replays keeps their asset store in
 ``<run_dir>/assets/``.
+
+A **v2 bout** directory (``bout.json`` of format ``rtt-bout`` version 2, written by
+:func:`rtt.pipeline.replays.record_bout_v2`) becomes one bout of v2-native lanes: freeform jaw
+pairs on ``train_v2`` parts, each lane labelled from the bout file and checked against its
+replay (design and part ids), with the part as the lane's object (``kind: "part"``). It needs
+``replay_version=2``.
+
+Published v2 headers are compact JSON, and a jaw drawn with the stock blade's CAD carries no
+collision geoms (its committed convex hulls, 40 per jaw, would be most of the download). Each
+lane's download (header, poses, overlays and every GLB it draws) must fit ``payload_budget``
+(:data:`HERO_PAYLOAD_BYTES`, the hero budget, by default); :attr:`ExportResult.payload_bytes`
+reports each lane.
 
 Entries are owned by a ``source`` tag, ``export:<run name>``: re-exporting a run
 replaces exactly its own entries and keeps everyone else's (the demo importer uses
@@ -48,7 +62,7 @@ from typing import Any, Final
 
 from rtt.design.schema import GEOMETRY_PARAMS, FingerDesign, design_json_schema
 
-__all__ = ["DEFAULT_DATA_DIR", "ExportResult", "export_web", "task_summary"]
+__all__ = ["DEFAULT_DATA_DIR", "HERO_PAYLOAD_BYTES", "ExportResult", "export_web", "task_summary"]
 
 REPO_ROOT: Final = Path(__file__).resolve().parents[3]
 DEFAULT_DATA_DIR: Final = REPO_ROOT / "web" / "public" / "data"
@@ -63,6 +77,7 @@ ORIGINS: Final = {
     "zeroshot": "zeroshot",
 }
 LANE_KINDS: Final = {"box": "box", "cylinder": "cylinder", "rod": "capsule"}
+HERO_PAYLOAD_BYTES: Final = 300_000  # gate GV-R: one lane's download, GLBs included
 
 
 @dataclass
@@ -76,6 +91,7 @@ class ExportResult:
     replays: int = 0
     skipped: list[str] = field(default_factory=list)
     assets: list[str] = field(default_factory=list)
+    payload_bytes: dict[str, int] = field(default_factory=dict)  # v2 lane replay -> its download
 
     def describe(self) -> str:
         return (
@@ -386,7 +402,8 @@ class _Staged:
     jobs: list[dict[str, Any]] = field(default_factory=list)
     copies: list[tuple[Path, str]] = field(default_factory=list)  # (source file, path under data dir)
     design_dirs: list[tuple[Path, str]] = field(default_factory=list)  # (staged dir, design id)
-    assets: dict[str, tuple[Path, dict[str, Any]]] = field(default_factory=dict)  # id -> (GLB, entry)
+    assets: dict[str, tuple[bytes, dict[str, Any]]] = field(default_factory=dict)  # id -> (GLB, entry)
+    pending_v2: list[tuple[Any, str, Path]] = field(default_factory=list)  # (v2 replay, rel, asset root)
 
 
 def _stage_v2_replay(
@@ -400,10 +417,9 @@ def _stage_v2_replay(
     run_id: str,
     code_version: str,
 ) -> None:
-    """Stage one lane as a replay v2 (lifting a v1 replay) plus the GLBs it draws."""
+    """Stage one lane as a replay v2 (lifting a v1 replay); :func:`_finish_v2` writes it."""
     from rtt.pipeline.replays import lift_to_v2
     from rtt.render.glb import AssetStore
-    from rtt.sim.replay import write_replay
 
     if replay.version == 1:
         store = AssetStore(staging / "assets")
@@ -411,18 +427,91 @@ def _stage_v2_replay(
         asset_root = store.root
     else:
         asset_root = run_dir / "assets"
-    stem = staging / "replays_v2" / rel
-    bin_path, json_path = write_replay(replay, stem)
-    staged.copies += [(bin_path, f"{rel}.bin"), (json_path, f"{rel}.json")]
-    if replay.overlays is not None:
-        staged.copies.append((stem.with_name(stem.name + ".ovl.bin"), f"{rel}.ovl.bin"))
-    for aid, entry in replay.header["assets"].items():
-        src = asset_root / f"{aid}.glb"
-        if not src.is_file():
+    for aid in replay.header["assets"]:
+        if not (asset_root / f"{aid}.glb").is_file():
             raise FileNotFoundError(
                 f"{run_dir}: replay {rel} draws asset {aid}, which is not in {asset_root}"
             )
-        staged.assets[aid] = (src, dict(entry))
+    staged.pending_v2.append((replay, rel, asset_root))
+
+
+def _web_header(header: Mapping[str, Any]) -> dict[str, Any]:
+    """The header as published: a jaw drawn with the stock blade's CAD loses its collision geoms.
+
+    The stock blade's collision solid is its committed convex hulls (40 per jaw); inlined as
+    v1 mesh geoms they are most of a stock lane's download, and the jaw on screen is the CAD
+    anyway. ``meta.collision_overlay_omitted`` names the bodies left without an overlay.
+    """
+    from rtt.render.glb import OURS_LICENSE
+
+    out = json.loads(json.dumps(header))
+    omitted = []
+    for body in out["bodies"]:
+        if body["name"] not in ("finger_left", "finger_right") or not body.get("geoms"):
+            continue
+        drawn = [out["assets"][v["asset"]] for v in body.get("visuals", [])]
+        if any(e["role"] == body["name"] and e["license"] != OURS_LICENSE for e in drawn):
+            del body["geoms"]
+            omitted.append(body["name"])
+    if omitted:
+        out["meta"]["collision_overlay_omitted"] = omitted
+    return out
+
+
+def _finish_v2(
+    staged: _Staged, staging: Path, *, compress: bool, payload_budget: int | None
+) -> dict[str, int]:
+    """Write every pending v2 lane, drawing served (compressed) assets; returns each lane's payload.
+
+    All GLBs are checked against their entries and compressed in one run; ``staged.assets``
+    then holds exactly the served files the lanes draw.
+    """
+    import hashlib
+
+    from rtt.render.compress import compress_assets, remap_header_assets
+    from rtt.render.glb import check_entry
+    from rtt.sim.replay import Replay, write_replay
+
+    raw: dict[str, tuple[bytes, dict[str, Any]]] = {}
+    for replay, rel, root in staged.pending_v2:
+        for aid, entry in replay.header["assets"].items():
+            data = (root / f"{aid}.glb").read_bytes()
+            if hashlib.sha256(data).hexdigest() != entry["sha256"] or len(data) != entry["bytes"]:
+                raise ValueError(f"asset {aid} drawn by {rel}: {aid}.glb does not match its manifest entry")
+            errs = check_entry(aid, entry)
+            if errs:
+                raise ValueError("; ".join(errs))
+            if aid in raw and raw[aid][1] != dict(entry):
+                raise ValueError(f"asset {aid} is listed with different metadata by two replays")
+            raw[aid] = (data, dict(entry))
+    served = compress_assets(raw) if compress else raw
+    by_sha = {e["sha256"]: data for data, e in served.values()}
+    payloads: dict[str, int] = {}
+    for replay, rel, _ in staged.pending_v2:
+        header = _web_header(replay.header)
+        if compress:
+            remap_header_assets(header, served)
+        stem = staging / "replays_v2" / rel
+        bin_path, json_path = write_replay(
+            Replay(frames=replay.frames, header=header, overlays=replay.overlays), stem
+        )
+        files = [(bin_path, f"{rel}.bin"), (json_path, f"{rel}.json")]
+        if replay.overlays is not None:
+            files.append((stem.with_name(stem.name + ".ovl.bin"), f"{rel}.ovl.bin"))
+        staged.copies += files
+        payload = sum(p.stat().st_size for p, _ in files) + sum(
+            int(e["bytes"]) for e in header["assets"].values()
+        )
+        if payload_budget is not None and payload > payload_budget:
+            raise ValueError(
+                f"lane {rel} downloads {payload:,} bytes (header, poses, overlays and its GLBs), over the "
+                f"{payload_budget:,} byte budget"
+            )
+        payloads[rel] = payload
+        for aid, entry in header["assets"].items():
+            staged.assets[aid] = (by_sha[entry["sha256"]], dict(entry))
+    staged.pending_v2.clear()
+    return payloads
 
 
 def _slice_entries(
@@ -624,6 +713,112 @@ def _slice_entries(
     return staged
 
 
+# --------------------------------------------------------------------------- v2 bout
+
+
+def _bout_v2_entries(run_dir: Path, doc: Mapping[str, Any], staging: Path, source: str) -> _Staged:
+    """One bout of v2-native lanes from a v2 bout directory (:func:`rtt.pipeline.replays.record_bout_v2`)."""
+    from rtt.sim.replay import read_replay
+    from rtt.sim.task import default_task_v2, task_digest
+
+    task = default_task_v2()
+    if doc["task"]["digest"] != task_digest(task):
+        raise ValueError(
+            f"{run_dir}: recorded under task {doc['task']['digest']}, the current v2 task is "
+            f"{task_digest(task)}; re-record the bout (replays must match the task the site prints)"
+        )
+    staged = _Staged()
+    bout_id = _slug(str(doc.get("run_id") or run_dir.name))
+    lanes = []
+    total_steps, total_wall = 0, 0.0
+    for lane in doc["lanes"]:
+        stem = str(lane["stem"])
+        rel = f"replays/{bout_id}/{stem}"
+        replay = read_replay(run_dir / stem)
+        if replay.version != 2:
+            raise ValueError(
+                f"{run_dir}: replay {stem} is version {replay.version}; a v2 bout holds v2 replays"
+            )
+        if replay.n_frames != lane["n_frames"]:
+            raise ValueError(
+                f"{run_dir}: replay {stem} has {replay.n_frames} frames, bout.json says {lane['n_frames']}"
+            )
+        meta = replay.header["meta"]
+        # the lane's label must describe the replay it plays: same design, same part
+        for key, want in (("design_id", lane["design_id"]), ("part_id", _slug(str(lane["part_id"])))):
+            if meta.get(key) != want:
+                raise ValueError(
+                    f"{run_dir}: lane {stem} says {key} {want}, its replay shows {meta.get(key)}; "
+                    "refusing to publish a lane under another lane's label"
+                )
+        _stage_v2_replay(replay, run_dir, rel, staging, staged, stock=False, run_id=bout_id, code_version="")
+        total_steps += int(lane["n_steps"])
+        total_wall += float(lane["wall_time_s"])
+        lanes.append(
+            {
+                "id": _slug(stem),
+                "replay": rel,
+                "label": str(lane["label"]),
+                "condition": str(lane["condition"]),
+                "entrant": str(lane["design"]),
+                "design_id": str(lane["design_id"]),
+                "object": {
+                    "kind": "part",
+                    "size_mm": [_r(v, 3) for v in lane["part_size_mm"]],
+                    "part_id": str(lane["part_id"]),
+                    "family": str(lane["part_family"]),
+                },
+                "controller_setting": None,
+                "grasp_height_frac": None,
+                "seed": int(lane["seed"]),
+                "n_frames": int(lane["n_frames"]),
+                "duration_s": _r((lane["n_frames"] - 1) / replay.header["fps"], 4),
+                "outcome": {
+                    "success": bool(lane["success"]),
+                    "failure_mode": lane["failure_mode"],
+                    "max_lift_mm": _r(1000.0 * lane["max_lift_m"], 1),
+                    "hold_s": _r(lane["hold_time_s"], 3),
+                    "flags": list(lane["flags"]),
+                    "source": "scorer",
+                    "wall_s": _r(lane["wall_time_s"], 3),
+                    "sim_steps": int(lane["n_steps"]),
+                },
+                "design_provenance": {"kind": "manual", "note": str(lane["design_note"])},
+            }
+        )
+    note = "Local run on a developer laptop, not a Nebius job. Replays recorded from the scored v2 episodes."
+    staged.bouts.append(
+        {
+            "id": bout_id,
+            "source": source,
+            "kind": str(doc.get("kind") or "training"),
+            "title": str(doc["title"]),
+            "summary": str(doc["summary"]),
+            "featured": False,
+            "recorded_at": doc.get("finished_at"),
+            "task": task_summary(task),
+            "compute": _compute(run_dir, "cpu", total_wall, total_steps, note, None),
+            "lanes": lanes,
+        }
+    )
+    staged.jobs.append(
+        _job_entry(
+            run_dir,
+            source,
+            "v2 bout",
+            f"{len(lanes)} recorded v2 episode{'s' if len(lanes) != 1 else ''} from {doc.get('suite') or 'train_v2'}.",
+            "cpu",
+            doc["started_at"],
+            doc["finished_at"],
+            float(doc.get("wall_s") or total_wall),
+            len(lanes),
+            total_steps,
+            [bout_id],
+        )
+    )
+    return staged
+
+
 # --------------------------------------------------------------------------- search / held-out
 
 
@@ -743,16 +938,21 @@ def export_web(
     featured: str | None = None,
     replay_version: int = 1,
     assets_dir: str | Path | None = None,
+    compress: bool | None = None,
+    payload_budget: int | None = HERO_PAYLOAD_BYTES,
 ) -> ExportResult:
     """Export ``run_dirs`` into ``data_dir`` (default ``web/public/data``).
 
     ``featured`` names a bout id to mark as the landing page's featured bout (other
     bouts this export writes are not featured; other sources' flags are untouched).
     ``replay_version=2`` publishes replay v2 headers and their GLB assets into
-    ``assets_dir`` (default: ``assets`` next to ``data_dir``).
+    ``assets_dir`` (default: ``assets`` next to ``data_dir``), meshopt-compressed unless
+    ``compress=False``; a v2 lane whose download exceeds ``payload_budget`` bytes (``None``:
+    no limit) fails the export.
     """
     if replay_version not in (1, 2):
         raise ValueError(f"replay_version must be 1 or 2, got {replay_version}")
+    compress = replay_version == 2 if compress is None else bool(compress)
     data = Path(data_dir)
     data.mkdir(parents=True, exist_ok=True)
     files = {name: data / f"{name}.json" for name in ("bouts", "designs", "jobs")}
@@ -774,6 +974,13 @@ def export_web(
             if (run_dir / "slice.json").is_file():
                 summary = json.loads((run_dir / "slice.json").read_text(encoding="utf-8"))
                 staged = _slice_entries(run_dir, summary, known, staging, source, replay_version)
+            elif _is_bout_v2(run_dir):
+                if replay_version != 2:
+                    raise ValueError(
+                        f"{run_dir}: a v2 bout holds replay v2 lanes; export it with replay_version=2"
+                    )
+                doc = json.loads((run_dir / "bout.json").read_text(encoding="utf-8"))
+                staged = _bout_v2_entries(run_dir, doc, staging, source)
             elif (run_dir / "heldout.json").is_file():
                 report = json.loads((run_dir / "heldout.json").read_text(encoding="utf-8"))
                 staged = _heldout_entries(run_dir, report, source)
@@ -788,7 +995,8 @@ def export_web(
             combined.jobs += staged.jobs
             combined.copies += staged.copies
             combined.design_dirs += staged.design_dirs
-            combined.assets.update(staged.assets)
+            combined.pending_v2 += staged.pending_v2
+        result.payload_bytes = _finish_v2(combined, staging, compress=compress, payload_budget=payload_budget)
 
         if featured is not None:
             for bout in combined.bouts:
@@ -848,25 +1056,24 @@ def export_web(
     return result
 
 
-def _publish_assets(assets: Mapping[str, tuple[Path, Mapping[str, Any]]], assets_dir: Path) -> None:
-    """Copy content-addressed GLBs (sha256-checked) and merge their manifest entries."""
+def _publish_assets(assets: Mapping[str, tuple[bytes, Mapping[str, Any]]], assets_dir: Path) -> None:
+    """Write content-addressed GLBs (sha256-checked) and merge their manifest entries."""
     import hashlib
 
     from rtt.render.glb import AssetStore, check_entry
 
-    for aid, (src, entry) in sorted(assets.items()):
-        data = src.read_bytes()
+    for aid, (data, entry) in sorted(assets.items()):
         if hashlib.sha256(data).hexdigest() != entry["sha256"] or len(data) != entry["bytes"]:
-            raise ValueError(f"asset {aid}: {src.name} does not match its manifest entry")
+            raise ValueError(f"asset {aid}: the file does not match its manifest entry")
         errs = check_entry(aid, entry)
         if errs:
             raise ValueError("; ".join(errs))
     assets_dir.mkdir(parents=True, exist_ok=True)
     store = AssetStore(assets_dir)
-    for aid, (src, entry) in sorted(assets.items()):
+    for aid, (data, entry) in sorted(assets.items()):
         dst = assets_dir / f"{aid}.glb"
-        if not dst.is_file() or dst.read_bytes() != src.read_bytes():
-            shutil.copyfile(src, dst)
+        if not dst.is_file() or dst.read_bytes() != data:
+            dst.write_bytes(data)
         store.entries[aid] = dict(entry)
     store.write_manifest()
 
@@ -880,6 +1087,14 @@ def _run_name(run_dir: Path) -> str:
     if run_dir.name in ("search", "heldout", "slice", "out"):
         return _slug(f"{run_dir.parent.name}-{run_dir.name}")
     return _slug(run_dir.name)
+
+
+def _is_bout_v2(run_dir: Path) -> bool:
+    try:
+        doc = json.loads((run_dir / "bout.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    return doc.get("format") == "rtt-bout" and doc.get("version") == 2
 
 
 def _manifest_kind(run_dir: Path) -> str | None:
