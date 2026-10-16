@@ -24,6 +24,14 @@ before a confirmed success count):
    never counts as a success; the flag itself stays in the episode's flags.
 4. Grasped but the object never reached ``success_lift`` -> ``slip_during_lift``.
 5. Reached ``success_lift`` but never held it for ``success_hold`` -> ``unstable_hold``.
+
+Task v2 (:func:`classify_v2`, spec section 7) scores a *registered grasp*: the v1 lift-and-hold
+criterion above (reported as ``lift_success``) and the registration rule of
+:mod:`rtt.sim.register`. Two failure modes are added (:data:`FAILURE_MODES_V2`), and the
+order of precedence is: physics flags (``physics_invalid``, a MuJoCo state reset), then the
+v1 labels (missed, ejected, slip, unstable), then ``not_registered`` (lifted and held, but not
+seated, centred or upright). ``invalid_build`` marks a design whose jaws could not be built
+for a part (it scores as a failure there, without a simulation).
 """
 
 from __future__ import annotations
@@ -33,7 +41,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Literal
 
-from rtt.sim.checks import FLAG_GRIPPER_ENV, CheckEvent
+from rtt.sim.checks import FLAG_BAD_QACC, FLAG_GRIPPER_ENV, CheckEvent
 from rtt.sim.controller import Phase
 from rtt.sim.task import ScoreConfig
 
@@ -46,6 +54,23 @@ FAILURE_MODES: tuple[FailureMode, ...] = (
     "ejected_on_close",
     "unstable_hold",
     "finger_env_collision",
+)
+
+FailureModeV2 = Literal[
+    "missed_grasp",
+    "slip_during_lift",
+    "ejected_on_close",
+    "unstable_hold",
+    "finger_env_collision",
+    "not_registered",
+    "physics_invalid",
+    "invalid_build",
+]
+FAILURE_MODES_V2: tuple[FailureModeV2, ...] = (
+    *FAILURE_MODES,
+    "not_registered",
+    "physics_invalid",
+    "invalid_build",
 )
 
 _PHASE_MODE: dict[Phase, FailureMode] = {
@@ -124,3 +149,24 @@ def classify(
     if tracker.max_lift < tracker.cfg.success_lift:
         return False, "slip_during_lift"
     return False, "unstable_hold"
+
+
+def classify_v2(
+    events: Sequence[CheckEvent], tracker: LiftTracker, grasped: bool, registered: bool
+) -> tuple[bool, bool, FailureModeV2 | None]:
+    """Return ``(success_v2, lift_success, failure_mode)`` for a finished v2 episode.
+
+    ``lift_success`` is the v1 criterion (:func:`classify`, ignoring the v2-only
+    ``bad_qacc`` flag); ``success_v2`` additionally needs ``registered``. A MuJoCo state reset
+    before a confirmed success makes the whole episode ``physics_invalid``: after a reset the
+    trajectory is not physics, so neither success counts.
+    """
+    cutoff = tracker.success_at if tracker.success_at is not None else math.inf
+    if any(e.flag == FLAG_BAD_QACC and e.t <= cutoff for e in events):
+        return False, False, "physics_invalid"
+    lift_success, mode = classify([e for e in events if e.flag != FLAG_BAD_QACC], tracker, grasped)
+    if not lift_success:
+        return False, False, mode
+    if not registered:
+        return False, True, "not_registered"
+    return True, True, None

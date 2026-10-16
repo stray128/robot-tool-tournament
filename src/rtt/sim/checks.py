@@ -23,6 +23,13 @@ how flags map onto failure modes.
   The controller keeps the palm clear of the object's top (see controller.py), so this
   flag means the object was pushed or rotated up into the palm.
 
+* ``bad_qacc`` (task v2 only, ``PhysicsChecks(bad_qacc=True)``): MuJoCo's bad-acceleration,
+  bad-velocity or bad-position warning counter went up. MuJoCo then resets the simulation
+  state silently (positions back to the model defaults, time to 0), so nothing after that
+  moment is physics; the episode is labelled ``physics_invalid`` (score.py). The counters
+  are cumulative, so a reset between two checks is never missed. v1 episodes never raise it
+  (task_v1 is frozen), but ``bad_qacc_count`` is always available.
+
 Contact normal forces come from ``mj_contactForce``, which is correct for both
 friction-cone types (the raw ``efc_force`` rows are pyramid edges, not the
 normal force, under a pyramidal cone).
@@ -52,6 +59,19 @@ FLAG_SPEED_CAP = "speed_cap"
 FLAG_EJECTION = "ejection"
 FLAG_OFF_TABLE = "off_table"
 FLAG_PALM_CONTACT = "palm_contact"
+FLAG_BAD_QACC = "bad_qacc"
+
+#: MuJoCo warnings that mean the simulation state was reset (NaN, Inf or huge values).
+RESET_WARNINGS: tuple[mujoco.mjtWarning, ...] = (
+    mujoco.mjtWarning.mjWARN_BADQACC,
+    mujoco.mjtWarning.mjWARN_BADQVEL,
+    mujoco.mjtWarning.mjWARN_BADQPOS,
+)
+
+
+def bad_state_count(data: mujoco.MjData) -> int:
+    """How often MuJoCo has reset ``data`` for NaN / Inf / huge qacc, qvel or qpos."""
+    return int(sum(data.warning[w].number for w in RESET_WARNINGS))
 
 
 @dataclass(frozen=True)
@@ -130,6 +150,7 @@ class PhysicsChecks:
     model: mujoco.MjModel
     ids: SceneIds
     task: TaskConfig
+    bad_qacc: bool = False  # raise FLAG_BAD_QACC when MuJoCo resets the state (task v2)
     events: list[CheckEvent] = field(default_factory=list)
     gripper_env_force_max: float = 0.0
     penetration_max: float = 0.0
@@ -138,6 +159,7 @@ class PhysicsChecks:
     close_xy_drift_max: float = 0.0
     palm_object_force_max: float = 0.0  # any phase (diagnostic)
     carry_palm_force_max: float = 0.0  # LIFT and HOLD only (what the palm_contact flag tests)
+    bad_qacc_count: int = 0  # MuJoCo state resets of this MjData (its warning counters start at 0)
     _flagged: set[str] = field(default_factory=set, repr=False)
     _close_ref_xy: np.ndarray | None = field(default=None, repr=False)
     _is_gripper: np.ndarray = field(init=False, repr=False)
@@ -175,6 +197,10 @@ class PhysicsChecks:
     def update(self, data: mujoco.MjData, t: float, phase: Phase) -> None:
         """Run all checks on the current state."""
         score = self.task.score
+        if self.bad_qacc:
+            self.bad_qacc_count = bad_state_count(data)
+            if self.bad_qacc_count > 0:
+                self._flag(FLAG_BAD_QACC, t, phase, f"{self.bad_qacc_count} MuJoCo state reset(s)")
         ncon = data.ncon
         if ncon:
             con = data.contact
