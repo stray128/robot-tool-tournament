@@ -13,6 +13,9 @@ across with +6 deg yaw) x 2 jitter seeds = 48 episodes per design. "Across the j
 object-frame x axis (the finger width); y is the closing axis. Seed jitter (+-0.5 mm, +-1 deg,
 +-10 % friction) is a task setting (``task_v2``), not part of the suite.
 
+**Hero screen** (:func:`hero_screen_suite`): the parts at the hero rule's screen conditions
+(gate GV-H), with their own seeds.
+
 Held-out conditions may carry a height error ``err_z`` (m): the part sits that much higher
 (positive) or lower than the controller assumes. Training conditions have none.
 """
@@ -257,3 +260,52 @@ def train_suite(spec: TrainSpec | str | Path | None = None) -> PartSuite:
 
 def part_suite_from_conditions(name: str, conditions: Sequence[PartCondition]) -> PartSuite:
     return PartSuite(name, tuple(conditions))
+
+
+# --------------------------------------------------------------------------- hero screen
+
+HERO_SCREEN_BASE_SEED = 20261019  # public; differs from train_v2's base seed
+
+
+def hero_screen_suite(
+    conditions: Mapping[str, tuple[float, float]],
+    parts: Sequence[PartSpec] | None = None,
+    *,
+    seeds_per_condition: int = 3,
+    base_seed: int = HERO_SCREEN_BASE_SEED,
+    name: str = "hero_screen_v2",
+) -> PartSuite:
+    """The episodes of the hero screen (gate GV-H): every part at every screen condition.
+
+    ``conditions`` maps a condition label to ``(error across the jaw in mm, yaw error in
+    degrees)``, as the hero rule's condition table does; the label becomes the condition's
+    ``placement_label`` so screen records map back to the rule's conditions. ``parts``
+    defaults to the six training parts; screened scans (for example from
+    :func:`rtt.sim.gso.selection_part_suite`) may be added. An odd ``seeds_per_condition``
+    avoids majority ties. Seeds come from ``base_seed`` and the condition id (common random
+    numbers across designs), never from the training suite's seeds.
+    """
+    if not conditions:
+        raise ValueError("the hero screen needs at least one condition")
+    if seeds_per_condition < 1:
+        raise ValueError("seeds_per_condition must be >= 1")
+    chosen = tuple(parts) if parts is not None else training_parts()
+    out = []
+    for part in chosen:
+        for label, (err_x_mm, yaw_deg) in conditions.items():
+            if not (math.isfinite(err_x_mm) and math.isfinite(yaw_deg)):
+                raise ValueError(f"hero condition {label!r}: errors must be finite")
+            cid = f"{name}/{part.name}/{label}"
+            out.append(
+                PartCondition(
+                    condition_id=cid,
+                    part=part,
+                    placement=objs.Placement(
+                        err_x=float(err_x_mm) / 1000.0, err_yaw=math.radians(float(yaw_deg))
+                    ),
+                    seeds=tuple(derive_seed(base_seed, cid, rep) for rep in range(seeds_per_condition)),
+                    placement_label=str(label),
+                    size_label="hero_screen",
+                )
+            )
+    return PartSuite(name, tuple(out))

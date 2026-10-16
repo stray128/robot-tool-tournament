@@ -11,7 +11,7 @@ import pytest
 
 from rtt.parts import heldout as H
 from rtt.parts import library as lib
-from rtt.parts.suite import PartSuite, load_train_spec, train_suite
+from rtt.parts.suite import PartSuite, hero_screen_suite, load_train_spec, train_suite
 from rtt.sim.conditions import heldout_suite
 from rtt.sim.task import default_task
 
@@ -198,3 +198,53 @@ def test_heldout_conditions_describe_to_json(suite: PartSuite) -> None:
     assert d["part"]["geometry_sha256"] == suite.conditions[0].part.geometry_sha256
     with pytest.raises(ValueError, match="height error"):
         next(c for c in suite if c.err_z != 0).to_condition()
+
+
+# --------------------------------------------------------------------------- hero screen
+
+# The hero rule's screen conditions (label -> (mm across the jaw, yaw deg)), as in the
+# analysis code's condition table.
+HERO = {
+    "x-3": (-3.0, 0.0),
+    "x-2": (-2.0, 0.0),
+    "x-1": (-1.0, 0.0),
+    "x+1": (1.0, 0.0),
+    "x+2": (2.0, 0.0),
+    "x+3": (3.0, 0.0),
+    "yaw+5": (0.0, 5.0),
+}
+
+
+def test_hero_screen_suite_covers_every_part_and_condition(train: PartSuite) -> None:
+    hero = hero_screen_suite(HERO)
+    assert len(hero) == 6 * 7 and hero.n_episodes == 6 * 7 * 3
+    assert [p.name for p in hero.parts()] == [p.name for p in train.parts()]
+    by = {(c.part.name, c.placement_label): c for c in hero}
+    c = by[("pipe_tee", "x-3")]
+    assert c.placement.err_x == pytest.approx(-0.003) and c.placement.err_yaw == 0.0
+    c = by[("block", "yaw+5")]
+    assert c.placement.err_x == 0.0 and math.degrees(c.placement.err_yaw) == pytest.approx(5.0)
+    assert all(c.err_z == 0.0 and c.placement.err_y == 0.0 for c in hero)
+    assert all(c.part.geometry_sha256 == by[(c.part.name, "x-3")].part.geometry_sha256 for c in hero)
+    # own seeds: stable, distinct, and never the training suite's
+    assert hero_screen_suite(HERO).digest() == hero.digest()
+    seeds = [s for c in hero for s in c.seeds]
+    assert len(set(seeds)) == len(seeds)
+    assert not set(seeds) & {s for c in train for s in c.seeds}
+    assert len(hero.to_suite()) == len(hero)  # runs on the v1 evaluation path
+
+
+def test_hero_screen_suite_takes_extra_parts_and_refuses_bad_input() -> None:
+    tee = lib.get_part("pipe_tee")
+    one = hero_screen_suite({"x+2": (2.0, 0.0)}, [tee], seeds_per_condition=1)
+    assert (
+        len(one) == 1
+        and one.n_episodes == 1
+        and one.conditions[0].condition_id == "hero_screen_v2/pipe_tee/x+2"
+    )
+    with pytest.raises(ValueError, match="at least one condition"):
+        hero_screen_suite({})
+    with pytest.raises(ValueError, match="seeds_per_condition"):
+        hero_screen_suite(HERO, seeds_per_condition=0)
+    with pytest.raises(ValueError, match="finite"):
+        hero_screen_suite({"bad": (math.nan, 0.0)}, [tee])
