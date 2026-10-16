@@ -46,7 +46,7 @@ This applies only if F1 runs.
 
 ### Gate GV3 calibration iterations (Part A only)
 
-At most 3 iterations, task-level knobs only, and tolerances changed in at most one of
+At most 3 iterations, suite-level knobs only, and tolerances changed in at most one of
 them (`docs/PREREG.md` section A9). One row per iteration, copied from
 `calibration_log.json`:
 
