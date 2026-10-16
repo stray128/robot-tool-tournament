@@ -39,7 +39,14 @@ export interface StudioOptions {
 
 export const NO_STUDIO_OPTIONS: StudioOptions = { xray: false, collision: false, clay: new Set(), cut: null };
 
-type MeshMaterial = THREE.Material & { color?: THREE.Color; map?: THREE.Texture | null };
+type MeshMaterial = THREE.Material & {
+  color?: THREE.Color;
+  map?: THREE.Texture | null;
+  emissiveMap?: THREE.Texture | null;
+};
+
+/** What clay takes away from a material, kept so the textured look can be restored. */
+type MaterialLook = { color?: THREE.Color; map: THREE.Texture | null; emissiveMap: THREE.Texture | null; vertexColors: boolean };
 
 function meshesOf(root: THREE.Object3D): THREE.Mesh[] {
   const out: THREE.Mesh[] = [];
@@ -84,14 +91,28 @@ function useStyle(root: THREE.Object3D | null, opts: { xray: boolean; clay: bool
     for (const mesh of meshesOf(root)) {
       mesh.receiveShadow = true;
       for (const m of materialsOf(mesh)) {
-        if (m.userData.original === undefined) m.userData.original = { color: m.color?.clone(), map: m.map ?? null };
-        const orig = m.userData.original as { color?: THREE.Color; map: THREE.Texture | null };
+        if (m.userData.original === undefined) {
+          const look: MaterialLook = {
+            color: m.color?.clone(),
+            map: m.map ?? null,
+            emissiveMap: m.emissiveMap ?? null,
+            vertexColors: m.vertexColors,
+          };
+          m.userData.original = look;
+        }
+        const orig = m.userData.original as MaterialLook;
+        // Clay removes every source of surface colour a brand mark could sit in: the base
+        // colour texture, an emissive texture and per-vertex colours.
         if (opts.clay) {
           m.color?.set(opts.palette.clay);
           if ("map" in m) m.map = null;
+          if ("emissiveMap" in m) m.emissiveMap = null;
+          m.vertexColors = false;
         } else {
           if (orig.color) m.color?.copy(orig.color);
           if ("map" in m) m.map = orig.map;
+          if ("emissiveMap" in m) m.emissiveMap = orig.emissiveMap;
+          m.vertexColors = orig.vertexColors;
         }
         m.transparent = opts.xray;
         m.opacity = opts.xray ? STUDIO.xrayOpacity : 1;
