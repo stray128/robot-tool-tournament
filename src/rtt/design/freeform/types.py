@@ -261,7 +261,7 @@ def build_pair(design: FingerRecipe | Baseline, part: PartSpec, task: TaskV2) ->
     ``task.controller.palm_clearance``, ``task.controller.min_tip_clearance`` and
     ``task.physics.friction``, so a v1 :class:`rtt.sim.task.TaskConfig` works too). The build
     is deterministic: float64, vertices rounded to 1e-7 m, no randomness, cached per
-    (generator version, design id, part geometry, gripper). An invalid design raises
+    (generator version, design id, part geometry, id and features, gripper). An invalid design raises
     :class:`~rtt.design.freeform.validate.InvalidDesign` (a ``ValueError``) whose ``code``
     and message say which rule failed.
 
