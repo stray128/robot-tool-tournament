@@ -123,6 +123,9 @@ def _mutations() -> list[tuple[str, Any]]:
     def engine(h: dict) -> None:
         h["provenance"]["engine"] = "isaac"
 
+    def stray_provenance(h: dict) -> None:
+        h["provenance"]["gpu"] = "L4"
+
     return [
         ("unknown asset", unknown_asset),
         ("scale", mirrored),
@@ -133,6 +136,7 @@ def _mutations() -> list[tuple[str, Any]]:
         ("content addressed", not_addressed),
         ("changes", no_changes),
         ("engine", engine),
+        ("does not allow", stray_provenance),
     ]
 
 
@@ -385,3 +389,8 @@ def test_scan_part_assets_carry_the_scan_credit(tmp_path: Path) -> None:
     assert np.allclose(doc.meshes[0].uv, Visual().uv_top_left(), atol=1e-6)
     clay = scan_asset(store, Visual(), fields, textured=False)
     assert read_glb(store.raw_bytes(clay)).meshes[0].texture is None and clay != tex
+
+
+def test_provenance_keys_match_the_schema() -> None:
+    assert set(rp.PROVENANCE_KEYS) == set(SCHEMA["$defs"]["provenance"]["properties"])
+    assert SCHEMA["$defs"]["provenance"]["additionalProperties"] is False

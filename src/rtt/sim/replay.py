@@ -71,6 +71,22 @@ _V2_REQUIRED = (
 _V2_KEYS = frozenset((*_V2_REQUIRED, "static", "static_visuals", "overlays"))
 _SLUG = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 _CODE_VERSION = re.compile(r"^[0-9a-f]{7,40}(\+dirty)?$")
+# provenance keys the schema allows (it sets additionalProperties: false there)
+PROVENANCE_KEYS = (
+    "source",
+    "engine",
+    "engine_version",
+    "run_id",
+    "code_version",
+    "product_mode",
+    "episode",
+    "suite",
+    "condition",
+    "seed",
+    "task_sha256",
+    "record_version",
+    "created_utc",
+)
 
 
 @dataclass
@@ -400,6 +416,11 @@ def check_header(
     for k, want in (("source", "simulation"), ("engine", "mujoco")):
         if prov.get(k) != want:
             errs.append(f"provenance.{k} must be {want!r}")
+    stray = set(prov) - set(PROVENANCE_KEYS)
+    if stray:
+        errs.append(f"provenance has keys the schema does not allow: {sorted(stray)} (put them in meta)")
+    if "run_id" in prov and not _SLUG.match(str(prov["run_id"])):
+        errs.append("provenance.run_id must be a slug")
     for k in ("engine_version", "run_id", "code_version", "product_mode"):
         if k not in prov:
             errs.append(f"provenance.{k} is required")
