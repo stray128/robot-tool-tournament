@@ -12,8 +12,8 @@
 # narrowest extent).
 #
 # Masses at these densities (rtt.parts.materials, handbook values [assumed]):
-# pipe_tee ~37 g, block 194 g, hex_standoff ~88 g, flanged_bushing ~93 g, l_bracket ~84 g,
-# steel_slug ~495 g. The heaviest is below the 0.917 kg grip cap of heldout_real_v1.
+# pipe_tee 39.9 g, block 194.4 g, hex_standoff 82.9 g, flanged_bushing 90.9 g, l_bracket 71.6 g,
+# steel_slug 494.8 g (exact, from the pieces). The heaviest is below the 0.917 kg grip cap of heldout_real_v1.
 name: parts_v2
 
 parts:
