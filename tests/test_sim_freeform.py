@@ -14,7 +14,7 @@ from rtt.design.freeform.types import FingerPair, JawGeometry
 from rtt.sim.controller import plan_grasp_v2
 from rtt.sim.episode import OVERLAY_CHANNELS, EpisodeResultV2, run_episode, run_episode_v2
 from rtt.sim.exec_cpu import EpisodeJob, run_jobs
-from rtt.sim.fingers_v2 import check_pair_units, jaw_mass_properties, v1_pair
+from rtt.sim.fingers_v2 import check_convex_piece, check_pair_units, jaw_mass_properties, v1_pair
 from rtt.sim.m1 import G1_BOX
 from rtt.sim.objects import Placement
 from rtt.sim.scene import build_model, build_model_v2, build_spec_v2
@@ -163,6 +163,42 @@ def test_millimetre_jaws_are_rejected() -> None:
         build_spec_v2(pair, TEE.to_mesh_object(), TASK)
 
 
+def _l_prism() -> np.ndarray:
+    """An extruded L (non-convex): its inner corner lies inside the hull's cap faces."""
+    outline = np.array([[0, 0], [20, 0], [20, 5], [5, 5], [5, 20], [0, 20]], dtype=float) * 1e-3
+    return np.array([[x - 0.01, y + 0.001, z] for z in (-0.06, -0.04) for x, y in outline])
+
+
+def _with_left_piece(pair: FingerPair, piece: np.ndarray) -> FingerPair:
+    import dataclasses
+
+    left = dataclasses.replace(pair.left, pieces=(piece, *pair.left.pieces[1:]))
+    return dataclasses.replace(pair, left=left)
+
+
+def test_a_non_convex_or_flat_piece_is_refused_not_filled_in() -> None:
+    # MuJoCo would silently collide with the hull of the L, i.e. a pad cut into the part
+    with pytest.raises(ValueError, match="left jaw piece 0 is not convex"):
+        build_spec_v2(_with_left_piece(TEE_PAIR, _l_prism()), TEE.to_mesh_object(), TASK)
+    flat = np.array([[x, y, -0.05] for x in (0.0, 0.01) for y in (0.0, 0.01)])
+    with pytest.raises(ValueError, match="flat or degenerate"):
+        build_spec_v2(_with_left_piece(TEE_PAIR, flat), TEE.to_mesh_object(), TASK)
+
+
+def test_the_convexity_check_allows_corners_and_edge_points_only() -> None:
+    cube = np.array([[x, y, z] for x in (0, 0.01) for y in (0, 0.01) for z in (0, 0.01)], dtype=float)
+    check_convex_piece(cube, "cube")
+    check_convex_piece(np.vstack([cube, cube[:1], [[0.005, 0.0, 0.0]]]), "duplicate and edge point")
+    with pytest.raises(ValueError, match="inside a face"):
+        check_convex_piece(np.vstack([cube, [[0.005, 0.005, 0.0]]]), "face point")
+    with pytest.raises(ValueError, match="5.000 mm inside the hull"):
+        check_convex_piece(np.vstack([cube, [[0.005, 0.005, 0.005]]]), "interior point")
+    for pair in (TEE_PAIR, build_fixture_pair(conform(), block(), TASK)):
+        for jaw in (pair.left, pair.right):
+            for i, piece in enumerate(jaw.pieces):
+                check_convex_piece(piece, f"piece {i}")
+
+
 # --------------------------------------------------------------------------- evaluation and certificate
 
 
@@ -182,6 +218,15 @@ def test_evaluate_designs_v2_records_every_episode_and_invalid_builds() -> None:
         if design.pad == "flat" and part.part_id == tee.part_id:
             raise ValueError("planted: no flat jaws for the tee")
         return build_fixture_pair(design, part, task)
+
+    def concave_builder(design, part, task):
+        return _with_left_piece(build_fixture_pair(design, part, task), _l_prism())
+
+    bad = evaluate_designs_v2(
+        [conform()], _suite([blk], {"c0": Placement()}), builder=concave_builder, task=TASK
+    )
+    assert [r.failure_mode for r in bad] == ["invalid_build"]
+    assert bad[0].flags[0].startswith("invalid_build: scene_check: left jaw piece 0 is not convex")
 
     designs = [conform(), conform(pad="flat", clearance_mm=0.0, pad_depth_mm=0.0, wall_draft_deg=0.0)]
     records = evaluate_designs_v2(designs, suite, builder=builder, workers=2, task=TASK)

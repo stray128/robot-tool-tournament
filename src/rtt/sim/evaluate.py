@@ -596,16 +596,28 @@ def build_pairs(
     """Per design, ``{part_id: FingerPair, or the build error message}`` (in part order).
 
     A ``ValueError`` from the builder (the generator's ``InvalidDesign`` is one) means the
-    design has no jaws for that part; any other exception is a bug and propagates.
+    design has no jaws for that part; any other exception is a bug and propagates. A pair the
+    scene would refuse (:func:`rtt.sim.fingers_v2.check_pair`: not in metres, or a collision
+    piece that is not convex) is caught here too, so it scores ``invalid_build`` with the
+    reason instead of failing the whole batch in a worker.
     """
+    from rtt.sim.fingers_v2 import check_pair
+
     out = []
     for design in designs:
         built: dict[str, Any] = {}
         for part in parts:
             try:
-                built[part.part_id] = builder(design, part, task)
+                pair = builder(design, part, task)
             except ValueError as exc:
                 built[part.part_id] = str(exc) or type(exc).__name__
+                continue
+            try:
+                check_pair(pair)
+            except ValueError as exc:
+                built[part.part_id] = f"scene_check: {exc}"
+                continue
+            built[part.part_id] = pair
         out.append(built)
     return out
 

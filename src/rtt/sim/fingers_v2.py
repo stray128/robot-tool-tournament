@@ -42,6 +42,7 @@ from rtt.sim.scene import (
 V1_DESIGN_SPACE = "box-v1"
 _MIRROR = np.diag([1.0, -1.0, 1.0])
 _QUANTUM = 1e-7  # m; vertex quantisation of geometry hashes (the generator's rounding)
+CONVEX_TOL = 1e-6  # m; a vertex deeper than this inside its piece's hull makes the piece concave
 
 
 @dataclass(frozen=True)
@@ -64,9 +65,17 @@ def jaw_mass_properties(jaw: JawGeometry) -> MassProperties:
     return MassProperties(mass=float(jaw.mass), com=np.array(jaw.com, dtype=np.float64), inertia=inertia)
 
 
-def jaw_bodies(pair: FingerPair) -> tuple[JawBody, JawBody]:
-    """``(left, right)`` scene bodies of a pair, after checking the geometry is in metres."""
+def check_pair(pair: FingerPair) -> None:
+    """Everything the scene refuses in a pair, as a ``ValueError``: geometry that is not in
+    metres (:func:`check_pair_units`) or a collision piece that is not convex
+    (:func:`check_pair_pieces`)."""
     check_pair_units(pair)
+    check_pair_pieces(pair)
+
+
+def jaw_bodies(pair: FingerPair) -> tuple[JawBody, JawBody]:
+    """``(left, right)`` scene bodies of a pair, after :func:`check_pair`."""
+    check_pair(pair)
     left_props, right_props = jaw_mass_properties(pair.left), jaw_mass_properties(pair.right)
     if pair.boxes is not None:
         boxes = tuple(pair.boxes)
@@ -89,6 +98,60 @@ def check_pair_units(pair: FingerPair) -> None:
                 f"{side} jaw reaches {extent:g} from its root; sizes must be in metres "
                 f"(at most {MAX_FINGER_EXTENT} m)"
             )
+
+
+def check_convex_piece(verts: np.ndarray, where: str, tol: float = CONVEX_TOL) -> None:
+    """Reject a vertex set that is not a convex piece: flat (no volume), or with a vertex that
+    is not on the edges of its own convex hull.
+
+    MuJoCo collides with the convex hull of a mesh geom's vertices. A non-convex piece (an L
+    or a notched strip, say) would be filled in silently, and a pad built that way would cut
+    into the part it was shaped around. In a convex piece every vertex is a corner of the hull
+    or lies on one of its edges (a redundant point). A vertex inside the hull, or inside one
+    of its faces (the inner corner of an extruded L lies inside the cap face), means the piece
+    was concave there. ``tol`` (m) is the distance within which a point counts as on a plane.
+    """
+    from scipy.spatial import ConvexHull, QhullError
+
+    pts = np.asarray(verts, dtype=np.float64)
+    try:
+        hull = ConvexHull(pts)
+    except QhullError:
+        raise ValueError(f"{where} is flat or degenerate: it has no convex volume") from None
+    corners = {int(i) for i in hull.vertices}
+    if len(corners) == len(pts):
+        return
+    # one plane per hull face (Qhull splits a face into coplanar triangles)
+    planes: list[np.ndarray] = []
+    for eq in hull.equations:
+        if not any(abs(float(eq[:3] @ p[:3]) - 1.0) < 1e-9 and abs(eq[3] - p[3]) < tol for p in planes):
+            planes.append(eq)
+    eqs = np.asarray(planes)
+    for i in range(len(pts)):
+        if i in corners:
+            continue
+        signed = pts[i] @ eqs[:, :3].T + eqs[:, 3]  # <= 0 inside
+        on = int(np.sum(np.abs(signed) <= tol))
+        if on < 2:
+            place = (
+                f"{-float(signed.max()) * 1000:.3f} mm inside the hull of the others"
+                if on == 0
+                else "inside a face of the hull of the others"
+            )
+            raise ValueError(
+                f"{where} is not convex: vertex {i} lies {place}, and MuJoCo would collide with "
+                "the filled-in hull"
+            )
+
+
+def check_pair_pieces(pair: FingerPair) -> None:
+    """Check every collision piece of both jaws with :func:`check_convex_piece`. A pair that
+    carries v1 boxes is skipped: its geoms are MuJoCo boxes, convex by construction."""
+    if pair.boxes is not None:
+        return
+    for side, jaw in (("left", pair.left), ("right", pair.right)):
+        for i, piece in enumerate(jaw.pieces):
+            check_convex_piece(piece, f"{side} jaw piece {i}")
 
 
 def pair_mass_g(pair: FingerPair) -> float:
