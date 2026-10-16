@@ -190,7 +190,7 @@ A recipe that builds invalid on a held-out part scores as a failure there.
 | `stock` | The open-source gripper's own blade (real mesh, convex hulls) | yes |
 | `flat` | flat pad, blunt tip, grip 0.5, pad 20 mm, width 20 mm | yes |
 | `imprint_configurator` | conform, draft 0, clearance 0.4 mm, depth = min(40 % of the part's half-extent along the closing axis in the pad band, the stroke cap) and at least 4 mm, grip 0.5, pad 20 mm, width 40 mm, blunt | yes |
-| `imprint_swept` | the same with a +-2.0 mm sweep, as in published imprint-and-sweep jaw design (Gebauer et al., 2025), through a baseline wrapper outside the search space | yes |
+| `imprint_swept` | the same with a +-2.0 mm sweep, as in published imprint-and-sweep jaw design (Gebauer et al., Production Engineering, 2025), through a baseline wrapper outside the search space | yes |
 | `ref_wrap` | conform, depth 4 mm, draft 30 deg, clearance 0.4 mm | reference, outside the budget |
 | `ref_hook` | conform, depth 2 mm, draft 30 deg, hook, tip 6 mm | reference, outside the budget |
 

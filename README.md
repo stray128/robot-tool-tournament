@@ -12,8 +12,11 @@ Serverless AI Jobs from one pinned container image, and a static web app replays
 bout in the browser.
 
 Status: work in progress (hackathon build, October 2026). The protocol is pre-registered
-before any scored run: the draft is `docs/PREREG.md` (not yet frozen), the frozen task is
-`docs/TASK.md`, and changes after the freeze go in `docs/DEVIATIONS.md`.
+before any scored run: the draft is `docs/PREREG.md` (not yet frozen) and changes after the
+freeze go in `docs/DEVIATIONS.md`. A second design space, part-shaped fingers
+(`freeform-v2`, task `docs/TASK_V2.md`), is in development. `docs/PREREG.md` holds both
+protocols: the v2 protocol runs if its gates pass by Oct 19, otherwise the v1 protocol
+(frozen task `docs/TASK.md`) runs as the fallback.
 
 ## Bring Your Part (quick start)
 
@@ -79,6 +82,16 @@ Platform feedback, kept as we go, is in `docs/FEEDBACK.md`; job setup and prices
 4. **Held-out evaluation.** Each run's top design is frozen. It is then scored on a
    commit-reveal held-out suite that no search process can read.
 
+**Part-shaped fingers (v2, in development).** A design becomes a part-relative recipe:
+a pad strategy (flat, conforming with draft, or V funnel), a tip (blunt, chamfer or hook)
+and 7 numbers. The generator compiles one recipe into its own left and right jaw for each
+part, built from exact convex pieces with a smooth printable body. The training suite is
+six procedural industrial parts placed up to 3 mm off centre, and a grasp only counts if
+the part is seated and centred before the lift ("registered"). The comparator is the
+shape-matched imprint jaw that configurators produce. In our prototypes it stopped short
+under 1-3 mm of placement error on parts with flat or socket features, while drafted pads
+pulled the part to centre; the pre-registered runs test this. See `docs/TASK_V2.md`.
+
 ## Quick start (development)
 
 Requires Python 3.12, [uv](https://docs.astral.sh/uv/), and Node 20.9+ with pnpm for the web app.
@@ -120,20 +133,22 @@ cd web && pnpm build # the new bout appears at /bout/<slice id>
 | `rtt serve` | The Grasp Engineer API on 127.0.0.1 (uploads, sessions with a live event stream, print packs). Binding beyond this machine requires the passcode for every upload. |
 | `rtt heldout-real {select,run}` | The real-object held-out set from Google Scanned Objects: a deterministic, hashed selection rule, and scoring of frozen designs on it (`docs/HELDOUT_REAL.md`). |
 | `rtt analyze-s1 --random DIR... --calibration FILE [--nemotron DIR...] [--power] [--compare]` | The S1 analysis: best-so-far curves, the tau rule, evaluations to tau per run, the exact permutation test and Monte Carlo power (`src/rtt/analysis/s1.py`). |
+| `python -m rtt.analysis.tau {derive,analyze,rule}` | The v2 S1 analysis: the v2 tau rule and R rule from the pilot (`derive`), the confirmatory test at the frozen tau with a lift-only pass (`analyze`). `make prereg-rules` prints the rule digests recorded in PREREG; `python -m rtt.analysis.power gv6` runs the GV6 checks; `python -m rtt.analysis.hero_rule` applies the hero rule. |
 | `rtt cloud ...` | The rest of the job tooling: `capacity`, `status`, `logs`, `list`, `fetch`, `spend`. |
 | `rtt probe-llm` | The Token Factory output-mode probe report (`docs/PROBE_LLM.md`). |
 | `rtt export-geom NAME --out finger.stl` | One entrant's finger as an STL in millimetres, or a gripper preview as GLB. |
 
 ## Repository layout
 
-- `src/rtt/design/`: finger schema, 14-box generator, validators, STL/GLB export.
+- `src/rtt/design/`: finger schema, 14-box generator, validators, STL/GLB export; `design/freeform/` holds the v2 part-shaped jaw generator.
+- `src/rtt/parts/`: the v2 procedural industrial parts library.
 - `src/rtt/sim/`: MuJoCo scene, controller, scoring, physics checks, replays, conditions (training suite and commit-reveal held-out), CPU and MJWarp executors, robustness certificate, mesh objects.
 - `src/rtt/search/`: search arms, lockstep runner, Nemotron proposer (prompts, repair, diversity check), top-1 freezing.
 - `src/rtt/llm/`: Token Factory client with response cache, spend ledger and rate limiting.
 - `src/rtt/store/`: manifests, run tables and the held-out vault guard.
 - `src/rtt/cloud/`: Nebius Serverless AI Jobs, Object Storage, cost ledger, in-container entry point.
 - `src/rtt/pipeline/`: slice, held-out scoring (procedural and real-object), replay recording, web export.
-- `src/rtt/analysis/`: calibration (gate G3) and the S1 analysis (tau rule, test, power).
+- `src/rtt/analysis/`: calibration (gates G3 and GV3), the S1 analysis (tau and R rules, test, power, GV6 checks) and the hero rule.
 - `src/rtt/part/`: Bring Your Part (intake, per-part conditions, search, certificate, jaw, print pack).
 - `src/rtt/agent/`, `src/rtt/api/`: the Grasp Engineer agent and its local API.
 - `configs/`: task, training suite, real-object held-out rule, manual entrants, seeds.
@@ -141,6 +156,23 @@ cd web && pnpm build # the new bout appears at /bout/<slice id>
 - `docker/`, `jobs/nebius/`: the job image and its build/push scripts.
 - `web/`: the static Next.js site (see `web/README.md`).
 - `docs/`: task, benchmarks, Nebius notes, LLM probe, platform feedback.
+
+## Roadmap (not built for the hackathon)
+
+- **A physics-tuned Nemotron.** Fine-tune an open NVIDIA Nemotron model with simulator
+  rewards (GRPO) so that it designs task-specific end-effectors, trained on Nebius GPUs
+  and served from Nebius Serverless Endpoints. The design space would grow from fingers
+  to general attachments, and later to other task types.
+- **Printed validation.** Print the top designs and test them on a real gripper with a
+  partner, against the simulated certificate.
+
+Related work: Fit2Form learns gripper-finger shapes with a 3D generative model (Ha,
+Agrawal and Song, CoRL 2020, arXiv:2011.06498); imprint-based jaw design with an
+uncertainty sweep for electrical connectors (Gebauer et al., Production Engineering
+19:15-27, 2025, doi:10.1007/s11740-024-01287-x); VLMgineer co-designs tools and
+their use with vision-language models and evolutionary search (Gao et al., 2025,
+arXiv:2507.12644); Text2Robot evolves robot designs from text (Ringel et al., 2024,
+arXiv:2406.19963).
 
 ## Secrets and leak hygiene
 
@@ -157,17 +189,22 @@ cd web && pnpm build # the new bout appears at /bout/<slice id>
 ## Acknowledgements
 
 The simulated gripper's opening, stroke, frame size and stock finger were measured from
-the open-source SO-ARM-102 parallel gripper. That is Robonine, SO-ARM 102,
-https://github.com/roboninecom/SO-ARM-102, at commit 190eb162. Its documentation and
-simulation files are licensed CC BY 4.0, and its hardware sources CERN-OHL-P-2.0. The
-`stock` entrant is our box approximation of its finger. This repository contains no files
-from that project.
+the open-source SO-ARM-102 parallel gripper: Robonine, SO-ARM 102,
+https://github.com/roboninecom/SO-ARM-102, CC BY 4.0, at commit 190eb162. Its simulation
+files are licensed CC BY 4.0, and its hardware sources CERN-OHL-P-2.0. In v1 the `stock`
+entrant is our box approximation of its finger and no files from that project are used.
+In v2 the renders and the web app draw the gripper's CC BY 4.0 simulation meshes, and the
+`stock` entrant is its own blade; modified: cut, re-posed, simplified, re-encoded (details
+in `NOTICE` and `docs/ATTRIBUTION.md`). On screen and in the video it is called "an
+open-source parallel gripper".
 
 The real-object held-out set uses 3D models from Google Scanned Objects (Google Research;
 Downs et al., "Google Scanned Objects: A High-Quality Dataset of 3D Scanned Household
 Items", ICRA 2022, arXiv:2204.11918), licensed CC BY 4.0, via Kevin Zakka's
-`mujoco_scanned_objects` (MIT, commit 6ff8d275). The scans are fetched at run time and not
-redistributed here; every selection writes per-object credits.
+`mujoco_scanned_objects` (MIT, commit 6ff8d275). The scans are fetched at run time;
+every selection writes per-object credits. In v2, unbranded scans shown on the site are
+published as modified GLBs (re-posed, decomposed, simplified, re-encoded) with their
+credits.
 
 MuJoCo and MuJoCo Warp are by Google DeepMind (Apache-2.0); NVIDIA Warp is Apache-2.0;
 CoACD is MIT. Full third-party notices are in `NOTICE`.
