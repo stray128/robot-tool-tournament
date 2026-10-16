@@ -52,6 +52,7 @@ from rtt.search.diversity import diversity_stats
 from rtt.search.nemotron import LLMProposer, NemotronProposer, ProposerConfig, prompt_spec_hashes
 from rtt.search.random_search import RandomSearch, round0_designs
 from rtt.search.select import FrozenDesign, freeze_top1, write_frozen
+from rtt.search.space import V1, V2, DesignSpace, get_space, space_of
 from rtt.search.zeroshot import ZeroShotProposer
 from rtt.store import runs as store
 from rtt.store.manifest import JobContext, LLMUsage, code_facts, write_manifest
@@ -59,12 +60,15 @@ from rtt.store.vault import VaultGuard
 
 __all__ = [
     "ARMS",
+    "ARMS_V2",
     "DEFAULT_ENTRANTS",
+    "DEFAULT_ENTRANTS_V2",
     "RunOutcome",
     "SearchConfig",
     "SearchOutcome",
     "load_seeds",
     "make_strategy",
+    "reference_entrants_v2",
     "run_search",
 ]
 
@@ -74,11 +78,29 @@ ARMS: Final[dict[str, type[SearchStrategy]]] = {
     "zeroshot": ZeroShotProposer,
 }
 DEFAULT_ENTRANTS: Final = Path(__file__).resolve().parents[3] / "configs" / "entrants.yaml"
+#: v2 entrants (track G): stock blade, flat pad, configurator imprint, swept imprint.
+DEFAULT_ENTRANTS_V2: Final = Path(__file__).resolve().parents[3] / "configs" / "entrants_v2.yaml"
+
+
+def _arms_v2() -> dict[str, type[SearchStrategy]]:
+    from rtt.search.nemotron_v2 import NemotronProposerV2
+    from rtt.search.zeroshot import ZeroShotProposerV2
+
+    return {"random": RandomSearch, "nemotron": NemotronProposerV2, "zeroshot": ZeroShotProposerV2}
+
+
+#: The same three arms on the v2 design space (resolved lazily: see :func:`make_strategy`).
+ARMS_V2: Final[tuple[str, ...]] = tuple(ARMS)
 
 
 @dataclass(frozen=True)
 class SearchConfig:
-    """Protocol knobs shared by every arm (frozen in PREREG)."""
+    """Protocol knobs shared by every arm (frozen in PREREG).
+
+    ``shared_diversity`` (v2 only): every arm's designs, including arm A, the round-0 Sobol
+    fill and ``fallback_random``, pass the same duplicate and diversity screen at the
+    proposer's ``min_distance`` (spec section 13, step 6). v1 ignores it.
+    """
 
     round0_size: int = DEFAULT_ROUND_SIZE
     round_size: int = DEFAULT_ROUND_SIZE
@@ -86,6 +108,12 @@ class SearchConfig:
     llm_concurrency: int = 8
     reuse_scores: bool = True
     proposer: ProposerConfig = field(default_factory=ProposerConfig)
+    shared_diversity: bool = True
+
+    @classmethod
+    def for_space(cls, space: str) -> SearchConfig:
+        """The pre-registered defaults of ``space`` (v2: the rule-set diversity and explore bars)."""
+        return cls() if space == V1 else cls(proposer=ProposerConfig.for_space(space))
 
     def to_json(self) -> dict[str, Any]:
         data = asdict(self)
@@ -128,8 +156,8 @@ def load_seeds(path: str | Path) -> list[int]:
 def make_strategy(
     arm: str, ctx: RunContext, llm_client: LLMClient | None, config: SearchConfig
 ) -> SearchStrategy:
-    """Instantiate ``arm``'s strategy for one run."""
-    cls = ARMS[arm]
+    """Instantiate ``arm``'s strategy for one run (the v2 classes when ``ctx.space`` is v2)."""
+    cls = ARMS[arm] if ctx.space.name == V1 else _arms_v2()[arm]
     if issubclass(cls, LLMProposer):
         if llm_client is None:
             raise ValueError(f"arm {arm!r} needs an llm_client")
@@ -152,12 +180,12 @@ class _ScoreBook:
         self.episodes = 0
         self.wall_s = 0.0
 
-    def evaluate(self, batches: Sequence[Sequence[FingerDesign]]) -> list[list[DesignScore]]:
+    def evaluate(self, batches: Sequence[Sequence[Any]]) -> list[list[DesignScore]]:
         known = self.scores if self.reuse else {}
-        todo: dict[str, FingerDesign] = {}
+        todo: dict[str, Any] = {}
         for designs in batches:
             for design in designs:
-                key = design.design_id()
+                key = _design_key(design)
                 if key not in known and key not in todo:
                     todo[key] = design
         fresh: dict[str, DesignScore] = {}
@@ -176,7 +204,13 @@ class _ScoreBook:
         if self.reuse:
             self.scores.update(fresh)
         lookup = {**known, **fresh}
-        return [[lookup[d.design_id()] for d in designs] for designs in batches]
+        return [[lookup[_design_key(d)] for d in designs] for designs in batches]
+
+
+def _design_key(design: Any) -> str:
+    if isinstance(design, FingerDesign):
+        return design.design_id()
+    return space_of(design).design_id(design)
 
 
 def _check_round(ctx: RunContext, round_index: int, proposals: Sequence[Proposal]) -> None:
@@ -186,8 +220,11 @@ def _check_round(ctx: RunContext, round_index: int, proposals: Sequence[Proposal
             f"{ctx.run_id} round {round_index}: {len(proposals)} proposals, expected {expected}"
         )
     for p in proposals:
-        result = validate(p.design, ctx.gripper_task)
-        if not result.ok:
+        if ctx.space.name == V1:
+            ok = validate(p.design, ctx.gripper_task).ok
+        else:
+            ok = ctx.space.is_design(p.design) and ctx.space.validate(p.design, ctx.gripper_task).ok
+        if not ok:
             raise BudgetError(f"{ctx.run_id} round {round_index}: invalid design reached the simulator")
 
 
@@ -219,10 +256,11 @@ def run_search(
     llm_client: LLMClient | None = None,
     *,
     config: SearchConfig | None = None,
-    entrants: Sequence[FingerDesign] | None = None,
-    gripper_task: GripperTask | None = None,
+    entrants: Sequence[Any] | None = None,
+    gripper_task: GripperTask | Any | None = None,
     job: JobContext | None = None,
     protected_paths: Iterable[str | Path] = (),
+    space: str | DesignSpace | None = None,
 ) -> SearchOutcome:
     """Run ``runs`` independent runs of ``arm`` in lockstep, each simulating exactly ``budget`` designs.
 
@@ -236,10 +274,14 @@ def run_search(
         out_dir: Output directory; must not already hold a manifest.
         llm_client: Required for the LLM arms. Its cache decides live vs replay.
         config: Protocol knobs (round sizes, LLM-call cap, proposer settings).
-        entrants: Manual entrants for round 0 (default ``configs/entrants.yaml``).
-        gripper_task: Validator constants (default: the evaluator's).
+        entrants: Manual entrants for round 0 (default ``configs/entrants.yaml``; v2:
+            ``configs/entrants_v2.yaml`` through track G's loader).
+        gripper_task: Validator constants (default: the evaluator's). In v2, the
+            :class:`~rtt.search.space_v2.V2Context` with the training parts.
         job: Job facts for the manifest (default :meth:`JobContext.from_env`).
         protected_paths: Extra paths the vault guard must keep unreadable.
+        space: ``box-v1`` or ``freeform-v2`` (default: the evaluator's design space). A run
+            never mixes spaces: the evaluator, the entrants and every proposal must agree.
     """
     if arm not in ARMS:
         raise ValueError(f"unknown arm {arm!r}; choose from {sorted(ARMS)}")
@@ -250,14 +292,25 @@ def run_search(
         raise ValueError(f"{runs} runs need {runs} seeds, got {len(run_seeds)}")
     if len(set(run_seeds)) != len(run_seeds):
         raise ValueError("run seeds must be distinct")
-    config = config or SearchConfig()
     out = Path(out_dir)
     if (out / "manifest.json").exists():
         raise FileExistsError(f"{out} already holds a search manifest; use a fresh directory")
     info = evaluator.describe()
+    design_space = get_space(space) if isinstance(space, str) else space or get_space(info.design_space)
+    if design_space.name != info.design_space:
+        raise ValueError(f"the evaluator scores {info.design_space} designs, not {design_space.name}")
+    config = config or SearchConfig.for_space(design_space.name)
     task = gripper_task or info.gripper_task
-    entrant_designs = list(entrants) if entrants is not None else load_entrants(DEFAULT_ENTRANTS)
+    if entrants is not None:
+        entrant_designs = list(entrants)
+    elif design_space.name == V1:
+        entrant_designs = load_entrants(DEFAULT_ENTRANTS)
+    else:
+        entrant_designs = _load_entrants_v2(DEFAULT_ENTRANTS_V2)
+    if any(not design_space.is_design(d) for d in entrant_designs):
+        raise ValueError(f"every entrant must be a {design_space.name} design")
     job = job or JobContext.from_env()
+    shared = config.proposer.min_distance if design_space.name != V1 and config.shared_diversity else None
 
     contexts = [
         RunContext(
@@ -267,6 +320,8 @@ def run_search(
             gripper_task=task,
             info=info,
             budget=BudgetLedger(budget, config.round0_size, config.round_size, config.llm_call_cap),
+            space=design_space,
+            shared_min_distance=shared,
         )
         for i, seed in enumerate(run_seeds)
     ]
@@ -295,12 +350,17 @@ def run_search(
             "seeds_per_condition": info.seeds_per_condition,
             "episodes_per_design": info.episodes_per_design,
         },
-        "gripper_task": asdict(task),
-        "entrants": [{"name": d.name, "design_id": d.design_id()} for d in entrant_designs],
+        "gripper_task": asdict(task) if design_space.name == V1 else _context_json(task),
+        "entrants": [
+            {"name": design_space.label(d), "design_id": design_space.design_id(d)} for d in entrant_designs
+        ],
         "config": config.to_json(),
         "model": _model_facts(llm_client) if strategies[0].uses_llm else None,
         "provider": PROVIDER if strategies[0].uses_llm else None,
-        "prompt_hashes": prompt_spec_hashes() if strategies[0].uses_llm else None,
+        "prompt_hashes": (
+            _prompt_hashes(design_space.name, info, config.proposer) if strategies[0].uses_llm else None
+        ),
+        "design_space": design_space.name,
     }
     write_manifest(out / "manifest.json", {**base_manifest, "status": "running"})
 
@@ -326,7 +386,17 @@ def run_search(
                 for round_index, size in enumerate(plan):
                     if round_index == 0:
                         proposals = [
-                            round0_designs(entrant_designs, c.run_seed, size, task) for c in contexts
+                            round0_designs(entrant_designs, c.run_seed, size, task)
+                            if design_space.name == V1
+                            else round0_designs(
+                                entrant_designs,
+                                c.run_seed,
+                                size,
+                                task,
+                                space=design_space,
+                                min_distance=c.shared_min_distance,
+                            )
+                            for c in contexts
                         ]
                     else:
                         proposals = list(pool.map(lambda s, r=round_index, n=size: s.ask(r, n), strategies))
@@ -352,8 +422,9 @@ def run_search(
             paths: dict[str, Path] = {}
             for outcome in outcomes:
                 paths[f"frozen:{outcome.ctx.run_id}"] = write_frozen(outcome.frozen, out / "frozen")
+            tables = store.write_tables if design_space.name == V1 else _write_tables_v2
             paths.update(
-                store.write_tables(
+                tables(
                     out / "results",
                     [_run_identity(c) for c in contexts],
                     [[item.to_json() for item in c.history] for c in contexts],
@@ -401,12 +472,17 @@ def run_search(
                     "success": best.score.success,
                 },
                 "best_so_far": ctx.history.best_so_far(),
-                "diversity": diversity_stats(ctx.history.designs()),
+                "diversity": diversity_stats(
+                    ctx.history.designs(), space=None if design_space.name == V1 else design_space
+                ),
                 "frozen_sha256": outcome.frozen.content_sha256,
                 "frozen_at": outcome.frozen.frozen_at,
                 "fingerprint": outcome.fingerprint,
             }
         )
+        if design_space.name != V1:
+            per_run[-1]["sampler"] = _sampler_stats(strategy)
+            per_run[-1]["lift_best_so_far"] = _lift_best_so_far(ctx)
     manifest = {
         **base_manifest,
         "status": "complete",
@@ -425,3 +501,143 @@ def run_search(
     }
     paths["manifest"] = write_manifest(out / "manifest.json", manifest)
     return SearchOutcome(arm=arm, out_dir=out, runs=outcomes, manifest=manifest, paths=paths)
+
+
+# --------------------------------------------------------------------------- v2 helpers
+
+
+def _load_entrants_v2(path: Path) -> list[Any]:
+    """Track G's round-0 v2 entrants (``configs/entrants_v2.yaml``); a clear error until G lands.
+
+    Reference entrants (``ref_wrap``, ``ref_hook``) are scored outside the budget, so they are
+    not in round 0; :func:`reference_entrants_v2` returns them.
+    """
+    return [
+        e for e in _all_entrants_v2(path) if getattr(e, "round0", True) and not getattr(e, "reference", False)
+    ]
+
+
+def reference_entrants_v2(path: Path = DEFAULT_ENTRANTS_V2) -> list[Any]:
+    """The v2 reference entrants: scored outside the budget and shown in every comparison (spec section 9)."""
+    return [e for e in _all_entrants_v2(path) if getattr(e, "reference", False)]
+
+
+def _all_entrants_v2(path: Path) -> list[Any]:
+    from rtt.search.space_v2 import track_g
+
+    load = track_g().load_entrants
+    if load is None or not path.exists():
+        raise FileNotFoundError(
+            "v2 entrants come from track G (rtt.design.freeform.baselines.load_entrants_v2 and "
+            f"{path.name}); pass entrants= explicitly until they land"
+        )
+    return list(load(path))
+
+
+def _context_json(task: Any) -> Any:
+    to_json = getattr(task, "to_json", None)
+    return to_json() if callable(to_json) else repr(task)
+
+
+def _prompt_hashes(space: str, info: Any, proposer: ProposerConfig) -> dict[str, str]:
+    if space == V1:
+        return prompt_spec_hashes()
+    from rtt.search.nemotron_v2 import prompt_spec_hashes_v2
+
+    return prompt_spec_hashes_v2(info, proposer)  # the run's own reserves and diversity bars
+
+
+def _sampler_stats(strategy: SearchStrategy) -> dict[str, Any] | None:
+    """The random stream's valid rate and rejections by reason (arm A, or an LLM arm's fallback)."""
+    sampler = getattr(strategy, "sampler", None) or getattr(strategy, "fallback", None)
+    stats = getattr(sampler, "stats", None)
+    return stats() if callable(stats) else None
+
+
+def _lift_best_so_far(ctx: RunContext) -> list[float]:
+    best, out = 0.0, []
+    for item in ctx.history:
+        lift = item.score.lift_success
+        best = max(best, item.score.success if lift is None else lift)
+        out.append(best)
+    return out
+
+
+def _design_row_v2(
+    run: Mapping[str, Any], evaluated: Mapping[str, Any], families: Sequence[str]
+) -> dict[str, Any]:
+    """:func:`rtt.store.runs.design_row` for v2: recipe columns (``pad``, ``tip``, the 7 numbers)."""
+    from rtt.search.space_v2 import SCORED_PARAMS
+
+    proposal, score = evaluated["proposal"], evaluated["score"]
+    design = proposal["design"]
+    point = design.get("point") if "baseline" in design else design
+    row: dict[str, Any] = {
+        "arm": run["arm"],
+        "run_id": run["run_id"],
+        "run_index": run["run_index"],
+        "run_seed": run["run_seed"],
+        "round": evaluated["round"],
+        "eval_index": evaluated["index"],
+        "label": evaluated["label"],
+        "design_id": proposal["design_id"],
+        "design_space": proposal.get("design_space", V2),
+        "origin": proposal["origin"],
+        "operator": proposal["operator"],
+        "island": proposal["island"],
+        "slot": proposal["slot"],
+        "parents": ",".join(proposal["parents"]),
+        "via": proposal["via"],
+        "fallback_reason": proposal["fallback_reason"],
+        "request_hash": proposal["request_hash"],
+        "hypothesis": proposal["hypothesis"],
+        "name": design.get("name"),
+        "baseline_kind": design.get("baseline"),
+    }
+    for key in SCORED_PARAMS:
+        row[key] = point.get(key) if point else None
+    row.update(
+        {
+            "mass_g": score["mass_g"],
+            "success": score["success"],
+            "lift_success": score.get("lift_success"),
+            "hold_fraction": score["hold_fraction"],
+            "n_episodes": score["n_episodes"],
+            "jam_on_close": score.get("jam_on_close"),
+            "off_centre": score.get("off_centre"),
+            "max_pieces": score.get("max_pieces"),
+        }
+    )
+    for family in families:
+        row[f"success_{family}"] = score["per_family"].get(family)
+    for place, value in sorted((score.get("per_placement") or {}).items()):
+        row[f"success_{place}"] = value
+    return row
+
+
+def _write_tables_v2(
+    out_dir: str | Path,
+    runs: Sequence[Mapping[str, Any]],
+    histories: Sequence[Sequence[Mapping[str, Any]]],
+    rejections: Sequence[Sequence[Mapping[str, Any]]],
+    families: Sequence[str],
+) -> dict[str, Path]:
+    """:func:`rtt.store.runs.write_tables` with v2 design rows (same files, same episode and rejection rows)."""
+    results = Path(out_dir)
+    designs: list[dict[str, Any]] = []
+    episodes: list[dict[str, Any]] = []
+    rejected: list[dict[str, Any]] = []
+    for run, history, run_rejections in zip(runs, histories, rejections, strict=True):
+        for item in history:
+            designs.append(_design_row_v2(run, item, families))
+            episodes.extend(store.episode_rows(run, item))
+        rejected.extend(store.rejection_row(run, r) for r in run_rejections)
+    paths = {
+        "designs_parquet": store.write_parquet(results / "designs.parquet", designs),
+        "designs_jsonl": store.write_jsonl(results / "designs.jsonl", designs),
+    }
+    if episodes:
+        paths["episodes_parquet"] = store.write_parquet(results / "episodes.parquet", episodes)
+    if rejected:
+        paths["rejections_parquet"] = store.write_parquet(results / "rejections.parquet", rejected)
+    return paths
