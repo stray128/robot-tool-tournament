@@ -120,3 +120,37 @@ conditions fail. The evidence points the other way, so a ruling is needed:
    0.8 to 1.4 times the v1 cost per step, and 14 to 17-piece jaws at 1.1 to 2.7 times. The
    library's tee has 98 pieces. Fewer, wider pad strips and fewer part pieces near the jaws
    bring the ratio down.
+
+## Re-run on the current generator and part library (verification, 2026-10-16 evening)
+
+The S branch with its checks above, merged in a scratch copy with the generator and the part
+library at their latest commits, all six parts. The generator still rejects the L-bracket, so
+`matrix_builds` and GV1's builds fail on it; every other number is over the five parts that
+build (120-episode matrix, 180 parity episodes).
+
+| | libccd (the task) | native (matrix re-run) |
+|---|---|---|
+| GV1 closing-axis clearance error, first-contact error | 0.000 mm, 0.000 mm | |
+| GV1 zero-error registration, both imprints | 100 % on 5 parts | |
+| Held (lift-only), registered | 89.2 %, 47.5 % | 98.3 %, 53.3 % |
+| Held episodes over 1 mm penetration | 7 (max 1.79 mm) | 3 (max 1.92 mm) |
+| Penetration p99 | 6.77 mm | 2.06 mm |
+| Creep p95 | 0.18 mm | 0.46 mm (max 0.79 mm) |
+| Deliberate failures | fail: hex held at mu 0.05, tee ejected on closing at mu 0.05 | |
+| 1 ms vs 2 ms parity | 88.3 % | |
+| Native on/off: v2, v1 parity set | 87.8 %, 98.5 % | |
+| Determinism, 10 designs x 3 processes | identical | |
+| Cost v2 / v1 | 1.48 | |
+
+Two more findings:
+
+- **The imprint's side clearance is looser than designed.** Sliding the part across the jaw
+  at the seat (`lateral_slide_mm`, now in the GV1 report) gives 0.49 to 0.55 mm for the
+  configurator imprint against 0.40 mm designed: 0.50 mm on the block, whose sides run along
+  the closing axis, so 0.10 mm extra. The swept imprint gives 2.49 to 2.55 mm against 2.40 mm.
+  The closing-axis criterion cannot see this. The 0.1 mm outline grid rounding outward would
+  explain it. A looser imprint jams less, so it favours the baseline.
+- **libccd errors go both ways.** The stock blade on the tee at -3 mm across, with seed 0's
+  friction (mu 0.27), slides the tee 3 mm to the centre under libccd and registers; with native
+  collision the tee stays 2.36 mm off centre and does not register. So libccd at 2 ms also makes
+  false registrations, not only the false failures above.
