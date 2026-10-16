@@ -68,7 +68,7 @@ export function studioPalette(colors: SceneColors): StudioPalette {
         matLine: "#3d434d",
         clay: "#a9a49b",
         section: "#e0533d",
-        sectionPart: "#6c727c",
+        sectionPart: "#363d48",
         overlay: colors.accent,
       }
     : {
