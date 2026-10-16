@@ -254,13 +254,20 @@ class FingerPair:
 def build_pair(design: FingerRecipe | Baseline, part: PartSpec, task: TaskV2) -> FingerPair:
     """Compile a recipe (or a baseline) against one part into a seat-aligned jaw pair.
 
-    ``design`` is a canonical :class:`~rtt.design.freeform.schema.FingerRecipe` or a
+    ``design`` is a :class:`~rtt.design.freeform.schema.FingerRecipe` or a
     :class:`~rtt.design.freeform.baselines.Baseline`, ``part`` a
     :class:`~rtt.parts.types.PartSpec` and ``task`` the v2 task configuration (gripper
-    stroke, opening and palm geometry). The build is deterministic: float64, vertices rounded
-    to 1e-7 m, no randomness. An invalid design raises ``ValueError`` with a message that
-    says which rule failed.
+    stroke, opening and palm geometry; it reads ``task.gripper.open_half_gap``,
+    ``task.controller.palm_clearance``, ``task.controller.min_tip_clearance`` and
+    ``task.physics.friction``, so a v1 :class:`rtt.sim.task.TaskConfig` works too). The build
+    is deterministic: float64, vertices rounded to 1e-7 m, no randomness, cached per
+    (generator version, design id, part geometry, gripper). An invalid design raises
+    :class:`~rtt.design.freeform.validate.InvalidDesign` (a ``ValueError``) whose ``code``
+    and message say which rule failed.
 
-    This is the frozen signature. The geometry generator implements it.
+    This is the frozen signature; the work happens in :mod:`rtt.design.freeform.generate`
+    (imported on first call, so importing this module stays numpy-only).
     """
-    raise NotImplementedError("rtt.design.freeform.build_pair is not implemented yet")
+    from rtt.design.freeform.generate import build_pair as _build_pair
+
+    return _build_pair(design, part, task)

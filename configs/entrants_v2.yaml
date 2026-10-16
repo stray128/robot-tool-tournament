@@ -1,0 +1,90 @@
+# Entrants for the v2 design space (freeform-v2), loaded by
+# rtt.design.freeform.baselines.load_entrants_v2(). Recipes use the FingerRecipe fields
+# (mm, degrees, fractions); see src/rtt/design/freeform/schema.py.
+#
+# Round 0 (byte-identical across arms) = the four round0 entrants below + 4 Sobol designs.
+# Reference entrants are scored outside the budget and shown in every comparison.
+#
+# - stock: the stock gripper's own clamp blade, as committed collision hulls (convex
+#   decomposition of the real blade, fixed asset with its sha256). Until the hull file exists
+#   the build falls back to the v1 box approximation (configs/entrants.yaml, "stock").
+# - imprint_configurator: what a commercial custom-jaw configurator cuts: the part's negative
+#   with straight walls (draft 0) and 0.4 mm clearance. Its depth is set per part:
+#   max(4 mm, min(40% of the part's half-extent along the closing axis in the grip band,
+#   stroke cap)). pad_depth_mm below is only a placeholder that keeps the recipe valid.
+# - imprint_swept: the same with a +-2 mm sweep of the part along x (an
+#   uncertainty-integrating imprint); the search space has no sweep.
+entrants:
+  - name: stock
+    kind: stock
+    round0: true
+    hulls: assets/gripper/stock/stock_blade_hulls.npz
+    rationale: The gripper's own clamp blade, as shipped.
+
+  - name: flat
+    round0: true
+    rationale: A plain parallel jaw with a flat pad.
+    recipe:
+      pad: flat
+      tip: blunt
+      grip_height_frac: 0.5
+      pad_height_mm: 20.0
+      finger_width_mm: 20.0
+
+  - name: imprint_configurator
+    round0: true
+    depth_rule: configurator
+    rationale: The part's imprint with 0.4 mm clearance and straight walls, as a configurator makes it.
+    recipe:
+      pad: conform
+      tip: blunt
+      grip_height_frac: 0.5
+      pad_height_mm: 20.0
+      finger_width_mm: 40.0
+      pad_depth_mm: 4.0
+      wall_draft_deg: 0.0
+      clearance_mm: 0.4
+
+  - name: imprint_swept
+    round0: true
+    depth_rule: configurator
+    sweep_mm: 2.0
+    rationale: The configurator imprint swept +-2 mm across the jaw to absorb placement error.
+    recipe:
+      pad: conform
+      tip: blunt
+      grip_height_frac: 0.5
+      pad_height_mm: 20.0
+      finger_width_mm: 40.0
+      pad_depth_mm: 4.0
+      wall_draft_deg: 0.0
+      clearance_mm: 0.4
+
+  - name: ref_wrap
+    round0: false
+    reference: true
+    rationale: The approved concave entrant as a recipe; a 4 mm wrap with 30 degree walls.
+    recipe:
+      pad: conform
+      tip: blunt
+      grip_height_frac: 0.5
+      pad_height_mm: 20.0
+      finger_width_mm: 30.0
+      pad_depth_mm: 4.0
+      wall_draft_deg: 30.0
+      clearance_mm: 0.4
+
+  - name: ref_hook
+    round0: false
+    reference: true
+    rationale: The approved hooked entrant as a recipe; a shallow wrap with a 6 mm hook lip.
+    recipe:
+      pad: conform
+      tip: hook
+      grip_height_frac: 0.5
+      pad_height_mm: 20.0
+      finger_width_mm: 30.0
+      pad_depth_mm: 2.0
+      wall_draft_deg: 30.0
+      clearance_mm: 0.4
+      tip_size_mm: 6.0
