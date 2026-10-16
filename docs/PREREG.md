@@ -193,7 +193,7 @@ All rows are filled in at freeze.
 | CoACD version, seed and threshold | coacd 1.0.14, seed 0, threshold 0.02 |
 | Stock-blade hulls (`stock_blade_hulls.npz`) | [at freeze] |
 | Scanned-object hull hashes (`heldout_real_v2`) | [at freeze] |
-| Hero rule (`src/rtt/analysis/hero_rule.py`; `HeroRule().digest()`) | [at freeze]; digest draft `ba565055b9cd6717f1af7a82ab01b7a1657a1912f53de7a9a94beece1b03850d` |
+| Hero rule (`src/rtt/analysis/hero_rule.py`; `HeroRule().digest()`) | [at freeze]; digest draft `8bbdb11175e350a9e7b64834e994827b014069823d5981eb8a82862ba0c8e875` |
 | v2 prompts and the engineering-notes block (`src/rtt/search/prompts/v2/*`) | [at freeze] |
 | Tool schema, parameter table, points rule (manifest `prompt_hashes`) | [at freeze] |
 | tau rule (`src/rtt/analysis/tau.py`; `TauRuleV2().digest()`) | [at freeze]; digest draft `e4db295272c0818d8a5148b0d1b32b2104a1db6018947a050480253c22b9b695` |
@@ -305,7 +305,9 @@ It is also an **imprint hero** when:
 Scans with visible branding never qualify. With several episodes per condition, a
 condition shows a property only if a strict majority of its episodes do; ties count
 against qualification. A `physics_invalid` episode never counts as a stock or imprint
-failure, and never as a designed pass.
+failure, and never as a designed pass. A value that was not measured (no registration
+pose, shortfall or tilt in the record) counts against qualification too: it is never a
+designed pass, an imprint jam or a visible failure.
 
 Heroes are labelled "showcase parts chosen because the stock finger fails". Expected: the
 tee, the block, the steel slug and one unbranded scanned object. If fewer than 3 qualify,
@@ -333,9 +335,10 @@ Reported, not gating: lift-only scores, `jam_on_close` and `off_centre` counts, 
 
 - At most 3 iterations, each logged in `calibration_log.json` with its file hashes,
   changes and checks. Iteration 1 is the task as drafted.
-- Only task-level knobs may change: part dimensions, density or material; placements;
-  friction or grip force within the gripper's spec; the registration tolerances. Never
-  anything per design, never an entrant, never a physics setting.
+- Only suite-level knobs may change: part dimensions, density or material; placements;
+  the registration tolerances. Never anything per design, never an entrant, never a
+  physics or task setting. Friction stays 0.3 and the grip force 25 N per jaw, because the
+  claims in A13 and the hashed engineering notes are stated at those values.
 - The registration tolerances change in at most one iteration.
 - Every iteration scores the same screening sample.
 - After the last iteration: pass, freeze; only the headroom criterion failing, declare the

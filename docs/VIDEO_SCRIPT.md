@@ -17,6 +17,11 @@ the recorded runs; none of them may be written from this script.
   (`docs/PREREG.md` section A8). They are labelled "showcase parts chosen because the
   stock finger fails". If fewer than 3 parts qualify, the hook uses the imprint-vs-designed
   offset contrast only (variant B below).
+- **"Designed by Nemotron" only when it was.** The designed jaw in the hook, the title
+  card and the round module is a recipe proposed by a Nemotron arm in a recorded run (its
+  `origin` in the run history). The hero screen (GV-H, Oct 19) runs before any Nemotron
+  run, so its best designed recipe may be a Sobol design or a reference entrant; a clip of
+  such a recipe is called "a designed finger", never "the finger Nemotron designed".
 - **On screen, the gripper is "an open-source parallel gripper".** Its name and credits
   appear in the README and the site's credits page only.
 - **No third-party brands or logos.** Scanned objects appear only if the brand screen

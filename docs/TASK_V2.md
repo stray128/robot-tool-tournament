@@ -237,5 +237,7 @@ Run on a screening sample of 64 Sobol designs (public seed 20261020, distinct fr
 gate and search seed) plus the round-0 and reference entrants. Targets: every round-0
 entrant 20-70 % registered; Sobol SD at least 0.15; at least 5 of 64 beat the best entrant
 (or the miss is declared, as with v1's G3); at most 10 % of Sobol designs at 100 %. At
-most 3 logged iterations; task-level knobs only. The procedure is
+most 3 logged iterations; only part dimensions, density or material, placements and (in
+one iteration) the registration tolerances may change. Friction, grip force and the
+physics settings stay as above. The procedure is
 `rtt.analysis.calibrate_v2` and `docs/PREREG.md` section A9. Results: **[at freeze]**.
