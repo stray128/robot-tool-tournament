@@ -9,24 +9,34 @@ from the expected one (when given) raises instead of publishing a misleading rep
 Each replay is written as ``<stem>.bin`` + ``<stem>.json``
 (:func:`rtt.sim.replay.write_replay`) with extra ``meta``: the design id and
 parameters, the condition id and description, and whatever the caller adds.
+
+:func:`lift_to_v2` turns a recorded version 1 replay into a version 2 replay drawn from GLB
+assets: the open-source gripper's frame and carriages, each finger's own asset (its v1 boxes
+fused into one solid, or the stock blade's CAD) and the object. The v1 geoms stay as the
+collision overlay. This is how v1 bouts (the F1 fallback) get the v2 look.
 """
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from rtt.design.generate import generate_finger
 from rtt.design.schema import FingerDesign
 from rtt.sim.conditions import Condition
 from rtt.sim.episode import EpisodeResult
 from rtt.sim.exec_cpu import CpuExecutor, EpisodeJob
-from rtt.sim.replay import write_replay
+from rtt.sim.replay import Replay, write_replay
 from rtt.sim.task import TaskConfig, default_task
 
-__all__ = ["RecordedReplay", "ReplayMismatchError", "ReplayRequest", "record_replays"]
+if TYPE_CHECKING:
+    from rtt.render.glb import AssetStore
+    from rtt.render.materials import Look
+
+__all__ = ["RecordedReplay", "ReplayMismatchError", "ReplayRequest", "lift_to_v2", "record_replays"]
 
 
 class ReplayMismatchError(RuntimeError):
@@ -166,3 +176,112 @@ def record_replays(
             )
         )
     return recorded
+
+
+# --------------------------------------------------------------------------- v1 -> v2 look
+
+_SLUG_BAD = re.compile(r"[^A-Za-z0-9_.-]+")
+
+
+def _slug(text: str) -> str:
+    out = _SLUG_BAD.sub("-", text).strip("-.") or "part"
+    return out if out[0].isalnum() else f"p{out}"
+
+
+def _part_id(meta: dict[str, Any]) -> str:
+    obj = meta.get("object") or {}
+    if obj.get("name"):
+        return _slug(str(obj["name"]))
+    size = "x".join(f"{1000.0 * float(v):g}" for v in obj.get("size", []))
+    return _slug(f"{obj.get('kind', 'object')}-{size}" if size else str(obj.get("kind", "object")))
+
+
+def lift_to_v2(
+    replay: Replay,
+    store: AssetStore,
+    *,
+    run_id: str,
+    code_version: str,
+    product_mode: bool = False,
+    design_space: str = "v1",
+    design_id: str | None = None,
+    geometry_id: str | None = None,
+    part_id: str | None = None,
+    stock_blade: bool = False,
+    finger_look: Look | None = None,
+    object_look: Look | None = None,
+    keep_geoms: bool = True,
+    **provenance_extra: Any,
+) -> Replay:
+    """A version 2 copy of a version 1 replay, drawn from assets written into ``store``.
+
+    Poses are copied unchanged. ``stock_blade=True`` draws the stock blade's CAD on both
+    jaws (for the box-approximated v1 stock entrant; the boxes remain the collision overlay).
+    ``design_id`` defaults to the replay's ``meta.design_id``; ``part_id`` to the object's
+    name, or its kind and size in mm.
+    """
+    from rtt.render import glb
+    from rtt.render import materials as mat
+    from rtt.render.gripper import add_gripper_assets
+    from rtt.sim import replay as rp
+
+    header = replay.header
+    if replay.version != rp.VERSION_V1:
+        raise ValueError("lift_to_v2 takes a version 1 replay")
+    names = [b["name"] for b in header["bodies"]]
+    if names != ["palm", "finger_left", "finger_right", "object"]:
+        raise ValueError(f"unexpected replay bodies {names}")
+    geoms = {b["name"]: b.get("geoms", []) for b in header["bodies"]}
+    grip = add_gripper_assets(store)
+    meta = dict(header.get("meta") or {})
+
+    def own(body: str, role: str, look: Look, label: str) -> str:
+        mesh = glb.mesh_from_geoms(geoms[body])
+        data = glb.glb_bytes(
+            [glb.mesh_from_trimesh(mesh, look, name=body)],
+            copyright=glb.OURS_ATTRIBUTION,
+            extras={"license": glb.OURS_LICENSE, "role": role},
+        )
+        return store.add(data, role=role, label=label)
+
+    visuals: dict[str, list[dict[str, Any]]] = {"palm": [rp.visual(grip.frame)]}
+    for side in ("left", "right"):
+        body = f"finger_{side}"
+        finger = (
+            grip.blade(side)
+            if stock_blade
+            else own(body, body, finger_look or mat.FINGER_DESIGNED, f"v1 finger, {side} jaw")
+        )
+        visuals[body] = [rp.visual(grip.carriage(side)), rp.visual(finger)]
+    visuals["object"] = [
+        rp.visual(own("object", "object", object_look or mat.PART_LOOKS["aluminium_anodised"], "v1 object"))
+    ]
+    used = {v["asset"] for vs in visuals.values() for v in vs}
+    prov = rp.provenance(
+        run_id=run_id,
+        code_version=code_version,
+        product_mode=product_mode,
+        seed=meta.get("seed"),
+        condition=meta.get("condition_id"),
+        **provenance_extra,
+    )
+    v2_meta = {
+        "design_space": design_space,
+        "design_id": str(design_id or meta.get("design_id") or "unknown"),
+        "geometry_id": geometry_id,
+        "part_id": part_id or _part_id(meta),
+    }
+    if stock_blade:
+        v2_meta["finger_visual"] = "stock blade CAD over the v1 box approximation"
+    lifted = rp.upgrade_header(
+        {**header, "n_frames": replay.n_frames},
+        visuals=visuals,
+        assets=store.subset(used),
+        meta=v2_meta,
+        provenance=prov,
+        keep_geoms=keep_geoms,
+    )
+    errs = rp.check_header(lifted, replay.frames, replay.overlays)
+    if errs:
+        raise ValueError("lifted header is invalid: " + "; ".join(errs))
+    return Replay(frames=replay.frames.copy(), header=lifted, overlays=replay.overlays)
