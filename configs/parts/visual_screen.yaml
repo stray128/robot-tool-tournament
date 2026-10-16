@@ -1,0 +1,44 @@
+# Brand screen for scanned (GSO) objects: which scans may appear TEXTURED on screen.
+# Load with rtt.sim.gso_visual.load_visual_screen(); check a shot with check_shot().
+#
+# Rules (spec section 8, "Brand rule"):
+#   * Hero and video shots show only the procedural industrial parts (rtt.parts) or scans
+#     listed under `objects` with brand_visible: false (in their listed stable poses).
+#   * Props are industrial parts, never scans.
+#   * The site's held-out gallery renders scans untextured ("clay"), so no label can show.
+#   * Any scan not listed counts as branded (default_brand_visible: true).
+#
+# How an object is screened: render it textured in each stable pose it may be shown in
+# (rtt.sim.gso_visual.load_scan_visual, UVs flipped for MuJoCo), from 4 azimuths 5-15 deg
+# above level and once from 60 deg above; clear it only if no printed text, logo, label,
+# sticker or barcode is legible in any view. Record the poses and views under `method`.
+# A cleared object is still shot from above its base plane only (a sticker under a base
+# stays hidden only while the camera cannot see the base).
+#
+# Screened 2026-10-16 (the 9 textured scans available locally): none cleared. Six show
+# printed labels or logos; three are mugs whose base sticker faces the camera in their
+# intake pose, and every stable pose of them is over 94 mm across (the gripper opens 84 mm).
+# They are listed by the SHA-256 of their full name only, so no brand name sits in this file.
+# Clearing a graspable unbranded scan for the hero needs more textures fetched from the
+# pinned source first (open item).
+version: 1
+default_brand_visible: true
+
+objects: {}
+# objects:
+#   <GSO object name>:
+#     brand_visible: false
+#     poses: [<stable pose index>, ...]
+#     method: "textured MuJoCo renders, pose k, 4 azimuths at -15 deg + 1 at -60 deg"
+#     note: "<what was checked>"
+
+screened_branded_sha256:
+  - 261e25c0ecf82ed9387a8fd98b4a7ac3fc0fad5b6675f7c53143e37ba6313f00
+  - 63da395ba1ea386e13cafcf1afd7313dcb6cc127ede89ae9fe51961ed76e25c9
+  - 75feb11dc1faad414566c641507cfed89bebdba102cdefbda5d8af656c6cdc22
+  - 790511ffd928b6deab3699d1b837941497258419d05452adfd465e1c58a9b13b
+  - 924ac1805dfd7f295658c223af5ee3994568283663d0daea8e70693773481f56
+  - a7778172a6b2fc73dfcd6c35f764745272e5e46859117fcb4466f0d715802126
+  - b1ab6d17dc46b75dbef6a861894b37d10fb8c0b1faaee681ddd317179be11bcf
+  - b448f158aaba3f56868c8bd4f5bd0fd05abe27829868947935f86d734fab5ea4
+  - c410343f4c163ee427b3ce7485e4bdc6decb89f908773be11e46f644592917d4
