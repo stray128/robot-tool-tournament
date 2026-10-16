@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { getDataRevision } from "@/lib/data";
 import { APP_NAME, REPO_URL } from "@/lib/site";
 
@@ -37,7 +39,10 @@ export function TitleBlock({ title, drawing, sheet }: TitleBlockProps) {
       </dl>
       <p className="flex flex-wrap justify-between gap-2 px-3 py-2 text-xs text-ink-3">
         <span>
-          {APP_NAME} is open source under the Apache-2.0 licence.
+          {APP_NAME} is open source under the Apache-2.0 licence.{" "}
+          <Link className="link" href="/credits/">
+            Credits
+          </Link>
           {REPO_URL ? (
             <>
               {" "}

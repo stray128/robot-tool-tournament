@@ -559,7 +559,8 @@ export function parseResults(raw: unknown, file = "results.json"): ResultsIndex 
 
 // ---------------------------------------------------------------- replay headers
 
-function readGeom(n: Node): ReplayGeom {
+/** Validate one v1-style replay geom (shared with the version 2 header parser in lib/replay.ts). */
+export function readGeom(n: Node): ReplayGeom {
   const type = n.get("type").oneOf(["box", "cylinder", "capsule", "plane", "mesh"] as const);
   const geom: ReplayGeom = {
     name: n.get("name").str(),

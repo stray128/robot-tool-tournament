@@ -9,6 +9,7 @@ import { isParkedGeom, type Bounds, type Replay } from "@/lib/replay";
 import type { ReplayGeom } from "@/lib/types";
 
 import type { PlaybackStore, ViewName } from "./playback";
+import { PoseDriver } from "./PoseDriver";
 import type { SceneColors } from "./useThemeColors";
 
 /**
@@ -16,10 +17,10 @@ import type { SceneColors } from "./useThemeColors";
  * this single rotation of the root group converts it: (x, y, z) -> (x, z, -y).
  * Nothing else in the viewer rotates world data.
  */
-const Z_UP_TO_Y_UP = new THREE.Euler(-Math.PI / 2, 0, 0);
+export const Z_UP_TO_Y_UP = new THREE.Euler(-Math.PI / 2, 0, 0);
 
 /** Camera directions (from the target towards the camera) in three.js world coordinates. */
-const VIEW_DIRECTIONS: Record<ViewName, THREE.Vector3> = {
+export const VIEW_DIRECTIONS: Record<ViewName, THREE.Vector3> = {
   // Looking along the finger width, slightly from above and the side: closing axis horizontal.
   iso: new THREE.Vector3(1, 0.55, 0.62).normalize(),
   // Straight along the finger width: the jaw closes left-right and the lift is vertical.
@@ -31,7 +32,7 @@ function toThree([x, y, z]: readonly [number, number, number]): THREE.Vector3 {
 }
 
 /** Screen space kept clear for the HTML readouts over the canvas, in CSS pixels. */
-const OVERLAY_PAD = { top: 52, bottom: 60, side: 10 };
+export const OVERLAY_PAD = { top: 52, bottom: 60, side: 10 };
 
 /**
  * Fits an orthographic camera to `bounds` (MuJoCo coordinates) from the chosen view,
@@ -84,40 +85,8 @@ function CameraRig({ bounds, view }: { bounds: Bounds; view: ViewName }) {
   return null;
 }
 
-/** Applies the interpolated body poses for the shared clock and requests a frame. */
-function PoseDriver({
-  store,
-  replay,
-  bodies,
-}: {
-  store: PlaybackStore;
-  replay: Replay;
-  bodies: React.RefObject<(THREE.Group | null)[]>;
-}) {
-  const invalidate = useThree((s) => s.invalidate);
-  useEffect(() => {
-    const pos = [0, 0, 0];
-    const quat = [0, 0, 0, 1];
-    const apply = (t: number) => {
-      const f = replay.frameAt(t);
-      bodies.current.forEach((group, i) => {
-        if (!group) return;
-        replay.sample(i, f, pos, quat);
-        group.position.set(pos[0]!, pos[1]!, pos[2]!);
-        group.quaternion.set(quat[0]!, quat[1]!, quat[2]!, quat[3]!);
-      });
-      invalidate();
-    };
-    apply(store.getState().t);
-    return store.subscribe((s, prev) => {
-      if (s.t !== prev.t) apply(s.t);
-    });
-  }, [store, replay, bodies, invalidate]);
-  return null;
-}
-
 /** Flat-shaded geometry of a convex mesh piece (vertices and faces from the replay header). */
-function useMeshGeometry(geom: ReplayGeom): THREE.BufferGeometry | null {
+export function useMeshGeometry(geom: ReplayGeom): THREE.BufferGeometry | null {
   const geometry = useMemo(() => {
     if (geom.type !== "mesh" || !geom.vertices || !geom.faces) return null;
     const g = new THREE.BufferGeometry();
@@ -193,7 +162,7 @@ function bodyColor(name: string, colors: SceneColors): { fill: string; edge: str
 }
 
 /** Square dashed ring at the success height around the object's rest position. */
-function Datum({ center, z, color }: { center: [number, number]; z: number; color: string }) {
+export function Datum({ center, z, color }: { center: [number, number]; z: number; color: string }) {
   const h = 0.075;
   const [cx, cy] = center;
   const points: [number, number, number][] = [
