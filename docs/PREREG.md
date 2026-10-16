@@ -35,6 +35,13 @@ shows it is labelled "product mode".
 
 **Decision:** [at freeze] (date, time, which gates, who decided).
 
+Status on 2026-10-16: the founder ruled "go v2 with stricter rules", declared in
+`docs/DEVIATIONS.md` before any scored run (native collision, a 1 ms step, the
+`physics_unreliable` rule, the stock-blade bulge measured on the contact zone, the parts
+fix, and a declarable Sobol spread miss). Under them GV0, GV1 and GV2 pass (GV2's cost miss
+is declared), GV3 is frozen with the spread miss declared, and GV-H found no hero. GV4 and
+GV5 are still to run.
+
 ## A1. Question and primary endpoint (S1)
 
 **Question.** Does NVIDIA Nemotron 3 Super, reading its own run's simulator results, reach
@@ -49,7 +56,11 @@ placements x 2 jitter seeds). There is no best-of-k step. Scores lie on a 1/48 g
 `success_v2` requires lift and hold as in v1, plus, 0.25 s after closing and before the
 lift: seat shortfall at most 1.0 mm, |dx| and |dy| at most 0.75 mm, yaw at most 2 deg
 (modulo the part's symmetry), tilt at most 3 deg; and tilt at most 5 deg after the hold.
-These tolerances may change once, during GV3, and are frozen in `docs/TASK_V2.md`.
+These tolerances may change once, during GV3, and are frozen in `docs/TASK_V2.md` (they
+did not change). An episode with a physics flag scores as a failure on both `success_v2`
+and the lift-only criterion: `physics_invalid` (a MuJoCo reset) and `physics_unreliable`
+(a held episode whose jaw-part penetration exceeds 1 mm), identically for every arm and
+design.
 
 **S1: evaluations to tau.** As in v1:
 
@@ -168,16 +179,22 @@ and shown in every comparison.
 - **Geometry:** jaws are built inside the job. Gate GV4 requires at least 99 % of 100 v2
   episodes to match the laptop and every geometry and hull hash to be equal; otherwise
   geometry is built once, stored by hash, and the jobs score the stored geometry.
-- **Physics validity:** an episode whose MuJoCo bad-acceleration counter rises is
-  `physics_invalid` and counts as a failure. More than 1 % of a run's episodes flagged is a
-  deviation.
+- **Physics:** `task_v2` runs at a 1 ms step with MuJoCo's native collision (founder
+  rulings 3 and 2 of 2026-10-16, declared in DEVIATIONS.md).
+- **Physics validity:** an episode whose MuJoCo bad-acceleration counter rises in its scored
+  part (up to the decision) is `physics_invalid` and counts as a failure. More than 1 % of a
+  run's episodes flagged is a deviation. A held episode whose jaw-part penetration exceeds
+  1 mm is `physics_unreliable` and counts as a failure (ruling 4); its share is reported
+  per run and per arm.
 - **Image:** built from the tagged commit with `make image`, pushed to both regional
   registries, referenced by digest. Digest [at freeze].
 - **Job order:** all search jobs first; the held-out jobs last, and only they are given
   the held-out seed.
-- **Compute estimate [derived]:** about 25 CPU-s per design and about 17 CPU-min per run;
-  about 6 CPU-h for 2 arms x R = 10, about 8 CPU-h with the pilot and held-out. Gate GV2
-  caps a v2 episode at 1.5x the v1 median CPU time.
+- **Compute estimate [derived]:** measured at the 1 ms step, a v2 episode costs 3.57x the
+  v1 median (gate GV2; the 1.5x cap is a declared miss) and 1.37 CPU-s in the GV3 worker
+  pool: about 38-66 CPU-s per design and 25-44 CPU-min per run; about 16-22 CPU-h for
+  2 arms x R = 10, about 21-29 CPU-h with the pilot and held-out (the draft said 8 CPU-h at
+  25 CPU-s per design).
 
 ## A5. Frozen inputs
 
@@ -185,15 +202,15 @@ All rows are filled in at freeze.
 
 | Input | SHA-256 / digest |
 |---|---|
-| Design-space version and generator code (`src/rtt/design/freeform/*.py`) | [at freeze] |
-| Parts library (`src/rtt/parts/*.py`, `configs/parts_v2.yaml`) | [at freeze] |
-| `configs/task_v2.yaml` (including the registration tolerances) | [at freeze] |
-| `configs/suites/train_v2.yaml` | [at freeze] |
-| `configs/entrants_v2.yaml` | [at freeze] |
+| Design-space version and generator code (`src/rtt/design/freeform/*.py`) | `rtt-freeform-gen/2`; code listing `c3ab4e3751f4fb46b3b2006096b340b24a359d88f58fc2419bb60d7d0ef57268` (GV3 freeze; `docs/TASK_V2.md` says how it is computed) |
+| Parts library (`src/rtt/parts/*.py`, `configs/parts_v2.yaml`) | code listing `62bb2cb129ff8cc5b70a6111bf1d86f2d23cbc56e09ccc53c4d18629fd1ad392`; `parts_v2.yaml` `43b35533a91746d3333714a648f0d3ca300b7dc2d88297749f6bdbd07dbfff70` (GV3 freeze) |
+| `configs/task_v2.yaml` (including the registration tolerances) | `bef7297f8e1ff2a6270cd3f1ffb6de8690928f46485828a58fd1ce2313d87487` (GV3 freeze) |
+| `configs/suites/train_v2.yaml` | `ebd292b98fb46d220589a96e1d18d465e9b3152657401b11c3efd323e2625c63` (GV3 freeze) |
+| `configs/entrants_v2.yaml` | `7d9ac3922a34f3904e9ffb1cd868442197c3b94e475682cad2bbba3851faf421` (GV3 freeze) |
 | CoACD version, seed and threshold | coacd 1.0.14, seed 0, threshold 0.02 |
-| Stock-blade hulls (`stock_blade_hulls.npz`) | [at freeze] |
+| Stock-blade hulls (`stock_blade_hulls.npz`) | `501782c6b1cc47db419fd47d82448b43a7385a0dc0a89c7938cd7f93d51aee0b` (GV3 freeze) |
 | Scanned-object hull hashes (`heldout_real_v2`) | [at freeze] |
-| Hero rule (`src/rtt/analysis/hero_rule.py`; `HeroRule().digest()`) | [at freeze]; digest draft `8bbdb11175e350a9e7b64834e994827b014069823d5981eb8a82862ba0c8e875` |
+| Hero rule (`src/rtt/analysis/hero_rule.py`; `HeroRule().digest()`) | [at freeze]; digest as applied at GV-H `dda0ec353fd66436a50257298c32246af8cf49733f0438526f2e2836f24f37cb` (was `8bbdb111...` before `physics_unreliable` counted against qualification) |
 | v2 prompts and the engineering-notes block (`src/rtt/search/prompts/v2/*`) | [at freeze] |
 | Tool schema, parameter table, points rule (manifest `prompt_hashes`) | [at freeze] |
 | tau rule (`src/rtt/analysis/tau.py`; `TauRuleV2().digest()`) | [at freeze]; digest draft `e4db295272c0818d8a5148b0d1b32b2104a1db6018947a050480253c22b9b695` |
@@ -305,8 +322,8 @@ It is also an **imprint hero** when:
 Scans with visible branding never qualify, and every part needs a recorded brand-screen
 verdict. With several episodes per condition, a condition shows a property only if a
 strict majority of its episodes do; ties count against qualification. A
-`physics_invalid` episode never counts as a stock or imprint failure, and never as a
-designed pass. A value that was not measured (no registration pose, shortfall or tilt in
+`physics_invalid` or `physics_unreliable` episode never counts as a stock or imprint
+failure, and never as a designed pass. A value that was not measured (no registration pose, shortfall or tilt in
 the record) counts against qualification too: it is never a designed pass, an imprint
 jam or a visible failure.
 
@@ -314,7 +331,12 @@ Heroes are labelled "showcase parts chosen because the stock finger fails". Expe
 tee, the block, the steel slug and one unbranded scanned object. If fewer than 3 qualify,
 the video hook uses the imprint-vs-designed offset contrast only.
 
-Result: [GV-H] (`hero_screen.json`, its SHA-256, the heroes and the hook mode).
+Result (GV-H, 2026-10-16, on the six training parts; the scanned objects are not yet
+screened): no hero, so the hook uses the imprint-vs-designed offset contrast only
+(`hook_mode` `offset_contrast_only`). The stock blade fails `success_v2` on 6-7 of 7 on five
+parts but never visibly; on the bushing most of its episodes are `physics_unreliable`.
+`hero_screen.json` SHA-256 `bc2bec86ad2bcedcb64701265a7cb39cf6cfc0098713b00ce61d5e4ac3d58294`
+(git-ignored under `runs/gates-v2/gvh/`; numbers in `docs/BENCH_V2.md`).
 
 ## A9. Calibration (gate GV3) rules
 
@@ -329,8 +351,8 @@ and reference entrants plus 64 valid Sobol designs (seed 20261020), scored on `t
   with v1's G3);
 - at most 10 % of the Sobol designs score 100 %.
 
-Reported, not gating: lift-only scores, `jam_on_close` and `off_centre` counts, and the
-`physics_invalid` share (above 1 %: a deviation).
+Reported, not gating: lift-only scores, `jam_on_close` and `off_centre` counts, the
+`physics_invalid` share (above 1 %: a deviation) and the `physics_unreliable` share.
 
 Scoring is defensive: an episode record that claims a registered grasp but did not lift,
 is not `registered`, carries a `not_registered` sub-flag, or (with the frozen seat
@@ -347,12 +369,17 @@ never counts as registered.
   claims in A13 and the hashed engineering notes are stated at those values.
 - The registration tolerances change in at most one iteration.
 - Every iteration scores the same screening sample.
-- After the last iteration: pass, freeze; only the headroom criterion failing, declare the
-  miss and freeze; anything else, F1 (section A0).
+- After the last iteration: pass, freeze; only the headroom or the Sobol spread failing
+  (the spread by founder ruling 6 of 2026-10-16), declare the miss and freeze; anything
+  else, F1 (section A0).
 - The freeze records the SHA-256 of `configs/task_v2.yaml`, `configs/suites/train_v2.yaml`,
   `configs/entrants_v2.yaml` and `configs/parts_v2.yaml` in `docs/TASK_V2.md` and here.
 
-Results: [at freeze].
+Results (official, 2026-10-16): three iterations (1: as drafted; 2: the block 20 mm
+across the jaws; 3: back to 30 mm). Iteration 3 = iteration 1: entrants 25.0-58.3 %
+registered, Sobol-64 SD 0.113 (miss, declared), 5 of 64 above the best entrant, none at
+100 %; `physics_invalid` 0, `physics_unreliable` 1.70 %. Tolerances unchanged. Frozen hashes
+in A5 and `docs/TASK_V2.md`; the iteration log in `docs/DEVIATIONS.md`.
 
 ## A10. Analysis plan
 

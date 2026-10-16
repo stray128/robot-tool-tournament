@@ -13,9 +13,13 @@ before the tag.
 
 ## Go/no-go decision (before the tag)
 
-- **Decision:** [Mon Oct 19, 22:00 IST: Part A (v2) or F1 (Part B)]
-- **Gates:** GV0 [ ], GV1 [ ], GV2 [ ], GV3 [ ], GV4 [ ]; GV5 by Tue Oct 20, 22:00 [ ]
-- **Decided by, and when:**
+- **Decision:** Part A (v2), with the stricter rules declared below; F1 is not taken. GV4
+  (Nebius parity) and GV5 (harness) must still pass by their deadlines, or F1 applies.
+- **Gates:** GV0 [x], GV1 [x], GV2 [x] (cost miss declared), GV3 [x] (spread miss declared,
+  frozen), GV-H [x] (0 heroes: offset-contrast fallback), GV4 [ ] (not run yet); GV5 by
+  Tue Oct 20, 22:00 [ ]. Numbers in `docs/BENCH_V2.md`.
+- **Decided by, and when:** the founder, 2026-10-16, after round 4 integration (rulings
+  below); gates re-run and GV3 frozen the same night.
 
 ## Declared at registration
 
@@ -55,22 +59,43 @@ by the track that owns the code, before any v2 design was simulated on the score
 | Penetration check | | Sampled every 10 ms (the check period), not every physics step | Cost |
 | Height error, held-out | +-1.5 mm | The 3 mm tip floor stops a +1.5 mm error from lowering the jaws further | Keeps the jaws off the table |
 | MuJoCo Warp | Cut for v2 | The Warp executor has no v2 path; a v2 job sent there fails loudly | Never scored silently |
+| MuJoCo resets | "the counter went up -> `physics_invalid`" | One rule in the scorer, the search harness and the analysis: a reset in the scored part of the episode (up to the decision) makes it `physics_invalid`; the replay-only tail is never checked, so it can change neither the label nor the record's `bad_qacc` count | The scorer used to ignore resets after a confirmed success while the harness and analysis counted every one; the two can only differ in the tail, which the spec says never changes an outcome |
+| Hero rule | `physics_invalid` episodes count against qualification | `physics_unreliable` episodes too (digest draft `8bbdb111...` -> `dda0ec35...`, changed before calibration) | A failure caused by the penetration rule is not a failure a viewer sees; a failure is never staged |
+| Stock entrant | Validators apply to recipes | The stock blade must also seat inside the 2-40 mm closure range (`q_seat_range`) | One validity rule for every entrant (integration ruling, track G) |
+| GV2 low-friction case | Must slip or drop | Any failure mode | An ejection or a physics flag at mu 0.05 also means the part was not carried (integration ruling, track S) |
 
 New files beyond the spec's track table: `src/rtt/parts/{pieces,suite,preview}.py`,
 `src/rtt/sim/gates_v2.py`, `src/rtt/analysis/{gv3_run,gvh_run}.py`, `scripts/v2_bout.py`.
 
-### Open before the go/no-go (integration, 2026-10-16)
+### Founder rulings after round 4 integration (2026-10-16), adopted before any v2 scored run
 
-Recorded so the decision is visible; each is settled, or the miss declared, before the tag:
+Spec Addendum D. Each was decided before the official GV3 calibration and before any search
+or pilot run; GV0 to GV3 and GV-H were re-run under them the same night.
 
-- The L-bracket's training pose cannot be gripped by the entrants (every one fails the
-  seat-closure rule on it), and the hex standoff's internal seam carries the part at low
-  friction. Both are parts-library fixes, re-measured on GV0 to GV2.
-- `native_ccd`: the rule of PREREG Part A keeps it off; the GV2 evidence favours on.
-- GV2 criteria missed with either collider: penetration in held episodes, 1 ms vs 2 ms
-  parity, and CPU cost per episode.
-- The stock-blade hulls bulge 0.69 and 0.75 mm over the whole inner face (0.0003 mm on the
-  contact pad) against the 0.2 mm limit: decision D9 or its box fallback.
+| # | Ruling | From | To | Why | Affects |
+|---|---|---|---|---|---|
+| 1 | Parts fix | L-bracket lying on one leg with the other at +y; hex standoff a solid base under hole-height ring sectors | L-bracket lying flat, gripped on the standing leg's edges, its frame centred on that leg; hex standoff as 12 full-height sectors plus a plug under the hole (track O's patch) | Every entrant failed the seat-closure rule on the old L-bracket; the hex's horizontal internal seam gave the pads a ledge that carried the part at mu 0.05 | `parts_v2`, `train_v2`, GV0-GV3 |
+| 2 | Native collision on | `native_ccd: false` by the rule of spec section 6 (parity on/off at least 99 % on the v1 set and on 200 v2 episodes) | `native_ccd: true` | The rule's parities missed (98.5 % v1, 97.2 % v2 at 1 ms), but the v1 misses are the primitive-cylinder lip-edge regression that v2 meshes never meet, and the v2 misses were mostly libccd at fault (2-3 mm mesh penetrations at 2 ms) | Every v2 episode |
+| 3 | 1 ms step | 2 ms, with a 1 ms vs 2 ms parity criterion (99 %) in GV2 | 1 ms for every v2 episode; the parity criterion is replaced (the 2 ms re-run is a diagnostic: 94.4 % agreement) | Outcomes at 2 ms changed with the step on mesh contacts (88-96 % parity) | Every v2 episode; compute (below) |
+| 3a | Cost accepted | GV2: a v2 episode at most 1.5x the v1 median CPU time | Declared miss: 3.57x measured (0.791 s against 0.221 s per episode) | The founder accepts the cost of the 1 ms step | Compute: about 21-29 CPU-h for the pilot, both arms at R = 10 and the held-out suites [derived], against the spec's 8 |
+| 4 | Penetration rule | GV2 criterion: penetration at most 1 mm in held episodes | Scoring rule: a held episode above 1 mm jaw-part penetration is `physics_unreliable`, a failure on both the registered and the lift-only criterion, for every arm and design | A grasp that leans on interpenetrating geometry is not evidence about the fingers | Every v2 score; 1.70 % of the GV3 screening episodes (57 of 3,360; 7 of them the stock blade on the bushing) |
+| 5 | D9 on the contact zone | Stock-blade inner-face bulge at most 0.2 mm, else the box fallback | Measured on the pad contact zone only: 0.0003 mm, pass | The 0.69/0.75 mm whole-face bulge lies on recessed arms at least 2.5 mm behind the contact plane | The stock entrant (real blade kept) |
+| 6 | GV3 run officially; spread miss declarable | Only the headroom miss could be declared | A miss on the Sobol SD target is declared in PREREG, as G3 was for v1 | | GV3 decision (below) |
+
+Integration rulings requested with them (same date): the stock path applies the
+seat-closure range check (track G); the GV2 low-friction case accepts any failure mode
+(track S); one reset rule across the scorer, the harness and the analysis (tracks S, P, Q;
+the implementation-choices table above).
+
+**Settled from the integration list:** the L-bracket and hex standoff (ruling 1, re-measured:
+every entrant builds on all six parts, the hex now slips at mu 0.05); `native_ccd` (ruling 2);
+the GV2 misses (penetration by ruling 4, timestep parity by ruling 3, cost declared under
+ruling 3); the stock-blade bulge (ruling 5).
+
+**Noted, not a deviation:** on the flanged bushing the stock blade's held episodes are mostly
+`physics_unreliable` (7 of 8 in GV3, 16 of 21 in the hero screen; 1.3-1.9 mm penetration,
+and the bushing tilts in the blade, up to 20 deg in the hero screen). The rule applies to the stock entrant as to every
+design; without it 2 more stock episodes would register (25.0 % -> 29.2 %).
 
 ### Gate G3 near-miss (Part B only)
 
@@ -85,17 +110,30 @@ At most 3 iterations, suite-level knobs only, and tolerances changed in at most 
 them (`docs/PREREG.md` section A9). One row per iteration, copied from
 `calibration_log.json`:
 
-| Iteration | Date | Changes | Checks failing | Decision |
+| Iteration | Date (UTC) | Changes | Checks failing | Decision |
 |---|---|---|---|---|
-| 1 | | (the task as drafted) | | |
+| 1 | 2026-10-16 17:07 | (the task as drafted) | sobol_sd (SD 0.113) | iterate |
+| 2 | 2026-10-16 17:20 | `part:block.x_mm` 30.0 -> 20.0 | sobol_sd (0.109), headroom (3 of 64) | iterate |
+| 3 | 2026-10-16 17:28 | `part:block.x_mm` 20.0 -> 30.0 | sobol_sd (0.113) | declare the miss and freeze |
 
-Declared misses, if any: [at freeze].
+Iteration 2 tried the one part that separated no designs (every Sobol design scored 3 of 8
+on the 30 mm block; no finger in the space reaches its sides); the narrower block lowered the
+spread and the headroom, so iteration 3 restored the drafted suite and reproduced iteration 1
+record for record. Re-scoring iteration 1's records under other tolerances moved the SD only
+between 0.113 and 0.126, so the tolerances were not used.
+
+Declared misses: **GV3 Sobol spread**, SD 0.113 against the 0.15 target (founder ruling 6);
+the other GV3 targets are met (entrants 25.0-58.3 %, 5 of 64 above the best entrant, none
+at 100 %). **GV2 cost**, 3.57x the v1 median against 1.5x (ruling 3). **`native_ccd`** on
+against the spec's rule (ruling 2). Not a miss: GV-H found 0 heroes, so the video hook uses
+the imprint-vs-designed offset contrast only, as the hero rule prescribes.
 
 ### Registration tolerances (Part A only)
 
 The tolerances in `docs/TASK_V2.md` may change once, during GV3, on the screening sample.
 If they change, record the old and new values, the iteration and the reason here.
-[at freeze]
+Unchanged at the freeze: seat 1.0 mm, dx and dy 0.75 mm, yaw 2 deg, tilt 3 deg, tilt after
+the hold 5 deg.
 
 ## After the tag
 

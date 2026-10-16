@@ -1,12 +1,22 @@
-# Task v2 physics bench: gates GV1 and GV2
+# Task v2 physics bench: gates GV0 to GV3 and GV-H
 
-Measured on 2026-10-16 with MuJoCo 3.15.0 on the CPU, 16 cores, under heavy machine load
-(load average 16 to 90). Timings are ratios, not absolute speeds. The gate code is
-`rtt.sim.gates_v2`; every number below is in the JSON report it writes.
+Measured on 2026-10-16 with MuJoCo 3.15.0 on the CPU of the 16-core laptop. The gate code is
+`rtt.sim.gates_v2` (GV1, GV2), `tests/test_freeform_hypothesis.py` (GV0),
+`rtt.analysis.gv3_run` (GV3) and `rtt.analysis.gvh_run` (GV-H); every number below is in the
+JSON report it writes (under `runs/gates-v2/`, git-ignored; each re-creates bit-identically).
+
+The first section is the gate record under the founder rulings of 2026-10-16 (task v2 at a
+1 ms step with native collision, the `physics_unreliable` rule, the patched parts library).
+The sections after it are the measurements that led to those rulings, kept as history; they
+ran at 2 ms under heavy machine load (load average 16 to 90), so their timings are ratios only.
 
 ## How to run
 
 ```
+make gv0 gv1 gv2            # GATES_OUT=runs/gates-v2 WORKERS=12 by default
+make gv3 LOG=runs/gates-v2/gv3/calibration_log.json
+make gvh
+
 # test fixtures (tests/ on the path)
 python -m rtt.sim.gates_v2 gv1 --builder freeform_fixtures:build_fixture_pair \
     --parts freeform_fixtures:training_parts --designs freeform_fixtures:gv1_designs --out gv1.json
@@ -23,10 +33,163 @@ python -m rtt.sim.gates_v2 gv2 --builder rtt.design.freeform:build_pair \
 ```
 
 The determinism criterion needs 10 designs, so a gv2 run without `--det-designs` fails it.
+GV1 checks the stock-blade hulls too (`--skip-stock-blade` leaves that out, for fixtures).
 
-Add `--native-ccd true` to run a gate with MuJoCo's native collision instead of libccd.
+`task_v2` now runs MuJoCo's native collision; add `--native-ccd false` to run a gate with
+libccd instead (the history sections below were measured with libccd as the task setting).
 
-## Inputs
+## Gate record under the founder rulings (2026-10-16, 22:27 to 23:05 IST)
+
+Code at `v2-look/integ` commits `5467184` (GV1, GV2) and `7d7cffe` to `9b03486` (GV3, GV-H), task
+`task_v2` with `timestep: 0.001`, `native_ccd: true`, `checks.held_penetration_max_mm: 1.0`;
+parts library with track O's patch (the L-bracket gripped on its standing leg, the hex
+standoff without a horizontal seam). Machine load average 3 to 12 (the gates' own workers).
+
+| Gate | Result |
+|---|---|
+| GV0 geometry | pass |
+| GV1 fidelity and fairness | pass (every criterion, all six parts) |
+| GV2 physics | pass; the cost criterion misses (3.57x against 1.5x), a declared deviation |
+| GV3 calibration | the Sobol spread misses (SD 0.113 against 0.15), declared under ruling 6; every other target met; frozen |
+| GV-H hero screen | 0 heroes, so the hook uses the offset contrast only (the rule's fallback) |
+
+### GV0: geometry (2,048 Sobol recipes x 6 parts)
+
+| Criterion | Measured |
+|---|---|
+| Builds or a specific rejection | 1,287 recipes valid on all six parts; 462 schema, 288 `q_seat_range`, 11 `mass` first rejections; 0 crashes, 0 unspecific |
+| Pieces convex (hull volume = piece volume) | worst relative difference 6.2e-13 |
+| Print watertight | 0 failures over 9,035 pairs |
+| Pad-zone print = collision (Hausdorff) | 2.1e-6 mm (limit 0.05 mm) |
+| Pad never cuts into the part | deepest early cut 2.0e-13 mm^3 |
+| Build time | p50 0.13 s, p95 0.26 s per pair (limit p95 0.5 s); max 1.05 s |
+| Pieces per jaw, PLA per jaw | at most 33 (limit 40); at most 49.7 g (limit 50 g) |
+
+### GV1: fidelity and fairness
+
+| Criterion | Limit | Measured |
+|---|---|---|
+| Simulated clearance at seat, both imprints, six parts | designed +-0.05 mm | 0.000 mm worst error (0.4 mm designed, 0.4 mm simulated on every jaw) |
+| First contact vs `q_seat` | +-0.05 mm | 0.000 mm |
+| Configurator imprint, zero-error registered | >= 95 % per part | 100 % on all six parts (with the task jitter: 87.5 % on the tee, 100 % elsewhere) |
+| Swept imprint, zero-error registered | >= 95 % per part | 100 % on all six parts |
+| Stock-blade hulls on the pad contact zone (ruling 5, D9) | <= 0.2 mm | 0.0003 mm; 40 convex pieces per jaw, inputs not stale |
+| Stock-blade hulls, whole inner face (reported) | | 0.75 mm, on recessed arms at least 2.5 mm behind the contact plane |
+| Side clearance across the jaw (`lateral_slide_mm`, diagnostic) | | configurator 0.49 to 0.55 mm, swept 2.49 to 2.55 mm (0.4 and 2.4 mm designed) |
+
+Deepest object-jaw penetration in the zero-error episodes: 0.07 to 0.12 mm.
+
+### GV2: physics
+
+3 designs (flat, conform 4 mm at 30 deg, V-funnel 6 mm at 45 deg; 40 mm wide) x 6 parts x
+4 placements x 2 seeds = 144 matrix episodes; the parity runs extend it to 3 seeds (216).
+
+| Criterion | Limit | Measured |
+|---|---|---|
+| Matrix builds | all | all 18 pairs |
+| MuJoCo resets (`bad_qacc`) | 0 | 0 |
+| Scored successes with penetration above 1 mm (ruling 4) | 0 | 0; the rule caught 2 held episodes (1.26 and 1.60 mm: V-funnel on the hex, conform on the block) and scored them `physics_unreliable` |
+| Penetration p99, all episodes | <= 2 mm | 1.10 mm (max 1.60 mm) |
+| Hold creep p95, held episodes | <= 0.5 mm | 0.40 mm (max 0.71 mm, flat pad on the bushing) |
+| Deliberate failures | all fail | pass: too high -> `missed_grasp` on all six; mu 0.05 -> `slip_during_lift` on five, the bushing rests on the jaws by its flange (not counted); too wide -> `missed_grasp` on all six |
+| Timestep | 1 ms (ruling 3) | 1 ms; the 2 ms re-run agrees on 94.4 % of 216 episodes (diagnostic; 12 differ, 5 of them the V-funnel on the hex) |
+| `native_ccd` decision recorded | | on, by ruling 2 (the rule says off: v1 parity 98.5 %, v2 parity 97.2 %) |
+| Asymmetric jaws, own mass properties | yes | yes (3 asymmetric pairs) |
+| 10 designs x 3 fresh processes, identical hashes | yes | yes |
+| v2 / v1 median CPU per episode | <= 1.5 (declared) | 3.57: 0.791 s against 0.221 s, 16 interleaved episodes each, one process |
+
+Held (lift-only) 98.6 % of the matrix, registered 55.6 %; failure modes 62 `not_registered`,
+2 `physics_unreliable`. With libccd (the same matrix): registered 56.9 %, held 97.9 %,
+penetration p99 1.54 mm and max 2.90 mm, creep p95 0.14 mm, 2 `physics_unreliable`, 1 slip.
+
+**The rulings fixed what the history sections measured.** The hex standoff no longer carries
+at mu 0.05 (the patch removed its seam), the tee slips at mu 0.05 instead of being ejected,
+and libccd-on-native parity on v2 episodes rose from 84-93 % to 97.2 % at the 1 ms step.
+
+**Native vs libccd on the v1 parity set** is unchanged at 98.5 % (the same three primitive
+cylinders); the lip-edge regression is still reproduced on v1 primitives (native ejects the
+cylinder) and absent on both v2 analogues (25.0 N squeeze per jaw, held).
+
+### GV3: calibration (official, screening seed 20261020)
+
+The four round-0 entrants, the two reference entrants and 64 Sobol designs (91 draws, 70.3 %
+valid) on the 48 episodes of `train_v2`: 3,360 episodes per iteration, 6.6 to 7.4 min on 14
+workers. Every iteration is logged in `runs/gates-v2/gv3/calibration_log.json`.
+
+| Iteration | Change | Sobol SD | Beat best entrant | Failing | Decision |
+|---|---|---|---|---|---|
+| 1 | none (the task as drafted) | 0.113 | 5 / 64 | spread | iterate |
+| 2 | block 30 -> 20 mm across the jaws | 0.109 | 3 / 64 | spread, headroom | iterate |
+| 3 | block back to 30 mm | 0.113 | 5 / 64 | spread | declare the miss and freeze |
+
+Iteration 3 reproduces iteration 1 record for record (3,360 identical records, wall time
+aside).
+
+Result at the freeze (iterations 1 and 3):
+
+| Design | Registered | Lift-only | `jam_on_close` | `off_centre` | `physics_unreliable` |
+|---|---|---|---|---|---|
+| stock | 25.0 % | 85.4 % | 0 | 34 | 7 (all on the bushing) |
+| flat | 31.2 % | 100.0 % | 0 | 33 | 0 |
+| imprint_configurator | 58.3 % | 95.8 % | 20 | 20 | 1 |
+| imprint_swept | 31.2 % | 100.0 % | 8 | 33 | 0 |
+| ref_wrap (reference) | 70.8 % | 97.9 % | 5 | 14 | 0 |
+| ref_hook (reference) | 56.2 % | 95.8 % | 10 | 20 | 0 |
+| Sobol-64 | mean 36.6 %, SD 0.113, median 31.2 %, max 77.1 % | mean 97.6 % | | | |
+
+| Target | Measured | |
+|---|---|---|
+| Every round-0 entrant 20-70 % registered | 25.0 to 58.3 % | pass |
+| Sobol-64 SD >= 0.15 | 0.113 | miss, declared (ruling 6) |
+| >= 5 of 64 beat the best entrant (configurator, 58.3 %) | 5 | pass |
+| <= 10 % of Sobol designs at 100 % | 0 | pass |
+| `physics_invalid` share (reported) | 0 of 3,360 | |
+| `physics_unreliable` share (reported) | 57 of 3,360 (1.70 %): 28 on the L-bracket, 16 on the hex standoff, 7 stock on the bushing, 5 on the tee (1 of them the configurator imprint), 1 on the bushing | |
+
+**Why the spread is narrow.** Two of the six parts separate almost no designs: on the block
+(30 mm across the jaws) every Sobol design scores the same 3 of 8, since no finger in the
+space (at most 40 mm wide) reaches its side faces; on the tee, whose run is 60 mm long across
+the jaws, nearly every design registers only at c0. Per part, the Sobol SD is 0.00 on the
+block and 0.09 on the tee against 0.21 to 0.26 on the other four. Iteration 2 made the block
+narrower: 13 Sobol episodes on it then lost registration (10 off centre, 3 jammed) and 6
+gained it, so the spread fell. Re-scoring iteration 1's records under other registration tolerances (dx and dy 0.5 to
+1.5 mm, seat 0.5 to 1.5 mm) moves the SD only between 0.113 and 0.126, so the tolerances were
+left as drafted.
+
+### GV-H: hero screen (hero rule digest `dda0ec35...`)
+
+The stock blade, the configurator imprint and 7 designed candidates (the two references and
+the five best Sobol designs of GV3) at the seven hero conditions, 3 jitter seeds each.
+
+| Part | (a) stock fails / visibly | (b) imprint short or off | (c) best design passes | Verdict |
+|---|---|---|---|---|
+| pipe_tee | 6 / 0 | 6 of 6 | 1 of 7 | no |
+| block | 6 / 0 | 6 of 6 | 1 of 7 | no |
+| hex_standoff | 6 / 0 | 0 of 6 | 7 of 7 | no |
+| flanged_bushing | 1 / 0 | 0 of 6 | 7 of 7 | no |
+| l_bracket | 7 / 0 | 6 of 6 | 7 of 7 | no |
+| steel_slug | 6 / 0 | 0 of 6 | 7 of 7 | no |
+
+No part qualifies: the stock blade fails registration on most conditions but never visibly
+(no slip, drop or tilt above 10 deg; it holds the part where it landed), and on the bushing
+16 of its 21 episodes are `physics_unreliable`, which count against qualification. The hook
+therefore uses the imprint-vs-designed offset contrast only (`hook_mode
+offset_contrast_only`). The L-bracket shows that contrast in full: the imprint is short or
+off-centre on 6 of 6 errors and the best design passes 7 of 7.
+
+### Cost
+
+| Measure | v1 | v2 (1 ms, native) | Ratio |
+|---|---|---|---|
+| GV2: median CPU per episode, interleaved in one process | 0.221 s | 0.791 s | 3.57 |
+| GV3: CPU per episode in the 14-worker pool (user + system, including building) | 0.51 s (spec estimate) | 1.37 s | 2.7 |
+
+So a design costs about 38 to 66 CPU-s (48 episodes), not 25, and the spec's 8 CPU-h for the
+pilot, 2 arms x R = 10 and the held-out suites becomes about 21 to 29 CPU-h [derived].
+
+## History: measurements before the rulings
+
+### Inputs
 
 - **A, fixtures.** The jaw builder and the six parts in `tests/freeform_fixtures.py`: a port of
   the 2.5D prototype with plain slab bodies. Its pad strips are split at 5 mm, and straight
@@ -41,7 +204,7 @@ GV2 designs: one flat pad, one drafted conform pad (depth 4 mm, draft 30 deg, cl
 0.5, pad 20 mm. Placements are the train_v2 ones (c0 to c3) with 2 seeds; the parity checks
 add a third seed (216 episodes for A, 180 for B).
 
-## GV1: fidelity and fairness
+### GV1: fidelity and fairness
 
 | | A, libccd | A, native | B, libccd | B, native |
 |---|---|---|---|---|
@@ -54,7 +217,7 @@ add a third seed (216 episodes for A, 180 for B).
 The fixture's swept imprint on the tee fails on spurious penetration flags during closing
 (about 2.3 mm reported, 0.16 mm with native collision). The generator's jaws do not show it.
 
-## GV2: physics
+### GV2: physics
 
 | Criterion | A, libccd | A, native | B, libccd | B, native |
 |---|---|---|---|---|
@@ -72,7 +235,7 @@ The fixture's swept imprint on the tee fails on spurious penetration flags durin
 
 "Not run": the A native column is the matrix re-run inside the libccd gate, not a full gate.
 
-## `native_ccd`: the rule and the decision
+### `native_ccd`: the rule and the decision
 
 Spec section 6 allows `native_ccd: true` only if outcomes agree on and off in at least 99 %
 of the v1 parity set and of 200 v2 episodes, and the lip-edge regression is reproduced and
@@ -99,7 +262,7 @@ conditions fail. The evidence points the other way, so a ruling is needed:
 - The rule's parity test assumes both colliders are mostly right. On v2 geometry the
   disagreements measure libccd's error, not native's.
 
-## Other findings
+### Other findings
 
 1. **Seams between part pieces catch the pads.** The library's hex standoff is a solid base
    plus 12 ring wedges above it, around the tapped hole. When the part slides in the jaws,
@@ -121,7 +284,7 @@ conditions fail. The evidence points the other way, so a ruling is needed:
    library's tee has 98 pieces. Fewer, wider pad strips and fewer part pieces near the jaws
    bring the ratio down.
 
-## Re-run on the current generator and part library (verification, 2026-10-16 evening)
+### Re-run on the current generator and part library (verification, 2026-10-16 evening)
 
 The S branch with its checks above, merged in a scratch copy with the generator and the part
 library at their latest commits, all six parts. The generator still rejects the L-bracket, so
