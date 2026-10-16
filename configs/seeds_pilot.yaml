@@ -1,0 +1,10 @@
+# Pilot run seeds (public). Pilot runs set tau (random arm only) and measure the
+# Nemotron arm's valid and fallback rates. They never enter the confirmatory analysis.
+#
+# Seeds already used during development, all excluded from the confirmatory set:
+#   17 (vertical slice), 101-103 (proposer development and the Oct 15 Nebius pilot),
+#   201-220 (random-arm draws for the power sensitivity analysis), 20261015 (live checks).
+# The calibration sample uses its own sampler seed (20261018), not a run seed.
+random: [101, 102, 103]
+nemotron: [101, 102]
+seeds: [101, 102, 103]

@@ -1,9 +1,9 @@
 # Too similar to designs already tested
 
-These new designs are closer than $min_distance to a design that is already tested in this run, or to another design accepted this round, so simulating them would waste the budget:
+These new designs cannot be simulated. Each is closer than $min_points points to a design that is already tested or already accepted this round$explore_clause:
 
 $problems
 
-$distance_rule
+Distances are in points: each number's range runs from 0 points (its minimum) to 100 points (its maximum), and a different inner_face or a different tip_profile adds 100 points. Designs in different cells (inner_face + tip_profile) are therefore always at least 100 points apart. Cells that no tested or accepted design uses yet: $untried.
 
-Call submit_designs again with every slot filled. Copy these slots unchanged: $keep. Replace only the listed slots with designs that clear this distance from every design shown in the prompt.
+Call submit_designs again with every slot filled. Copy these slots unchanged: $keep. Replace only the listed slots, keeping each one's operator and idea where you can: either move the design to a cell that no design uses yet, or move its numbers further from every design listed for it, by at least the shortfall plus 20 points.$fields_note

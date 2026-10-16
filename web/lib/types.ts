@@ -278,27 +278,69 @@ export interface ArmEstimate {
   ci95: [number, number];
 }
 
-export interface CurveArm {
-  id: string;
-  label: string;
-  /** One best-so-far training curve per run: value after evaluation 1..budget, 0..1. */
-  runs: { run: string; best: number[] }[];
+/** One search run's best-so-far training success after each simulated design. */
+export interface S1Run {
+  run: string;
+  /** Value after design 1..n (n <= budget), 0..1, non-decreasing. */
+  best: number[];
+  /** Nebius job that ran it, when it ran on Nebius. */
+  job_id: string | null;
 }
 
+export interface S1Arm {
+  id: string;
+  label: string;
+  runs: S1Run[];
+}
+
+/** Where one run's numbers came from (shown under the charts). */
+export interface ResultSource {
+  arm: string;
+  run: string;
+  kind: "nebius" | "local";
+  job_id: string | null;
+  platform: string | null;
+  preset: string | null;
+  region: string | null;
+  executor: string | null;
+  wall_s: number | null;
+  /** The simulation job's cost (Nebius), not including model calls. */
+  cost_usd: number | null;
+  /** Model calls the run made (Token Factory); null when not recorded. */
+  llm_calls?: number | null;
+  /** Their cost, billed separately from the job; null when not recorded. */
+  llm_usd?: number | null;
+}
+
+/**
+ * results.json, version 2. S1 (speed to a good design) is the primary endpoint;
+ * H1 (held-out success) is secondary. Version 1 files (`forest` + `curves`) are
+ * still read and upgraded by lib/validate.ts.
+ */
 export interface ResultsIndex {
   schema: "rtt-web-results";
-  version: 1;
+  version: 2;
   /** `synthetic`: layout data, not a result. `pilot`: excluded from confirmatory analysis. */
   status: "synthetic" | "pilot" | "final";
   note: string;
-  forest: {
+  s1: {
     endpoint: string;
+    /** Training-success threshold a run must reach; null while undecided. */
+    threshold: number | null;
+    /** Where the threshold comes from, e.g. "provisional" or the PREREG tag. */
+    threshold_note: string;
+    /** Designs per run (B); a run that never reaches the threshold is censored here. */
+    budget: number;
+    /** Leading designs every arm shares (entrants and seed designs), 0 if none. */
+    shared_prefix: number;
+    arms: S1Arm[];
+  };
+  h1: {
+    endpoint: string;
+    /** `not_run`: the held-out evaluation has not happened; arms are then empty. */
+    status: "not_run" | "available";
     arms: ArmEstimate[];
     references: { label: string; value: number }[];
   };
-  curves: {
-    endpoint: string;
-    budget: number;
-    arms: CurveArm[];
-  };
+  sources: ResultSource[];
 }

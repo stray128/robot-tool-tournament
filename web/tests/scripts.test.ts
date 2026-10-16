@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -17,6 +17,9 @@ import {
   SOURCE,
   taskSummary,
 } from "../scripts/import-demo.mjs";
+import { withProvenance } from "../scripts/import-certificate.mjs";
+import { findPrivateIds } from "../scripts/import-session.mjs";
+import { bestSoFar, buildResults, readHistory, scanRunDir, sharedPrefix } from "../scripts/import-results.mjs";
 import { syntheticResults } from "../scripts/make-synthetic-results.mjs";
 import { resolveFile } from "../scripts/serve.mjs";
 import { parseResults } from "@/lib/validate";
@@ -128,12 +131,112 @@ describe("synthetic results", () => {
   it("validate and are marked synthetic", () => {
     const doc = syntheticResults();
     expect(parseResults(doc).status).toBe("synthetic");
-    expect(doc.curves.arms[0]?.runs[0]?.best).toHaveLength(40);
+    expect(doc.s1.arms[0]?.runs[0]?.best).toHaveLength(40);
   });
 
   it("match the committed file", () => {
     const committed = JSON.parse(readFileSync(path.join(WEB, "public", "data", "results.json"), "utf8"));
     if (committed.status === "synthetic") expect(committed).toEqual(JSON.parse(JSON.stringify(syntheticResults())));
+  });
+});
+
+describe("import-results", () => {
+  const history = (scores: number[], ids: string[]) =>
+    scores.map((s, i) => JSON.stringify({ index: i + 1, proposal: { design_id: ids[i], origin: "x" }, score: { success: s } })).join("\n");
+
+  function runDir(arm: string, scores: number[], ids: string[], job?: object) {
+    const dir = mkdtempSync(path.join(os.tmpdir(), "rtt-results-"));
+    mkdirSync(path.join(dir, "search", "runs", `${arm}-r00`), { recursive: true });
+    writeFileSync(path.join(dir, "search", "manifest.json"), JSON.stringify({ kind: "search", arm, budget: 4, executor: "cpu", job: { region: "uk-south2" } }));
+    writeFileSync(path.join(dir, "search", "runs", `${arm}-r00`, "history.jsonl"), history(scores, ids));
+    if (job) writeFileSync(path.join(dir, "job.json"), JSON.stringify(job));
+    return dir;
+  }
+
+  it("reads histories in index order and finds the shared prefix", () => {
+    const rows = readHistory('{"index":2,"proposal":{"design_id":"b"},"score":{"success":0.5}}\n{"index":1,"proposal":{"design_id":"a"},"score":{"success":0.25}}\n');
+    expect(rows.map((r: { design_id: string }) => r.design_id)).toEqual(["a", "b"]);
+    expect(bestSoFar([0.25, 0.5, 0.25])).toEqual([0.25, 0.5, 0.5]);
+    const a = [{ design_id: "e1" }, { design_id: "e2" }, { design_id: "x" }];
+    const b = [{ design_id: "e1" }, { design_id: "e2" }, { design_id: "y" }];
+    expect(sharedPrefix([a, b])).toBe(2);
+    expect(sharedPrefix([a])).toBe(0);
+  });
+
+  it("builds a valid pilot file with Nebius provenance and costs from jobs.json", () => {
+    const dirs = [
+      runDir("nemotron", [0.5, 0.6, 0.9, 0.7], ["e1", "e2", "n1", "n2"], { job_id: "aijob-n", platform: "cpu-d3", preset: "16vcpu-64gb", wall_s: 100.123456, secret: "x" }),
+      runDir("random", [0.5, 0.6, 0.65, 0.85], ["e1", "e2", "r1", "r2"]),
+    ];
+    writeFileSync(
+      path.join(dirs[0]!, "search", "runs", "nemotron-r00", "llm_calls.jsonl"),
+      `${JSON.stringify({ cost_usd: 0.0031, prompt_tokens: 10 })}\n${JSON.stringify({ cost_usd: 0.0012 })}\n`,
+    );
+    writeFileSync(path.join(dirs[1]!, "search", "runs", "random-r00", "llm_calls.jsonl"), "");
+    try {
+      const doc = buildResults(dirs.map(scanRunDir), {
+        status: "pilot",
+        threshold: 0.8,
+        thresholdNote: "provisional",
+        note: "pilot",
+        jobsIndex: { jobs: [{ id: "aijob-n", cost_usd: 0.05 }] },
+      });
+      const parsed = parseResults(doc);
+      expect(parsed.s1.arms.map((a) => a.id)).toEqual(["a-random", "c-nemotron"]);
+      expect(parsed.s1.shared_prefix).toBe(2);
+      expect(parsed.s1.arms[1]!.runs[0]).toEqual({ run: "nemotron-r00", best: [0.5, 0.6, 0.9, 0.9], job_id: "aijob-n" });
+      expect(parsed.h1.status).toBe("not_run");
+      const nebius = parsed.sources.find((s) => s.kind === "nebius")!;
+      expect(nebius).toMatchObject({ job_id: "aijob-n", platform: "cpu-d3", region: "uk-south2", wall_s: 100.1235, cost_usd: 0.05 });
+      // model calls are billed separately from the job and reported next to it
+      expect(nebius).toMatchObject({ llm_calls: 2, llm_usd: 0.0043 });
+      expect(parsed.sources.find((x) => x.arm === "a-random")).toMatchObject({ llm_calls: 0, llm_usd: 0 });
+      expect(JSON.stringify(doc)).not.toContain("secret");
+    } finally {
+      for (const d of dirs) rmSync(d, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("import-certificate", () => {
+  const doc = { schema: "rtt.certificates/1", design_id: "abc", certificates: [{}] };
+
+  it("labels a local run and requires full Nebius facts", () => {
+    expect(withProvenance(doc, { engine: "MuJoCo 3.15.0", wallS: "12.5" }).provenance).toEqual({
+      kind: "local",
+      executor: "cpu",
+      engine: "MuJoCo 3.15.0",
+      host: "workstation",
+      wall_s: 12.5,
+      sim_steps: null,
+      note: null,
+    });
+    expect(() => withProvenance(doc, { jobId: "aijob-e00abc" })).toThrow(/--platform/);
+    expect(withProvenance(doc, { jobId: "aijob-e00abc", platform: "p", preset: "s", region: "r", costUsd: "0.01" }).provenance).toMatchObject({
+      kind: "nebius",
+      job_id: "aijob-e00abc",
+      cost_usd: 0.01,
+    });
+    expect(() => withProvenance({ design_id: "x", certificates: [] }, {})).toThrow(/no certificates/);
+  });
+
+  it("refuses local paths, Nebius resource ids and registry paths, but not the AI job id", () => {
+    const full = { platform: "p", preset: "s", region: "r" };
+    expect(() => withProvenance(doc, { jobId: "project-e00abcdefghijklmnop", ...full })).toThrow(/AI job id/);
+    expect(() => withProvenance({ ...doc, note: "ran in /home/someone/rtt" }, {})).toThrow(/local paths/);
+    expect(() => withProvenance({ ...doc, note: "bucket storagebucket-e00abcdefghijklmnopq" }, {})).toThrow(/Nebius resource IDs/);
+    expect(() => withProvenance({ ...doc, image: "cr.eu-north1.nebius.cloud/x/rtt:1" }, {})).toThrow(/registry/);
+    expect(withProvenance(doc, { jobId: "aijob-e00xx86cr7b6ycwkwm", ...full }).provenance).toMatchObject({ job_id: "aijob-e00xx86cr7b6ycwkwm" });
+    // agent ids (prefix + 12 hex) are not mistaken for Nebius ids
+    expect(findPrivateIds({ a: "sess-e0a1b2c3d4e5", b: "pack-e00000000000", c: "aijob-e00p6shj7m77w4dfnd" })).toEqual([]);
+  });
+
+  it("the published certificates pass the importer's checks", () => {
+    const dir = path.join(__dirname, "..", "public", "data", "certificates");
+    for (const name of readdirSync(dir)) {
+      const { provenance, ...cert } = JSON.parse(readFileSync(path.join(dir, name), "utf8"));
+      expect(() => withProvenance(cert, { note: provenance?.note ?? undefined })).not.toThrow();
+    }
   });
 });
 

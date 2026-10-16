@@ -2,15 +2,26 @@ import { describe, expect, it } from "vitest";
 
 import {
   capitalizeFirst,
+  formatBytes,
   formatClock,
   formatDuration,
   formatLift,
+  formatOffset,
   formatPercent,
   formatUsd,
   formatUtc,
 } from "@/lib/format";
 
 describe("formatting", () => {
+  it("session offsets and byte sizes", () => {
+    expect(formatOffset(6.4)).toBe("0:06");
+    expect(formatOffset(342.2)).toBe("5:42");
+    expect(formatOffset(-3)).toBe("0:00");
+    expect(formatBytes(940)).toBe("940 B");
+    expect(formatBytes(18484)).toBe("18.5 kB");
+    expect(formatBytes(2.4e6)).toBe("2.4 MB");
+  });
+
   it("durations pick a unit by size", () => {
     expect(formatDuration(0.469)).toBe("0.47 s");
     expect(formatDuration(41.23)).toBe("41.2 s");

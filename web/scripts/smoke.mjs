@@ -7,11 +7,14 @@
  * Serves web/out, opens every route in Chromium at desktop (1280 px) and phone
  * (375 px) widths, and fails on: a non-200 response, a console error or page
  * error, horizontal page scroll, a replay lane that does not finish loading, or a
- * missing WebGL canvas on replay pages. Saves a full-page screenshot per route and
- * width to --shots (default web/.smoke).
+ * missing WebGL canvas on replay pages. On /part/ it also drops the example STL
+ * into the intake (a preview canvas and a size readout must appear) and runs the
+ * demo session to its end (at least 5 tool cards; an illustrative session must be
+ * labelled illustrative before it plays). Saves a full-page
+ * screenshot per route and width to --shots (default web/.smoke).
  */
 
-import { mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
@@ -30,15 +33,52 @@ const { values } = parseArgs({
 
 const bouts = JSON.parse(readFileSync(path.join(webDir, "public/data/bouts.json"), "utf8")).bouts;
 const designs = JSON.parse(readFileSync(path.join(webDir, "public/data/designs.json"), "utf8")).designs;
+const certDir = path.join(webDir, "public/data/certificates");
+const certificates = existsSync(certDir) ? readdirSync(certDir).filter((f) => f.endsWith(".json")).map((f) => f.slice(0, -5)) : [];
+const demoStl = path.join(webDir, "public/data/sessions/parts/dumbbell-handle.stl");
+const sessionDir = path.join(webDir, "public/data/sessions");
+const sessionKinds = existsSync(sessionDir)
+  ? readdirSync(sessionDir)
+      .filter((f) => f.endsWith(".json"))
+      .map((f) => JSON.parse(readFileSync(path.join(sessionDir, f), "utf8")).kind)
+  : [];
+/** /part plays a recorded session first when one exists (lib/data.ts), else an illustrative one. */
+const firstDemoIllustrative = sessionKinds.length > 0 && !sessionKinds.includes("recorded");
 const routes = [
   "/",
+  "/part/",
   "/benchmark/",
   "/results/",
   "/compute/",
   "/about/",
   ...bouts.map((b) => `/bout/${b.id}/`),
   ...designs.map((d) => `/design/${d.id}/`),
+  ...certificates.map((id) => `/certificate/${id}/`),
 ];
+
+/** Drop the example part into /part/ and play the demo session; returns problems found. */
+async function exercisePart(page) {
+  const problems = [];
+  if (existsSync(demoStl)) {
+    await page.setInputFiles('input[type="file"]', demoStl);
+    await page.waitForSelector("canvas", { timeout: 15000 }).catch(() => problems.push("no STL preview canvas after upload"));
+    const text = await page.locator("main").innerText();
+    if (!/fits the \d+(\.\d)? mm opening/.test(text)) problems.push("no size readout after upload");
+  }
+  // An illustrative session must never be presented as a recorded run.
+  const before = await page.locator("main").innerText();
+  if (firstDemoIllustrative && (/RECORDED DEMO/.test(before) || !/ILLUSTRATIVE DEMO/.test(before))) {
+    problems.push("an illustrative demo session is labelled as recorded");
+  }
+  await page.getByRole("button", { name: /Run the demo session/ }).click();
+  await page
+    .waitForFunction(() => document.body.innerText.includes("Session finished"), null, { timeout: 20000 })
+    .catch(() => problems.push("demo session did not finish"));
+  const cards = await page.locator('article[aria-label^="Step"]').count();
+  // A real session can stop early (7 calls is common); five cards is inspect through stress test.
+  if (cards < 5) problems.push(`only ${cards} tool cards in the timeline`);
+  return problems;
+}
 const widths = [
   { name: "desktop", width: 1280, height: 900 },
   { name: "phone", width: 375, height: 812 },
@@ -67,7 +107,8 @@ for (const vp of widths) {
         .catch(() => errors.push("replay lanes still loading after 15 s"));
       await page.waitForTimeout(500);
     }
-    const needsCanvas = route === "/" || route.startsWith("/bout/") || route.startsWith("/design/");
+    const needsCanvas = route === "/" || route === "/part/" || route.startsWith("/bout/") || route.startsWith("/design/");
+    if (route === "/part/") errors.push(...(await exercisePart(page)));
     if (needsCanvas) await page.waitForSelector("canvas", { timeout: 15000 }).catch(() => {});
     const metrics = await page.evaluate(() => ({
       scrollWidth: document.documentElement.scrollWidth,
@@ -83,7 +124,7 @@ for (const vp of widths) {
     if (needsCanvas && metrics.canvases === 0) problems.push("no WebGL canvas");
     const shot = path.join(values.shots, `${vp.name}${route === "/" ? "-home" : route.replace(/\/$/, "").replace(/\//g, "-")}.png`);
     await page.screenshot({ path: shot, fullPage: true });
-    console.log(`${problems.length ? "FAIL" : "ok  "} ${vp.name.padEnd(7)} ${route.padEnd(28)} canvases=${metrics.canvases} ${problems.join("; ")}`);
+    console.log(`${problems.length ? "FAIL" : "ok  "} ${vp.name.padEnd(7)} ${route.padEnd(32)} canvases=${metrics.canvases} ${problems.join("; ")}`);
     if (problems.length) failures.push({ route, viewport: vp.name, problems });
     await page.close();
   }

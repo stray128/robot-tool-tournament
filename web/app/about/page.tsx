@@ -109,6 +109,13 @@ export default function AboutPage() {
           per run, standing in for print-and-test cycles. Tokens, dollars and wall time are reported separately.
         </p>
         <p>
+          The primary endpoint, S1, is speed to a good design: how many simulated designs a run needs before its best
+          training success reaches a pre-registered threshold, with runs that never reach it censored at the budget.
+          Held-out success (H1) is secondary. CPU MuJoCo is the executor of record. The pre-registered runs are set
+          to use Nebius CPU instances; the pilot ran the same CPU executor on a Nebius GPU machine type, as the{" "}
+          <Link className="link" href="/compute/">compute page</Link> shows.
+        </p>
+        <p>
           Each run freezes its best design before any held-out trial. The held-out suite uses object sizes and poses
           the search never saw, plus real household objects from Google Scanned Objects (CC BY 4.0). The hypothesis,
           budget, number of runs, seeds and analysis script are written down and tagged before the main runs start, and
@@ -153,7 +160,7 @@ export default function AboutPage() {
         </ul>
       </Section>
 
-      <TitleBlock title="Method and limitations" drawing="/about" sheet="5 of 5" />
+      <TitleBlock title="Method and limitations" drawing="/about" sheet="6 of 6" />
     </>
   );
 }

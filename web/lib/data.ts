@@ -9,9 +9,11 @@
  */
 
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 
+import { type CertificateDoc, parseCertificateDoc } from "./certificate";
+import { parseRecordedSession, type RecordedSession, SessionError, type SessionSummary, summarizeSession } from "./session";
 import { POSE_STRIDE } from "./track.mjs";
 import type { Bout, BoutsIndex, Design, DesignsIndex, JobsIndex, ResultsIndex } from "./types";
 import { DataError, parseBouts, parseDesigns, parseJobs, parseReplayHeader, parseResults } from "./validate";
@@ -110,6 +112,65 @@ export function getFeaturedBout(): Bout | undefined {
   return bouts.find((b) => b.featured) ?? bouts[0];
 }
 
+/** JSON files directly inside public/data/<dir>, sorted by name; [] when the directory is absent. */
+function listJson(dir: string, dataDir: string = DATA_DIR): string[] {
+  const full = path.join(dataDir, dir);
+  if (!existsSync(full)) return [];
+  return readdirSync(full, { withFileTypes: true })
+    .filter((e) => e.isFile() && e.name.endsWith(".json"))
+    .map((e) => e.name)
+    .sort();
+}
+
+/**
+ * Recorded Grasp Engineer sessions (public/data/sessions/*.json), validated, each
+ * part STL checked to exist. Recorded runs sort before illustrative ones.
+ */
+export function getSessions(dataDir: string = DATA_DIR): RecordedSession[] {
+  return memo(`sessions:${dataDir}`, () => {
+    const sessions = listJson("sessions", dataDir).map((name) => {
+      const rel = `sessions/${name}`;
+      const session = parseRecordedSession(JSON.parse(readFileSync(path.join(dataDir, rel), "utf8")), rel);
+      if (session.part.stl && !existsSync(path.join(dataDir, session.part.stl))) {
+        throw new SessionError(rel, `missing part file ${session.part.stl}`);
+      }
+      return session;
+    });
+    const ids = new Set<string>();
+    for (const s of sessions) {
+      if (ids.has(s.id)) throw new SessionError("sessions/", `duplicate session id ${s.id}`);
+      ids.add(s.id);
+    }
+    return sessions.sort((a, b) => (a.kind === b.kind ? a.id.localeCompare(b.id) : a.kind === "recorded" ? -1 : 1));
+  });
+}
+
+export function getSessionSummaries(): SessionSummary[] {
+  return getSessions().map(summarizeSession);
+}
+
+/** Robustness certificates (public/data/certificates/<id>.json), validated. */
+export function getCertificates(dataDir: string = DATA_DIR): CertificateDoc[] {
+  return memo(`certificates:${dataDir}`, () =>
+    listJson("certificates", dataDir).map((name) => {
+      const id = name.replace(/\.json$/, "");
+      if (!/^[a-z0-9][a-z0-9._-]*$/.test(id)) throw new DataError(`certificates/${name}`, "$", "file name is not a URL-safe id");
+      return parseCertificateDoc(JSON.parse(readFileSync(path.join(dataDir, "certificates", name), "utf8")), id);
+    }),
+  );
+}
+
+export function getCertificate(id: string): CertificateDoc | undefined {
+  return getCertificates().find((c) => c.id === id);
+}
+
+/** Certificate ids by design id, for linking a design to its certificate page. */
+export function certificateIdsByDesign(): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const c of getCertificates()) if (!out.has(c.design_id)) out.set(c.design_id, c.id);
+  return out;
+}
+
 /**
  * Short content hash of the published data files, shown in each page's title block
  * so a screenshot can be matched to the exact data it shows.
@@ -117,7 +178,15 @@ export function getFeaturedBout(): Bout | undefined {
 export function getDataRevision(): string {
   return memo("revision", () => {
     const hash = createHash("sha256");
-    for (const name of ["bouts.json", "designs.json", "jobs.json", "results.json"]) {
+    const names = [
+      "bouts.json",
+      "designs.json",
+      "jobs.json",
+      "results.json",
+      ...listJson("sessions").map((n) => `sessions/${n}`),
+      ...listJson("certificates").map((n) => `certificates/${n}`),
+    ];
+    for (const name of names) {
       hash.update(name);
       hash.update(readFileSync(path.join(DATA_DIR, name)));
     }

@@ -9,6 +9,12 @@ determined by its job.
 :func:`run_jobs` starts a pool per call. A search loop that evaluates a batch per
 round can keep one :class:`CpuExecutor` open instead, so the ~1 s pool start-up
 (spawning workers and importing MuJoCo) is paid once.
+
+A ``multiprocessing`` pool waits forever for a chunk whose worker died (for example,
+killed by the kernel when memory runs out). :meth:`CpuExecutor.run` therefore collects
+results as they finish and raises :class:`ExecutorStallError` when none arrives for
+``stall_timeout_s`` (default 600 s; one episode takes about a second), so a hang
+becomes a clean failure instead of a job that runs until its server-side timeout.
 """
 
 from __future__ import annotations
@@ -18,6 +24,7 @@ import os
 import time
 from collections.abc import Sequence
 from dataclasses import dataclass
+from multiprocessing import TimeoutError as PoolTimeoutError
 from multiprocessing.pool import Pool
 from types import TracebackType
 from typing import Self
@@ -82,6 +89,19 @@ def run_job(job: EpisodeJob) -> EpisodeResult:
     )
 
 
+def _run_chunk(chunk: Sequence[tuple[int, EpisodeJob]]) -> list[tuple[int, EpisodeResult]]:
+    """Run a chunk of jobs, returning each result with the job's position."""
+    return [(index, run_job(job)) for index, job in chunk]
+
+
+class ExecutorStallError(RuntimeError):
+    """No episode finished within the stall timeout: a worker probably died."""
+
+
+#: Seconds without any finished episode before :meth:`CpuExecutor.run` gives up.
+DEFAULT_STALL_TIMEOUT_S = 600.0
+
+
 def default_workers() -> int:
     """All logical CPUs (``os.cpu_count()``); 1 if unknown."""
     return os.cpu_count() or 1
@@ -96,8 +116,13 @@ class CpuExecutor:
             batch = ex.run(jobs)
     """
 
-    def __init__(self, workers: int | None = None) -> None:
+    def __init__(
+        self, workers: int | None = None, *, stall_timeout_s: float = DEFAULT_STALL_TIMEOUT_S
+    ) -> None:
         self.workers = max(1, workers if workers is not None else default_workers())
+        if not stall_timeout_s > 0:
+            raise ValueError("stall_timeout_s must be positive")
+        self.stall_timeout_s = float(stall_timeout_s)
         self._pool: Pool | None = None
 
     def _ensure_pool(self) -> Pool:
@@ -113,7 +138,7 @@ class CpuExecutor:
             used = 1
         else:
             chunk = max(1, len(jobs) // (self.workers * 8))
-            results = self._ensure_pool().map(run_job, jobs, chunksize=chunk)
+            results = self._collect(jobs, chunk)
             used = min(self.workers, len(jobs))
         return BatchResult(
             results=list(results),
@@ -121,6 +146,35 @@ class CpuExecutor:
             total_steps=sum(r.n_steps for r in results),
             workers=used,
         )
+
+    def _collect(self, jobs: Sequence[EpisodeJob], chunk: int) -> list[EpisodeResult]:
+        """Results in job order, failing fast when no chunk finishes for ``stall_timeout_s``.
+
+        Chunks are built here and sent one per task: ``Pool.imap_unordered`` with
+        ``chunksize > 1`` returns a plain generator, whose ``next`` takes no timeout.
+        """
+        indexed = list(enumerate(jobs))
+        chunks = [indexed[i : i + chunk] for i in range(0, len(indexed), chunk)]
+        out: list[EpisodeResult | None] = [None] * len(jobs)
+        it = self._ensure_pool().imap_unordered(_run_chunk, chunks, chunksize=1)
+        for _ in range(len(chunks)):
+            try:
+                done = it.next(timeout=self.stall_timeout_s)
+            except PoolTimeoutError:
+                self._abort()
+                raise ExecutorStallError(
+                    f"no episode finished in {self.stall_timeout_s:.0f} s ({sum(r is not None for r in out)}"
+                    f" of {len(jobs)} done); a worker probably died, for example out of memory"
+                ) from None
+            for index, result in done:
+                out[index] = result
+        return out  # type: ignore[return-value]  # every slot is filled above
+
+    def _abort(self) -> None:
+        if self._pool is not None:
+            self._pool.terminate()
+            self._pool.join()
+            self._pool = None
 
     def close(self) -> None:
         """Shut the worker processes down (idempotent)."""
@@ -138,10 +192,8 @@ class CpuExecutor:
         exc: BaseException | None,
         tb: TracebackType | None,
     ) -> None:
-        if exc_type is not None and self._pool is not None:
-            self._pool.terminate()
-            self._pool.join()
-            self._pool = None
+        if exc_type is not None:
+            self._abort()
         self.close()
 
 

@@ -14,7 +14,7 @@ from rtt.design.schema import GEOMETRY_PARAMS, FingerDesign, load_entrants
 from rtt.llm.client import LLMAuthError, LLMClient, TokenBucket
 from rtt.llm.providers import TransportResponse
 from rtt.search.base import BudgetLedger, Evaluated, Proposal, RunContext, derive_seed
-from rtt.search.diversity import MIN_DISTANCE, nearest
+from rtt.search.diversity import EXPLORE_MIN_DISTANCE, MIN_DISTANCE, explore_check, nearest
 from rtt.search.fakes import FakeEvaluator, ScriptedProposer
 from rtt.search.nemotron import (
     PROPOSER_SLOTS,
@@ -87,13 +87,15 @@ def round0_context(seed: int = 5, cap: int = 16, arm: str = "nemotron") -> tuple
 
 
 def diverse_designs(ctx: RunContext, n: int, seed: int = 99) -> list[FingerDesign]:
-    """``n`` valid designs that pass the diversity check against the run and each other."""
+    """``n`` valid designs that pass the diversity check (and the explore rule) against the run and each other."""
     chosen: list[FingerDesign] = []
     sampler = DesignSampler(seed, ctx.gripper_task)
     refs = ctx.history.designs()
 
     def far(design: FingerDesign) -> bool:
-        return nearest(design, refs + chosen).distance >= MIN_DISTANCE + 0.02
+        if nearest(design, refs + chosen).distance < MIN_DISTANCE + 0.02:
+            return False
+        return explore_check(design, refs + chosen, min_cell_distance=EXPLORE_MIN_DISTANCE + 0.02)[0]
 
     for _ in range(n):
         chosen += sampler.sample(1, accept=far)
@@ -119,24 +121,52 @@ def submission(designs: list[FingerDesign], analysis: str = "analysis") -> dict[
     return args
 
 
+def _bare_strategy_args() -> tuple[RunContext, LLMClient]:
+    ctx, _ = round0_context()
+    return ctx, client_for(ReplyTransport())
+
+
 # --------------------------------------------------------------------------- schema and prompt
 
 
 def test_tool_schema_orders_analysis_first_and_fixes_operator_quota() -> None:
-    tool = submit_designs_tool(PROPOSER_SLOTS)
+    tool = submit_designs_tool(PROPOSER_SLOTS, explain=True)
     params = tool["function"]["parameters"]
     assert list(params["properties"]) == ["analysis", "mutate_1", "mutate_2", "crossover", "explore"]
     assert params["required"] == list(params["properties"])
     mutate = params["properties"]["mutate_1"]
-    assert list(mutate["properties"])[:2] == ["parents", "hypothesis"]
+    assert list(mutate["properties"])[:4] == ["parents", "hypothesis", "changes", "same_cell_distances"]
     assert mutate["properties"]["parents"]["minItems"] == mutate["properties"]["parents"]["maxItems"] == 1
     assert params["properties"]["crossover"]["properties"]["parents"]["minItems"] == 2
     assert "parents" not in params["properties"]["explore"]["properties"]
+    assert list(params["properties"]["explore"]["properties"])[:3] == [
+        "hypothesis",
+        "changes",
+        "same_cell_distances",
+    ]
     assert set(GEOMETRY_PARAMS) <= set(mutate["properties"])
     assert mutate["properties"]["inner_face"]["enum"] == ["flat", "concave_arc", "v_groove"]
     assert mutate["properties"]["finger_length_mm"] == {"type": "number", "minimum": 40.0, "maximum": 120.0}
     zs = submit_designs_tool(ZEROSHOT_SLOTS)["function"]["parameters"]["properties"]
     assert list(zs) == ["analysis", "design_1", "design_2", "design_3", "design_4"]
+    assert "changes" not in zs["design_1"]["properties"]  # arm Z keeps the plain slot
+    with_reserves = submit_designs_tool(PROPOSER_SLOTS, explain=True, reserves=4)
+    assert NemotronProposer(*_bare_strategy_args()).tool == with_reserves
+    props = with_reserves["function"]["parameters"]["properties"]
+    assert list(props)[5:] == ["reserve_1", "reserve_2", "reserve_3", "reserve_4"]
+    reserve = props["reserve_1"]
+    assert list(reserve["properties"])[:5] == [
+        "operator",
+        "parents",
+        "hypothesis",
+        "changes",
+        "same_cell_distances",
+    ]
+    assert reserve["properties"]["operator"]["enum"] == ["mutate", "crossover", "explore"]
+    assert (
+        reserve["properties"]["parents"]["minItems"] == 0
+        and reserve["properties"]["parents"]["maxItems"] == 2
+    )
 
 
 def test_prompt_has_every_section_with_elites_ascending() -> None:
@@ -144,19 +174,23 @@ def test_prompt_has_every_section_with_elites_ascending() -> None:
     strategy = NemotronProposer(ctx, client_for(ReplyTransport()))
     strategy.tell(items)
     system, user = (m["content"] for m in strategy.build_messages(1, 0))
-    assert "submit_designs" in system and "2 independent design teams" in system
+    assert (
+        "submit_designs" in system and "design team 1 of 2" in system and "budget of 40 simulations" in system
+    )
     headings = [line for line in user.splitlines() if line.startswith("# ")]
     assert headings == [
         "# Task",
         "# Design parameters",
         "# Validator rules",
-        "# Tested designs (top 8 of 8, worst first, best last)",
+        "# Distance rule",
+        "# All 8 designs tested in this run, by cell",
+        "# Your team's best designs (top 8 of 8, worst first, best last)",
         "# Informative failures",
         "# Validator rejections in your last round",
         "# Target",
         "# Round 1 of 4: what to submit",
     ]
-    elites = user.split("# Tested designs")[1].split("# Informative failures")[0]
+    elites = user.split("# Your team's best designs")[1].split("# Informative failures")[0]
     lines = [line for line in elites.splitlines() if re.match(r"^d\d\d \[", line)]
     assert len(lines) == 8
     shown = [int(re.search(r"score (\d+)% at k=", line).group(1)) for line in lines]
@@ -167,6 +201,17 @@ def test_prompt_has_every_section_with_elites_ascending() -> None:
         assert re.search(r"\| box \d+%, cylinder \d+%, rod \d+% \|", line)
         assert "failures: " in line and re.search(r"mass \d+\.\d g$", line)
     assert '{"finger_length_mm": ' in elites
+    assert (
+        len(
+            re.findall(
+                r"^  cell [a-z_]+ \+ [a-z]+; nearest \(points\): d\d\d \d+, d\d\d \d+; open gap \d+\.\d mm \(needs >= \d+\)$",
+                elites,
+                re.MULTILINE,
+            )
+        )
+        == 8
+    )
+    assert "Crossover candidates" in elites
     failures = user.split("# Informative failures")[1].split("# Validator rejections")[0]
     assert 1 <= len([line for line in failures.splitlines() if line.startswith("- ")]) <= 4
     target = round(100 * min(1.0, 1.2 * best.score.success))
@@ -225,6 +270,28 @@ def test_invalid_slot_is_repaired_with_validator_messages() -> None:
     assert [c.kind for c in ctx.llm_calls] == ["main", "repair", "main"]
 
 
+def test_non_finite_numbers_are_rejected_and_repaired_not_fatal() -> None:
+    """json.loads accepts NaN / Infinity in tool arguments; the run must log and repair them, not crash."""
+    ctx, items = round0_context()
+    designs = diverse_designs(ctx, 10)
+    broken = submission(designs[:4])
+    broken["mutate_1"]["finger_length_mm"] = float("nan")
+    broken["crossover"]["taper_ratio"] = float("inf")
+    fixed = submission([designs[8], designs[1], designs[9], designs[3]])
+    transport = ReplyTransport(broken, fixed, submission(designs[4:8]))
+    strategy = NemotronProposer(ctx, client_for(transport))
+    strategy.tell(items)
+    proposals = strategy.ask(1, 8)
+    repair_prompt = transport.user_text(1)
+    assert "# Correction needed" in repair_prompt and '"finger_length_mm":"nan"' in repair_prompt
+    assert [(r.reason, r.slot) for r in ctx.rejections] == [("invalid", "mutate_1"), ("invalid", "crossover")]
+    for r in ctx.rejections:  # logged rows must serialise under the run's allow_nan=False writers
+        json.dumps(r.to_json(), allow_nan=False)
+    assert [p.via for p in proposals[:4]] == ["repair", "main", "repair", "main"]
+    assert all(p.origin == "nemotron" for p in proposals)
+    assert [c.kind for c in ctx.llm_calls] == ["main", "repair", "main"]
+
+
 def test_unparseable_reply_is_retried_once_then_falls_back() -> None:
     ctx, items = round0_context()
     designs = diverse_designs(ctx, 4)
@@ -248,17 +315,20 @@ def test_near_duplicate_triggers_one_reflection_call() -> None:
     designs = diverse_designs(ctx, 9)
     copy = items[0].design  # d01, an entrant
     first = submission([designs[0], designs[1], designs[2], copy])
-    transport = ReplyTransport(first, submission(designs[4:8]), submission([*designs[:3], designs[8]]))
+    transport = ReplyTransport(first, submission([*designs[:3], designs[8]]), submission(designs[4:8]))
     strategy = NemotronProposer(ctx, client_for(transport))
     strategy.tell(items)
     proposals = strategy.ask(1, 8)
-    reflection = transport.user_text(2)
+    reflection = transport.user_text(1)
     assert "# Too similar to designs already tested" in reflection
-    assert "- explore:" in reflection and "from d01" in reflection
+    assert "- explore: 0 points from d01 (needs 80, short by 80)." in reflection
+    assert "differs by: nothing" in reflection
     assert "Copy these slots unchanged: mutate_1, mutate_2, crossover." in reflection
+    assert 'Write "changes" and "same_cell_distances" again' in reflection
     assert proposals[3].via == "reflection" and proposals[3].design.design_id() == designs[8].design_id()
     assert [(r.reason, r.slot) for r in ctx.rejections] == [("too_similar", "explore")]
-    assert [c.kind for c in ctx.llm_calls] == ["main", "main", "reflection"]
+    # Islands are asked in turn: island 0 reflects before island 1's main call.
+    assert [(c.kind, c.island) for c in ctx.llm_calls] == [("main", 0), ("reflection", 0), ("main", 1)]
 
 
 def test_auth_errors_abort_the_run() -> None:

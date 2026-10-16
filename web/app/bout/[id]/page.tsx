@@ -147,7 +147,7 @@ export default async function BoutPage({ params }: Params) {
         </div>
       </section>
 
-      <TitleBlock title={bout.title} drawing={`/bout/${bout.id}`} sheet="Detail of sheet 2" />
+      <TitleBlock title={bout.title} drawing={`/bout/${bout.id}`} sheet="Detail of sheet 3" />
     </>
   );
 }

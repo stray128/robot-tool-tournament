@@ -1,0 +1,46 @@
+{
+  "design_id": "7969dbaaaa4d",
+  "label": "Product mode: not part of the pre-registered experiment",
+  "origin": "proposed",
+  "hypothesis": "V‑groove with a rounded tip centers the bracket and reduces stress concentrations for off‑center grasps.",
+  "params": {
+    "finger_length_mm": 60.0,
+    "finger_thickness_mm": 6.0,
+    "finger_width_mm": 12.0,
+    "bend_angle_deg": -5.0,
+    "bend_start_frac": 0.3,
+    "inner_face": "v_groove",
+    "inner_face_depth_mm": 2.0,
+    "tip_profile": "rounded",
+    "tip_size_mm": 2.0,
+    "taper_ratio": 0.9
+  },
+  "verdict": "pass",
+  "mass_g": 4.688130268666669,
+  "success": 1.0,
+  "best_k": 0,
+  "success_by_k": [
+    1.0,
+    0.8333333333333334,
+    0.75
+  ],
+  "hold_fraction": 1.0,
+  "per_family": {
+    "pose0": 1.0,
+    "pose1": 1.0,
+    "pose2": 1.0
+  },
+  "per_condition": {
+    "part-97243dfa63cf/pose0-narrow-centre/centred": 1.0,
+    "part-97243dfa63cf/pose0-narrow-centre/sloppy": 1.0,
+    "part-97243dfa63cf/pose1-narrow-at-22mm/centred": 1.0,
+    "part-97243dfa63cf/pose1-narrow-at-22mm/sloppy": 1.0,
+    "part-97243dfa63cf/pose2-narrow-centre/centred": 1.0,
+    "part-97243dfa63cf/pose2-narrow-centre/sloppy": 1.0
+  },
+  "failure_modes": {},
+  "condition_failures": {},
+  "n_episodes": 36,
+  "run_id": "run-3e6fc59b1e07",
+  "part_id": "part-97243dfa63cf"
+}

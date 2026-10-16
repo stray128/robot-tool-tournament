@@ -16,6 +16,8 @@ const nextConfig: NextConfig = {
   images: { unoptimized: true },
   reactStrictMode: true,
   poweredByHeader: false,
+  // `next dev` otherwise writes an AGENTS.md into web/ on every start.
+  agentRules: false,
 };
 
 export default nextConfig;

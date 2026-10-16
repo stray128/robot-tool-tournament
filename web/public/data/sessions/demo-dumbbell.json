@@ -1,0 +1,1319 @@
+{
+ "format": "rtt-agent-session",
+ "version": 1,
+ "session_id": "demo-dumbbell",
+ "kind": "illustrative",
+ "mode": "product",
+ "label": "Product mode: not part of the pre-registered experiment",
+ "status": "completed",
+ "title": "Dumbbell handle",
+ "note": "Illustrative session for layout, in the agent's own event format: the job ids, timings and scores are examples in line with the measured pilot jobs, not a recorded agent run.",
+ "recorded_at": null,
+ "part": {
+  "name": "dumbbell-handle.stl",
+  "stl": "sessions/parts/dumbbell-handle.stl",
+  "units": "mm"
+ },
+ "offline": false,
+ "spend": {
+  "session_cap_usd": 0.5,
+  "spent_usd": 0.06207,
+  "by_kind_usd": {
+   "llm": 0.02207,
+   "nebius": 0.04
+  },
+  "reserved_usd": 0,
+  "session_remaining_usd": 0.43793,
+  "day_cap_usd": 2,
+  "day_spent_usd": 0.06207
+ },
+ "verdicts": [
+  {
+   "design_id": "462150ca1475",
+   "label": "straight",
+   "origin": "baseline",
+   "success_pct": 41.7,
+   "verdict": "fail"
+  },
+  {
+   "design_id": "r1-saddle",
+   "label": "r1-saddle",
+   "origin": "proposed",
+   "success_pct": 70.8,
+   "verdict": "fail"
+  },
+  {
+   "design_id": "r1-hook",
+   "label": "r1-hook",
+   "origin": "proposed",
+   "success_pct": 75,
+   "verdict": "fail"
+  },
+  {
+   "design_id": "r1-cradle",
+   "label": "r1-cradle",
+   "origin": "proposed",
+   "success_pct": 58.3,
+   "verdict": "fail"
+  },
+  {
+   "design_id": "r2-hook-groove",
+   "label": "r2-hook-groove",
+   "origin": "proposed",
+   "success_pct": 91.7,
+   "verdict": "pass",
+   "certificate_score_pct": 80.8,
+   "certificate_verdict": "pass"
+  },
+  {
+   "design_id": "r2-wide-groove",
+   "label": "r2-wide-groove",
+   "origin": "proposed",
+   "success_pct": 79.2,
+   "verdict": "fail"
+  }
+ ],
+ "answer": "Recommended design r2-hook-groove: 92% simulated success (pass) and a robustness score of 81% (pass). The print pack has both fingers, the mount plate and the certificate.",
+ "summary": "r2-hook-groove held the bar in 92% of 24 trials and passed 16 of 18 stress checks: every placement error up to 3 mm along the bar and 2 mm across it, all three shakes, and one of two pushes.",
+ "events": [
+  {
+   "seq": 1,
+   "t_s": 0,
+   "type": "session.started",
+   "part_id": "part-illustrative",
+   "goal": "Find gripper fingers that reliably lift and hold my part, check how robust the best one is, and give me a print pack.",
+   "label": "Product mode: not part of the pre-registered experiment",
+   "models": {
+    "agent": "nvidia/nemotron-3-super-120b-a12b",
+    "proposer": "nvidia/nemotron-3-super-120b-a12b",
+    "summarizer": "nvidia/Nemotron-3_5-Lightning"
+   },
+   "offline": false,
+   "caps": {
+    "max_tool_calls": 12,
+    "max_concurrent_jobs": 2,
+    "session_usd": 0.5,
+    "day_usd": 2,
+    "max_llm_turns": 16,
+    "max_designs_per_job": 8,
+    "max_designs_per_proposal": 4,
+    "poll_wait_s": 90
+   },
+   "unlocked": true,
+   "targets": [
+    "local",
+    "nebius"
+   ]
+  },
+  {
+   "seq": 2,
+   "t_s": 1.5,
+   "type": "llm.call",
+   "role": "agent",
+   "model": "nvidia/nemotron-3-super-120b-a12b",
+   "prompt_tokens": 1240,
+   "completion_tokens": 96,
+   "reasoning_tokens": null,
+   "cost_usd": 0.0005,
+   "latency_s": 1.4,
+   "cached": false,
+   "finish_reason": "tool_calls"
+  },
+  {
+   "seq": 3,
+   "t_s": 1.6,
+   "type": "agent.message",
+   "content": "I will measure the part and find how it rests, then design fingers for the grasp it allows.",
+   "tool_calls": [],
+   "reasoning": null
+  },
+  {
+   "seq": 4,
+   "t_s": 1.7,
+   "type": "tool.call",
+   "call_id": "call_1",
+   "name": "inspect_part",
+   "args": {
+    "part_id": "part-illustrative"
+   },
+   "n": 1
+  },
+  {
+   "seq": 5,
+   "t_s": 6.3,
+   "type": "tool.result",
+   "call_id": "call_1",
+   "name": "inspect_part",
+   "ok": true,
+   "duration_s": 4.6,
+   "result": {
+    "part": {
+     "part_id": "part-illustrative",
+     "name": "dumbbell-handle",
+     "size_mm": [
+      84,
+      40,
+      40
+     ],
+     "grip_width_mm": 40,
+     "height_mm": 40,
+     "volume_cm3": 42.1,
+     "mass_g": 50.5,
+     "density_kg_m3": 1200,
+     "max_opening_mm": 84,
+     "fits_gripper": true,
+     "n_convex_pieces": 3,
+     "stable_pose_probability": 0.94,
+     "conditions": [
+      "centred",
+      "offset 5 mm",
+      "rotated 10 degrees",
+      "low friction"
+     ],
+     "episodes_per_design": 24,
+     "notes": [
+      "The bar is 16 mm across and sits 20 mm above the table, between discs 60 mm apart."
+     ]
+    },
+    "pass_threshold_pct": 80,
+    "baselines": [
+     {
+      "design_id": "462150ca1475",
+      "name": "straight",
+      "valid_for_part": true
+     },
+     {
+      "design_id": "9a0624079454",
+      "name": "concave",
+      "valid_for_part": true
+     },
+     {
+      "design_id": "732d575caf85",
+      "name": "hooked",
+      "valid_for_part": false,
+      "why_not": [
+       "the hook tip would strike a disc at full close"
+      ]
+     },
+     {
+      "design_id": "be6496fa15e2",
+      "name": "stock",
+      "valid_for_part": true
+     }
+    ],
+    "targets": [
+     "local",
+     "nebius"
+    ]
+   },
+   "tool_calls_left": 11
+  },
+  {
+   "seq": 6,
+   "t_s": 7,
+   "type": "llm.call",
+   "role": "summarizer",
+   "model": "nvidia/Nemotron-3_5-Lightning",
+   "prompt_tokens": 540,
+   "completion_tokens": 46,
+   "reasoning_tokens": null,
+   "cost_usd": 0.00005,
+   "latency_s": 0.6,
+   "cached": false,
+   "finish_reason": "stop"
+  },
+  {
+   "seq": 7,
+   "t_s": 7.1,
+   "type": "summary",
+   "step": "inspect_part",
+   "text": "The handle rests on its two discs nearly every time. Its 40 mm width fits the 84 mm opening with room to spare; the hard part is the thin bar between the discs.",
+   "model": "nvidia/Nemotron-3_5-Lightning"
+  },
+  {
+   "seq": 8,
+   "t_s": 8.6,
+   "type": "llm.call",
+   "role": "agent",
+   "model": "nvidia/nemotron-3-super-120b-a12b",
+   "prompt_tokens": 1890,
+   "completion_tokens": 140,
+   "reasoning_tokens": null,
+   "cost_usd": 0.0008,
+   "latency_s": 1.5,
+   "cached": false,
+   "finish_reason": "tool_calls"
+  },
+  {
+   "seq": 9,
+   "t_s": 8.7,
+   "type": "agent.message",
+   "content": "Lying down, the bar is 16 mm across and the fingers must reach it without touching the discs. I will try four ways to hold a thin bar.",
+   "tool_calls": [],
+   "reasoning": null
+  },
+  {
+   "seq": 10,
+   "t_s": 8.8,
+   "type": "tool.call",
+   "call_id": "call_2",
+   "name": "propose_designs",
+   "args": {
+    "part_id": "part-illustrative",
+    "n": 4
+   },
+   "n": 2
+  },
+  {
+   "seq": 11,
+   "t_s": 17,
+   "type": "llm.call",
+   "role": "proposer",
+   "model": "nvidia/nemotron-3-super-120b-a12b",
+   "prompt_tokens": 6120,
+   "completion_tokens": 1004,
+   "reasoning_tokens": null,
+   "cost_usd": 0.0028,
+   "latency_s": 8.1,
+   "cached": false,
+   "finish_reason": "stop"
+  },
+  {
+   "seq": 12,
+   "t_s": 17.2,
+   "type": "tool.result",
+   "call_id": "call_2",
+   "name": "propose_designs",
+   "ok": true,
+   "duration_s": 8.4,
+   "result": {
+    "designs": [
+     {
+      "design_id": "r1-saddle",
+      "hypothesis": "A v-groove centres the 16 mm bar; a short finger keeps the tips clear of the 40 mm discs.",
+      "params": {
+       "finger_length_mm": 58,
+       "finger_thickness_mm": 10,
+       "finger_width_mm": 18,
+       "bend_angle_deg": 0,
+       "bend_start_frac": 0.5,
+       "inner_face": "v_groove",
+       "inner_face_depth_mm": 4,
+       "tip_profile": "chamfer",
+       "tip_size_mm": 3,
+       "taper_ratio": 0.85
+      }
+     },
+     {
+      "design_id": "r1-hook",
+      "hypothesis": "A hooked tip wraps under the bar so the lift cannot pull it out of a weak pinch.",
+      "params": {
+       "finger_length_mm": 66,
+       "finger_thickness_mm": 9,
+       "finger_width_mm": 16,
+       "bend_angle_deg": 0,
+       "bend_start_frac": 0.5,
+       "inner_face": "flat",
+       "inner_face_depth_mm": 0,
+       "tip_profile": "hook",
+       "tip_size_mm": 6,
+       "taper_ratio": 0.9
+      }
+     },
+     {
+      "design_id": "r1-cradle",
+      "hypothesis": "A concave channel cradles the bar on two lines and resists it rolling under a push.",
+      "params": {
+       "finger_length_mm": 62,
+       "finger_thickness_mm": 12,
+       "finger_width_mm": 20,
+       "bend_angle_deg": 0,
+       "bend_start_frac": 0.5,
+       "inner_face": "concave_arc",
+       "inner_face_depth_mm": 5,
+       "tip_profile": "rounded",
+       "tip_size_mm": 3,
+       "taper_ratio": 1
+      }
+     }
+    ],
+    "rejected": [
+     {
+      "slot": "d4",
+      "reasons": [
+       "too similar to r1-saddle: every parameter within 5% of its range"
+      ]
+     }
+    ],
+    "analysis": "Thin bar between two discs: the risks are slip during the lift and the fingertips striking the discs. Explore centring (v-groove), wrapping (hook) and cradling (concave channel)."
+   },
+   "tool_calls_left": 10
+  },
+  {
+   "seq": 13,
+   "t_s": 18.5,
+   "type": "llm.call",
+   "role": "agent",
+   "model": "nvidia/nemotron-3-super-120b-a12b",
+   "prompt_tokens": 2650,
+   "completion_tokens": 118,
+   "reasoning_tokens": null,
+   "cost_usd": 0.0009,
+   "latency_s": 1.2,
+   "cached": false,
+   "finish_reason": "tool_calls"
+  },
+  {
+   "seq": 14,
+   "t_s": 18.6,
+   "type": "tool.call",
+   "call_id": "call_3",
+   "name": "launch_sim_job",
+   "args": {
+    "part_id": "part-illustrative",
+    "designs": [
+     "r1-saddle",
+     "r1-hook",
+     "r1-cradle",
+     "462150ca1475"
+    ],
+    "target": "nebius"
+   },
+   "n": 3
+  },
+  {
+   "seq": 15,
+   "t_s": 19.9,
+   "type": "job.update",
+   "job_id": "illustrative-job-1",
+   "target": "nebius",
+   "part_id": "part-illustrative",
+   "designs": [
+    "r1-saddle",
+    "r1-hook",
+    "r1-cradle",
+    "462150ca1475"
+   ],
+   "state": "QUEUED",
+   "elapsed_s": 0,
+   "est_usd": 0.021,
+   "platform": "cpu-d3",
+   "preset": "16vcpu-64gb"
+  },
+  {
+   "seq": 16,
+   "t_s": 20,
+   "type": "tool.result",
+   "call_id": "call_3",
+   "name": "launch_sim_job",
+   "ok": true,
+   "duration_s": 1.4,
+   "result": {
+    "job_id": "illustrative-job-1",
+    "target": "nebius",
+    "part_id": "part-illustrative",
+    "designs": [
+     "r1-saddle",
+     "r1-hook",
+     "r1-cradle",
+     "462150ca1475"
+    ],
+    "state": "QUEUED",
+    "elapsed_s": 0,
+    "est_usd": 0.021,
+    "platform": "cpu-d3",
+    "preset": "16vcpu-64gb"
+   },
+   "tool_calls_left": 9
+  },
+  {
+   "seq": 17,
+   "t_s": 21.2,
+   "type": "llm.call",
+   "role": "agent",
+   "model": "nvidia/nemotron-3-super-120b-a12b",
+   "prompt_tokens": 2980,
+   "completion_tokens": 64,
+   "reasoning_tokens": null,
+   "cost_usd": 0.001,
+   "latency_s": 1.1,
+   "cached": false,
+   "finish_reason": "tool_calls"
+  },
+  {
+   "seq": 18,
+   "t_s": 21.3,
+   "type": "tool.call",
+   "call_id": "call_4",
+   "name": "poll_job",
+   "args": {
+    "job_id": "illustrative-job-1"
+   },
+   "n": 4
+  },
+  {
+   "seq": 19,
+   "t_s": 111.3,
+   "type": "job.update",
+   "job_id": "illustrative-job-1",
+   "target": "nebius",
+   "part_id": "part-illustrative",
+   "designs": [
+    "r1-saddle",
+    "r1-hook",
+    "r1-cradle",
+    "462150ca1475"
+   ],
+   "state": "RUNNING",
+   "elapsed_s": 91.4,
+   "est_usd": 0.021,
+   "platform": "cpu-d3",
+   "preset": "16vcpu-64gb"
+  },
+  {
+   "seq": 20,
+   "t_s": 111.4,
+   "type": "tool.result",
+   "call_id": "call_4",
+   "name": "poll_job",
+   "ok": true,
+   "duration_s": 90.1,
+   "result": {
+    "job_id": "illustrative-job-1",
+    "target": "nebius",
+    "part_id": "part-illustrative",
+    "designs": [
+     "r1-saddle",
+     "r1-hook",
+     "r1-cradle",
+     "462150ca1475"
+    ],
+    "state": "RUNNING",
+    "elapsed_s": 91.4,
+    "est_usd": 0.021,
+    "platform": "cpu-d3",
+    "preset": "16vcpu-64gb"
+   },
+   "tool_calls_left": 8
+  },
+  {
+   "seq": 21,
+   "t_s": 112.5,
+   "type": "llm.call",
+   "role": "agent",
+   "model": "nvidia/nemotron-3-super-120b-a12b",
+   "prompt_tokens": 3120,
+   "completion_tokens": 64,
+   "reasoning_tokens": null,
+   "cost_usd": 0.001,
+   "latency_s": 1,
+   "cached": false,
+   "finish_reason": "tool_calls"
+  },
+  {
+   "seq": 22,
+   "t_s": 112.6,
+   "type": "tool.call",
+   "call_id": "call_5",
+   "name": "poll_job",
+   "args": {
+    "job_id": "illustrative-job-1"
+   },
+   "n": 5
+  },
+  {
+   "seq": 23,
+   "t_s": 141.2,
+   "type": "job.update",
+   "job_id": "illustrative-job-1",
+   "target": "nebius",
+   "part_id": "part-illustrative",
+   "designs": [
+    "r1-saddle",
+    "r1-hook",
+    "r1-cradle",
+    "462150ca1475"
+   ],
+   "state": "COMPLETED",
+   "elapsed_s": 121.3,
+   "est_usd": 0.021,
+   "platform": "cpu-d3",
+   "preset": "16vcpu-64gb"
+  },
+  {
+   "seq": 24,
+   "t_s": 141.3,
+   "type": "tool.result",
+   "call_id": "call_5",
+   "name": "poll_job",
+   "ok": true,
+   "duration_s": 28.7,
+   "result": {
+    "job_id": "illustrative-job-1",
+    "target": "nebius",
+    "part_id": "part-illustrative",
+    "designs": [
+     "r1-saddle",
+     "r1-hook",
+     "r1-cradle",
+     "462150ca1475"
+    ],
+    "state": "COMPLETED",
+    "elapsed_s": 121.3,
+    "est_usd": 0.021,
+    "platform": "cpu-d3",
+    "preset": "16vcpu-64gb"
+   },
+   "tool_calls_left": 7
+  },
+  {
+   "seq": 25,
+   "t_s": 142.4,
+   "type": "llm.call",
+   "role": "agent",
+   "model": "nvidia/nemotron-3-super-120b-a12b",
+   "prompt_tokens": 3260,
+   "completion_tokens": 60,
+   "reasoning_tokens": null,
+   "cost_usd": 0.001,
+   "latency_s": 1,
+   "cached": false,
+   "finish_reason": "tool_calls"
+  },
+  {
+   "seq": 26,
+   "t_s": 142.5,
+   "type": "tool.call",
+   "call_id": "call_6",
+   "name": "fetch_results",
+   "args": {
+    "job_id": "illustrative-job-1"
+   },
+   "n": 6
+  },
+  {
+   "seq": 27,
+   "t_s": 143.9,
+   "type": "tool.result",
+   "call_id": "call_6",
+   "name": "fetch_results",
+   "ok": true,
+   "duration_s": 1.4,
+   "result": {
+    "run_id": "run-illustrative-1",
+    "job_id": "illustrative-job-1",
+    "target": "nebius",
+    "pass_threshold_pct": 80,
+    "best_design_id": "r1-hook",
+    "designs": [
+     {
+      "design_id": "r1-hook",
+      "label": "r1-hook",
+      "success_pct": 75,
+      "verdict": "fail",
+      "success_by_grasp_height_pct": [
+       62.5,
+       75,
+       50
+      ],
+      "hold_fraction": 0.79,
+      "mass_g": 14.2,
+      "failure_modes": {
+       "finger_env_collision": 4,
+       "missed_grasp": 2
+      },
+      "episodes": 24
+     },
+     {
+      "design_id": "r1-saddle",
+      "label": "r1-saddle",
+      "success_pct": 70.8,
+      "verdict": "fail",
+      "success_by_grasp_height_pct": [
+       70.8,
+       58.3,
+       41.7
+      ],
+      "hold_fraction": 0.74,
+      "mass_g": 12.9,
+      "failure_modes": {
+       "slip_during_lift": 5,
+       "unstable_hold": 2
+      },
+      "episodes": 24
+     },
+     {
+      "design_id": "r1-cradle",
+      "label": "r1-cradle",
+      "success_pct": 58.3,
+      "verdict": "fail",
+      "success_by_grasp_height_pct": [
+       58.3,
+       45.8,
+       33.3
+      ],
+      "hold_fraction": 0.63,
+      "mass_g": 17.6,
+      "failure_modes": {
+       "slip_during_lift": 8,
+       "ejected_on_close": 2
+      },
+      "episodes": 24
+     },
+     {
+      "design_id": "462150ca1475",
+      "label": "straight",
+      "success_pct": 41.7,
+      "verdict": "fail",
+      "success_by_grasp_height_pct": [
+       41.7,
+       37.5,
+       25
+      ],
+      "hold_fraction": 0.48,
+      "mass_g": 19.8,
+      "failure_modes": {
+       "slip_during_lift": 11,
+       "unstable_hold": 3
+      },
+      "episodes": 24
+     }
+    ]
+   },
+   "tool_calls_left": 6
+  },
+  {
+   "seq": 28,
+   "t_s": 144.8,
+   "type": "llm.call",
+   "role": "summarizer",
+   "model": "nvidia/Nemotron-3_5-Lightning",
+   "prompt_tokens": 760,
+   "completion_tokens": 52,
+   "reasoning_tokens": null,
+   "cost_usd": 0.00006,
+   "latency_s": 0.7,
+   "cached": false,
+   "finish_reason": "stop"
+  },
+  {
+   "seq": 29,
+   "t_s": 144.9,
+   "type": "summary",
+   "step": "fetch_results",
+   "text": "The hook finger held 75% of trials, the best so far but below the 80% pass mark; it failed when its tip clipped a disc. The grooved finger slipped during the lift.",
+   "model": "nvidia/Nemotron-3_5-Lightning"
+  },
+  {
+   "seq": 30,
+   "t_s": 146.3,
+   "type": "llm.call",
+   "role": "agent",
+   "model": "nvidia/nemotron-3-super-120b-a12b",
+   "prompt_tokens": 3880,
+   "completion_tokens": 152,
+   "reasoning_tokens": null,
+   "cost_usd": 0.0013,
+   "latency_s": 1.6,
+   "cached": false,
+   "finish_reason": "tool_calls"
+  },
+  {
+   "seq": 31,
+   "t_s": 146.4,
+   "type": "agent.message",
+   "content": "The groove centres the bar but it slips on the way up; the hook holds but its tip clips a disc. Next round: both ideas in one shorter finger, and a wider groove.",
+   "tool_calls": [],
+   "reasoning": null
+  },
+  {
+   "seq": 32,
+   "t_s": 146.5,
+   "type": "tool.call",
+   "call_id": "call_7",
+   "name": "propose_designs",
+   "args": {
+    "part_id": "part-illustrative",
+    "n": 2
+   },
+   "n": 7
+  },
+  {
+   "seq": 33,
+   "t_s": 153.7,
+   "type": "llm.call",
+   "role": "proposer",
+   "model": "nvidia/nemotron-3-super-120b-a12b",
+   "prompt_tokens": 7480,
+   "completion_tokens": 912,
+   "reasoning_tokens": null,
+   "cost_usd": 0.0031,
+   "latency_s": 7,
+   "cached": false,
+   "finish_reason": "stop"
+  },
+  {
+   "seq": 34,
+   "t_s": 153.9,
+   "type": "tool.result",
+   "call_id": "call_7",
+   "name": "propose_designs",
+   "ok": true,
+   "duration_s": 7.4,
+   "result": {
+    "designs": [
+     {
+      "design_id": "r2-hook-groove",
+      "hypothesis": "Combine the two best: the v-groove for centring and a 5 mm hook against slip during the lift.",
+      "params": {
+       "finger_length_mm": 62,
+       "finger_thickness_mm": 10,
+       "finger_width_mm": 18,
+       "bend_angle_deg": 0,
+       "bend_start_frac": 0.5,
+       "inner_face": "v_groove",
+       "inner_face_depth_mm": 4,
+       "tip_profile": "hook",
+       "tip_size_mm": 5,
+       "taper_ratio": 0.9
+      }
+     },
+     {
+      "design_id": "r2-wide-groove",
+      "hypothesis": "A wider v-groove finger resists the bar twisting when it is pushed sideways at the top.",
+      "params": {
+       "finger_length_mm": 60,
+       "finger_thickness_mm": 11,
+       "finger_width_mm": 24,
+       "bend_angle_deg": 0,
+       "bend_start_frac": 0.5,
+       "inner_face": "v_groove",
+       "inner_face_depth_mm": 5,
+       "tip_profile": "chamfer",
+       "tip_size_mm": 3,
+       "taper_ratio": 0.85
+      }
+     }
+    ],
+    "rejected": [],
+    "analysis": "Round 1: slip_during_lift dominates the grooved and cradling fingers, finger_env_collision the hook. Keep the groove, add a short hook, and shorten the finger so the tip clears the discs."
+   },
+   "tool_calls_left": 5
+  },
+  {
+   "seq": 35,
+   "t_s": 155,
+   "type": "llm.call",
+   "role": "agent",
+   "model": "nvidia/nemotron-3-super-120b-a12b",
+   "prompt_tokens": 4320,
+   "completion_tokens": 104,
+   "reasoning_tokens": null,
+   "cost_usd": 0.0014,
+   "latency_s": 1.1,
+   "cached": false,
+   "finish_reason": "tool_calls"
+  },
+  {
+   "seq": 36,
+   "t_s": 155.1,
+   "type": "tool.call",
+   "call_id": "call_8",
+   "name": "launch_sim_job",
+   "args": {
+    "part_id": "part-illustrative",
+    "designs": [
+     "r2-hook-groove",
+     "r2-wide-groove"
+    ],
+    "target": "nebius"
+   },
+   "n": 8
+  },
+  {
+   "seq": 37,
+   "t_s": 156.3,
+   "type": "job.update",
+   "job_id": "illustrative-job-2",
+   "target": "nebius",
+   "part_id": "part-illustrative",
+   "designs": [
+    "r2-hook-groove",
+    "r2-wide-groove"
+   ],
+   "state": "QUEUED",
+   "elapsed_s": 0,
+   "est_usd": 0.019,
+   "platform": "cpu-d3",
+   "preset": "16vcpu-64gb"
+  },
+  {
+   "seq": 38,
+   "t_s": 156.4,
+   "type": "tool.result",
+   "call_id": "call_8",
+   "name": "launch_sim_job",
+   "ok": true,
+   "duration_s": 1.3,
+   "result": {
+    "job_id": "illustrative-job-2",
+    "target": "nebius",
+    "part_id": "part-illustrative",
+    "designs": [
+     "r2-hook-groove",
+     "r2-wide-groove"
+    ],
+    "state": "QUEUED",
+    "elapsed_s": 0,
+    "est_usd": 0.019,
+    "platform": "cpu-d3",
+    "preset": "16vcpu-64gb"
+   },
+   "tool_calls_left": 4
+  },
+  {
+   "seq": 39,
+   "t_s": 157.5,
+   "type": "llm.call",
+   "role": "agent",
+   "model": "nvidia/nemotron-3-super-120b-a12b",
+   "prompt_tokens": 4510,
+   "completion_tokens": 64,
+   "reasoning_tokens": null,
+   "cost_usd": 0.0014,
+   "latency_s": 1,
+   "cached": false,
+   "finish_reason": "tool_calls"
+  },
+  {
+   "seq": 40,
+   "t_s": 157.6,
+   "type": "tool.call",
+   "call_id": "call_9",
+   "name": "poll_job",
+   "args": {
+    "job_id": "illustrative-job-2"
+   },
+   "n": 9
+  },
+  {
+   "seq": 41,
+   "t_s": 247.6,
+   "type": "job.update",
+   "job_id": "illustrative-job-2",
+   "target": "nebius",
+   "part_id": "part-illustrative",
+   "designs": [
+    "r2-hook-groove",
+    "r2-wide-groove"
+   ],
+   "state": "RUNNING",
+   "elapsed_s": 91.2,
+   "est_usd": 0.019,
+   "platform": "cpu-d3",
+   "preset": "16vcpu-64gb"
+  },
+  {
+   "seq": 42,
+   "t_s": 271,
+   "type": "job.update",
+   "job_id": "illustrative-job-2",
+   "target": "nebius",
+   "part_id": "part-illustrative",
+   "designs": [
+    "r2-hook-groove",
+    "r2-wide-groove"
+   ],
+   "state": "COMPLETED",
+   "elapsed_s": 114.6,
+   "est_usd": 0.019,
+   "platform": "cpu-d3",
+   "preset": "16vcpu-64gb"
+  },
+  {
+   "seq": 43,
+   "t_s": 271.1,
+   "type": "tool.result",
+   "call_id": "call_9",
+   "name": "poll_job",
+   "ok": true,
+   "duration_s": 113.5,
+   "result": {
+    "job_id": "illustrative-job-2",
+    "target": "nebius",
+    "part_id": "part-illustrative",
+    "designs": [
+     "r2-hook-groove",
+     "r2-wide-groove"
+    ],
+    "state": "COMPLETED",
+    "elapsed_s": 114.6,
+    "est_usd": 0.019,
+    "platform": "cpu-d3",
+    "preset": "16vcpu-64gb"
+   },
+   "tool_calls_left": 3
+  },
+  {
+   "seq": 44,
+   "t_s": 272.2,
+   "type": "llm.call",
+   "role": "agent",
+   "model": "nvidia/nemotron-3-super-120b-a12b",
+   "prompt_tokens": 4640,
+   "completion_tokens": 60,
+   "reasoning_tokens": null,
+   "cost_usd": 0.0014,
+   "latency_s": 1,
+   "cached": false,
+   "finish_reason": "tool_calls"
+  },
+  {
+   "seq": 45,
+   "t_s": 272.3,
+   "type": "tool.call",
+   "call_id": "call_10",
+   "name": "fetch_results",
+   "args": {
+    "job_id": "illustrative-job-2"
+   },
+   "n": 10
+  },
+  {
+   "seq": 46,
+   "t_s": 273.6,
+   "type": "tool.result",
+   "call_id": "call_10",
+   "name": "fetch_results",
+   "ok": true,
+   "duration_s": 1.3,
+   "result": {
+    "run_id": "run-illustrative-2",
+    "job_id": "illustrative-job-2",
+    "target": "nebius",
+    "pass_threshold_pct": 80,
+    "best_design_id": "r2-hook-groove",
+    "designs": [
+     {
+      "design_id": "r2-hook-groove",
+      "label": "r2-hook-groove",
+      "success_pct": 91.7,
+      "verdict": "pass",
+      "success_by_grasp_height_pct": [
+       91.7,
+       83.3,
+       66.7
+      ],
+      "hold_fraction": 0.93,
+      "mass_g": 13.8,
+      "failure_modes": {
+       "slip_during_lift": 1,
+       "unstable_hold": 1
+      },
+      "episodes": 24
+     },
+     {
+      "design_id": "r2-wide-groove",
+      "label": "r2-wide-groove",
+      "success_pct": 79.2,
+      "verdict": "fail",
+      "success_by_grasp_height_pct": [
+       79.2,
+       70.8,
+       54.2
+      ],
+      "hold_fraction": 0.82,
+      "mass_g": 16.4,
+      "failure_modes": {
+       "slip_during_lift": 4,
+       "unstable_hold": 1
+      },
+      "episodes": 24
+     }
+    ]
+   },
+   "tool_calls_left": 2
+  },
+  {
+   "seq": 47,
+   "t_s": 274.5,
+   "type": "llm.call",
+   "role": "summarizer",
+   "model": "nvidia/Nemotron-3_5-Lightning",
+   "prompt_tokens": 690,
+   "completion_tokens": 48,
+   "reasoning_tokens": null,
+   "cost_usd": 0.00005,
+   "latency_s": 0.6,
+   "cached": false,
+   "finish_reason": "stop"
+  },
+  {
+   "seq": 48,
+   "t_s": 274.6,
+   "type": "summary",
+   "step": "fetch_results",
+   "text": "The combined hook and groove finger held 22 of 24 trials and passes. The wider groove fell just short at 79%.",
+   "model": "nvidia/Nemotron-3_5-Lightning"
+  },
+  {
+   "seq": 49,
+   "t_s": 275.8,
+   "type": "llm.call",
+   "role": "agent",
+   "model": "nvidia/nemotron-3-super-120b-a12b",
+   "prompt_tokens": 5210,
+   "completion_tokens": 92,
+   "reasoning_tokens": null,
+   "cost_usd": 0.0016,
+   "latency_s": 1.2,
+   "cached": false,
+   "finish_reason": "tool_calls"
+  },
+  {
+   "seq": 50,
+   "t_s": 275.9,
+   "type": "tool.call",
+   "call_id": "call_11",
+   "name": "stress_test",
+   "args": {
+    "part_id": "part-illustrative",
+    "design_id": "r2-hook-groove"
+   },
+   "n": 11
+  },
+  {
+   "seq": 51,
+   "t_s": 290.4,
+   "type": "tool.result",
+   "call_id": "call_11",
+   "name": "stress_test",
+   "ok": true,
+   "duration_s": 14.5,
+   "result": {
+    "design_id": "r2-hook-groove",
+    "score_pct": 80.8,
+    "verdict": "pass",
+    "category_pct": {
+     "placement": 92.3,
+     "shake": 100,
+     "push": 50
+    },
+    "placement_tolerance_mm": {
+     "x": 3,
+     "y": 2
+    },
+    "passed": "16/18",
+    "failed_tests": [
+     {
+      "test": "offset_y_+3mm",
+      "failure_mode": "slip_during_lift"
+     },
+     {
+      "test": "push_x",
+      "failure_mode": "unstable_hold"
+     }
+    ]
+   },
+   "tool_calls_left": 1
+  },
+  {
+   "seq": 52,
+   "t_s": 291.3,
+   "type": "llm.call",
+   "role": "summarizer",
+   "model": "nvidia/Nemotron-3_5-Lightning",
+   "prompt_tokens": 610,
+   "completion_tokens": 50,
+   "reasoning_tokens": null,
+   "cost_usd": 0.00005,
+   "latency_s": 0.6,
+   "cached": false,
+   "finish_reason": "stop"
+  },
+  {
+   "seq": 53,
+   "t_s": 291.4,
+   "type": "summary",
+   "step": "stress_test",
+   "text": "It tolerates the part being placed 3 mm off along the bar and 2 mm across it, survives all three shakes, and drops once when pushed sideways along the bar.",
+   "model": "nvidia/Nemotron-3_5-Lightning"
+  },
+  {
+   "seq": 54,
+   "t_s": 292.6,
+   "type": "llm.call",
+   "role": "agent",
+   "model": "nvidia/nemotron-3-super-120b-a12b",
+   "prompt_tokens": 5690,
+   "completion_tokens": 88,
+   "reasoning_tokens": null,
+   "cost_usd": 0.0017,
+   "latency_s": 1.2,
+   "cached": false,
+   "finish_reason": "tool_calls"
+  },
+  {
+   "seq": 55,
+   "t_s": 292.7,
+   "type": "tool.call",
+   "call_id": "call_12",
+   "name": "export_print_pack",
+   "args": {
+    "run_id": "run-illustrative-2",
+    "design_id": "r2-hook-groove"
+   },
+   "n": 12
+  },
+  {
+   "seq": 56,
+   "t_s": 296.2,
+   "type": "tool.result",
+   "call_id": "call_12",
+   "name": "export_print_pack",
+   "ok": true,
+   "duration_s": 3.5,
+   "result": {
+    "pack_id": "pack-illustrative",
+    "design_id": "r2-hook-groove",
+    "run_id": "run-illustrative-2",
+    "verdict": "pass",
+    "certificate_included": true,
+    "files": [
+     {
+      "name": "certificate.html",
+      "bytes": 41210
+     },
+     {
+      "name": "certificate.json",
+      "bytes": 6122
+     },
+     {
+      "name": "design.json",
+      "bytes": 512
+     },
+     {
+      "name": "finger_left.stl",
+      "bytes": 18484
+     },
+     {
+      "name": "finger_right.stl",
+      "bytes": 18484
+     },
+     {
+      "name": "mount_plate.stl",
+      "bytes": 9884
+     }
+    ],
+    "zip_bytes": 31876,
+    "download": "/printpack/pack-illustrative"
+   },
+   "tool_calls_left": 0
+  },
+  {
+   "seq": 57,
+   "t_s": 297.9,
+   "type": "llm.call",
+   "role": "agent",
+   "model": "nvidia/nemotron-3-super-120b-a12b",
+   "prompt_tokens": 6040,
+   "completion_tokens": 146,
+   "reasoning_tokens": null,
+   "cost_usd": 0.0019,
+   "latency_s": 1.7,
+   "cached": false,
+   "finish_reason": "tool_calls"
+  },
+  {
+   "seq": 58,
+   "t_s": 298,
+   "type": "agent.message",
+   "content": "Recommended design r2-hook-groove: 92% simulated success (pass) and a robustness score of 81% (pass). The print pack has both fingers, the mount plate and the certificate.",
+   "tool_calls": [],
+   "reasoning": null
+  },
+  {
+   "seq": 59,
+   "t_s": 299,
+   "type": "llm.call",
+   "role": "summarizer",
+   "model": "nvidia/Nemotron-3_5-Lightning",
+   "prompt_tokens": 820,
+   "completion_tokens": 64,
+   "reasoning_tokens": null,
+   "cost_usd": 0.00006,
+   "latency_s": 0.7,
+   "cached": false,
+   "finish_reason": "stop"
+  },
+  {
+   "seq": 60,
+   "t_s": 299.2,
+   "type": "session.finished",
+   "status": "completed",
+   "reason": null,
+   "answer": "Recommended design r2-hook-groove: 92% simulated success (pass) and a robustness score of 81% (pass). The print pack has both fingers, the mount plate and the certificate.",
+   "summary": "r2-hook-groove held the bar in 92% of 24 trials and passed 16 of 18 stress checks: every placement error up to 3 mm along the bar and 2 mm across it, all three shakes, and one of two pushes.",
+   "verdicts": [
+    {
+     "design_id": "462150ca1475",
+     "label": "straight",
+     "origin": "baseline",
+     "success_pct": 41.7,
+     "verdict": "fail"
+    },
+    {
+     "design_id": "r1-saddle",
+     "label": "r1-saddle",
+     "origin": "proposed",
+     "success_pct": 70.8,
+     "verdict": "fail"
+    },
+    {
+     "design_id": "r1-hook",
+     "label": "r1-hook",
+     "origin": "proposed",
+     "success_pct": 75,
+     "verdict": "fail"
+    },
+    {
+     "design_id": "r1-cradle",
+     "label": "r1-cradle",
+     "origin": "proposed",
+     "success_pct": 58.3,
+     "verdict": "fail"
+    },
+    {
+     "design_id": "r2-hook-groove",
+     "label": "r2-hook-groove",
+     "origin": "proposed",
+     "success_pct": 91.7,
+     "verdict": "pass",
+     "certificate_score_pct": 80.8,
+     "certificate_verdict": "pass"
+    },
+    {
+     "design_id": "r2-wide-groove",
+     "label": "r2-wide-groove",
+     "origin": "proposed",
+     "success_pct": 79.2,
+     "verdict": "fail"
+    }
+   ],
+   "spend": {
+    "session_cap_usd": 0.5,
+    "spent_usd": 0.06207,
+    "by_kind_usd": {
+     "llm": 0.02207,
+     "nebius": 0.04
+    },
+    "reserved_usd": 0,
+    "session_remaining_usd": 0.43793,
+    "day_cap_usd": 2,
+    "day_spent_usd": 0.06207
+   },
+   "turns": 13,
+   "tool_calls": 12
+  }
+ ]
+}

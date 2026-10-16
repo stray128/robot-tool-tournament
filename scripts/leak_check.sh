@@ -5,11 +5,14 @@
 #   * every non-empty, non-comment line of ~/.config/rtt/leak-patterns.txt
 #     (override the path with RTT_LEAK_PATTERNS);
 #   * the values of the resource-ID variables in ~/.config/rtt/nebius.env
-#     (names ending in _ID or containing _ID_, and NEBIUS_BUCKET_NAME; override the
-#     file with RTT_NEBIUS_ENV);
+#     (names ending in _ID or containing _ID_, NEBIUS_BUCKET_NAME[_<SUFFIX>] and
+#     NEBIUS_SECRET_NAME_<SUFFIX>; a registry ID also without its "registry-" prefix, the
+#     form it takes in image references; override the file with RTT_NEBIUS_ENV);
 #   * every credential in the repository's .env (names containing KEY, TOKEN, SECRET or
 #     PASSWORD), and the first 5 characters of each as a key-shape prefix, so a pasted or
-#     rotated key of the same format is caught too.
+#     rotated key of the same format is caught too;
+#   * the held-out seed in secrets/heldout_seed.txt (override with RTT_HELDOUT_SEED_FILE),
+#     whose SHA-256 is the only form that may be committed before the reveal.
 # Patterns are matched as fixed strings in text and binary files: case-insensitively,
 # except the key-shape prefixes, which are matched exactly.
 # Hits are reported as file:line plus the pattern's source and index, never the
@@ -79,11 +82,18 @@ env_values() {  # $1 = file, $2 = label, $3 = name filter (extended regex)
     [[ "$name" =~ $3 ]] || continue
     value="${value%\"}"; value="${value#\"}"; value="${value%\'}"; value="${value#\'}"
     add_pattern "$2:$name" "$value"
+    # a registry ID appears in image references without its "registry-" prefix
+    if [[ "$value" == registry-* ]]; then add_pattern "$2:$name path" "${value#registry-}"; fi
     if [[ -n "${4:-}" ]]; then add_exact "$2:$name prefix" "${value:0:5}"; fi
   done <"$1"
 }
-env_values "$nebius_env" "nebius.env" '(_ID$|_ID_|^NEBIUS_BUCKET_NAME$)'
+# per-region variants too (NEBIUS_BUCKET_NAME_UKSOUTH2, and NEBIUS_SECRET_NAME_<SUFFIX>,
+# which holds a MysteryBox secret ID when a region references another project's secret)
+env_values "$nebius_env" "nebius.env" '(_ID$|_ID_|^NEBIUS_BUCKET_NAME(_[A-Z0-9]+)?$|^NEBIUS_SECRET_NAME_[A-Z0-9]+$)'
 env_values "$repo/.env" ".env" '(KEY|TOKEN|SECRET|PASSWORD)' prefix
+# the held-out seed: until the results release reveals it, only its SHA-256 may appear
+seed_file="${RTT_HELDOUT_SEED_FILE:-$repo/secrets/heldout_seed.txt}"
+if [[ -r "$seed_file" ]]; then add_pattern "heldout seed" "$(head -n 1 "$seed_file")"; fi
 
 n_patterns=$(( $(wc -l <"$pats") + $(wc -l <"$cs_pats") ))
 mode="${1:-}"
@@ -152,7 +162,7 @@ case "$mode" in
     scan_files "${existing[@]}"
     ;;
   -h|--help)
-    sed -n '2,22p' "$0"
+    sed -n '2,27p' "$0"
     exit 0
     ;;
   *)

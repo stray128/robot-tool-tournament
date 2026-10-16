@@ -21,8 +21,16 @@
   and a manifest are written, and the web data is exported (:mod:`rtt.pipeline.slice`).
 * ``rtt export-web RUN_DIR...``: publishes run directories into ``web/public/data``.
 * ``rtt job {smoke,m1,search}``: runs the same work as a Nebius Serverless AI Job in the
-  pinned image, waits, records the spend and fetches the result (:mod:`rtt.cloud`);
-  ``rtt cloud ...`` exposes the rest of the job tooling (status, logs, list, spend).
+  pinned image, waits, records the spend and fetches the result (:mod:`rtt.cloud`). The
+  default target is ``uks2-cpu`` (CPU MuJoCo on uk-south2, the executor of record), with
+  the eu-north1 H100 as fallback; ``rtt cloud ...`` exposes the rest of the job tooling.
+* ``rtt part {intake,run,certify,printpack}``: Bring Your Part (:mod:`rtt.part`).
+* ``rtt agent run --stl PART``: one Grasp Engineer session in the terminal (:mod:`rtt.agent`).
+* ``rtt serve``: the Grasp Engineer API on 127.0.0.1 (:mod:`rtt.api`).
+* ``rtt heldout-real {select,run}``: the Google Scanned Objects held-out set
+  (:mod:`rtt.pipeline.heldout_real`).
+* ``rtt analyze-s1``: the S1 analysis (best-so-far curves, tau rule, test, power) from
+  search outputs (:mod:`rtt.analysis.s1`).
 * ``rtt version``: prints the package version.
 
 Heavy dependencies (MuJoCo, trimesh) are imported only by the command that needs them.
@@ -400,28 +408,74 @@ def _cmd_export_web(args: argparse.Namespace) -> int:
     return 0 if not result.skipped else 1
 
 
-def _cmd_job(args: argparse.Namespace) -> int:
-    from rtt.cloud.__main__ import main as cloud_main
-
+def job_argv(args: argparse.Namespace) -> list[str] | None:
+    """The ``python -m rtt.cloud`` argument list for ``rtt job``; ``None`` if arguments are missing."""
     kind = "probe" if args.kind == "smoke" else args.kind
     argv = ["run", kind, "--cap-usd", f"{args.cap_usd:g}", "--expected-run-s", f"{args.expected_run_s:g}"]
     if args.dry_run:
         argv.append("--dry-run")
     if args.platform:
         argv += ["--platform", args.platform]
+    elif args.target:
+        argv += ["--target", args.target]
+    if args.vcpus is not None:
+        argv += ["--vcpus", str(args.vcpus)]
+    if not args.fallback:
+        argv.append("--no-fallback")
     if args.run_id:
         argv += ["--run-id", args.run_id]
     if kind == "m1" and args.no_video:
         argv.append("--no-video")
     if kind == "search":
         if not (args.arm and args.runs and args.budget):
-            print("error: rtt job search needs --arm, --runs and --budget")
-            return 2
+            return None
         argv += ["--arm", args.arm, "--runs", str(args.runs), "--budget", str(args.budget)]
         argv += ["--spend-cap", f"{args.spend_cap:g}"]
         if args.seeds:
             argv += ["--seeds", args.seeds]
+        if args.workers is not None:
+            argv += ["--workers", str(args.workers)]
+    return argv
+
+
+def _cmd_job(args: argparse.Namespace) -> int:
+    from rtt.cloud.__main__ import main as cloud_main
+
+    argv = job_argv(args)
+    if argv is None:
+        print("error: rtt job search needs --arm, --runs and --budget")
+        return 2
     return cloud_main(argv)
+
+
+def _cmd_part(args: argparse.Namespace) -> int:
+    from rtt.part.__main__ import main as part_main
+
+    return part_main(args.rest, prog="rtt part")
+
+
+def _cmd_agent(args: argparse.Namespace) -> int:
+    from rtt.agent.__main__ import main as agent_main
+
+    return agent_main(args.rest, prog="rtt agent")
+
+
+def _cmd_serve(args: argparse.Namespace) -> int:
+    from rtt.api.__main__ import main as api_main
+
+    return api_main(args.rest, prog="rtt serve")
+
+
+def _cmd_heldout_real(args: argparse.Namespace) -> int:
+    from rtt.pipeline.heldout_real import main as heldout_real_main
+
+    return heldout_real_main(args.rest)
+
+
+def _cmd_analyze_s1(args: argparse.Namespace) -> int:
+    from rtt.analysis.s1 import main as s1_main
+
+    return s1_main(args.rest, prog="rtt analyze-s1")
 
 
 def _cmd_cloud(args: argparse.Namespace) -> int:
@@ -614,6 +668,16 @@ def build_parser() -> argparse.ArgumentParser:
     jb.add_argument("--seeds", default=None, help="search: comma-separated run seeds")
     jb.add_argument("--spend-cap", type=float, default=2.0, help="search: live model spend cap in USD")
     jb.add_argument("--no-video", action="store_true", help="m1: skip MP4 rendering")
+    jb.add_argument(
+        "--target",
+        default=None,
+        help="region profile: uks2-cpu (default, uk-south2 CPU, executor of record) or eun1-gpu",
+    )
+    jb.add_argument("--vcpus", type=int, default=None, help="CPU target: preset vCPUs (default 16)")
+    jb.add_argument(
+        "--no-fallback", dest="fallback", action="store_false", help="never move to the H100 fallback"
+    )
+    jb.add_argument("--workers", type=int, default=None, help="search: CPU processes in the job")
     jb.add_argument("--platform", default=None, help="force one platform (no fallback)")
     jb.add_argument("--run-id", default=None)
     jb.add_argument("--cap-usd", type=float, default=3.0, help="Nebius spend cap over the ledger")
@@ -624,11 +688,37 @@ def build_parser() -> argparse.ArgumentParser:
     cl = sub.add_parser("cloud", help="Nebius job tooling: capacity, status, logs, list, fetch, spend, ...")
     cl.add_argument("rest", nargs=argparse.REMAINDER, help="arguments for python -m rtt.cloud")
     cl.set_defaults(handler=_cmd_cloud)
+
+    # Pass-through commands: everything after the command name goes to the module's own
+    # parser (so `rtt part run --help` shows that parser's help). They are listed here for
+    # `rtt --help`; :func:`main` dispatches them before argparse sees the arguments.
+    for name, (handler, text) in PASSTHROUGH.items():
+        pt = sub.add_parser(name, help=text, add_help=False)
+        pt.add_argument("rest", nargs=argparse.REMAINDER)
+        pt.set_defaults(handler=handler)
     return parser
 
 
+PASSTHROUGH = {
+    "part": (_cmd_part, "Bring Your Part: intake | run | certify | printpack (python -m rtt.part)"),
+    "agent": (_cmd_agent, "Grasp Engineer session in the terminal: run --stl PART (python -m rtt.agent)"),
+    "serve": (_cmd_serve, "serve the Grasp Engineer API on 127.0.0.1 (python -m rtt.api)"),
+    "heldout-real": (
+        _cmd_heldout_real,
+        "Google Scanned Objects held-out set: select | run (python -m rtt.pipeline.heldout_real)",
+    ),
+    "analyze-s1": (_cmd_analyze_s1, "S1 analysis: curves, tau rule, test and power (rtt.analysis.s1)"),
+}
+
+
 def main(argv: Sequence[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    import sys
+
+    tokens = list(sys.argv[1:] if argv is None else argv)
+    if tokens and tokens[0] in PASSTHROUGH:
+        handler, _ = PASSTHROUGH[tokens[0]]
+        return int(handler(argparse.Namespace(rest=tokens[1:])))
+    args = build_parser().parse_args(tokens)
     return int(args.handler(args))
 
 

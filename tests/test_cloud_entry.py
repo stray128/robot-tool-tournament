@@ -43,6 +43,16 @@ def test_run_ids_and_entry_args() -> None:
     assert entry_args("probe", "p", probe_warp=False)[-1] == "--no-warp"
     with pytest.raises(ValueError, match="unknown run kind"):
         entry_args("train", "x")
+
+
+@pytest.mark.parametrize("bad", ["", "../etc", "runs/x", "/abs", "M1-X", "-lead", "a_b", "x" * 60, "a\nb"])
+def test_unsafe_run_ids_are_refused(bad: str, tmp_path: Path, capsys) -> None:
+    with pytest.raises(ValueError, match="run ID"):
+        run_prefix(bad)
+    # the CLI refuses before touching the bucket or the local runs folder
+    assert cloud_main(["fetch", "--fetch-dir", str(tmp_path / "runs"), "--", bad]) == 2
+    assert "run ID" in capsys.readouterr().err
+    assert not (tmp_path / "runs").exists()
     with pytest.raises(ValueError, match="needs SearchJobArgs"):
         entry_args("search", "x")
     search = SearchJobArgs(arm="nemotron", runs=2, budget=40, seeds="7,8", spend_cap_usd=0.25)
@@ -58,7 +68,13 @@ def test_job_spec_for_wires_image_secret_and_bucket() -> None:
     spec.validate()
     assert spec.name == "rtt-m1-x" and spec.image == IMAGE
     assert spec.command == "/app/.venv/bin/python"
-    assert spec.env_secrets == {"NEBIUS_API_KEY": "tf-api-key"}
+    assert spec.env_secrets == {}  # the gate never calls the model, so it never gets the key
+    assert job_spec_for(CONFIG, "probe", "p-x").env_secrets == {"NEBIUS_API_KEY": "tf-api-key"}
+    llm = SearchJobArgs(arm="nemotron", runs=1, budget=4)
+    assert job_spec_for(CONFIG, "search", "s-x", search=llm).env_secrets == {"NEBIUS_API_KEY": "tf-api-key"}
+    rnd = SearchJobArgs(arm="random", runs=1, budget=4)
+    assert job_spec_for(CONFIG, "search", "s-y", search=rnd).env_secrets == {}
+    assert job_spec_for(CONFIG, "m1", "m1-y", attach_key=True).env_secrets == {"NEBIUS_API_KEY": "tf-api-key"}
     assert "NEBIUS_API_KEY" not in spec.env
     # manifests learn the image name and digest, never the registry path
     assert spec.env["RTT_IMAGE_NAME"] == "rtt-sim" and spec.env["RTT_IMAGE_DIGEST"] == DIGEST
@@ -146,6 +162,16 @@ def test_explicit_stage_is_kept(tmp_path: Path) -> None:
 def test_gpu_info_without_nvidia_smi(monkeypatch) -> None:
     monkeypatch.setenv("PATH", "/nonexistent")
     assert "error" in entry.gpu_info()
+
+
+def test_cpu_info_reads_model_name(tmp_path: Path) -> None:
+    cpuinfo = tmp_path / "cpuinfo"
+    cpuinfo.write_text(
+        "processor\t: 0\nvendor_id\t: AuthenticAMD\nmodel name\t: AMD EPYC 9654 96-Core Processor\n"
+    )
+    assert entry.cpu_info(cpuinfo)["model"] == "AMD EPYC 9654 96-Core Processor"
+    assert entry.cpu_info(tmp_path / "absent")["model"] is None
+    assert "cpu" in entry.environment(probe_gl=False)
 
 
 def test_verify_run_reports_problems(tmp_path: Path) -> None:

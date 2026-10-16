@@ -1,0 +1,2664 @@
+{
+ "schema": "rtt.certificates/1",
+ "design_id": "732d575caf85",
+ "design": {
+  "name": "hooked",
+  "rationale": "A 15 degree inward bend near the tip plus an 8 mm hook lip catches under objects during the lift.",
+  "finger_length_mm": 80,
+  "finger_thickness_mm": 10,
+  "finger_width_mm": 20,
+  "bend_angle_deg": 15,
+  "bend_start_frac": 0.7,
+  "inner_face": "flat",
+  "inner_face_depth_mm": 0,
+  "tip_profile": "hook",
+  "tip_size_mm": 8,
+  "taper_ratio": 1
+ },
+ "issued_at": "2026-10-15T16:54:49Z",
+ "certificates": [
+  {
+   "design_id": "732d575caf85",
+   "object": "box 80x50x110",
+   "controller_setting": 0,
+   "task": "task_v1",
+   "task_digest": "823e58a28a93",
+   "score": 0.8333,
+   "category_scores": {
+    "placement": 1,
+    "shake": 1,
+    "push": 0.5
+   },
+   "tolerance_mm": {
+    "x": 3,
+    "y": 3
+   },
+   "passed": "17/18",
+   "settings": {
+    "grasp_fraction": 0.3,
+    "placement_errors_mm": [
+     1,
+     2,
+     3
+    ],
+    "shake": {
+     "amplitude_m": 0.01,
+     "frequency_hz": 5,
+     "cycles": 5
+    },
+    "push": {
+     "impulse_ns": 0.5,
+     "duration_s": 0.02,
+     "at_top": true
+    },
+    "post_perturb_hold_s": 1,
+    "jitter": "off",
+    "seed": 0
+   },
+   "tests": [
+    {
+     "name": "nominal",
+     "category": "placement",
+     "params": {
+      "axis": null,
+      "error_mm": 0
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1485,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_+1mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": 1
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1485,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_-1mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": -1
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1485,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_+2mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": 2
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1485,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_-2mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": -2
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1485,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_+3mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": 3
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1485,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_-3mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": -3
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1485,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_+1mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": 1
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1484,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_-1mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": -1
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1484,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_+2mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": 2
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1485,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_-2mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": -2
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1485,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_+3mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": 3
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1485,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_-3mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": -3
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1485,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "shake_x",
+     "category": "shake",
+     "params": {
+      "axis": "x",
+      "amplitude_m": 0.01,
+      "frequency_hz": 5,
+      "cycles": 5,
+      "peak_accel_m_s2": 9.87
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1485,
+     "hold_time_s": 2.78,
+     "flags": []
+    },
+    {
+     "name": "shake_y",
+     "category": "shake",
+     "params": {
+      "axis": "y",
+      "amplitude_m": 0.01,
+      "frequency_hz": 5,
+      "cycles": 5,
+      "peak_accel_m_s2": 9.87
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1485,
+     "hold_time_s": 2.78,
+     "flags": []
+    },
+    {
+     "name": "shake_z",
+     "category": "shake",
+     "params": {
+      "axis": "z",
+      "amplitude_m": 0.01,
+      "frequency_hz": 5,
+      "cycles": 5,
+      "peak_accel_m_s2": 9.87
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1569,
+     "hold_time_s": 2.78,
+     "flags": []
+    },
+    {
+     "name": "push_x",
+     "category": "push",
+     "params": {
+      "axis": "x",
+      "impulse_ns": 0.5,
+      "duration_s": 0.02,
+      "force_n": 25,
+      "height_above_com_m": 0.055
+     },
+     "success": false,
+     "failure_mode": "unstable_hold",
+     "max_lift_m": 0.1485,
+     "hold_time_s": 0.78,
+     "flags": [
+      "penetration"
+     ]
+    },
+    {
+     "name": "push_y",
+     "category": "push",
+     "params": {
+      "axis": "y",
+      "impulse_ns": 0.5,
+      "duration_s": 0.02,
+      "force_n": 25,
+      "height_above_com_m": 0.055
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1511,
+     "hold_time_s": 2.01,
+     "flags": []
+    }
+   ]
+  },
+  {
+   "design_id": "732d575caf85",
+   "object": "box 140x40x60",
+   "controller_setting": 1,
+   "task": "task_v1",
+   "task_digest": "823e58a28a93",
+   "score": 1,
+   "category_scores": {
+    "placement": 1,
+    "shake": 1,
+    "push": 1
+   },
+   "tolerance_mm": {
+    "x": 3,
+    "y": 3
+   },
+   "passed": "18/18",
+   "settings": {
+    "grasp_fraction": 0.5,
+    "placement_errors_mm": [
+     1,
+     2,
+     3
+    ],
+    "shake": {
+     "amplitude_m": 0.01,
+     "frequency_hz": 5,
+     "cycles": 5
+    },
+    "push": {
+     "impulse_ns": 0.5,
+     "duration_s": 0.02,
+     "at_top": true
+    },
+    "post_perturb_hold_s": 1,
+    "jitter": "off",
+    "seed": 0
+   },
+   "tests": [
+    {
+     "name": "nominal",
+     "category": "placement",
+     "params": {
+      "axis": null,
+      "error_mm": 0
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1474,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_+1mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": 1
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1474,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_-1mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": -1
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1474,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_+2mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": 2
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1474,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_-2mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": -2
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1474,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_+3mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": 3
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1474,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_-3mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": -3
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1474,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_+1mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": 1
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1474,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_-1mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": -1
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1474,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_+2mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": 2
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1474,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_-2mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": -2
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1474,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_+3mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": 3
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1474,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_-3mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": -3
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1474,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "shake_x",
+     "category": "shake",
+     "params": {
+      "axis": "x",
+      "amplitude_m": 0.01,
+      "frequency_hz": 5,
+      "cycles": 5,
+      "peak_accel_m_s2": 9.87
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1474,
+     "hold_time_s": 2.77,
+     "flags": []
+    },
+    {
+     "name": "shake_y",
+     "category": "shake",
+     "params": {
+      "axis": "y",
+      "amplitude_m": 0.01,
+      "frequency_hz": 5,
+      "cycles": 5,
+      "peak_accel_m_s2": 9.87
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1474,
+     "hold_time_s": 2.77,
+     "flags": []
+    },
+    {
+     "name": "shake_z",
+     "category": "shake",
+     "params": {
+      "axis": "z",
+      "amplitude_m": 0.01,
+      "frequency_hz": 5,
+      "cycles": 5,
+      "peak_accel_m_s2": 9.87
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1541,
+     "hold_time_s": 2.77,
+     "flags": []
+    },
+    {
+     "name": "push_x",
+     "category": "push",
+     "params": {
+      "axis": "x",
+      "impulse_ns": 0.5,
+      "duration_s": 0.02,
+      "force_n": 25,
+      "height_above_com_m": 0.03
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1474,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "push_y",
+     "category": "push",
+     "params": {
+      "axis": "y",
+      "impulse_ns": 0.5,
+      "duration_s": 0.02,
+      "force_n": 25,
+      "height_above_com_m": 0.03
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1474,
+     "hold_time_s": 2.01,
+     "flags": []
+    }
+   ]
+  },
+  {
+   "design_id": "732d575caf85",
+   "object": "box 160x30x30",
+   "controller_setting": 1,
+   "task": "task_v1",
+   "task_digest": "823e58a28a93",
+   "score": 1,
+   "category_scores": {
+    "placement": 1,
+    "shake": 1,
+    "push": 1
+   },
+   "tolerance_mm": {
+    "x": 3,
+    "y": 3
+   },
+   "passed": "18/18",
+   "settings": {
+    "grasp_fraction": 0.5,
+    "placement_errors_mm": [
+     1,
+     2,
+     3
+    ],
+    "shake": {
+     "amplitude_m": 0.01,
+     "frequency_hz": 5,
+     "cycles": 5
+    },
+    "push": {
+     "impulse_ns": 0.5,
+     "duration_s": 0.02,
+     "at_top": true
+    },
+    "post_perturb_hold_s": 1,
+    "jitter": "off",
+    "seed": 0
+   },
+   "tests": [
+    {
+     "name": "nominal",
+     "category": "placement",
+     "params": {
+      "axis": null,
+      "error_mm": 0
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1489,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_+1mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": 1
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1489,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_-1mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": -1
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1489,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_+2mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": 2
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1489,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_-2mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": -2
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1489,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_+3mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": 3
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1489,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_-3mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": -3
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1489,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_+1mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": 1
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1489,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_-1mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": -1
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1489,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_+2mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": 2
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1489,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_-2mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": -2
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1489,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_+3mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": 3
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1489,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_-3mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": -3
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1489,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "shake_x",
+     "category": "shake",
+     "params": {
+      "axis": "x",
+      "amplitude_m": 0.01,
+      "frequency_hz": 5,
+      "cycles": 5,
+      "peak_accel_m_s2": 9.87
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1489,
+     "hold_time_s": 2.78,
+     "flags": []
+    },
+    {
+     "name": "shake_y",
+     "category": "shake",
+     "params": {
+      "axis": "y",
+      "amplitude_m": 0.01,
+      "frequency_hz": 5,
+      "cycles": 5,
+      "peak_accel_m_s2": 9.87
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1489,
+     "hold_time_s": 2.78,
+     "flags": []
+    },
+    {
+     "name": "shake_z",
+     "category": "shake",
+     "params": {
+      "axis": "z",
+      "amplitude_m": 0.01,
+      "frequency_hz": 5,
+      "cycles": 5,
+      "peak_accel_m_s2": 9.87
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1571,
+     "hold_time_s": 2.78,
+     "flags": []
+    },
+    {
+     "name": "push_x",
+     "category": "push",
+     "params": {
+      "axis": "x",
+      "impulse_ns": 0.5,
+      "duration_s": 0.02,
+      "force_n": 25,
+      "height_above_com_m": 0.015
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1489,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "push_y",
+     "category": "push",
+     "params": {
+      "axis": "y",
+      "impulse_ns": 0.5,
+      "duration_s": 0.02,
+      "force_n": 25,
+      "height_above_com_m": 0.015
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1506,
+     "hold_time_s": 2.01,
+     "flags": []
+    }
+   ]
+  },
+  {
+   "design_id": "732d575caf85",
+   "object": "box 120x30x80",
+   "controller_setting": 0,
+   "task": "task_v1",
+   "task_digest": "823e58a28a93",
+   "score": 0.6667,
+   "category_scores": {
+    "placement": 1,
+    "shake": 1,
+    "push": 0
+   },
+   "tolerance_mm": {
+    "x": 3,
+    "y": 3
+   },
+   "passed": "16/18",
+   "settings": {
+    "grasp_fraction": 0.3,
+    "placement_errors_mm": [
+     1,
+     2,
+     3
+    ],
+    "shake": {
+     "amplitude_m": 0.01,
+     "frequency_hz": 5,
+     "cycles": 5
+    },
+    "push": {
+     "impulse_ns": 0.5,
+     "duration_s": 0.02,
+     "at_top": true
+    },
+    "post_perturb_hold_s": 1,
+    "jitter": "off",
+    "seed": 0
+   },
+   "tests": [
+    {
+     "name": "nominal",
+     "category": "placement",
+     "params": {
+      "axis": null,
+      "error_mm": 0
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1478,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_+1mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": 1
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1478,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_-1mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": -1
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1478,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_+2mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": 2
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1478,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_-2mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": -2
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1478,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_+3mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": 3
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1478,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_-3mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": -3
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1478,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_+1mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": 1
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1478,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_-1mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": -1
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1478,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_+2mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": 2
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1478,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_-2mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": -2
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1478,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_+3mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": 3
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1478,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_-3mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": -3
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1478,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "shake_x",
+     "category": "shake",
+     "params": {
+      "axis": "x",
+      "amplitude_m": 0.01,
+      "frequency_hz": 5,
+      "cycles": 5,
+      "peak_accel_m_s2": 9.87
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1478,
+     "hold_time_s": 2.78,
+     "flags": []
+    },
+    {
+     "name": "shake_y",
+     "category": "shake",
+     "params": {
+      "axis": "y",
+      "amplitude_m": 0.01,
+      "frequency_hz": 5,
+      "cycles": 5,
+      "peak_accel_m_s2": 9.87
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1478,
+     "hold_time_s": 2.78,
+     "flags": []
+    },
+    {
+     "name": "shake_z",
+     "category": "shake",
+     "params": {
+      "axis": "z",
+      "amplitude_m": 0.01,
+      "frequency_hz": 5,
+      "cycles": 5,
+      "peak_accel_m_s2": 9.87
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1564,
+     "hold_time_s": 2.78,
+     "flags": []
+    },
+    {
+     "name": "push_x",
+     "category": "push",
+     "params": {
+      "axis": "x",
+      "impulse_ns": 0.5,
+      "duration_s": 0.02,
+      "force_n": 25,
+      "height_above_com_m": 0.04
+     },
+     "success": false,
+     "failure_mode": "unstable_hold",
+     "max_lift_m": 0.1478,
+     "hold_time_s": 0.83,
+     "flags": [
+      "penetration"
+     ]
+    },
+    {
+     "name": "push_y",
+     "category": "push",
+     "params": {
+      "axis": "y",
+      "impulse_ns": 0.5,
+      "duration_s": 0.02,
+      "force_n": 25,
+      "height_above_com_m": 0.04
+     },
+     "success": false,
+     "failure_mode": "unstable_hold",
+     "max_lift_m": 0.1478,
+     "hold_time_s": 0.8,
+     "flags": [
+      "penetration"
+     ]
+    }
+   ]
+  },
+  {
+   "design_id": "732d575caf85",
+   "object": "cylinder 25x110",
+   "controller_setting": 0,
+   "task": "task_v1",
+   "task_digest": "823e58a28a93",
+   "score": 0.6667,
+   "category_scores": {
+    "placement": 1,
+    "shake": 1,
+    "push": 0
+   },
+   "tolerance_mm": {
+    "x": 3,
+    "y": 3
+   },
+   "passed": "16/18",
+   "settings": {
+    "grasp_fraction": 0.3,
+    "placement_errors_mm": [
+     1,
+     2,
+     3
+    ],
+    "shake": {
+     "amplitude_m": 0.01,
+     "frequency_hz": 5,
+     "cycles": 5
+    },
+    "push": {
+     "impulse_ns": 0.5,
+     "duration_s": 0.02,
+     "at_top": true
+    },
+    "post_perturb_hold_s": 1,
+    "jitter": "off",
+    "seed": 0
+   },
+   "tests": [
+    {
+     "name": "nominal",
+     "category": "placement",
+     "params": {
+      "axis": null,
+      "error_mm": 0
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1493,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_+1mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": 1
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1493,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_-1mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": -1
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1493,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_+2mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": 2
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1493,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_-2mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": -2
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1493,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_+3mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": 3
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1493,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_-3mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": -3
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1493,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_+1mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": 1
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1493,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_-1mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": -1
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1493,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_+2mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": 2
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1493,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_-2mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": -2
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1493,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_+3mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": 3
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1493,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_-3mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": -3
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1493,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "shake_x",
+     "category": "shake",
+     "params": {
+      "axis": "x",
+      "amplitude_m": 0.01,
+      "frequency_hz": 5,
+      "cycles": 5,
+      "peak_accel_m_s2": 9.87
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1493,
+     "hold_time_s": 2.78,
+     "flags": []
+    },
+    {
+     "name": "shake_y",
+     "category": "shake",
+     "params": {
+      "axis": "y",
+      "amplitude_m": 0.01,
+      "frequency_hz": 5,
+      "cycles": 5,
+      "peak_accel_m_s2": 9.87
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1493,
+     "hold_time_s": 2.78,
+     "flags": []
+    },
+    {
+     "name": "shake_z",
+     "category": "shake",
+     "params": {
+      "axis": "z",
+      "amplitude_m": 0.01,
+      "frequency_hz": 5,
+      "cycles": 5,
+      "peak_accel_m_s2": 9.87
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1574,
+     "hold_time_s": 2.78,
+     "flags": []
+    },
+    {
+     "name": "push_x",
+     "category": "push",
+     "params": {
+      "axis": "x",
+      "impulse_ns": 0.5,
+      "duration_s": 0.02,
+      "force_n": 25,
+      "height_above_com_m": 0.055
+     },
+     "success": false,
+     "failure_mode": "unstable_hold",
+     "max_lift_m": 0.1493,
+     "hold_time_s": 0.82,
+     "flags": [
+      "penetration"
+     ]
+    },
+    {
+     "name": "push_y",
+     "category": "push",
+     "params": {
+      "axis": "y",
+      "impulse_ns": 0.5,
+      "duration_s": 0.02,
+      "force_n": 25,
+      "height_above_com_m": 0.055
+     },
+     "success": false,
+     "failure_mode": "unstable_hold",
+     "max_lift_m": 0.1497,
+     "hold_time_s": 0.78,
+     "flags": [
+      "penetration"
+     ]
+    }
+   ]
+  },
+  {
+   "design_id": "732d575caf85",
+   "object": "cylinder 6x100",
+   "controller_setting": 1,
+   "task": "task_v1",
+   "task_digest": "823e58a28a93",
+   "score": 0.6667,
+   "category_scores": {
+    "placement": 1,
+    "shake": 1,
+    "push": 0
+   },
+   "tolerance_mm": {
+    "x": 3,
+    "y": 3
+   },
+   "passed": "16/18",
+   "settings": {
+    "grasp_fraction": 0.5,
+    "placement_errors_mm": [
+     1,
+     2,
+     3
+    ],
+    "shake": {
+     "amplitude_m": 0.01,
+     "frequency_hz": 5,
+     "cycles": 5
+    },
+    "push": {
+     "impulse_ns": 0.5,
+     "duration_s": 0.02,
+     "at_top": true
+    },
+    "post_perturb_hold_s": 1,
+    "jitter": "off",
+    "seed": 0
+   },
+   "tests": [
+    {
+     "name": "nominal",
+     "category": "placement",
+     "params": {
+      "axis": null,
+      "error_mm": 0
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1499,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_+1mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": 1
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1499,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_-1mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": -1
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1499,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_+2mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": 2
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1499,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_-2mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": -2
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1499,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_+3mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": 3
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1499,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_-3mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": -3
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1499,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_+1mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": 1
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.15,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_-1mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": -1
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.15,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_+2mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": 2
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.15,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_-2mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": -2
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.15,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_+3mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": 3
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1501,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_-3mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": -3
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1501,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "shake_x",
+     "category": "shake",
+     "params": {
+      "axis": "x",
+      "amplitude_m": 0.01,
+      "frequency_hz": 5,
+      "cycles": 5,
+      "peak_accel_m_s2": 9.87
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1499,
+     "hold_time_s": 2.79,
+     "flags": []
+    },
+    {
+     "name": "shake_y",
+     "category": "shake",
+     "params": {
+      "axis": "y",
+      "amplitude_m": 0.01,
+      "frequency_hz": 5,
+      "cycles": 5,
+      "peak_accel_m_s2": 9.87
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1499,
+     "hold_time_s": 2.79,
+     "flags": []
+    },
+    {
+     "name": "shake_z",
+     "category": "shake",
+     "params": {
+      "axis": "z",
+      "amplitude_m": 0.01,
+      "frequency_hz": 5,
+      "cycles": 5,
+      "peak_accel_m_s2": 9.87
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1578,
+     "hold_time_s": 2.79,
+     "flags": []
+    },
+    {
+     "name": "push_x",
+     "category": "push",
+     "params": {
+      "axis": "x",
+      "impulse_ns": 0.5,
+      "duration_s": 0.02,
+      "force_n": 25,
+      "height_above_com_m": 0.05
+     },
+     "success": false,
+     "failure_mode": "unstable_hold",
+     "max_lift_m": 0.1499,
+     "hold_time_s": 0.79,
+     "flags": [
+      "speed_cap"
+     ]
+    },
+    {
+     "name": "push_y",
+     "category": "push",
+     "params": {
+      "axis": "y",
+      "impulse_ns": 0.5,
+      "duration_s": 0.02,
+      "force_n": 25,
+      "height_above_com_m": 0.05
+     },
+     "success": false,
+     "failure_mode": "unstable_hold",
+     "max_lift_m": 0.1594,
+     "hold_time_s": 0.79,
+     "flags": [
+      "penetration"
+     ]
+    }
+   ]
+  },
+  {
+   "design_id": "732d575caf85",
+   "object": "rod 3x120",
+   "controller_setting": 1,
+   "task": "task_v1",
+   "task_digest": "823e58a28a93",
+   "score": 0,
+   "category_scores": {
+    "placement": 0,
+    "shake": 0,
+    "push": 0
+   },
+   "tolerance_mm": {
+    "x": null,
+    "y": null
+   },
+   "passed": "0/18",
+   "settings": {
+    "grasp_fraction": 0.5,
+    "placement_errors_mm": [
+     1,
+     2,
+     3
+    ],
+    "shake": {
+     "amplitude_m": 0.01,
+     "frequency_hz": 5,
+     "cycles": 5
+    },
+    "push": {
+     "impulse_ns": 0.5,
+     "duration_s": 0.02,
+     "at_top": true
+    },
+    "post_perturb_hold_s": 1,
+    "jitter": "off",
+    "seed": 0
+   },
+   "tests": [
+    {
+     "name": "nominal",
+     "category": "placement",
+     "params": {
+      "axis": null,
+      "error_mm": 0
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "offset_x_+1mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": 1
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "offset_x_-1mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": -1
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "offset_x_+2mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": 2
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "offset_x_-2mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": -2
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "offset_x_+3mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": 3
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "offset_x_-3mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": -3
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "offset_y_+1mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": 1
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "offset_y_-1mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": -1
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "offset_y_+2mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": 2
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "offset_y_-2mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": -2
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "offset_y_+3mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": 3
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "offset_y_-3mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": -3
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "shake_x",
+     "category": "shake",
+     "params": {
+      "axis": "x",
+      "amplitude_m": 0.01,
+      "frequency_hz": 5,
+      "cycles": 5,
+      "peak_accel_m_s2": 9.87
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "shake_y",
+     "category": "shake",
+     "params": {
+      "axis": "y",
+      "amplitude_m": 0.01,
+      "frequency_hz": 5,
+      "cycles": 5,
+      "peak_accel_m_s2": 9.87
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "shake_z",
+     "category": "shake",
+     "params": {
+      "axis": "z",
+      "amplitude_m": 0.01,
+      "frequency_hz": 5,
+      "cycles": 5,
+      "peak_accel_m_s2": 9.87
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "push_x",
+     "category": "push",
+     "params": {
+      "axis": "x",
+      "impulse_ns": 0.5,
+      "duration_s": 0.02,
+      "force_n": 25,
+      "height_above_com_m": 0.003
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0.0117,
+     "hold_time_s": 0,
+     "flags": [
+      "speed_cap"
+     ]
+    },
+    {
+     "name": "push_y",
+     "category": "push",
+     "params": {
+      "axis": "y",
+      "impulse_ns": 0.5,
+      "duration_s": 0.02,
+      "force_n": 25,
+      "height_above_com_m": 0.003
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0.0101,
+     "hold_time_s": 0,
+     "flags": [
+      "speed_cap"
+     ]
+    }
+   ]
+  },
+  {
+   "design_id": "732d575caf85",
+   "object": "rod 7x140",
+   "controller_setting": 2,
+   "task": "task_v1",
+   "task_digest": "823e58a28a93",
+   "score": 0,
+   "category_scores": {
+    "placement": 0,
+    "shake": 0,
+    "push": 0
+   },
+   "tolerance_mm": {
+    "x": null,
+    "y": null
+   },
+   "passed": "0/18",
+   "settings": {
+    "grasp_fraction": 0.7,
+    "placement_errors_mm": [
+     1,
+     2,
+     3
+    ],
+    "shake": {
+     "amplitude_m": 0.01,
+     "frequency_hz": 5,
+     "cycles": 5
+    },
+    "push": {
+     "impulse_ns": 0.5,
+     "duration_s": 0.02,
+     "at_top": true
+    },
+    "post_perturb_hold_s": 1,
+    "jitter": "off",
+    "seed": 0
+   },
+   "tests": [
+    {
+     "name": "nominal",
+     "category": "placement",
+     "params": {
+      "axis": null,
+      "error_mm": 0
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "offset_x_+1mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": 1
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "offset_x_-1mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": -1
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "offset_x_+2mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": 2
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "offset_x_-2mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": -2
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "offset_x_+3mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": 3
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "offset_x_-3mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": -3
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "offset_y_+1mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": 1
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "offset_y_-1mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": -1
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "offset_y_+2mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": 2
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "offset_y_-2mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": -2
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "offset_y_+3mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": 3
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "offset_y_-3mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": -3
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "shake_x",
+     "category": "shake",
+     "params": {
+      "axis": "x",
+      "amplitude_m": 0.01,
+      "frequency_hz": 5,
+      "cycles": 5,
+      "peak_accel_m_s2": 9.87
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "shake_y",
+     "category": "shake",
+     "params": {
+      "axis": "y",
+      "amplitude_m": 0.01,
+      "frequency_hz": 5,
+      "cycles": 5,
+      "peak_accel_m_s2": 9.87
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "shake_z",
+     "category": "shake",
+     "params": {
+      "axis": "z",
+      "amplitude_m": 0.01,
+      "frequency_hz": 5,
+      "cycles": 5,
+      "peak_accel_m_s2": 9.87
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0,
+     "hold_time_s": 0,
+     "flags": []
+    },
+    {
+     "name": "push_x",
+     "category": "push",
+     "params": {
+      "axis": "x",
+      "impulse_ns": 0.5,
+      "duration_s": 0.02,
+      "force_n": 25,
+      "height_above_com_m": 0.007
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0.0085,
+     "hold_time_s": 0,
+     "flags": [
+      "speed_cap"
+     ]
+    },
+    {
+     "name": "push_y",
+     "category": "push",
+     "params": {
+      "axis": "y",
+      "impulse_ns": 0.5,
+      "duration_s": 0.02,
+      "force_n": 25,
+      "height_above_com_m": 0.007
+     },
+     "success": false,
+     "failure_mode": "missed_grasp",
+     "max_lift_m": 0.0023,
+     "hold_time_s": 0,
+     "flags": [
+      "speed_cap"
+     ]
+    }
+   ]
+  },
+  {
+   "design_id": "732d575caf85",
+   "object": "rod 14x180",
+   "controller_setting": 0,
+   "task": "task_v1",
+   "task_digest": "823e58a28a93",
+   "score": 0.8333,
+   "category_scores": {
+    "placement": 1,
+    "shake": 1,
+    "push": 0.5
+   },
+   "tolerance_mm": {
+    "x": 3,
+    "y": 3
+   },
+   "passed": "17/18",
+   "settings": {
+    "grasp_fraction": 0.3,
+    "placement_errors_mm": [
+     1,
+     2,
+     3
+    ],
+    "shake": {
+     "amplitude_m": 0.01,
+     "frequency_hz": 5,
+     "cycles": 5
+    },
+    "push": {
+     "impulse_ns": 0.5,
+     "duration_s": 0.02,
+     "at_top": true
+    },
+    "post_perturb_hold_s": 1,
+    "jitter": "off",
+    "seed": 0
+   },
+   "tests": [
+    {
+     "name": "nominal",
+     "category": "placement",
+     "params": {
+      "axis": null,
+      "error_mm": 0
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1496,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_+1mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": 1
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1496,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_-1mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": -1
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1496,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_+2mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": 2
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1496,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_-2mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": -2
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1496,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_+3mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": 3
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1495,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_x_-3mm",
+     "category": "placement",
+     "params": {
+      "axis": "x",
+      "error_mm": -3
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1495,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_+1mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": 1
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1495,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_-1mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": -1
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1495,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_+2mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": 2
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1496,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_-2mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": -2
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1496,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_+3mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": 3
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1496,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "offset_y_-3mm",
+     "category": "placement",
+     "params": {
+      "axis": "y",
+      "error_mm": -3
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1496,
+     "hold_time_s": 2.01,
+     "flags": []
+    },
+    {
+     "name": "shake_x",
+     "category": "shake",
+     "params": {
+      "axis": "x",
+      "amplitude_m": 0.01,
+      "frequency_hz": 5,
+      "cycles": 5,
+      "peak_accel_m_s2": 9.87
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1496,
+     "hold_time_s": 2.78,
+     "flags": []
+    },
+    {
+     "name": "shake_y",
+     "category": "shake",
+     "params": {
+      "axis": "y",
+      "amplitude_m": 0.01,
+      "frequency_hz": 5,
+      "cycles": 5,
+      "peak_accel_m_s2": 9.87
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1496,
+     "hold_time_s": 2.78,
+     "flags": []
+    },
+    {
+     "name": "shake_z",
+     "category": "shake",
+     "params": {
+      "axis": "z",
+      "amplitude_m": 0.01,
+      "frequency_hz": 5,
+      "cycles": 5,
+      "peak_accel_m_s2": 9.87
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1577,
+     "hold_time_s": 2.78,
+     "flags": []
+    },
+    {
+     "name": "push_x",
+     "category": "push",
+     "params": {
+      "axis": "x",
+      "impulse_ns": 0.5,
+      "duration_s": 0.02,
+      "force_n": 25,
+      "height_above_com_m": 0.014
+     },
+     "success": false,
+     "failure_mode": "unstable_hold",
+     "max_lift_m": 0.1512,
+     "hold_time_s": 0.8,
+     "flags": [
+      "penetration"
+     ]
+    },
+    {
+     "name": "push_y",
+     "category": "push",
+     "params": {
+      "axis": "y",
+      "impulse_ns": 0.5,
+      "duration_s": 0.02,
+      "force_n": 25,
+      "height_above_com_m": 0.014
+     },
+     "success": true,
+     "failure_mode": null,
+     "max_lift_m": 0.1886,
+     "hold_time_s": 2.01,
+     "flags": []
+    }
+   ]
+  }
+ ],
+ "provenance": {
+  "kind": "local",
+  "executor": "cpu",
+  "engine": "MuJoCo 3.15.0",
+  "host": "workstation",
+  "wall_s": 11.8,
+  "sim_steps": null,
+  "note": "rtt certify --entrant hooked, 9 training objects, 8 workers"
+ }
+}

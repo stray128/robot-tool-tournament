@@ -11,9 +11,11 @@ ARM ?= random
 RUNS ?= 1
 BUDGET ?= 40
 OUT ?= runs/search/$(ARM)-$(shell date -u +%Y%m%d-%H%M%S)
+# image builds: a clean export of one commit (scored jobs); REF=worktree builds the dirty tree
+REF ?= HEAD
 
 .PHONY: help sync test lint format m1 probe-llm calibrate slice search web web-build demo \
-        leak-check hooks image push nebius-smoke nebius-m1
+        leak-check hooks image image-dirty push nebius-smoke nebius-m1 serve part-demo
 
 help:
 	@echo "make sync         install the locked dependencies plus dev tools (uv sync --extra dev)"
@@ -29,7 +31,10 @@ help:
 	@echo "make probe-llm    print the Token Factory probe summary (no API calls)"
 	@echo "make leak-check   scan the work tree for private strings (patterns live outside the repo)"
 	@echo "make hooks        install the leak check as git pre-commit and pre-push hooks"
-	@echo "make image/push   build and push the job image (jobs/nebius/*.sh)"
+	@echo "make image/push   build (from commit REF=HEAD, clean) and push the job image (jobs/nebius/*.sh)"
+	@echo "make image-dirty  build the job image from the working tree (never for scored jobs)"
+	@echo "make serve        Grasp Engineer API on 127.0.0.1:8000 (live mode for web /part)"
+	@echo "make part-demo    Bring Your Part on an example part, random arm (no key, no spend)"
 	@echo "make nebius-smoke run the environment probe as a Nebius job"
 	@echo "make nebius-m1    run gate G1 as a Nebius job"
 
@@ -82,7 +87,16 @@ hooks:
 	@echo "installed $(HOOKS_DIR)/pre-commit and $(HOOKS_DIR)/pre-push (scripts/leak_check.sh)"
 
 image:
+	jobs/nebius/build_image.sh --ref $(REF)
+
+image-dirty:
 	jobs/nebius/build_image.sh
+
+serve:
+	$(RTT) serve
+
+part-demo:
+	$(RTT) part run assets/parts/l_bracket.stl --arm random --budget 16 --out runs/part/l_bracket-$(shell date -u +%Y%m%d-%H%M%S)
 
 push:
 	jobs/nebius/push_image.sh

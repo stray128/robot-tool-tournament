@@ -31,9 +31,9 @@ export default function ComputePage() {
         title="Compute"
         lede={
           <p>
-            Every number on this site traces to a job. Scored simulation runs as Nebius Serverless Jobs from one pinned
-            container image, writing results to Object Storage; this page lists each job with its platform, time and
-            cost.
+            Every simulated number on this site says where it ran. Scored simulation runs as Nebius Serverless Jobs from
+            one pinned container image, writing results to Object Storage; this page lists each job with its platform,
+            time and cost. Robustness certificates name their own run on their page.
           </p>
         }
       />
@@ -113,7 +113,7 @@ export default function ComputePage() {
         </div>
       </section>
 
-      <TitleBlock title="Compute" drawing="/compute" sheet="4 of 5" />
+      <TitleBlock title="Compute" drawing="/compute" sheet="5 of 6" />
     </>
   );
 }

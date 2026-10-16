@@ -1,0 +1,29 @@
+{
+  "arm": "agent",
+  "run_index": 0,
+  "run_seed": 0,
+  "label": "d01",
+  "design_id": "7969dbaaaa4d",
+  "design": {
+    "name": null,
+    "rationale": "V‑groove with a rounded tip centers the bracket and reduces stress concentrations for off‑center grasps.",
+    "finger_length_mm": 60.0,
+    "finger_thickness_mm": 6.0,
+    "finger_width_mm": 12.0,
+    "bend_angle_deg": -5.0,
+    "bend_start_frac": 0.3,
+    "inner_face": "v_groove",
+    "inner_face_depth_mm": 2.0,
+    "tip_profile": "rounded",
+    "tip_size_mm": 2.0,
+    "taper_ratio": 0.9
+  },
+  "controller_setting": 0,
+  "grasp_height_frac": null,
+  "training_success": 1.0,
+  "training_hold_fraction": 1.0,
+  "mass_g": 4.688130268666669,
+  "origin": "grasp-engineer",
+  "content_sha256": "25c9935fa36929abff0b86233f03424093be5ee07e8fd2414d53061e43e909ac",
+  "frozen_at": "2026-10-15T17:59:09.465Z"
+}

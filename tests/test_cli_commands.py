@@ -105,3 +105,65 @@ def test_export_web_skips_unknown_directories(tmp_path: Path, capsys) -> None:
 def test_job_search_needs_its_arguments(capsys) -> None:
     assert main(["job", "search"]) == 2
     assert "needs --arm, --runs and --budget" in capsys.readouterr().out
+
+
+# --------------------------------------------------------------------------- integration wiring
+
+
+def test_passthrough_commands_are_listed_and_dispatched(monkeypatch, capsys) -> None:
+    """`rtt part|agent|serve|heldout-real|analyze-s1` hand every argument to the module's parser."""
+    from rtt import cli
+
+    parser = build_parser()
+    sub = next(a for a in parser._actions if a.dest == "cmd")
+    assert {"part", "agent", "serve", "heldout-real", "analyze-s1"} <= set(sub.choices)
+
+    seen: dict[str, list[str]] = {}
+
+    def fake(name: str):
+        def handler(ns) -> int:
+            seen[name] = list(ns.rest)
+            return 7
+
+        return handler
+
+    monkeypatch.setattr(cli, "PASSTHROUGH", {k: (fake(k), v[1]) for k, v in cli.PASSTHROUGH.items()})
+    assert main(["part", "run", "--help", "x.stl"]) == 7
+    assert main(["serve", "--port", "9000"]) == 7
+    assert main(["heldout-real", "select", "--mode", "dev", "--out", "o"]) == 7
+    assert seen == {
+        "part": ["run", "--help", "x.stl"],
+        "serve": ["--port", "9000"],
+        "heldout-real": ["select", "--mode", "dev", "--out", "o"],
+    }
+
+
+def test_part_help_uses_the_rtt_program_name(capsys) -> None:
+    with pytest.raises(SystemExit) as exc:
+        main(["part", "--help"])
+    assert exc.value.code == 0
+    out = capsys.readouterr().out
+    assert out.startswith("usage: rtt part") and "certify" in out and "printpack" in out
+
+
+def test_job_search_defaults_to_the_uk_south2_cpu_target() -> None:
+    """No --target: the cloud CLI's default (uks2-cpu) applies; the flags pass through when given."""
+    from rtt.cli import job_argv
+
+    parser = build_parser()
+    args = parser.parse_args(["job", "search", "--arm", "random", "--runs", "3", "--budget", "40"])
+    argv = job_argv(args)
+    assert argv is not None and argv[:2] == ["run", "search"]
+    assert "--target" not in argv and "--platform" not in argv and "--no-fallback" not in argv
+    from rtt.cloud.nebius_jobs import DEFAULT_TARGET
+
+    assert DEFAULT_TARGET == "uks2-cpu"
+    args = parser.parse_args(
+        ["job", "search", "--arm", "random", "--runs", "3", "--budget", "40", "--target", "uks2-cpu"]
+        + ["--vcpus", "32", "--no-fallback", "--workers", "30", "--seeds", "1,2,3"]
+    )
+    argv = job_argv(args)
+    assert argv is not None
+    joined = " ".join(argv)
+    assert "--target uks2-cpu" in joined and "--vcpus 32" in joined and "--no-fallback" in joined
+    assert "--workers 30" in joined and "--seeds 1,2,3" in joined

@@ -5,9 +5,11 @@
 #
 # Usage: jobs/nebius/smoke.sh [extra `python -m rtt.cloud run probe` flags]
 #   e.g. jobs/nebius/smoke.sh --dry-run
+#        jobs/nebius/smoke.sh --no-warp                 (uks2-cpu, the default target)
 #        jobs/nebius/smoke.sh --platform gpu-h200-sxm --cap-usd 5
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/env.sh"
-require RTT_IMAGE NEBIUS_PROFILE NEBIUS_PROJECT_ID NEBIUS_SUBNET_ID NEBIUS_BUCKET_ID NEBIUS_BUCKET_NAME
+# region settings (NEBIUS_*_ID or NEBIUS_*_ID_<SUFFIX>) are checked per target by the CLI
+require RTT_IMAGE NEBIUS_PROFILE NEBIUS_TENANT_ID
 
 exec "${RTT_PY}" -m rtt.cloud run probe "$@"

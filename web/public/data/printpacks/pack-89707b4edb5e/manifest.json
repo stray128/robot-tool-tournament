@@ -1,0 +1,245 @@
+{
+  "format": "rtt-print-pack",
+  "version": 1,
+  "created_at": "2026-10-15T17:59:12+00:00",
+  "disclaimer": "Simulated, untested on hardware. These results come from a physics simulation (MuJoCo) of an open-source parallel gripper; print and test before relying on them.",
+  "license": "Generated files: CC0-1.0. Generator: Apache-2.0.",
+  "notice": "Clamp interface dimensions measured from an open-source parallel gripper's published hardware sources (CERN-OHL-P-2.0; attribution in the project README). New model; no files from that project.",
+  "files": {
+    "README.txt": {
+      "bytes": 1821,
+      "sha256": "7ec7f1c9b338ba2a44b24ffba159920dfcb13e0095a5cdc02339878477e51b83"
+    },
+    "certificate.html": {
+      "bytes": 108687,
+      "sha256": "3701f573bdc66be0e8767d021a73ed79d71db41d2df7aed57d038994c6f1a62f"
+    },
+    "certificate.json": {
+      "bytes": 23040,
+      "sha256": "5b3d8a777cfce2bc48726460ff46e56736ea64ea92179bb4a5d4ac55c18dd894"
+    },
+    "design.json": {
+      "bytes": 865,
+      "sha256": "8b354ecca689b9ca272092174d7a43e70d897c38c8e24aacbf7d3ce2ab1548e9"
+    },
+    "finger_left.stl": {
+      "bytes": 16584,
+      "sha256": "b4532fc8138f98205ba4d4c547bb07f0721629a10b0009652bc6541450d112ec",
+      "units": "mm",
+      "orientation": "assembly frame"
+    },
+    "finger_right.stl": {
+      "bytes": 16584,
+      "sha256": "d25f8d684439ec53ffbcf6446b91c85087c5823c14bbc5887d0569e44c468527",
+      "units": "mm",
+      "orientation": "assembly frame"
+    },
+    "jaw.stl": {
+      "bytes": 42784,
+      "sha256": "dcb29f705ae20b817e65406ffad50a97b72e04d9a97c17976cddb149f68e6c26",
+      "units": "mm",
+      "quantity": 2,
+      "orientation": "print (contact face down)",
+      "needs_support": false
+    },
+    "results.json": {
+      "bytes": 1322,
+      "sha256": "8f7b1a80e1ab55562bf29b33b9213bb7d49b49aa6bc5cde5130535a4231a46d9"
+    }
+  },
+  "part": {
+    "name": "l_bracket",
+    "source_name": "source.stl",
+    "source_sha256": "f88830cf85756efa851b4aa4bacd9ba958393e4119bbc8a8ffcd6ccd391d5c8f",
+    "extents_mm": [
+      60.0,
+      30.0,
+      50.0
+    ],
+    "mass_g": 15.107,
+    "material": "plastic",
+    "units": "mm",
+    "poses": [
+      {
+        "rank": 0,
+        "probability": 0.418793
+      },
+      {
+        "rank": 1,
+        "probability": 0.232662
+      },
+      {
+        "rank": 2,
+        "probability": 0.185222
+      }
+    ]
+  },
+  "design": {
+    "design_id": "7969dbaaaa4d",
+    "params": {
+      "finger_length_mm": 60.0,
+      "finger_thickness_mm": 6.0,
+      "finger_width_mm": 12.0,
+      "bend_angle_deg": -5.0,
+      "bend_start_frac": 0.3,
+      "inner_face": "v_groove",
+      "inner_face_depth_mm": 2.0,
+      "tip_profile": "rounded",
+      "tip_size_mm": 2.0,
+      "taper_ratio": 0.9
+    },
+    "origin": "grasp-engineer",
+    "training_success": 1.0,
+    "controller_setting": 0,
+    "mass_g": 4.688130268666669,
+    "frozen_sha256": "25c9935fa36929abff0b86233f03424093be5ee07e8fd2414d53061e43e909ac"
+  },
+  "certificate": {
+    "score": 0.7513,
+    "passed": 45,
+    "n_tests": 54,
+    "placement_curve": {
+      "x": [
+        [
+          -3.0,
+          0.6667
+        ],
+        [
+          -2.0,
+          0.6667
+        ],
+        [
+          -1.0,
+          0.6667
+        ],
+        [
+          0.0,
+          1.0
+        ],
+        [
+          1.0,
+          1.0
+        ],
+        [
+          2.0,
+          1.0
+        ],
+        [
+          3.0,
+          1.0
+        ]
+      ],
+      "y": [
+        [
+          -3.0,
+          0.6667
+        ],
+        [
+          -2.0,
+          1.0
+        ],
+        [
+          -1.0,
+          1.0
+        ],
+        [
+          0.0,
+          1.0
+        ],
+        [
+          1.0,
+          1.0
+        ],
+        [
+          2.0,
+          1.0
+        ],
+        [
+          3.0,
+          0.6667
+        ]
+      ]
+    }
+  },
+  "clamp_interface": {
+    "rod_bore_d_mm": {
+      "value": 6.1,
+      "source": "documented"
+    },
+    "rod_spacing_mm": {
+      "value": 32.0,
+      "source": "documented"
+    },
+    "block_width_mm": {
+      "value": 42.0,
+      "source": "documented"
+    },
+    "block_depth_mm": {
+      "value": 16.0,
+      "source": "documented"
+    },
+    "block_height_mm": {
+      "value": 18.0,
+      "source": "assumed"
+    },
+    "rod_axis_height_mm": {
+      "value": 9.0,
+      "source": "assumed"
+    },
+    "stroke_mm": {
+      "value": 42.0,
+      "source": "documented"
+    },
+    "rack": {
+      "value": false,
+      "source": "setting"
+    },
+    "rack_module_mm": {
+      "value": 0.8,
+      "source": "documented"
+    },
+    "pinion_teeth": {
+      "value": 18,
+      "source": "documented"
+    },
+    "pressure_angle_deg": {
+      "value": 20.0,
+      "source": "assumed"
+    },
+    "rack_length_mm": {
+      "value": 58.0,
+      "source": "assumed"
+    },
+    "rack_face_width_mm": {
+      "value": 6.0,
+      "source": "assumed"
+    },
+    "rack_bar_mm": {
+      "value": 3.0,
+      "source": "assumed"
+    },
+    "rack_z_mm": {
+      "value": 9.0,
+      "source": "assumed"
+    },
+    "clearance_mm": {
+      "value": 0.5,
+      "source": "assumed"
+    }
+  },
+  "provenance": {
+    "arm": null,
+    "budget": null,
+    "runs": null,
+    "model": null,
+    "provider": null,
+    "llm_cost_usd": null,
+    "job": null,
+    "code": null,
+    "task_hash": null,
+    "suite_hash": null,
+    "search_wall_s": null,
+    "timings_s": null
+  },
+  "label": "Product mode: not part of the pre-registered experiment"
+}

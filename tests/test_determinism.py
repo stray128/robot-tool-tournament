@@ -80,3 +80,24 @@ def test_process_pool_matches_serial_execution() -> None:
     assert [r.summary() for r in pooled.results] == [r.summary() for r in serial.results]
     assert pooled.total_steps == serial.total_steps > 0
     assert serial.steps_per_sec > 0 and serial.steps_per_sec_per_worker > 0
+
+
+def test_a_stalled_pool_fails_fast_and_the_executor_recovers() -> None:
+    """No finished episode within the stall timeout raises instead of hanging forever."""
+    import pytest
+
+    from rtt.sim.exec_cpu import CpuExecutor, ExecutorStallError
+
+    finger = straight_finger()
+    # 40 jobs on 2 workers: chunks of 2, so the chunked path (whose iterator must take a timeout) runs
+    jobs = [EpisodeJob(finger, G1_BOX, Placement(), G1_SETTING, seed=s, task=TASK) for s in range(40)]
+    with pytest.raises(ValueError):
+        CpuExecutor(2, stall_timeout_s=0)
+    with CpuExecutor(2, stall_timeout_s=0.001) as ex:  # no episode finishes in 1 ms
+        with pytest.raises(ExecutorStallError, match="no episode finished"):
+            ex.run(jobs)
+        assert ex._pool is None  # the stuck pool was terminated
+        ex.stall_timeout_s = 600.0
+        again = ex.run(jobs)  # a fresh pool, results in job order
+    serial = run_jobs(jobs, workers=1)
+    assert [r.summary() for r in again.results] == [r.summary() for r in serial.results]

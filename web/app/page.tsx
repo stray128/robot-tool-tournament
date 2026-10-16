@@ -3,35 +3,33 @@ import Link from "next/link";
 import { computeChip, ProvenanceChips, uniqueDesignChips } from "@/components/ProvenanceChips";
 import BoutPlayer from "@/components/replay/BoutPlayer";
 import { TitleBlock } from "@/components/TitleBlock";
-import { getDesigns, getFeaturedBout } from "@/lib/data";
+import { getCertificates, getDesigns, getFeaturedBout, getJobs, getResults } from "@/lib/data";
 import { APP_NAME, APP_TAGLINE } from "@/lib/site";
+import { siteStats } from "@/lib/stats";
 
 const STEPS = [
   {
-    title: "Upload your part",
-    body: "Send an STL of the object you need to pick. It is split into convex pieces and every pose it can rest in is found.",
-    detail: "STL in, stable poses out",
+    title: "Drop your part",
+    body: "Upload an STL of the object you need to pick. The agent measures it, splits it into convex pieces and finds every way it can rest on a table.",
+    detail: "STL in, resting poses out",
   },
   {
     title: "Nemotron designs fingers",
-    body: "NVIDIA Nemotron 3 Super on Nebius Token Factory proposes finger shapes as ten physical parameters, then reads each round's measured failures before proposing the next.",
-    detail: "10 parameters, 14 boxes per finger",
+    body: "NVIDIA Nemotron 3 Super, served by Nebius Token Factory, proposes finger shapes as ten physical parameters, then reads each round's measured failures before proposing the next.",
+    detail: "10 parameters, one hypothesis each",
   },
   {
-    title: "Nebius physics proves them",
-    body: "Nebius Serverless Jobs run every candidate through MuJoCo grasp trials, then a robustness certificate: placement errors up to 3 mm, a shake during the hold and a sideways push.",
-    detail: "Same gripper, same controller, same force",
-  },
-  {
-    title: "Download the print pack",
-    body: "Left and right finger STLs sized for an open-source parallel gripper, a mount plate and the certificate, ready for a desktop printer.",
-    detail: "STL, mount plate, certificate",
+    title: "Nebius proves them, you print them",
+    body: "Nebius jobs run every candidate through MuJoCo grasp trials; the best one is then stress-tested for a robustness certificate. You download left and right finger STLs, a mount plate and the certificate.",
+    detail: "Placement error, shake, push",
   },
 ] as const;
 
 export default function HomePage() {
   const bout = getFeaturedBout();
-  const designIds = getDesigns().designs.map((d) => d.id);
+  const designs = getDesigns();
+  const designIds = designs.designs.map((d) => d.id);
+  const stats = siteStats({ jobs: getJobs(), designs, results: getResults(), certificates: getCertificates() });
   const [line1, ...rest] = APP_TAGLINE.split(". ");
 
   return (
@@ -39,30 +37,30 @@ export default function HomePage() {
       <section className="pt-12 sm:pt-20" aria-labelledby="hero-title">
         <h1 id="hero-title" className="display max-w-[14ch] text-[clamp(2.6rem,8.4vw,5.75rem)] text-ink">
           <span className="block">{line1}.</span>
-          <span className="block">{rest.join(". ")}</span>
+          <span className="block text-accent">{rest.join(". ")}</span>
         </h1>
         <p className="prose-measure mt-6 text-lg text-ink-2 sm:text-xl">
-          Custom gripper fingers are usually found by printing and testing until one works. {APP_NAME} moves that
-          loop into simulation: an NVIDIA Nemotron model proposes finger shapes for your part, and Nebius runs the
-          grasp trials that keep or reject them.
+          Custom gripper fingers are usually found by printing and testing until one works. {APP_NAME} moves that loop
+          into simulation: an NVIDIA Nemotron agent designs fingers for your part, and Nebius runs the grasp trials that
+          keep or reject them.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
+          <Link href="/part/" className="bg-accent px-5 py-2.5 text-accent-ink no-underline">
+            Bring your part
+          </Link>
           {bout ? (
-            <Link href={`/bout/${bout.id}/`} className="bg-accent px-4 py-2.5 text-accent-ink no-underline">
+            <Link href={`/bout/${bout.id}/`} className="border border-rule-strong px-4 py-2.5 text-ink no-underline hover:bg-paper-2">
               Watch a recorded bout
             </Link>
           ) : null}
-          <Link href="/about/" className="border border-rule-strong px-4 py-2.5 text-ink no-underline hover:bg-paper-2">
-            How the trials are scored
-          </Link>
         </div>
       </section>
 
-      <section className="mt-20" aria-labelledby="flow-title">
-        <h2 id="flow-title" className="heading text-2xl sm:text-3xl">
-          From part to printable fingers
+      <section className="mt-16" aria-labelledby="flow-title">
+        <h2 id="flow-title" className="sr-only">
+          How it works
         </h2>
-        <ol className="mt-6 grid gap-px border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-4">
+        <ol className="grid gap-px border border-rule bg-rule md:grid-cols-3">
           {STEPS.map((step, i) => (
             <li key={step.title} className="relative flex flex-col bg-paper p-5">
               <span className="num text-sm text-accent" aria-hidden="true">
@@ -74,6 +72,23 @@ export default function HomePage() {
             </li>
           ))}
         </ol>
+      </section>
+
+      <section className="mt-10" aria-labelledby="stats-title">
+        <h2 id="stats-title" className="text-xs font-semibold tracking-wide text-ink-3">
+          FROM THE PUBLISHED DATA
+        </h2>
+        <ul className="mt-3 grid grid-cols-2 gap-px border border-rule bg-rule lg:grid-cols-4">
+          {stats.map((s) => (
+            <li key={s.label} className="bg-paper">
+              <Link href={s.href} className="group flex h-full flex-col px-4 py-3 no-underline hover:bg-paper-2/60">
+                <span className="num text-[clamp(1.6rem,4vw,2.25rem)] leading-tight text-ink">{s.value}</span>
+                <span className="text-sm text-ink group-hover:underline">{s.label}</span>
+                <span className="mt-1 text-xs text-ink-3">{s.note}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
       </section>
 
       {bout ? (
@@ -104,7 +119,7 @@ export default function HomePage() {
         </section>
       ) : null}
 
-      <TitleBlock title={APP_TAGLINE} drawing="/" sheet="1 of 5" />
+      <TitleBlock title={APP_TAGLINE} drawing="/" sheet="1 of 6" />
     </>
   );
 }

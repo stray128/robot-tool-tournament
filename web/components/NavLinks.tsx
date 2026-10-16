@@ -10,14 +10,17 @@ function isActive(pathname: string, href: string): boolean {
   const base = href.replace(/\/$/, "");
   if (pathname === base || pathname.startsWith(`${base}/`)) return true;
   // Detail pages belong to the benchmark section.
-  return base === "/benchmark" && (pathname.startsWith("/bout/") || pathname.startsWith("/design/"));
+  return (
+    base === "/benchmark" &&
+    (pathname.startsWith("/bout/") || pathname.startsWith("/design/") || pathname.startsWith("/certificate/"))
+  );
 }
 
 export function NavLinks() {
   const pathname = usePathname() ?? "/";
   return (
     <nav aria-label="Primary" className="order-3 w-full sm:order-none sm:w-auto sm:flex-1">
-      <ul className="flex flex-wrap gap-x-3.5 gap-y-1 text-sm sm:gap-x-5 sm:text-[0.9375rem]">
+      <ul className="flex flex-wrap gap-x-3 gap-y-1 text-[0.8125rem] sm:gap-x-5 sm:text-[0.9375rem]">
         {NAV.map((item) => {
           const active = isActive(pathname, item.href);
           return (

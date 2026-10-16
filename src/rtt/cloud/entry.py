@@ -198,8 +198,33 @@ def _version(dist: str) -> str | None:
         return None
 
 
+def cpu_info(cpuinfo: str | Path = "/proc/cpuinfo") -> dict[str, Any]:
+    """CPU model name and memory size, for comparing executors across platforms.
+
+    Reads ``/proc/cpuinfo`` and ``/proc/meminfo`` (Linux); missing files give ``None``.
+    """
+    model = None
+    try:
+        for line in Path(cpuinfo).read_text(encoding="utf-8", errors="replace").splitlines():
+            key, sep, value = line.partition(":")
+            if sep and key.strip() == "model name":
+                model = value.strip()
+                break
+    except OSError:
+        pass
+    mem_gib = None
+    try:
+        for line in Path("/proc/meminfo").read_text(encoding="utf-8").splitlines():
+            if line.startswith("MemTotal:"):
+                mem_gib = round(int(line.split()[1]) / (1024 * 1024), 1)
+                break
+    except (OSError, ValueError, IndexError):
+        pass
+    return {"model": model, "mem_total_gib": mem_gib}
+
+
 def environment(probe_gl: bool = True, probe_warp: bool = False) -> dict[str, Any]:
-    """Host, interpreter, package versions, GPU and (optionally) GL and Warp probes."""
+    """Host, interpreter, package versions, CPU, GPU and (optionally) GL and Warp probes."""
     try:
         affinity = len(os.sched_getaffinity(0))
     except (AttributeError, OSError):
@@ -211,6 +236,7 @@ def environment(probe_gl: bool = True, probe_warp: bool = False) -> dict[str, An
         "python": platform.python_version(),
         "cpu_count": os.cpu_count(),
         "cpu_affinity": affinity,
+        "cpu": cpu_info(),
         "packages": {d: _version(d) for d in ("mujoco", "mujoco-warp", "warp-lang", "numpy")},
         "mujoco_gl": os.environ.get("MUJOCO_GL"),
         "gpu": gpu_info(),

@@ -3,30 +3,52 @@
 Each round after round 0 a run makes one forced ``submit_designs`` tool call per
 island (2 islands x 4 designs). The four slots fix the operator quota in the
 schema itself: ``mutate_1``, ``mutate_2`` (one parent each), ``crossover`` (two
-parents) and ``explore`` (none). Each slot carries a ``hypothesis`` before its
-parameters, and the ``analysis`` field comes before every slot, so the model
-analyses the round before it designs.
+parents) and ``explore`` (none). Arm C's calls also return ``reserve_1`` ...
+``reserve_4`` (:attr:`ProposerConfig.reserves`): extra designs, each declaring its
+own operator and parents, that replace rejected slots in order. The ``analysis``
+field comes before every slot, and inside each slot the ``hypothesis``, the
+``changes`` (every parameter changed from the parent, in points, with the total)
+and ``same_cell_distances`` (distances in points to the tested designs in the same
+cell) come before the parameters, so the model analyses the round and checks the
+distance rule before it writes a design. Design notes and the evidence behind
+them are in ``docs/PROPOSER.md``.
 
 **Prompt** (:meth:`NemotronProposer.build_messages`, templates in
 :mod:`rtt.search.prompts`): task metadata and training conditions, the parameter
-table, the validator rules, the island's top-8 designs sorted ascending (integer
-success %, per-family success, failure-mode counts, mass, best controller
-setting), 4 informative failures, the island's validator rejections from the
-last round, and a target of 1.2 x the island's best score. Only this run's
-training results ever enter a prompt.
+table, the validator rules, the distance rule in *points* (each numeric range is
+0-100 points, a changed ``inner_face`` or ``tip_profile`` is 100; see
+:mod:`rtt.search.diversity`), a compact table of **every** design tested in this
+run grouped by cell (``inner_face`` + ``tip_profile``) with its score and point
+positions, plus the cells nobody has tried; the island's top-8 designs sorted
+ascending (integer success %, per-family success, failure-mode counts, mass, best
+controller setting, nearest tested designs in points) with the crossover-ready
+pairs among them; 4 informative failures; the island's rejections from the last
+round; a target of 1.2 x the island's best score; and the operator rules. Only
+this run's training results ever enter a prompt.
 
-**Islands.** The shared round 0 seeds both islands. Each island's pool then holds
-its own designs (FunSearch-style lineages); after round 2 each island receives the
-other's best design (one migration). Diversity checks use the whole run.
+**Islands.** The shared round 0 seeds both islands. Each island's elite pool then
+holds its own designs (FunSearch-style lineages); after round 2 each island
+receives the other's best design (one migration). The tested-design table and
+the diversity checks use the whole run. Islands are asked in turn, and an
+island's prompt lists the designs earlier islands already claimed this round
+(rows ``t<team>.<slot>``), so two islands do not submit the same idea.
 
-**Per round** (:meth:`LLMProposer.ask`):
+**Per island, per round** (:meth:`LLMProposer.ask`):
 
-1. Per island: main call, then at most one *repair* call that shows the
-   validator's messages for the invalid (or unparseable) slots.
-2. Diversity: a valid design closer than 0.08 to any design simulated in this run
-   or already accepted this round is rejected; at most one *reflection* call per
-   island asks for replacements.
-3. Any slot still empty is filled by ``fallback_random`` (the run's own Sobol
+1. Main call. Each valid design goes through the diversity check: closer than
+   0.08 (80 points) to any design simulated in this run or already accepted this
+   round is ``too_similar``; an ``explore`` design must also sit in an untried
+   cell or at least 0.2 from every design in its cell (``not_novel``).
+2. Holes (invalid or rejected slots) take the call's reserves in order; a reserve
+   is validated and diversity-checked when it is tried, and every rejected
+   reserve is logged like any other rejection. Unused reserves are dropped.
+3. At most one *repair* call for invalid (or unparseable) slots that no reserve
+   could fill, showing the validator's messages, and at most one *reflection*
+   call for near-copies that are left, showing each one's exact nearest
+   neighbours, per-parameter differences in points and shortfall. Each
+   follow-up call brings fresh reserves; those its own slots do not need are
+   offered to every hole that is left before the next call or the random fill.
+4. Any slot still empty is filled by ``fallback_random`` (the run's own Sobol
    stream, validity- and diversity-checked) and logged with its reason.
 
 Invalid outputs are recorded as :class:`~rtt.search.base.Rejection` rows and cost
@@ -44,6 +66,7 @@ writes.
 from __future__ import annotations
 
 import json
+import math
 import re
 from abc import abstractmethod
 from collections.abc import Mapping, Sequence
@@ -77,12 +100,29 @@ from rtt.search.base import (
     RunContext,
     SearchStrategy,
     derive_seed,
+    params_key,
 )
-from rtt.search.diversity import MIN_DISTANCE, Nearest, nearest
+from rtt.search.diversity import (
+    EXPLORE_MIN_DISTANCE,
+    MIN_DISTANCE,
+    NUMERIC_PARAMS,
+    POINTS_PER_RANGE,
+    Nearest,
+    all_cells,
+    cell_name,
+    cell_of,
+    distance_points,
+    explore_check,
+    nearest,
+    neighbours,
+    points_of,
+    to_points,
+)
 from rtt.search.random_search import DesignSampler, SamplerExhaustedError
 from rtt.store.manifest import write_json_atomic
 
 __all__ = [
+    "DIVERSITY_REASONS",
     "FAILED_CALLS_DIR",
     "PROPOSER_MODEL",
     "PROPOSER_SAMPLING",
@@ -94,18 +134,24 @@ __all__ = [
     "SlotSpec",
     "assert_prompt_clean",
     "make_proposer_client",
+    "min_points",
+    "points_row",
     "prompt_spec_hashes",
     "render_distance_rule",
+    "render_operators",
     "render_parameters",
+    "render_points_rule",
     "render_rules",
     "render_task",
+    "render_tested",
     "scrub_model_text",
     "submit_designs_tool",
 ]
 
 PROPOSER_MODEL: Final = NEMOTRON_SUPER
 #: Sampling for proposals, repairs and reflections (plan decision 10); thinking stays on.
-PROPOSER_SAMPLING: Final[dict[str, float | int]] = {"temperature": 1.0, "top_p": 0.95, "max_tokens": 8192}
+#: max_tokens leaves room for reasoning plus 8 designs (4 slots and 4 reserves) per call.
+PROPOSER_SAMPLING: Final[dict[str, float | int]] = {"temperature": 1.0, "top_p": 0.95, "max_tokens": 16384}
 
 _PARAM_MEANING: Final[dict[str, str]] = {
     "finger_length_mm": "root (at the palm) to tip; longer reaches lower on tall objects but is heavier",
@@ -123,8 +169,37 @@ _PARAM_MEANING: Final[dict[str, str]] = {
 _FORBIDDEN_PROMPT_TEXT = re.compile(r"held[\s_-]?out|secrets?[/\\]", re.IGNORECASE)
 _MAX_ANALYSIS_CHARS: Final = 4000
 _MAX_HYPOTHESIS_CHARS: Final = 1000
+_MAX_DECLARED_CHARS: Final = 400
+#: Parent labels are model text quoted back into later prompts (table rows, reflection), so they are bounded.
+_MAX_PARENT_CHARS: Final = 32
 #: Folder inside the response cache that records calls which failed without a response.
 FAILED_CALLS_DIR: Final = "failed_calls"
+#: Rejection reasons the diversity pass gives (both are answered by the reflection call).
+DIVERSITY_REASONS: Final[tuple[str, ...]] = ("too_similar", "not_novel")
+#: Short column names of the 8 numeric parameters in the points table.
+_POINT_COLUMNS: Final[dict[str, str]] = {
+    "finger_length_mm": "len",
+    "finger_thickness_mm": "thick",
+    "finger_width_mm": "width",
+    "bend_angle_deg": "bend",
+    "bend_start_frac": "bend_at",
+    "inner_face_depth_mm": "depth",
+    "tip_size_mm": "tip_size",
+    "taper_ratio": "taper",
+}
+#: Per-slot fields that make the model check the distance rule before it writes parameters.
+_EXPLAIN_FIELDS: Final[dict[str, str]] = {
+    "changes": (
+        "Each parameter you change from the parent (explore: from the nearest tested design in its cell) as "
+        "name old -> new with the difference in points, then the total in points."
+    ),
+    "same_cell_distances": (
+        "Distances in points to the tested designs in this design's cell (at least the 3 nearest), nearest "
+        'first, e.g. "d25 95, d06 150, d11 210", or "untried cell".'
+    ),
+}
+#: Operators a reserve design may declare.
+RESERVE_OPERATORS: Final[tuple[str, ...]] = ("mutate", "crossover", "explore")
 
 
 class PromptLeakError(RuntimeError):
@@ -151,6 +226,45 @@ def scrub_model_text(text: str) -> str:
     return _FORBIDDEN_PROMPT_TEXT.sub("[removed]", text)
 
 
+def _json_safe(value: Any) -> Any:
+    """``value`` with every non-finite float (and any non-JSON value) replaced by its text.
+
+    Tool arguments are parsed with :func:`json.loads`, which accepts ``NaN`` and
+    ``Infinity``, but the run's logs, cache keys and follow-up prompts are written
+    with ``allow_nan=False``. The validator already rejects such a design; this keeps
+    its rejection loggable instead of aborting the run. Finite values, key order and
+    types are unchanged, so ordinary arguments serialise byte for byte as before.
+    """
+    if isinstance(value, Mapping):
+        return {str(k): _json_safe(v) for k, v in value.items()}
+    if isinstance(value, list | tuple):
+        return [_json_safe(v) for v in value]
+    if isinstance(value, float) and not math.isfinite(value):
+        return repr(value)
+    if value is None or isinstance(value, str | int | float):
+        return value
+    return repr(value)
+
+
+def _raw_geometry(raw: Any) -> dict[str, Any] | None:
+    """A slot's geometry parameters exactly as the model sent them, made JSON-safe (``None`` if not an object).
+
+    This is what a :class:`~rtt.search.base.Rejection` logs as ``params`` and what
+    reserve de-duplication keys on, so it must serialise with ``allow_nan=False``.
+    """
+    if not isinstance(raw, Mapping):
+        return None
+    return _json_safe({k: raw[k] for k in GEOMETRY_PARAMS if k in raw})
+
+
+def _parent_labels(parents: Any) -> tuple[str, ...]:
+    """The first two parent labels the model gave, scrubbed, single-line and bounded."""
+    if not isinstance(parents, list):
+        return ()
+    labels = (" ".join(str(p).split())[:_MAX_PARENT_CHARS] for p in parents if isinstance(p, str | int))
+    return tuple(scrub_model_text(label) for label in labels)[:2]
+
+
 # --------------------------------------------------------------------------- tool schema
 
 
@@ -171,9 +285,27 @@ PROPOSER_SLOTS: Final[tuple[SlotSpec, ...]] = (
 )
 
 
-def _slot_schema(slot: SlotSpec) -> dict[str, Any]:
+def reserve_names(n: int) -> list[str]:
+    """Names of ``n`` reserve slots: ``reserve_1`` ... ``reserve_n``."""
+    return [f"reserve_{i}" for i in range(1, n + 1)]
+
+
+def _slot_schema(slot: SlotSpec, explain: bool, *, reserve: bool = False) -> dict[str, Any]:
     properties: dict[str, Any] = {}
-    if slot.n_parents:
+    if reserve:
+        properties["operator"] = {
+            "type": "string",
+            "enum": list(RESERVE_OPERATORS),
+            "description": "How this reserve design was made: mutate (1 parent), crossover (2) or explore (none).",
+        }
+        properties["parents"] = {
+            "type": "array",
+            "items": {"type": "string"},
+            "minItems": 0,
+            "maxItems": 2,
+            "description": "Labels of the tested designs this builds on (empty for explore).",
+        }
+    elif slot.n_parents:
         noun = "label" if slot.n_parents == 1 else "labels"
         properties["parents"] = {
             "type": "array",
@@ -186,6 +318,9 @@ def _slot_schema(slot: SlotSpec) -> dict[str, Any]:
         "type": "string",
         "description": "One or two sentences: what this design changes and why it should grasp better.",
     }
+    if explain:
+        for name, description in _EXPLAIN_FIELDS.items():
+            properties[name] = {"type": "string", "description": description}
     for name in GEOMETRY_PARAMS:
         if name in CATEGORICAL_OPTIONS:
             properties[name] = {"type": "string", "enum": list(CATEGORICAL_OPTIONS[name])}
@@ -200,8 +335,16 @@ def _slot_schema(slot: SlotSpec) -> dict[str, Any]:
     }
 
 
-def submit_designs_tool(slots: Sequence[SlotSpec]) -> dict[str, Any]:
-    """The forced tool: ``analysis`` first, then one object per slot in order."""
+def submit_designs_tool(
+    slots: Sequence[SlotSpec], *, explain: bool = False, reserves: int = 0
+) -> dict[str, Any]:
+    """The forced tool: ``analysis`` first, then one object per slot in order, then the reserves.
+
+    With ``explain``, every slot also asks for ``changes`` and ``same_cell_distances``
+    between the hypothesis and the parameters (arm C). ``reserves`` adds
+    ``reserve_1`` ... ``reserve_n``: extra designs, each with its own operator, that
+    replace rejected slots in order.
+    """
     properties: dict[str, Any] = {
         "analysis": {
             "type": "string",
@@ -209,12 +352,15 @@ def submit_designs_tool(slots: Sequence[SlotSpec]) -> dict[str, Any]:
         }
     }
     for slot in slots:
-        properties[slot.name] = _slot_schema(slot)
+        properties[slot.name] = _slot_schema(slot, explain)
+    for name in reserve_names(reserves):
+        properties[name] = _slot_schema(SlotSpec(name, "reserve"), explain, reserve=True)
+    extra = f", plus {reserves} reserve designs that replace any rejected one" if reserves else ""
     return {
         "type": "function",
         "function": {
             "name": "submit_designs",
-            "description": f"Submit {len(slots)} gripper finger designs for simulation, one per slot.",
+            "description": f"Submit {len(slots)} gripper finger designs for simulation, one per slot{extra}.",
             "parameters": {
                 "type": "object",
                 "properties": properties,
@@ -235,6 +381,33 @@ def _num(value: float) -> str:
 
 def _pct(fraction: float) -> str:
     return f"{round(100.0 * fraction)}%"
+
+
+def min_points(min_distance: float) -> int:
+    """A design distance threshold in prompt points (0.08 -> 80)."""
+    return math.ceil(min_distance * POINTS_PER_RANGE * len(GEOMETRY_PARAMS) - 1e-9)
+
+
+def points_row(design: FingerDesign) -> str:
+    """The 8 numeric parameters in points, e.g. ``len 50 thick 50 ... taper 100``."""
+    pts = points_of(design)
+    return " ".join(f"{_POINT_COLUMNS[name]} {pts[name]}" for name in NUMERIC_PARAMS)
+
+
+def _point_differences(a: FingerDesign, b: FingerDesign) -> str:
+    """Per-parameter differences in points, largest first (categoricals count 100)."""
+    terms: list[tuple[int, str]] = []
+    for name in GEOMETRY_PARAMS:
+        va, vb = getattr(a, name), getattr(b, name)
+        if name in CATEGORICAL_OPTIONS:
+            if va != vb:
+                terms.append((POINTS_PER_RANGE, f"{name} {POINTS_PER_RANGE}"))
+            continue
+        diff = round(abs(to_points(name, va) - to_points(name, vb)))
+        if diff:
+            terms.append((diff, f"{_POINT_COLUMNS[name]} {diff}"))
+    terms.sort(key=lambda t: -t[0])
+    return ", ".join(text for _, text in terms) or "nothing"
 
 
 def params_json(design: FingerDesign) -> str:
@@ -316,7 +489,7 @@ def render_parameters() -> str:
 
 
 def render_distance_rule(min_distance: float) -> str:
-    """How the diversity check works, in the terms a designer needs to clear it."""
+    """How the diversity check works, in range fractions (arm Z's prompt)."""
     total = min_distance * len(GEOMETRY_PARAMS)
     return (
         f"Every new design must differ from every design already tested in this run, and from your other new "
@@ -327,6 +500,25 @@ def render_distance_rule(min_distance: float) -> str:
         f"must move by {_pct(total)} of a range in total, for example three numbers by about {_pct(total / 3)} of "
         'their range each (the "10% of range" column gives the step sizes). Small tweaks of one or two numbers '
         "are always rejected."
+    )
+
+
+def render_points_rule(min_distance: float) -> str:
+    """The diversity check in points and cells (arm C's prompt)."""
+    need = min_points(min_distance)
+    return (
+        "Positions are given in points: each number's range runs from 0 points (its minimum) to 100 points (its "
+        'maximum), so 1 point is 1% of the range and the "10% of range" column above is 10 points. A design\'s '
+        "cell is its inner_face + tip_profile pair. The distance between two designs in points is the sum over "
+        "the 8 numbers of their difference in points, plus 100 if inner_face differs and 100 if tip_profile "
+        "differs.\n\n"
+        f"Every new design must be at least {need} points from every tested design and from every other new "
+        "design this round, or it is rejected without being simulated and its slot goes to a random design. "
+        "Designs in different cells are always at least 100 points apart, so only the tested designs in your "
+        "design's own cell can be too close, and a design in a cell that no tested design uses always passes. "
+        f"Within a cell the 8 numbers must differ by at least {need} points in total from each tested design "
+        f"there; aim for {need + 20} or more, because the listed positions are rounded. Tweaking one or two "
+        "numbers of a tested design by 10-30 points is always rejected."
     )
 
 
@@ -360,6 +552,87 @@ def render_rules(task: GripperTask) -> str:
     )
 
 
+def _team(island: int) -> str:
+    """Model-facing team name of an island (1-based)."""
+    return f"team {island + 1}"
+
+
+def _origin_note(item: Evaluated, island: int | None) -> str:
+    """Where a tested design came from, from ``island``'s point of view."""
+    p = item.proposal
+    if item.round == 0:
+        return f"{p.origin}, round 0"
+    if p.origin == "fallback_random":
+        source = f"random fill, round {item.round}"
+    else:
+        source = f"{p.operator or p.origin}"
+        if p.parents:
+            source += " of " + " + ".join(p.parents)
+        source += f", round {item.round}"
+    if p.island is not None and island is not None:
+        source += ", your team" if p.island == island else f", {_team(p.island)}"
+    return source
+
+
+@dataclass(frozen=True)
+class _Claim:
+    """A design another island already submitted this round (not simulated yet)."""
+
+    label: str
+    design: FingerDesign
+    note: str
+
+
+def render_tested(
+    items: Sequence[Evaluated], island: int | None = None, claims: Sequence[_Claim] = ()
+) -> str:
+    """Every tested design of the run grouped by cell, positions in points, plus the untried cells.
+
+    Cells run from the worst best-score to the best and rows inside a cell from the
+    worst score to the best (best last, as in OPRO's ascending trajectory).
+    """
+    legend = (
+        "Positions are in points (0-100): "
+        + ", ".join(f"{short} = {name}" for name, short in _POINT_COLUMNS.items())
+        + ". Cells run from the lowest best score to the highest; inside a cell, rows run from the lowest score "
+        "to the highest."
+    )
+    if claims:
+        legend += (
+            ' Rows labelled "t<team>.<slot>" were submitted this round by another team and are not simulated '
+            "yet; they count as tested for the distance rule."
+        )
+    groups: dict[tuple[str, str], list[tuple[float, int, str]]] = {}
+    for item in items:
+        line = f"  {item.label} {_pct(item.score.success)} | {points_row(item.design)} | {_origin_note(item, island)}"
+        groups.setdefault(cell_of(item.design), []).append((item.score.success, item.index, line))
+    for order, claim in enumerate(claims):
+        line = f"  {claim.label} new | {points_row(claim.design)} | {claim.note}"
+        groups.setdefault(cell_of(claim.design), []).append((math.inf, len(items) + order + 1, line))
+    lines = [legend, ""]
+
+    def cell_key(cell: tuple[str, str]) -> tuple[float, str]:
+        scores = [s for s, _, _ in groups[cell] if s != math.inf]
+        return (max(scores) if scores else math.inf, cell_name(cell))
+
+    for cell in sorted(groups, key=cell_key):
+        rows = sorted(groups[cell], key=lambda t: (t[0], t[1]))
+        scores = [s for s, _, _ in rows if s != math.inf]
+        tested = len(scores)
+        head = f"{cell_name(cell)} ({tested} tested"
+        head += f", best {_pct(max(scores))}):" if scores else "):"
+        lines.append(head)
+        lines.extend(line for _, _, line in rows)
+    untried = [cell_name(c) for c in all_cells() if c not in groups]
+    lines.append("")
+    lines.append(
+        "Cells with no tested design yet: "
+        + (", ".join(untried) if untried else "none, every cell has at least one tested design")
+        + "."
+    )
+    return "\n".join(lines)
+
+
 def _family_vector(item: Evaluated, families: Sequence[str]) -> str:
     return ", ".join(f"{f} {_pct(item.score.per_family.get(f, 0.0))}" for f in families)
 
@@ -368,8 +641,28 @@ def _failure_counts(counts: Mapping[str, int]) -> str:
     return ", ".join(f"{mode} {n}" for mode, n in counts.items()) or "none"
 
 
-def render_elites(ranked_pool: Sequence[Evaluated], info: EvaluatorInfo, n: int) -> str:
-    """Top ``n`` of an already ranked pool (best first), printed worst first."""
+def _nearest_line(item: Evaluated, history: Sequence[Evaluated], k: int) -> str:
+    others = [o for o in history if o.index != item.index]
+    near = neighbours(item.design, [o.design for o in others], [o.label for o in others], k)
+    return ", ".join(f"{n.label} {round(1000 * n.distance)}" for n in near) or "none"
+
+
+def render_elites(
+    ranked_pool: Sequence[Evaluated],
+    info: EvaluatorInfo,
+    n: int,
+    *,
+    history: Sequence[Evaluated] | None = None,
+    near_k: int = 0,
+    task: GripperTask | None = None,
+) -> str:
+    """Top ``n`` of an already ranked pool (best first), printed worst first.
+
+    With ``history`` and ``near_k``, each design also lists its cell and its
+    ``near_k`` nearest tested designs in the run with their distances in points;
+    with ``task``, also the fully open gap the validator measures (how much room
+    is left for an inward bend or a hook).
+    """
     lines: list[str] = []
     for item in reversed(list(ranked_pool[:n])):
         s = item.score
@@ -380,10 +673,38 @@ def render_elites(ranked_pool: Sequence[Evaluated], info: EvaluatorInfo, n: int)
             f"failures: {_failure_counts(s.failure_modes)} | mass {s.mass_g:.1f} g"
         )
         lines.append(f"  {params_json(item.design)}")
+        if history is not None and near_k > 0:
+            line = f"  cell {cell_name(cell_of(item.design))}; nearest (points): {_nearest_line(item, history, near_k)}"
+            if task is not None:
+                gap = validate(item.design, task).metrics.get("open_gap_mm")
+                if gap is not None:
+                    line += f"; open gap {gap:.1f} mm (needs >= {_num(task.required_open_gap_mm)})"
+            lines.append(line)
         idea = item.proposal.hypothesis or item.design.rationale
         if idea:
             lines.append(f"  idea: {scrub_model_text(' '.join(idea.split())[:200])}")
     return "\n".join(lines) if lines else "None yet."
+
+
+def render_pairs(ranked_pool: Sequence[Evaluated], n: int, need: int, show: int = 6) -> str:
+    """Pairs among the top ``n`` designs at least ``need`` points apart (crossover candidates)."""
+    top = list(ranked_pool[:n])
+    pairs: list[tuple[float, int, str]] = []
+    for i, a in enumerate(top):
+        for b in top[i + 1 :]:
+            d = distance_points(a.design, b.design)
+            if d >= need:
+                pairs.append((-(a.score.success + b.score.success), -d, f"{a.label} + {b.label} ({d})"))
+    if not pairs:
+        return (
+            f"Crossover candidates: no two of your top {len(top)} designs are {need} points apart; take a second "
+            "parent from another cell in the table."
+        )
+    pairs.sort()
+    return (
+        f"Crossover candidates (pairs of your top {len(top)} designs at least {need} points apart, best pairs "
+        f"first): " + ", ".join(text for _, _, text in pairs[:show]) + "."
+    )
 
 
 def render_failures(ranked_pool: Sequence[Evaluated], info: EvaluatorInfo, n: int) -> str:
@@ -459,12 +780,107 @@ def render_target(best: float, factor: float) -> str:
     return f"Beat {_pct(target)} ({_num(factor)} x the current best of {_pct(best)})."
 
 
+def render_operators(
+    untried: Sequence[str],
+    min_distance: float,
+    explore_min_distance: float,
+    *,
+    claims: bool = False,
+    reserves: int = 0,
+) -> str:
+    """What each slot must do, with the point budgets of the distance rule."""
+    need = min_points(min_distance)
+    far = min_points(explore_min_distance) if explore_min_distance > 0 else 0
+    cells = ", ".join(untried)
+    if untried and far:
+        explore_rule = (
+            f"Put it in a cell that no tested design uses ({cells}); if you use a cell that already has tested "
+            f"designs, it must be at least {far} points from every one of them. An explore that misses this is "
+            "rejected like a near-copy."
+        )
+    elif far:
+        explore_rule = (
+            f"Every cell already has a tested design, so it must be at least {far} points from every tested design "
+            "in its cell. An explore that misses this is rejected like a near-copy."
+        )
+    elif untried:
+        explore_rule = f"Prefer a cell that no tested design uses ({cells})."
+    else:
+        explore_rule = "Keep it far from every tested design in its cell."
+    claims_text = (
+        ' and from the designs other teams already submitted this round (rows "t<team>.<slot>" in the table)'
+        if claims
+        else ""
+    )
+    return "\n".join(
+        [
+            (
+                f"Call submit_designs with exactly 4 new designs, one per slot, plus {reserves} reserves:"
+                if reserves
+                else "Call submit_designs with exactly 4 new designs, one per slot:"
+            ),
+            (
+                '- mutate_1 and mutate_2: each starts from ONE tested design (put its label, e.g. "d05", in parents) '
+                "and makes one bold change aimed at that design's main failure mode, worth 100-250 points in total: "
+                "for example 2-4 numbers moved by 25-60 points each, or a switch of inner_face or tip_profile (100 "
+                "points) together with the numbers that switch needs. Give the two mutations different parents or "
+                "clearly different changes. Mutations usually fail by landing on an earlier variation of the same "
+                "parent, so check every tested design in the cell you end up in."
+            ),
+            (
+                f"- crossover: combines TWO tested designs (both labels in parents) that are at least {2 * need} "
+                "points apart. Take each parameter whole from one parent or the other; do not average numbers, "
+                f"because an average lands close to both parents. The child must differ from each parent by at "
+                f"least {need} points."
+            ),
+            f"- explore: tests an idea that no tested design covers. {explore_rule}",
+            *(
+                [
+                    (
+                        f"- reserve_1 to reserve_{reserves}: {reserves} more designs, each with its own operator "
+                        "(mutate, crossover or explore) and parents, following the same rules. Whenever one of the "
+                        "4 designs above is rejected (it breaks a validator rule or is too close to a tested design), "
+                        "the next reserve that passes takes its place, so make the reserves as good as the first "
+                        "four and different from them."
+                    )
+                ]
+                if reserves
+                else []
+            ),
+            "",
+            "In each slot, before the parameters:",
+            (
+                '- "changes": every parameter you change from the parent (explore: from the nearest tested design '
+                "in its cell) as name old -> new with the difference in points, then the total, e.g. "
+                '"finger_width_mm 15 -> 25 mm (+50), tip_profile hook -> chamfer (+100): 150 points from d06".'
+            ),
+            (
+                '- "same_cell_distances": go through the cell\'s rows in the table above and give the distance in '
+                "points from the new design to each tested design in the same cell (at least the 3 nearest), "
+                'nearest first, e.g. "d25 95, d06 150, d11 210", or "untried cell". If any is below '
+                f"{need}, change the design before you write its parameters."
+            ),
+            (
+                f"Every new design must also be at least {need} points from your other new designs this round"
+                f"{claims_text}."
+            ),
+        ]
+    )
+
+
 # --------------------------------------------------------------------------- proposer core
 
 
 @dataclass(frozen=True)
 class ProposerConfig:
-    """Knobs of the LLM arms (frozen in PREREG)."""
+    """Knobs of the LLM arms (frozen in PREREG).
+
+    ``explore_min_distance`` is the within-cell novelty an ``explore`` slot needs
+    when its cell is already tried (0 turns the rule off); ``reserves`` is how many
+    extra designs each call of an arm that uses reserves (arm C) returns to replace
+    rejected slots; ``neighbours_shown`` is how many nearest tested designs each
+    elite lists.
+    """
 
     islands: int = 2
     elites_shown: int = 8
@@ -472,6 +888,10 @@ class ProposerConfig:
     rejections_shown: int = 6
     target_factor: float = 1.2
     min_distance: float = MIN_DISTANCE
+    explore_min_distance: float = EXPLORE_MIN_DISTANCE
+    reserves: int = 4
+    neighbours_shown: int = 2
+    crossover_pool: int = 6
     migrate_after_rounds: tuple[int, ...] = (2,)
     repairs_per_call: int = 1
     reflections_per_call: int = 1
@@ -484,6 +904,10 @@ class ProposerConfig:
             "rejections_shown": self.rejections_shown,
             "target_factor": self.target_factor,
             "min_distance": self.min_distance,
+            "explore_min_distance": self.explore_min_distance,
+            "reserves": self.reserves,
+            "neighbours_shown": self.neighbours_shown,
+            "crossover_pool": self.crossover_pool,
             "migrate_after_rounds": list(self.migrate_after_rounds),
             "repairs_per_call": self.repairs_per_call,
             "reflections_per_call": self.reflections_per_call,
@@ -500,6 +924,16 @@ class _Slot:
     reason: str | None = None
     similar: Nearest | None = None
     stage: str = "main"
+    rejected: FingerDesign | None = None
+    """The last valid design of this slot that the diversity pass turned down."""
+    declared: dict[str, str] = field(default_factory=dict)
+    """The model's own ``changes`` / ``same_cell_distances`` text for the current design."""
+    parents: tuple[str, ...] = ()
+    """Parent labels the model gave for the current design."""
+    request_hash: str | None = None
+    """Request hash of the call that produced the current content."""
+    screened: bool = False
+    """True once the current proposal went through the diversity check."""
 
 
 @dataclass(frozen=True)
@@ -550,6 +984,10 @@ class LLMProposer(SearchStrategy):
     uses_llm = True
     origin: ClassVar[str] = ""
     slots: ClassVar[tuple[SlotSpec, ...]] = PROPOSER_SLOTS
+    #: Whether slots carry ``changes`` / ``same_cell_distances`` (arm C) or only a hypothesis (arm Z).
+    explain_changes: ClassVar[bool] = False
+    #: Whether calls also return ``config.reserves`` reserve designs (arm C).
+    uses_reserves: ClassVar[bool] = False
 
     def __init__(self, ctx: RunContext, client: LLMClient, config: ProposerConfig | None = None) -> None:
         super().__init__(ctx)
@@ -557,11 +995,17 @@ class LLMProposer(SearchStrategy):
         self.config = config or ProposerConfig()
         if self.config.islands < 1:
             raise ValueError("at least one island is needed")
-        self.tool = submit_designs_tool(self.slots)
+        self.n_reserves = self.config.reserves if self.uses_reserves else 0
+        if self.n_reserves < 0:
+            raise ValueError("reserves must be >= 0")
+        self.tool = submit_designs_tool(self.slots, explain=self.explain_changes, reserves=self.n_reserves)
         self.fallback = DesignSampler(derive_seed(ctx.run_seed, "fallback", ctx.arm), ctx.gripper_task)
         self._disabled: str | None = None
         self._messages: dict[int, list[dict[str, str]]] = {}
         self._failures = _FailureLog(client.cache)
+        self._accepted: list[_Slot] = []
+        self._accepted_round: int | None = None
+        self._seen_reserves: set[str] = set()
 
     @property
     def disabled_reason(self) -> str | None:
@@ -573,6 +1017,20 @@ class LLMProposer(SearchStrategy):
     @abstractmethod
     def build_messages(self, round_index: int, island: int) -> list[dict[str, str]]:
         """System and user messages for this island's main call."""
+
+    def round_claims(self, round_index: int, island: int) -> list[_Claim]:
+        """Designs that islands asked before ``island`` already hold this round (accepted or random fill)."""
+        if self._accepted_round != round_index:
+            return []
+        claims = []
+        for slot in self._accepted:
+            if slot.island >= island or slot.proposal is None:
+                continue
+            note = f"{slot.spec.operator}, this round, {_team(slot.island)}"
+            if slot.proposal.origin == "fallback_random":
+                note = f"random fill, this round, {_team(slot.island)}"
+            claims.append(_Claim(f"t{slot.island + 1}.{slot.spec.name}", slot.proposal.design, note))
+        return claims
 
     # ------------------------------------------------------------------ ask
 
@@ -587,28 +1045,32 @@ class LLMProposer(SearchStrategy):
             raise ValueError("round 0 is shared and filled by the runner")
         islands = self.config.islands
         future_mains = islands * (self.ctx.budget.n_rounds - 1 - round_index)
+        self._accepted, self._accepted_round = [], round_index
         slots: list[_Slot] = []
         for island in range(islands):
             later_mains = future_mains + (islands - 1 - island)
-            slots.extend(self._propose_island(round_index, island, later_mains))
-        accepted = self._diversity_pass(round_index, slots)
-        for island in range(islands):
-            similar = [s for s in slots if s.island == island and s.reason == "too_similar"]
-            if similar:
-                self._reflect(round_index, island, slots, similar, accepted, keep=future_mains)
-        for slot in slots:
-            if slot.proposal is None:
-                self._fill_fallback(slot, accepted)
+            slots.extend(self._run_island(round_index, island, later_mains))
         return [s.proposal for s in slots if s.proposal is not None]
 
     # ------------------------------------------------------------------ steps
 
-    def _propose_island(self, round_index: int, island: int, later_mains: int) -> list[_Slot]:
+    def _run_island(self, round_index: int, island: int, later_mains: int) -> list[_Slot]:
+        """Main call, reserves, at most one repair and one reflection, then random fill, for one island.
+
+        Holes (invalid or rejected slots) are filled first from the call's reserve
+        designs, in order; a repair call is made only for invalid slots that no
+        reserve could fill, and a reflection only for near-copies that are left.
+        Reserves a follow-up call brings but does not need for its own slots are
+        offered to every remaining hole before the next call or the random fill.
+        """
         slots = [_Slot(island, spec) for spec in self.slots]
+        self._seen_reserves = set()
         messages = self.build_messages(round_index, island)
         self._messages[island] = messages
         outcome = self._call("main", round_index, island, messages, keep=0)
         self._absorb(round_index, outcome, slots, stage="main")
+        pool = self._absorb_reserves(outcome, island, "main")
+        self._screen(round_index, slots, pool)
         for _ in range(self.config.repairs_per_call):
             broken = [s for s in slots if s.proposal is None and s.reason in ("invalid", "parse_error")]
             if not broken:
@@ -618,14 +1080,98 @@ class LLMProposer(SearchStrategy):
             if outcome is None:
                 break
             self._absorb(round_index, outcome, broken, stage="repair")
+            pool.extend(self._absorb_reserves(outcome, island, "repair"))
+            self._screen(round_index, broken, pool)
+        self._screen(round_index, slots, pool)  # leftover repair reserves, before any reflection call
+        if any(s.proposal is None and s.reason in DIVERSITY_REASONS for s in slots):
+            self._reflect(round_index, island, slots, pool, keep=later_mains)
+            self._screen(round_index, slots, pool)  # leftover reflection reserves, before the random fill
+        for slot in slots:
+            if slot.proposal is None:
+                self._fill_fallback(slot, self._accepted)
         return slots
 
-    def _diversity_pass(self, round_index: int, slots: Sequence[_Slot]) -> list[_Slot]:
-        accepted: list[_Slot] = []
+    def _screen(self, round_index: int, slots: Sequence[_Slot], pool: list[_Slot]) -> None:
+        """Diversity-check the new proposals in ``slots``, then fill their holes from ``pool``."""
         for slot in slots:
-            if slot.proposal is not None:
-                self._check_diversity(round_index, slot, accepted)
-        return accepted
+            if slot.proposal is not None and not slot.screened:
+                self._check_diversity(round_index, slot, self._accepted)
+        for slot in slots:
+            if slot.proposal is None:
+                self._fill_from_reserves(round_index, slot, pool)
+
+    def _absorb_reserves(self, outcome: _CallOutcome | None, island: int, stage: str) -> list[_Slot]:
+        """The call's reserve designs as candidate slots (validated now, checked for diversity when used).
+
+        A follow-up call often copies the previous call's reserves unchanged; a
+        reserve whose parameters this island has already received is skipped, so it
+        is neither tried nor logged twice.
+        """
+        if not self.n_reserves or outcome is None or outcome.args is None:
+            return []
+        out: list[_Slot] = []
+        for name in reserve_names(self.n_reserves):
+            raw = outcome.args.get(name)
+            if raw is None:
+                continue
+            geometry = _raw_geometry(raw)
+            key = params_key(geometry) if geometry is not None else repr(raw)
+            if key in self._seen_reserves:
+                continue
+            self._seen_reserves.add(key)
+            declared = raw.get("operator") if isinstance(raw, Mapping) else None
+            parents = raw.get("parents") if isinstance(raw, Mapping) else None
+            n_parents = len(parents) if isinstance(parents, list) else 0
+            if declared not in RESERVE_OPERATORS:
+                declared = ("explore", "mutate", "crossover")[min(n_parents, 2)]
+            spec = SlotSpec(name, str(declared), n_parents)
+            slot = _Slot(island, spec, stage=stage, request_hash=outcome.record.request_hash)
+            design, errors, meta = _parse_slot(raw, spec, self.ctx.gripper_task)
+            slot.raw = geometry
+            slot.declared, slot.parents = meta["declared"], meta["parents"]
+            if design is None:
+                slot.reason, slot.errors = "invalid", errors
+            else:
+                slot.proposal = Proposal(
+                    design=design,
+                    origin=self.origin,
+                    operator=spec.operator,
+                    island=island,
+                    slot=name,
+                    parents=meta["parents"],
+                    hypothesis=meta["hypothesis"],
+                    via=stage,
+                    request_hash=outcome.record.request_hash,
+                )
+            out.append(slot)
+        return out
+
+    def _fill_from_reserves(self, round_index: int, hole: _Slot, pool: list[_Slot]) -> bool:
+        """Give ``hole`` the next reserve that is valid and passes the diversity check (rejections logged)."""
+        while pool:
+            reserve = pool.pop(0)
+            if reserve.proposal is None:
+                self.ctx.reject(
+                    Rejection(
+                        round=round_index,
+                        stage=reserve.stage,
+                        reason=reserve.reason or "invalid",
+                        errors=tuple(reserve.errors),
+                        island=reserve.island,
+                        slot=reserve.spec.name,
+                        params=reserve.raw,
+                        request_hash=reserve.request_hash,
+                    )
+                )
+                continue
+            self._check_diversity(round_index, reserve, self._accepted)
+            if reserve.proposal is None:
+                continue
+            hole.proposal, hole.stage, hole.screened = reserve.proposal, reserve.stage, True
+            hole.declared, hole.parents = reserve.declared, reserve.parents
+            hole.reason, hole.errors = None, []
+            return True
+        return False
 
     def _reference(self, accepted: Sequence[_Slot], island: int) -> tuple[list[FingerDesign], list[str]]:
         """Designs a new proposal must keep its distance from, labelled as ``island`` sees them."""
@@ -641,19 +1187,36 @@ class LLMProposer(SearchStrategy):
         return designs, labels
 
     def _check_diversity(self, round_index: int, slot: _Slot, accepted: list[_Slot]) -> None:
+        """Accept ``slot`` or reject it as ``too_similar`` (any slot) or ``not_novel`` (explore)."""
         assert slot.proposal is not None
         designs, labels = self._reference(accepted, slot.island)
-        near = nearest(slot.proposal.design, designs, labels)
-        if near.distance >= self.config.min_distance:
+        design = slot.proposal.design
+        near = nearest(design, designs, labels)
+        reason: str | None = None
+        if near.distance < self.config.min_distance:
+            reason = "too_similar"
+            message = f"distance {near.distance:.3f} to {near.label} (needs >= {self.config.min_distance:g})"
+        elif slot.spec.operator == "explore" and self.config.explore_min_distance > 0:
+            novel, same_cell = explore_check(design, designs, labels, self.config.explore_min_distance)
+            if not novel and same_cell is not None:
+                reason, near = "not_novel", same_cell
+                message = (
+                    f"explore in the tried cell {cell_name(cell_of(design))}: distance {near.distance:.3f} to "
+                    f"{near.label} (needs an untried cell or >= {self.config.explore_min_distance:g} within the cell)"
+                )
+        if reason is None:
+            slot.screened = True
             accepted.append(slot)
             return
-        message = f"distance {near.distance:.3f} to {near.label} (needs >= {self.config.min_distance:g})"
+        errors = [message]
+        if slot.declared.get("same_cell_distances"):
+            errors.append(f"model's same_cell_distances: {slot.declared['same_cell_distances'][:160]}")
         self.ctx.reject(
             Rejection(
                 round=round_index,
                 stage=slot.stage,
-                reason="too_similar",
-                errors=(message,),
+                reason=reason,
+                errors=tuple(errors),
                 island=slot.island,
                 slot=slot.spec.name,
                 params=slot.raw,
@@ -661,53 +1224,107 @@ class LLMProposer(SearchStrategy):
             )
         )
         slot.similar = near
-        slot.reason = "too_similar"
-        slot.errors = [message]
+        slot.reason = reason
+        slot.errors = errors
+        slot.rejected = design
         slot.proposal = None
+
+    def _problem(self, slot: _Slot, designs: Sequence[FingerDesign], labels: Sequence[str]) -> str:
+        """One rejected slot for the reflection prompt: exact neighbours, differences and shortfall."""
+        cfg = self.config
+        near = slot.similar
+        design = slot.rejected
+        parents = f" (parent {' + '.join(slot.parents)})" if slot.parents else ""
+        if design is None or near is None or near.index is None:
+            return f"- {slot.spec.name}: {'; '.join(slot.errors)}"
+        d_pts = distance_points(design, designs[near.index])
+        if slot.reason == "not_novel":
+            same = [labels[i] for i, ref in enumerate(designs) if cell_of(ref) == cell_of(design)]
+            far = min_points(cfg.explore_min_distance)
+            head = (
+                f"- {slot.spec.name}{parents}: its cell {cell_name(cell_of(design))} already holds {', '.join(same)}; "
+                f"the nearest, {near.label}, is {d_pts} points away, and an explore needs an untried cell or "
+                f"{far} points from each of them (short by {max(1, far - d_pts)})."
+            )
+        else:
+            need = min_points(cfg.min_distance)
+            head = (
+                f"- {slot.spec.name}{parents}: {d_pts} points from {near.label} (needs {need}, short by "
+                f"{max(1, need - d_pts)})."
+            )
+        claimed = slot.declared.get("same_cell_distances")
+        if claimed:
+            head += f' You wrote same_cell_distances "{scrub_model_text(claimed[:120])}".'
+        lines = [
+            head,
+            f"    yours: {cell_name(cell_of(design))} | {points_row(design)}",
+            (
+                f"    {near.label}: {cell_name(cell_of(designs[near.index]))} | {points_row(designs[near.index])}; "
+                f"differs by: {_point_differences(design, designs[near.index])}"
+            ),
+        ]
+        limit = 2.5 * cfg.min_distance
+        others = [
+            n for n in neighbours(design, designs, labels, 4, max_distance=limit) if n.index != near.index
+        ]
+        if others:
+            lines.append(
+                f"    also within {min_points(limit)} points: "
+                + ", ".join(f"{n.label} {round(1000 * n.distance)}" for n in others[:3])
+            )
+        return "\n".join(lines)
+
+    def _follow_up_note(self) -> str:
+        """What a repair or reflection call should do with the explain fields and the reserves."""
+        note = ""
+        if self.explain_changes:
+            note += ' Write "changes" and "same_cell_distances" again for every replaced slot.'
+        if self.n_reserves:
+            note += (
+                f" Fill reserve_1 to reserve_{self.n_reserves} with fresh designs that differ from everything above:"
+                " they replace, in order, any replaced slot that is still rejected."
+            )
+        return note
 
     def _reflect(
         self,
         round_index: int,
         island: int,
         slots: Sequence[_Slot],
-        similar: Sequence[_Slot],
-        accepted: list[_Slot],
+        pool: list[_Slot],
         keep: int,
     ) -> None:
         for _ in range(self.config.reflections_per_call):
-            pending = [s for s in similar if s.proposal is None and s.reason == "too_similar"]
+            pending = [s for s in slots if s.proposal is None and s.reason in DIVERSITY_REASONS]
             if not pending:
                 return
-            designs, _labels = self._reference(accepted, island)
-            problems = []
-            for s in pending:
-                near = s.similar
-                distance = near.distance if near else 0.0
-                ref = ""
-                if near is not None and near.index is not None:
-                    ref = f" {near.label} is {params_json(designs[near.index])}."
-                shortfall = (self.config.min_distance - distance) * len(GEOMETRY_PARAMS)
-                problems.append(
-                    f"- {s.spec.name}: {_raw_params_json(s.raw)} is at distance {distance:.3f} from "
-                    f"{near.label if near else '?'}; the changes are short by {shortfall:.2f} of a range in "
-                    f"total.{ref}"
+            designs, labels = self._reference(self._accepted, island)
+            problems = "\n".join(self._problem(s, designs, labels) for s in pending)
+            keep_names = [s.spec.name for s in slots if s.proposal is not None]
+            used = {cell_of(d) for d in designs}
+            untried = [cell_name(c) for c in all_cells() if c not in used]
+            explore_clause = ""
+            if any(s.reason == "not_novel" for s in pending):
+                explore_clause = (
+                    ", or is an explore in a cell that is already tested and less than "
+                    f"{min_points(self.config.explore_min_distance)} points from a design there"
                 )
-            keep_names = [s.spec.name for s in slots if s.island == island and s.proposal is not None]
             text = prompts.render(
                 "diversity.md",
-                min_distance=_num(self.config.min_distance),
-                problems="\n".join(problems),
-                distance_rule=render_distance_rule(self.config.min_distance),
+                min_points=min_points(self.config.min_distance),
+                explore_clause=explore_clause,
+                problems=problems,
+                untried=", ".join(untried) or "none",
                 keep=", ".join(keep_names) or "none",
+                fields_note=self._follow_up_note(),
             )
             messages = _append_to_user(self._messages[island], text)
             outcome = self._call("reflection", round_index, island, messages, keep=keep)
             if outcome is None:
                 return
             self._absorb(round_index, outcome, pending, stage="reflection")
-            for s in pending:
-                if s.proposal is not None:
-                    self._check_diversity(round_index, s, accepted)
+            pool.extend(self._absorb_reserves(outcome, island, "reflection"))
+            self._screen(round_index, pending, pool)
 
     def _fill_fallback(self, slot: _Slot, accepted: list[_Slot]) -> None:
         designs, _ = self._reference(accepted, slot.island)
@@ -796,7 +1413,7 @@ class LLMProposer(SearchStrategy):
     ) -> None:
         """Turn a call's arguments into proposals for ``slots`` (others are left untouched)."""
         for slot in slots:
-            slot.stage = stage
+            slot.stage, slot.screened = stage, False
             if outcome is None:
                 slot.reason = slot.reason or ("spend_cap" if self._disabled else "llm_call_cap")
                 continue
@@ -817,7 +1434,9 @@ class LLMProposer(SearchStrategy):
                 continue
             raw = outcome.args.get(slot.spec.name)
             design, errors, meta = _parse_slot(raw, slot.spec, self.ctx.gripper_task)
-            slot.raw = {k: raw[k] for k in GEOMETRY_PARAMS if k in raw} if isinstance(raw, Mapping) else None
+            slot.raw = _raw_geometry(raw)
+            slot.declared, slot.parents = meta["declared"], meta["parents"]
+            slot.request_hash = outcome.record.request_hash
             if design is None:
                 slot.reason, slot.errors, slot.proposal = "invalid", errors, None
                 self.ctx.reject(
@@ -860,12 +1479,19 @@ class LLMProposer(SearchStrategy):
         else:
             problems = "\n".join(f"- {s.spec.name}: " + "; ".join(s.errors) for s in broken)
             previous = (
-                wire_json(outcome.args) if outcome is not None and outcome.args is not None else "(none)"
+                # json.loads accepts NaN / Infinity in tool arguments; wire_json refuses them.
+                wire_json(_json_safe(outcome.args))
+                if outcome is not None and outcome.args is not None
+                else "(none)"
             )
             kept = [s.spec.name for s in slots if s.proposal is not None]
             keep = ", ".join(kept) or "none"
         text = prompts.render(
-            "repair.md", problems=scrub_model_text(problems), previous=scrub_model_text(previous), keep=keep
+            "repair.md",
+            problems=scrub_model_text(problems),
+            previous=scrub_model_text(previous),
+            keep=keep,
+            reserves_note=self._follow_up_note(),
         )
         return _append_to_user(messages, text)
 
@@ -883,15 +1509,17 @@ def _parse_slot(
     raw: Any, spec: SlotSpec, task: GripperTask
 ) -> tuple[FingerDesign | None, list[str], dict[str, Any]]:
     """Validate one slot's object: (design or None, error messages, metadata)."""
-    meta: dict[str, Any] = {"parents": (), "hypothesis": None}
+    meta: dict[str, Any] = {"parents": (), "hypothesis": None, "declared": {}}
     if not isinstance(raw, Mapping):
         return None, [f"slot '{spec.name}' is missing or is not an object"], meta
     hypothesis = raw.get("hypothesis")
     if isinstance(hypothesis, str) and hypothesis.strip():
         meta["hypothesis"] = " ".join(hypothesis.split())[:_MAX_HYPOTHESIS_CHARS]
-    parents = raw.get("parents")
-    if isinstance(parents, list):
-        meta["parents"] = tuple(str(p) for p in parents if isinstance(p, str | int))[:2]
+    meta["parents"] = _parent_labels(raw.get("parents"))
+    for name in _EXPLAIN_FIELDS:
+        value = raw.get(name)
+        if isinstance(value, str) and value.strip():
+            meta["declared"][name] = " ".join(value.split())[:_MAX_DECLARED_CHARS]
     mapping: dict[str, Any] = {k: raw[k] for k in GEOMETRY_PARAMS if k in raw}
     if meta["hypothesis"]:
         mapping["rationale"] = meta["hypothesis"]
@@ -910,6 +1538,8 @@ class NemotronProposer(LLMProposer):
     arm = "nemotron"
     origin = "nemotron"
     slots = PROPOSER_SLOTS
+    explain_changes = True
+    uses_reserves = True
 
     def __init__(self, ctx: RunContext, client: LLMClient, config: ProposerConfig | None = None) -> None:
         super().__init__(ctx, client, config)
@@ -945,23 +1575,47 @@ class NemotronProposer(LLMProposer):
         ranked = self.ranked_pool(island)
         if not ranked:
             raise RuntimeError("the island pool is empty: round 0 was not told to the strategy")
+        history = list(self.ctx.history)
+        claims = self.round_claims(round_index, island)
+        used = {cell_of(item.design) for item in history} | {cell_of(c.design) for c in claims}
+        untried = [cell_name(c) for c in all_cells() if c not in used]
         last_round = [r for r in self.ctx.rejections if r.round == round_index - 1 and r.island == island]
-        system = prompts.render("proposer_system.md", n_islands=cfg.islands)
+        elites = render_elites(
+            ranked,
+            info,
+            cfg.elites_shown,
+            history=history,
+            near_k=cfg.neighbours_shown,
+            task=self.ctx.gripper_task,
+        )
+        pairs = render_pairs(ranked, cfg.crossover_pool, 2 * min_points(cfg.min_distance))
+        system = prompts.render(
+            "proposer_system.md", n_islands=cfg.islands, island=island + 1, budget=self.ctx.budget.budget
+        )
         user = prompts.render(
             "proposer_user.md",
             task=render_task(info, self.ctx.gripper_task),
             parameters=render_parameters(),
             rules=render_rules(self.ctx.gripper_task),
+            distance_rule=render_points_rule(cfg.min_distance),
+            n_tested=len(history),
+            tested=render_tested(history, island, claims),
             n_elites=min(cfg.elites_shown, len(ranked)),
             n_pool=len(ranked),
             n_conditions=len(info.conditions),
-            elites=render_elites(ranked, info, cfg.elites_shown),
+            elites=f"{elites}\n\n{pairs}",
             failures=render_failures(ranked[: cfg.elites_shown], info, cfg.failures_shown),
             rejections=render_rejections(last_round, cfg.rejections_shown),
             target=render_target(ranked[0].score.success, cfg.target_factor),
             round=round_index,
             last_round=self.ctx.budget.n_rounds - 1,
-            distance_rule=render_distance_rule(cfg.min_distance),
+            operators=render_operators(
+                untried,
+                cfg.min_distance,
+                cfg.explore_min_distance,
+                claims=bool(claims),
+                reserves=self.n_reserves,
+            ),
         )
         return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
@@ -1012,7 +1666,12 @@ def prompt_spec_hashes() -> dict[str, str]:
 
     return {
         **{f"template:{k}": v for k, v in prompts.template_hashes().items()},
-        "tool:proposer": h(submit_designs_tool(PROPOSER_SLOTS)),
+        "tool:proposer": h(
+            submit_designs_tool(
+                PROPOSER_SLOTS, explain=NemotronProposer.explain_changes, reserves=ProposerConfig().reserves
+            )
+        ),
         "tool:zeroshot": h(submit_designs_tool(ZEROSHOT_SLOTS)),
         "parameter_table": h(render_parameters()),
+        "points_rule": h(render_points_rule(MIN_DISTANCE)),
     }

@@ -60,3 +60,17 @@ export function formatLift(metres: number): string {
 export function capitalizeFirst(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
+
+/** Session clock offset as "m:ss" ("0:06", "5:42", "72:10"). */
+export function formatOffset(seconds: number): string {
+  const total = Math.max(0, Math.round(Number.isFinite(seconds) ? seconds : 0));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+}
+
+/** Byte size as "940 B", "18.0 kB", "2.4 MB". */
+export function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes < 0) return "n/a";
+  if (bytes < 1000) return `${bytes} B`;
+  if (bytes < 1e6) return `${(bytes / 1000).toFixed(1)} kB`;
+  return `${(bytes / 1e6).toFixed(1)} MB`;
+}

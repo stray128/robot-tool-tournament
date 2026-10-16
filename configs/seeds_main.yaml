@@ -1,0 +1,5 @@
+# Confirmatory run seeds (public, fixed before the PREREG tag). Run r of every arm uses
+# seed seeds[r], so arms A and C share round 0 run by run. Only the first R are used.
+# Disjoint from every seed used before the freeze (see seeds_pilot.yaml). No search with
+# these seeds may run before the prereg tag.
+seeds: [1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 1009, 1010, 1011, 1012, 1013, 1014, 1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1032]

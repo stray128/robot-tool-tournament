@@ -1,0 +1,60 @@
+{
+ "messages": [
+  {
+   "role": "user",
+   "content": "Part: part-7585721f2e4a\nGoal: Find gripper fingers that reliably lift and hold my part, check how robust the best one is, and give me a print pack."
+  },
+  {
+   "role": "assistant",
+   "content": "",
+   "tool_calls": [
+    {
+     "id": "call_1",
+     "type": "function",
+     "function": {
+      "name": "inspect_part",
+      "arguments": "{\"part_id\": \"part-7585721f2e4a\"}"
+     }
+    }
+   ]
+  },
+  {
+   "role": "tool",
+   "tool_call_id": "call_1",
+   "content": "{\"ok\":true,\"result\":{\"part\":{\"part_id\":\"part-7585721f2e4a\",\"name\":\"dumbbell-handle\",\"source_sha256\":\"5055aa7e404b7be9fc5fc5356c4f887080e2ebf7f4d6a7eb6b2b3f6913639227\",\"size_mm\":[84.0,40.0,40.0],\"grip_width_mm\":40.0,\"height_mm\":40.0,\"volume_cm3\":42.103,\"mass_g\":50.52,\"density_kg_m3\":1200.0,\"max_opening_mm\":84.0,\"fits_gripper\":true,\"n_convex_pieces\":1,\"stable_pose_probability\":1.0,\"conditions\":[\"fake: part centred\"],\"episodes_per_design\":9,\"notes\":[]},\"pass_threshold_pct\":80.0,\"baselines\":[{\"design_id\":\"462150ca1475\",\"name\":\"straight\",\"valid_for_part\":true},{\"design_id\":\"9a0624079454\",\"name\":\"concave\",\"valid_for_part\":true},{\"design_id\":\"732d575caf85\",\"name\":\"hooked\",\"valid_for_part\":true},{\"design_id\":\"be6496fa15e2\",\"name\":\"stock\",\"valid_for_part\":true}],\"targets\":[\"local\"]},\"tool_calls_left\":11}"
+  },
+  {
+   "role": "assistant",
+   "content": "",
+   "tool_calls": [
+    {
+     "id": "call_3",
+     "type": "function",
+     "function": {
+      "name": "propose_designs",
+      "arguments": "{\"part_id\": \"part-7585721f2e4a\", \"n\": 3}"
+     }
+    }
+   ]
+  },
+  {
+   "role": "tool",
+   "tool_call_id": "call_3",
+   "content": "{\"ok\":true,\"result\":{\"designs\":[{\"design_id\":\"c3dddc95d0b7\",\"hypothesis\":\"Scripted idea 1.\",\"params\":{\"finger_length_mm\":70.0,\"finger_thickness_mm\":10.0,\"finger_width_mm\":22.0,\"bend_angle_deg\":0.0,\"bend_start_frac\":0.5,\"inner_face\":\"flat\",\"inner_face_depth_mm\":0.0,\"tip_profile\":\"rounded\",\"tip_size_mm\":3.0,\"taper_ratio\":0.8}},{\"design_id\":\"f6844a91b170\",\"hypothesis\":\"Scripted idea 2.\",\"params\":{\"finger_length_mm\":75.0,\"finger_thickness_mm\":12.0,\"finger_width_mm\":24.0,\"bend_angle_deg\":0.0,\"bend_start_frac\":0.5,\"inner_face\":\"v_groove\",\"inner_face_depth_mm\":4.0,\"tip_profile\":\"chamfer\",\"tip_size_mm\":3.0,\"taper_ratio\":0.9}},{\"design_id\":\"c84efeac4d3c\",\"hypothesis\":\"Scripted idea 3.\",\"params\":{\"finger_length_mm\":60.0,\"finger_thickness_mm\":10.0,\"finger_width_mm\":26.0,\"bend_angle_deg\":0.0,\"bend_start_frac\":0.6,\"inner_face\":\"concave_arc\",\"inner_face_depth_mm\":3.0,\"tip_profile\":\"rounded\",\"tip_size_mm\":2.0,\"taper_ratio\":1.0}}],\"rejected\":[],\"analysis\":\"Scripted analysis: vary the contact face and the tip.\"},\"tool_calls_left\":10}"
+  },
+  {
+   "role": "assistant",
+   "content": "",
+   "tool_calls": [
+    {
+     "id": "call_5",
+     "type": "function",
+     "function": {
+      "name": "launch_sim_job",
+      "arguments": "{\"part_id\": \"part-7585721f2e4a\", \"designs\": [\"c3dddc95d0b7\", \"f6844a91b170\", \"c84efeac4d3c\", \"462150ca1475\"], \"target\": \"local\"}"
+     }
+    }
+   ]
+  }
+ ]
+}

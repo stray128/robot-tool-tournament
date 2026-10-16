@@ -1,5 +1,5 @@
 import { formatPercent } from "@/lib/format";
-import type { ResultsIndex } from "@/lib/types";
+import type { ArmEstimate } from "@/lib/types";
 
 /** Series colours by arm order; the second arm (the Nemotron arm in the protocol) takes the accent. */
 export const ARM_COLORS = ["var(--ink-2)", "var(--accent)", "var(--pending)", "var(--pass)"] as const;
@@ -28,7 +28,7 @@ export function labelRows(values: number[]): number[] {
  * interval as a line; manual entrants as dashed reference lines. HTML, not SVG, so
  * the text stays legible at any width.
  */
-export function ForestPlot({ forest }: { forest: ResultsIndex["forest"] }) {
+export function ForestPlot({ forest }: { forest: { arms: ArmEstimate[]; references: { label: string; value: number }[] } }) {
   const rows = forest.arms.length;
   const refRows = labelRows(forest.references.map((r) => r.value));
   const labelLines = Math.max(0, ...refRows.map((r) => r + 1));

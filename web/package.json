@@ -2,7 +2,7 @@
   "name": "rtt-web",
   "version": "0.1.0",
   "private": true,
-  "description": "Static web app for the Robot Tool Tournament: recorded replays, designs, results and compute provenance.",
+  "description": "Static web app for the Robot Tool Tournament: bring-your-part agent sessions, recorded replays, designs, certificates, results and compute provenance.",
   "license": "Apache-2.0",
   "type": "module",
   "packageManager": "pnpm@10.29.3",
@@ -16,6 +16,10 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "import:demo": "node scripts/import-demo.mjs",
+    "import:results": "node scripts/import-results.mjs",
+    "import:certificate": "node scripts/import-certificate.mjs",
+    "import:session": "node scripts/import-session.mjs",
+    "make:session": "node scripts/make-demo-session.mjs",
     "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {

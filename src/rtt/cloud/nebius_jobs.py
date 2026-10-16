@@ -6,12 +6,19 @@ parses the result, so this module needs no SDK and sees exactly what the CLI see
 * :class:`JobSpec` describes a job; :meth:`JobSpec.create_args` renders the
   ``nebius ai job create`` flags (image by digest, ``--env-secret`` for credentials,
   bucket volume by ID, platform/preset, timeout, ``--restart-policy never``).
+* :class:`Target` is a region profile: where a job runs and on what. ``uks2-cpu``
+  (:data:`DEFAULT_TARGET`, CPU-only ``cpu-d3`` in uk-south2, the executor of record for
+  scored jobs) and ``eun1-gpu`` (:data:`FALLBACK_TARGET`, single-GPU H100/H200/L40S in
+  eu-north1, used only when uk-south2 cannot run the job). :func:`cpu_preset` maps a
+  vCPU count to the CPU preset name.
 * :class:`NebiusJobs` submits, polls, streams logs, cancels and lists jobs, reads the
-  tenant's capacity advice, and :meth:`NebiusJobs.run` walks a platform fallback list:
-  a job stuck before start for longer than ``provisioning_timeout_s`` is cancelled and
-  the next available platform is tried. Each attempt is appended to a
+  tenant's capacity advice (GPU platforms) and vCPU quota (CPU platforms; capacity advice
+  has no CPU rows), and :meth:`NebiusJobs.run` walks a platform fallback list: a job
+  stuck before start for longer than ``provisioning_timeout_s`` is cancelled and the
+  next available platform is tried. Each attempt is appended to a
   :class:`~rtt.cloud.cost.SpendLedger`, and the ledger's cap is enforced before every
-  submission and while a job runs.
+  submission and while a job runs, across processes (each job holds a reservation in
+  the ledger while it is in flight).
 
 Credentials never pass through here: the Token Factory key reaches a job only as a
 MysteryBox reference (``--env-secret``), and :class:`JobSpec` refuses plain ``--env``
@@ -32,7 +39,15 @@ from datetime import UTC, datetime
 from typing import Any
 
 from rtt.cloud.config import NebiusConfig
-from rtt.cloud.cost import JobSpend, SpendCapError, SpendLedger, estimate_usd, hourly_usd
+from rtt.cloud.cost import (
+    JobSpend,
+    SpendCapError,
+    SpendLedger,
+    estimate_usd,
+    hourly_usd,
+    is_cpu_platform,
+    preset_resources,
+)
 
 # --------------------------------------------------------------------------- states
 
@@ -59,6 +74,18 @@ class NebiusCLIError(RuntimeError):
         self.returncode = returncode
         self.detail = detail
         super().__init__(f"`nebius {command}` failed (exit {returncode}): {detail}")
+
+
+class NoCapacityError(RuntimeError):
+    """No candidate could run the job: none had capacity, or every attempt timed out before start.
+
+    Raised before any of our code ran, so the caller may try another :class:`Target`.
+    ``attempts`` holds the spend of the cancelled attempts (already in the ledger).
+    """
+
+    def __init__(self, message: str, attempts: tuple[JobSpend, ...] = ()) -> None:
+        super().__init__(message)
+        self.attempts = attempts
 
 
 class ProvisioningTimeoutError(RuntimeError):
@@ -180,7 +207,7 @@ class Job:
     state: str
     platform: str | None = None
     preset: str | None = None
-    image: str | None = None
+    image: str | None = field(default=None, repr=False)  # its path holds the registry ID
     created_at: datetime | None = None
     started_at: datetime | None = None
     finished_at: datetime | None = None
@@ -260,12 +287,24 @@ class JobSpec:
     working_dir: str | None = None
     allow_tag: bool = False  # permit a tag instead of a digest (smoke tests of public images)
 
+    def __repr__(self) -> str:
+        """Names, platform and env keys only: the image path, secret selectors, bucket
+        volume, subnet and project are account IDs and never appear in logs or tracebacks."""
+        return (
+            f"JobSpec(name={self.name!r}, image=<set>, platform={self.platform!r}, preset={self.preset!r},"
+            f" env={sorted(self.env)!r}, env_secrets={sorted(self.env_secrets)!r},"
+            f" volumes={len(self.volumes)}, timeout={self.timeout!r}, preemptible={self.preemptible!r})"
+        )
+
     def validate(self) -> None:
         """Raise ``ValueError`` for a spec the platform or our hygiene rules would reject."""
         if not _JOB_NAME.match(self.name):
             raise ValueError(f"job name {self.name!r}: use 1-63 lowercase letters, digits and dashes")
         if "@sha256:" not in self.image and not self.allow_tag:
-            raise ValueError(f"image must be pinned by digest (…@sha256:…), got {self.image!r}")
+            # only the last path part: the registry path is an account ID
+            raise ValueError(
+                f"image must be pinned by digest (…@sha256:…), got …/{self.image.rsplit('/', 1)[-1]}"
+            )
         for key in self.env:
             if _SECRET_NAME.search(key):
                 raise ValueError(f"env {key!r} looks like a credential; pass it with env_secrets instead")
@@ -276,7 +315,8 @@ class JobSpec:
             raise ValueError(f"restart_policy must be 'never' or 'on-failure', got {self.restart_policy!r}")
         for volume in self.volumes:
             if ":" not in volume:
-                raise ValueError(f"volume {volume!r}: expected SOURCE:/container/path[:mode]")
+                # the source is a bucket ID, so the value itself is not shown
+                raise ValueError("a volume has no ':': expected SOURCE:/container/path[:mode]")
 
     def create_args(self, dry_run: bool = False) -> list[str]:
         """The ``ai job create`` argv (without the binary, ``--format`` or ``--profile``)."""
@@ -323,13 +363,146 @@ class Candidate:
     preset: str
     region: str = "eu-north1"
 
+    @property
+    def is_cpu(self) -> bool:
+        """A CPU-only platform (no GPU; capacity is governed by the vCPU quota)."""
+        return is_cpu_platform(self.platform)
 
-DEFAULT_CANDIDATES: tuple[Candidate, ...] = (
+    @property
+    def vcpus(self) -> int | None:
+        """vCPUs of the preset (``16vcpu-64gb`` -> 16)."""
+        resources = preset_resources(self.preset)
+        return resources[0] if resources else None
+
+
+GPU_CANDIDATES: tuple[Candidate, ...] = (
     Candidate("gpu-h100-sxm", "1gpu-16vcpu-200gb"),
     Candidate("gpu-h200-sxm", "1gpu-16vcpu-200gb"),
     Candidate("gpu-l40s-a", "1gpu-8vcpu-32gb"),
 )
 """Fallback order for single-GPU jobs next to the eu-north1 bucket."""
+
+DEFAULT_CANDIDATES = GPU_CANDIDATES
+"""Kept for callers of the GPU-only API; new code picks a :class:`Target`."""
+
+CPU_VCPU_CHOICES: tuple[int, ...] = (2, 4, 8, 16, 32, 48, 64, 96, 128, 160, 192, 224, 256)
+"""vCPU counts of the ``cpu-d3`` presets (``nebius compute platform list``, uk-south2)."""
+CPU_GIB_PER_VCPU = 4
+DEFAULT_CPU_VCPUS = 16
+"""16 vCPUs: the same CPU count as the 1-GPU H100 preset, so wall times compare directly."""
+CPU_VCPU_QUOTA = "compute.instance.non-gpu.vcpu"
+
+
+def cpu_preset(vcpus: int = DEFAULT_CPU_VCPUS) -> str:
+    """The CPU-only preset with ``vcpus`` vCPUs and 4 GiB each, e.g. ``16vcpu-64gb``.
+
+    Raises:
+        ValueError: no preset has that many vCPUs.
+    """
+    if vcpus not in CPU_VCPU_CHOICES:
+        raise ValueError(f"no CPU preset with {vcpus} vCPUs; choose one of {CPU_VCPU_CHOICES}")
+    return f"{vcpus}vcpu-{vcpus * CPU_GIB_PER_VCPU}gb"
+
+
+@dataclass(frozen=True)
+class Target:
+    """A region profile: the region a job runs in and the platforms to try there, in order.
+
+    Each target uses that region's project, subnet and bucket
+    (:meth:`rtt.cloud.config.NebiusConfig.for_region`).
+    """
+
+    name: str
+    region: str
+    kind: str  # "cpu" | "gpu"
+    candidates: tuple[Candidate, ...]
+    description: str = ""
+
+    def with_vcpus(self, vcpus: int) -> Target:
+        """A CPU target whose candidates all use the ``vcpus`` preset (GPU targets unchanged)."""
+        if self.kind != "cpu":
+            return self
+        preset = cpu_preset(vcpus)
+        return replace(self, candidates=tuple(replace(c, preset=preset) for c in self.candidates))
+
+    def only(self, platform: str, preset: str | None = None) -> Target:
+        """This target restricted to one platform (no fallback within the region)."""
+        if preset is None:
+            match = [c for c in self.candidates if c.platform == platform]
+            if not match:
+                raise ValueError(f"{platform} is not a platform of target {self.name}; pass a preset")
+            preset = match[0].preset
+        return replace(self, candidates=(Candidate(platform, preset, self.region),))
+
+
+TARGETS: dict[str, Target] = {
+    t.name: t
+    for t in (
+        Target(
+            "uks2-cpu",
+            "uk-south2",
+            "cpu",
+            (Candidate("cpu-d3", cpu_preset(DEFAULT_CPU_VCPUS), "uk-south2"),),
+            "CPU-only AMD EPYC Genoa in uk-south2: the executor of record for scored jobs",
+        ),
+        Target(
+            "eun1-gpu",
+            "eu-north1",
+            "gpu",
+            GPU_CANDIDATES,
+            "single-GPU H100/H200/L40S in eu-north1: fallback (eu-north1 has no CPU-only quota)",
+        ),
+    )
+}
+DEFAULT_TARGET = "uks2-cpu"
+FALLBACK_TARGET = "eun1-gpu"
+
+
+def get_target(name: str, vcpus: int | None = None) -> Target:
+    """The named target, with its CPU preset set to ``vcpus`` when given.
+
+    Raises:
+        ValueError: unknown target or unsupported vCPU count.
+    """
+    if name not in TARGETS:
+        raise ValueError(f"unknown target {name!r}; known: {', '.join(TARGETS)}")
+    target = TARGETS[name]
+    return target.with_vcpus(vcpus) if vcpus is not None else target
+
+
+def target_for_platform(platform: str) -> Target:
+    """The first target that lists ``platform`` (CPU platforms map to the CPU target)."""
+    for target in TARGETS.values():
+        if any(c.platform == platform for c in target.candidates):
+            return target
+    if is_cpu_platform(platform):
+        return TARGETS[DEFAULT_TARGET]
+    raise ValueError(f"no target runs platform {platform!r}; known targets: {', '.join(TARGETS)}")
+
+
+@dataclass(frozen=True)
+class QuotaAllowance:
+    """One quota in one region (``nebius quotas quota-allowance get-by-name``)."""
+
+    name: str
+    region: str
+    limit: int
+    usage: int
+
+    @property
+    def free(self) -> int:
+        return max(0, self.limit - self.usage)
+
+    @classmethod
+    def from_json(cls, data: Mapping[str, Any], name: str, region: str) -> QuotaAllowance:
+        spec = data.get("spec") or {}
+        status = data.get("status") or {}
+        limit = int(spec.get("limit") or 0)
+        usage = status.get("usage")
+        if usage is None:  # the API omits zero usage; derive from the percentage if present
+            pct = float(status.get("usage_percentage") or 0.0)
+            usage = round(limit * pct / 100.0)
+        return cls(name, str(spec.get("region") or region), limit, int(usage))
 
 
 @dataclass(frozen=True)
@@ -398,16 +571,23 @@ def rank_candidates(
     candidates: Sequence[Candidate] = DEFAULT_CANDIDATES,
     preemptible: bool = False,
     min_level: str = "MEDIUM",
+    cpu_free_vcpus: Mapping[str, int] | None = None,
 ) -> list[Candidate]:
     """The candidates with usable capacity, in fallback order.
 
-    A candidate is usable when any fabric in its region reports a free instance at
-    ``min_level`` or better for the requested allocation type.
+    A GPU candidate is usable when any fabric in its region reports a free instance at
+    ``min_level`` or better for the requested allocation type. Capacity advice has no
+    rows for CPU-only platforms, so a CPU candidate is usable when ``cpu_free_vcpus``
+    (region -> free ``compute.instance.non-gpu.vcpu`` quota) covers its preset.
     """
     rows = list(advice)
+    free = cpu_free_vcpus or {}
     out = []
     for cand in candidates:
-        if any(
+        if cand.is_cpu:
+            if (cand.vcpus or 0) <= free.get(cand.region, 0):
+                out.append(cand)
+        elif any(
             r.platform == cand.platform
             and r.preset == cand.preset
             and r.region == cand.region
@@ -459,6 +639,29 @@ def _extract_job_id(data: Any) -> str | None:
             if found:
                 return found
     return None
+
+
+def _budget_limit(
+    ledger: SpendLedger | None, token: str | None, worst_usd: float, usd_per_s: float
+) -> Callable[[float], float | None] | None:
+    """The wall-time limit of a job holding reservation ``token``, re-read at every poll.
+
+    Each call first raises the reservation to the job's live spend (when that exceeds
+    the worst case reserved at submission), so other processes see it, then returns the
+    seconds that the cap minus recorded spend minus every *other* reservation pays for.
+    ``None`` (no limit) without a capped ledger.
+    """
+    if ledger is None or token is None or ledger.cap_usd is None or usd_per_s <= 0:
+        return None
+
+    def limit(elapsed_s: float) -> float | None:
+        live = elapsed_s * usd_per_s
+        if live > worst_usd:
+            ledger.hold(token, live)
+        remaining = ledger.remaining_usd(exclude=token)
+        return None if remaining is None else remaining / usd_per_s
+
+    return limit
 
 
 class NebiusJobs:
@@ -545,6 +748,35 @@ class NebiusJobs:
         )
         return parse_capacity(data)
 
+    def quota(self, name: str, region: str | None = None) -> QuotaAllowance:
+        """One tenant quota in ``region`` (default: the config's region)."""
+        self.config.require("tenant_id")
+        assert self.config.tenant_id is not None
+        reg = region or self.config.region
+        args = ["quotas", "quota-allowance", "get-by-name", "--parent-id", self.config.tenant_id]
+        data = self.cli.run_json([*args, "--name", name, "--region", reg])
+        return QuotaAllowance.from_json(data, name, reg)
+
+    def cpu_free_vcpus(self, region: str | None = None) -> int:
+        """Free ``compute.instance.non-gpu.vcpu`` quota in ``region`` (0 when the quota is absent)."""
+        try:
+            return self.quota(CPU_VCPU_QUOTA, region).free
+        except NebiusCLIError as exc:
+            if "not found" in exc.detail.lower() or "notfound" in exc.detail.lower():
+                return 0
+            raise
+
+    def usable_candidates(
+        self, candidates: Sequence[Candidate], preemptible: bool = False, min_level: str = "MEDIUM"
+    ) -> list[Candidate]:
+        """``candidates`` with capacity now: advice for GPU platforms, quota for CPU ones.
+
+        Each source is queried only when some candidate needs it.
+        """
+        advice = self.capacity() if any(not c.is_cpu for c in candidates) else []
+        free = {r: self.cpu_free_vcpus(r) for r in sorted({c.region for c in candidates if c.is_cpu})}
+        return rank_candidates(advice, candidates, preemptible, min_level, free)
+
     # -- waiting
 
     def wait(
@@ -552,7 +784,7 @@ class NebiusJobs:
         job_id: str,
         poll_s: float = 15.0,
         provisioning_timeout_s: float | None = 900.0,
-        max_wall_s: float | None = None,
+        max_wall_s: float | Callable[[float], float | None] | None = None,
         on_update: Callable[[JobUpdate], None] | None = None,
         max_poll_errors: int = 5,
     ) -> Job:
@@ -562,10 +794,15 @@ class NebiusJobs:
         only ``max_poll_errors`` failures in a row abort the wait, because giving up
         leaves a billed job running unobserved.
 
+        ``max_wall_s`` is a fixed limit, or a function of the elapsed seconds that returns
+        the current limit at every poll (:meth:`run` uses one so that jobs of other
+        processes sharing the spend ledger shrink this job's allowance as they spend).
+
         Raises:
             ProvisioningTimeoutError: the job spent ``provisioning_timeout_s`` in
                 :data:`PRE_START_STATES` (the caller decides whether to cancel).
-            SpendCapError: the job ran past ``max_wall_s`` (the job is cancelled first).
+            SpendCapError: the job ran past ``max_wall_s``, or a callable ``max_wall_s``
+                raised (the cap can no longer be checked); the job is cancelled first.
             NebiusCLIError: ``max_poll_errors`` polls in a row failed.
         """
         t0 = self.clock()
@@ -593,10 +830,21 @@ class NebiusJobs:
                 and elapsed >= provisioning_timeout_s
             ):
                 raise ProvisioningTimeoutError(job, elapsed)
-            if max_wall_s is not None and elapsed >= max_wall_s:
+            try:
+                limit = max_wall_s(elapsed) if callable(max_wall_s) else max_wall_s
+            except Exception as exc:
+                # Fail closed: when the budget can no longer be read (an unreadable in-flight
+                # file, a ledger write error), the cap cannot be enforced, so the job stops
+                # instead of running on unwatched until its timeout.
                 self.cancel(job_id)
                 raise SpendCapError(
-                    f"job {job.name} cancelled after {elapsed:.0f} s: the spend cap allows {max_wall_s:.0f} s"
+                    f"job {job.name} cancelled after {elapsed:.0f} s: the spend cap could not be"
+                    f" checked ({exc.__class__.__name__}: {exc})"
+                ) from exc
+            if limit is not None and elapsed >= limit:
+                self.cancel(job_id)
+                raise SpendCapError(
+                    f"job {job.name} cancelled after {elapsed:.0f} s: the spend cap allows {max(0.0, limit):.0f} s"
                 )
             self.sleep(poll_s)
 
@@ -630,66 +878,72 @@ class NebiusJobs:
         ``RTT_PLATFORM``/``RTT_PRESET``/``RTT_REGION`` env of the container). A job stuck
         before start for ``provisioning_timeout_s`` is cancelled and the next candidate is
         tried. With a capped ``ledger``, a submission is refused unless the worst case
-        (provisioning timeout plus ``expected_run_s``) fits, and a running job is cancelled
-        when its wall time reaches what the remaining budget pays for.
+        (provisioning timeout plus ``expected_run_s``) fits next to the recorded spend and
+        every other job in flight, and that worst case stays reserved in the ledger while
+        the job runs (raised to the job's live spend when it runs longer). A running job is
+        cancelled when its wall time reaches what the budget left by everything else pays
+        for, re-read at every poll, so concurrent ``rtt job`` processes cannot together
+        pass the cap.
 
         Raises:
-            RuntimeError: no candidate had capacity or every attempt timed out.
+            NoCapacityError: no candidate had capacity or every attempt timed out.
             SpendCapError: see above.
         """
         if check_capacity:
-            ranked = rank_candidates(self.capacity(), candidates, spec.preemptible, min_level)
+            ranked = self.usable_candidates(candidates, spec.preemptible, min_level)
         else:
             ranked = list(candidates)
         ranked = [c for c in ranked if c.region == self.config.region]
         if not ranked:
             names = ", ".join(f"{c.platform}/{c.preset}" for c in candidates)
-            raise RuntimeError(f"no capacity in {self.config.region} for any of: {names}")
+            raise NoCapacityError(f"no capacity in {self.config.region} for any of: {names}")
 
         attempts: list[JobSpend] = []
         for i, cand in enumerate(ranked):
             usd_per_s = hourly_usd(cand.platform, cand.preset) / 3600.0
             worst = (provisioning_timeout_s + expected_run_s) * usd_per_s
-            max_wall_s = None
-            if ledger is not None:
-                ledger.check(worst)
-                remaining = ledger.remaining_usd()
-                if remaining is not None:
-                    max_wall_s = remaining / usd_per_s
             name = spec.name if i == 0 else f"{spec.name[:58]}-r{i}"
-            env = dict(spec.env)
-            env.update(RTT_PLATFORM=cand.platform, RTT_PRESET=cand.preset, RTT_REGION=cand.region)
-            if "RTT_JOB_NAME" in env:
-                env["RTT_JOB_NAME"] = name  # the manifest must name the attempt that ran
-            attempt = replace(spec, name=name, platform=cand.platform, preset=cand.preset, env=env)
-            job = self.submit(attempt)
+            token = ledger.reserve(worst, name) if ledger is not None else None
             try:
-                final = self.wait(job.id, poll_s, provisioning_timeout_s, max_wall_s, on_update)
-            except ProvisioningTimeoutError as exc:
-                self.cancel(job.id)
-                final = self.wait_cancelled(job.id)
-                attempts.append(self._spend(final, cand, attempt, run_id, f"cancelled: {exc}"))
+                max_wall_s = _budget_limit(ledger, token, worst, usd_per_s)
+                env = dict(spec.env)
+                env.update(RTT_PLATFORM=cand.platform, RTT_PRESET=cand.preset, RTT_REGION=cand.region)
+                if "RTT_JOB_NAME" in env:
+                    env["RTT_JOB_NAME"] = name  # the manifest must name the attempt that ran
+                attempt = replace(spec, name=name, platform=cand.platform, preset=cand.preset, env=env)
+                job = self.submit(attempt)
+                try:
+                    final = self.wait(job.id, poll_s, provisioning_timeout_s, max_wall_s, on_update)
+                except ProvisioningTimeoutError as exc:
+                    self.cancel(job.id)
+                    final = self.wait_cancelled(job.id)
+                    attempts.append(self._spend(final, cand, attempt, run_id, f"cancelled: {exc}"))
+                    if ledger is not None:
+                        ledger.append(attempts[-1], release=token)
+                    continue
+                except SpendCapError as exc:
+                    final = self.wait_cancelled(job.id)
+                    attempts.append(self._spend(final, cand, attempt, run_id, str(exc)))
+                    if ledger is not None:
+                        ledger.append(attempts[-1], release=token)
+                    raise
+                except BaseException as exc:
+                    # Lost track of a live job (poll failures, Ctrl-C): record what it has cost
+                    # so far, so the cap still sees it, and leave it running for the caller.
+                    self._record_abandoned(job, cand, attempt, run_id, ledger, exc)
+                    raise
+                attempts.append(self._spend(final, cand, attempt, run_id, final.state_details))
                 if ledger is not None:
-                    ledger.append(attempts[-1])
-                continue
-            except SpendCapError as exc:
-                final = self.wait_cancelled(job.id)
-                attempts.append(self._spend(final, cand, attempt, run_id, str(exc)))
-                if ledger is not None:
-                    ledger.append(attempts[-1])
-                raise
-            except BaseException as exc:
-                # Lost track of a live job (poll failures, Ctrl-C): record what it has cost
-                # so far, so the cap still sees it, and leave it running for the caller.
-                self._record_abandoned(job, cand, attempt, run_id, ledger, exc)
-                raise
-            attempts.append(self._spend(final, cand, attempt, run_id, final.state_details))
-            if ledger is not None:
-                ledger.append(attempts[-1])
-            return RunOutcome(final, cand, tuple(attempts))
-        raise RuntimeError(
+                    ledger.append(attempts[-1], release=token)
+                return RunOutcome(final, cand, tuple(attempts))
+            finally:
+                if ledger is not None and token is not None:
+                    with contextlib.suppress(Exception):  # never mask the original exception
+                        ledger.release(token)  # no-op when append already released it
+        raise NoCapacityError(
             f"every candidate timed out in provisioning ({len(attempts)} attempts, "
-            f"${sum(a.est_usd for a in attempts):.2f} estimated)"
+            f"${sum(a.est_usd for a in attempts):.2f} estimated)",
+            tuple(attempts),
         )
 
     def _record_abandoned(

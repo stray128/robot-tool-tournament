@@ -9,6 +9,7 @@ executes :mod:`rtt.cloud.entry` in the pinned image, and checks a fetched run.
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -16,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from rtt.cloud.config import NebiusConfig
-from rtt.cloud.nebius_jobs import JobSpec
+from rtt.cloud.nebius_jobs import Candidate, JobSpec
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 LOCAL_RUNS = REPO_ROOT / "runs" / "cloud"
@@ -25,6 +26,8 @@ CONTAINER_PYTHON = "/app/.venv/bin/python"
 MOUNT = "/out"
 KINDS = ("m1", "probe", "search")
 LAUNCHER = "nebius-serverless-jobs"
+LLM_ARMS = frozenset({"nemotron", "zeroshot"})
+"""Search arms that call Token Factory from inside the job."""
 
 
 @dataclass(frozen=True)
@@ -67,9 +70,27 @@ def new_run_id(kind: str, now: datetime | None = None) -> str:
     return f"{kind}-{ts}"
 
 
+_RUN_ID = re.compile(r"^[a-z0-9][a-z0-9-]{0,58}$")
+
+
+def validate_run_id(run_id: str) -> str:
+    """Return ``run_id`` if it is safe as a bucket prefix, a local folder and a job-name part.
+
+    1-59 lowercase letters, digits and dashes, starting with a letter or digit, so that
+    ``rtt-<run_id>`` is a valid job name and no ``/``, ``..`` or absolute path can reach
+    the bucket prefix or ``runs/cloud/<run_id>/`` on the laptop.
+
+    Raises:
+        ValueError: anything else.
+    """
+    if not isinstance(run_id, str) or not _RUN_ID.match(run_id):
+        raise ValueError(f"run ID {run_id!r}: use 1-59 lowercase letters, digits and dashes")
+    return run_id
+
+
 def run_prefix(run_id: str) -> str:
-    """Object-storage prefix of a run (no trailing slash)."""
-    return f"runs/{run_id}"
+    """Object-storage prefix of a run (no trailing slash); ``run_id`` is validated."""
+    return f"runs/{validate_run_id(run_id)}"
 
 
 def entry_args(
@@ -99,6 +120,16 @@ def entry_args(
     return args
 
 
+def needs_token_factory(kind: str, search: SearchJobArgs | None = None) -> bool:
+    """Whether a job of ``kind`` needs the Token Factory key.
+
+    Only the LLM search arms call the model; the probe checks that the secret arrives.
+    Gates and random search run without it, so they never see the key (and run in a
+    region whose project has no copy of the secret).
+    """
+    return kind == "probe" or (kind == "search" and search is not None and search.arm in LLM_ARMS)
+
+
 def job_spec_for(
     config: NebiusConfig,
     kind: str,
@@ -110,11 +141,18 @@ def job_spec_for(
     timeout: str = "1h",
     extra_env: Mapping[str, str] | None = None,
     search: SearchJobArgs | None = None,
+    candidate: Candidate | None = None,
+    attach_key: bool | None = None,
 ) -> JobSpec:
     """The job that runs ``kind`` in the configured image and writes to the bucket.
 
-    Needs ``RTT_IMAGE`` (a digest reference), ``NEBIUS_BUCKET_ID``, ``NEBIUS_SUBNET_ID``
-    and ``NEBIUS_PROJECT_ID``. The Token Factory key is attached by secret reference.
+    ``config`` is the config of the region the job runs in
+    (:meth:`~rtt.cloud.config.NebiusConfig.for_region`). Needs ``RTT_IMAGE`` (a digest
+    reference) and that region's bucket ID, subnet ID and project ID. ``candidate`` sets
+    the platform and preset (default: the config's GPU platform and preset; :meth:`NebiusJobs.run`
+    overrides them per attempt anyway, but a dry run validates exactly this spec). The
+    Token Factory key is attached by secret reference when ``attach_key`` is true, or by
+    default when :func:`needs_token_factory` says the job uses it.
 
     The container gets the job facts that run manifests record (``RTT_RUN_ID``,
     ``RTT_JOB_NAME``, ``RTT_IMAGE_NAME``, ``RTT_IMAGE_DIGEST``, ``RTT_LAUNCHER``; the
@@ -124,6 +162,7 @@ def job_spec_for(
     """
     config.require("image", "bucket_id", "subnet_id", "project_id")
     assert config.image is not None and config.bucket_id is not None
+    key = needs_token_factory(kind, search) if attach_key is None else attach_key
     image_name, digest = split_image_ref(config.image)
     name = f"rtt-{run_id}"
     env = {
@@ -140,10 +179,10 @@ def job_spec_for(
         command=CONTAINER_PYTHON,
         args=entry_args(kind, run_id, seed, video, probe_warp, search),
         env=env,
-        env_secrets={"NEBIUS_API_KEY": config.secret_name},
+        env_secrets={"NEBIUS_API_KEY": config.secret_name} if key else {},
         volumes=[f"{config.bucket_id}:{MOUNT}:rw"],
-        platform=config.gpu_platform,
-        preset=config.gpu_preset,
+        platform=candidate.platform if candidate else config.gpu_platform,
+        preset=candidate.preset if candidate else config.gpu_preset,
         timeout=timeout,
         restart_policy="never",
         subnet_id=config.subnet_id,

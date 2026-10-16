@@ -8,4 +8,4 @@ Your previous call, for reference:
 
 $previous
 
-Call submit_designs again with every slot filled. Copy these slots unchanged: $keep. Replace only the slots listed above with designs that keep their operator and intent but satisfy every validator rule.
+Call submit_designs again with every slot filled. Copy these slots unchanged: $keep. Replace only the slots listed above with designs that keep their operator and intent but satisfy every validator rule.$reserves_note

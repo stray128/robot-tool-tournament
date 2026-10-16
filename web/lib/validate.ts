@@ -13,7 +13,6 @@ import type {
   BoutsIndex,
   Certificate,
   ComputeProvenance,
-  CurveArm,
   Design,
   DesignProvenance,
   DesignsIndex,
@@ -25,7 +24,9 @@ import type {
   PhaseSpan,
   ReplayGeom,
   ReplayHeader,
+  ResultSource,
   ResultsIndex,
+  S1Arm,
   TaskSummary,
   Vec3,
 } from "./types";
@@ -57,7 +58,7 @@ function describe(v: unknown): string {
 }
 
 /** A cursor over one JSON value that knows its path, for precise error messages. */
-class Node {
+export class Node {
   constructor(
     readonly file: string,
     readonly path: string,
@@ -440,46 +441,119 @@ function readArm(n: Node): ArmEstimate {
   };
 }
 
-function readCurveArm(n: Node, budget: number): CurveArm {
+/** A best-so-far curve: values in [0, 1], never decreasing, at most `budget` long. */
+function readBest(n: Node, budget: number): number[] {
+  const best = n.items().map((x) => x.unit());
+  if (best.length > budget) n.fail(`more points (${best.length}) than the budget (${budget})`);
+  best.forEach((v, i) => {
+    if (i > 0 && v < best[i - 1]!) n.fail(`best-so-far decreases at design ${i + 1} (${best[i - 1]} -> ${v})`);
+  });
+  return best;
+}
+
+function readS1Arm(n: Node, budget: number, version: 1 | 2): S1Arm {
   return {
     id: slug(n.get("id")),
     label: n.get("label").nonEmpty(),
     runs: n
       .get("runs")
       .items()
-      .map((r) => {
-        const best = r.get("best").items().map((x) => x.unit());
-        if (best.length > budget) r.get("best").fail(`more points (${best.length}) than the budget (${budget})`);
-        return { run: r.get("run").nonEmpty(), best };
-      }),
+      .map((r) => ({
+        run: r.get("run").nonEmpty(),
+        best: readBest(r.get("best"), budget),
+        job_id: version === 2 && r.has("job_id") ? r.get("job_id").nullable((x) => x.nonEmpty()) : null,
+      })),
   };
 }
 
+function readReferences(n: Node): { label: string; value: number }[] {
+  return n.items().map((r) => ({ label: r.get("label").nonEmpty(), value: r.get("value").unit() }));
+}
+
+function readSource(n: Node): ResultSource {
+  return {
+    arm: n.get("arm").nonEmpty(),
+    run: n.get("run").nonEmpty(),
+    kind: n.get("kind").oneOf(["nebius", "local"] as const),
+    job_id: n.get("job_id").nullable((x) => x.nonEmpty()),
+    platform: n.get("platform").nullable((x) => x.str()),
+    preset: n.get("preset").nullable((x) => x.str()),
+    region: n.get("region").nullable((x) => x.str()),
+    executor: n.get("executor").nullable((x) => x.str()),
+    wall_s: n.get("wall_s").nullable((x) => x.nonNeg()),
+    cost_usd: n.get("cost_usd").nullable((x) => x.nonNeg()),
+    llm_calls: n.has("llm_calls") ? n.get("llm_calls").nullable((x) => x.nonNeg()) : null,
+    llm_usd: n.has("llm_usd") ? n.get("llm_usd").nullable((x) => x.nonNeg()) : null,
+  };
+}
+
+/**
+ * Validate results.json. Version 2 is current (S1 primary, H1 secondary); a version 1
+ * file (`forest` + `curves`, from before the endpoint change) is upgraded: its curves
+ * become S1 with no threshold and its forest becomes H1.
+ */
 export function parseResults(raw: unknown, file = "results.json"): ResultsIndex {
   const root = new Node(file, "$", raw);
   root.get("schema").literal("rtt-web-results");
-  root.get("version").literal(1);
-  const forest = root.get("forest");
-  const curves = root.get("curves");
-  const budget = curves.get("budget").int();
+  const version = root.get("version").value;
+  const status = root.get("status").oneOf(["synthetic", "pilot", "final"] as const);
+  const note = root.get("note").str();
+  if (version === 1) {
+    const forest = root.get("forest");
+    const curves = root.get("curves");
+    const budget = curves.get("budget").int();
+    return {
+      schema: "rtt-web-results",
+      version: 2,
+      status,
+      note,
+      s1: {
+        endpoint: curves.get("endpoint").nonEmpty(),
+        threshold: null,
+        threshold_note: "No threshold in this version 1 file",
+        budget,
+        shared_prefix: 0,
+        arms: uniqueIds(curves, curves.get("arms").items().map((a) => readS1Arm(a, budget, 1)), "arm"),
+      },
+      h1: {
+        endpoint: forest.get("endpoint").nonEmpty(),
+        status: "available",
+        arms: uniqueIds(forest, forest.get("arms").items().map(readArm), "arm"),
+        references: readReferences(forest.get("references")),
+      },
+      sources: [],
+    };
+  }
+  root.get("version").literal(2);
+  const s1 = root.get("s1");
+  const budget = s1.get("budget").int();
+  if (budget < 1) s1.get("budget").fail("budget must be at least 1");
+  const shared = s1.get("shared_prefix").int();
+  if (shared < 0 || shared > budget) s1.get("shared_prefix").fail(`expected 0..${budget}, got ${shared}`);
+  const h1 = root.get("h1");
+  const h1Status = h1.get("status").oneOf(["not_run", "available"] as const);
+  const h1Arms = uniqueIds(h1, h1.get("arms").items().map(readArm), "arm");
+  if (h1Status === "not_run" && h1Arms.length > 0) h1.get("arms").fail("arms must be empty while status is not_run");
   return {
     schema: "rtt-web-results",
-    version: 1,
-    status: root.get("status").oneOf(["synthetic", "pilot", "final"] as const),
-    note: root.get("note").str(),
-    forest: {
-      endpoint: forest.get("endpoint").nonEmpty(),
-      arms: uniqueIds(forest, forest.get("arms").items().map(readArm), "arm"),
-      references: forest
-        .get("references")
-        .items()
-        .map((r) => ({ label: r.get("label").nonEmpty(), value: r.get("value").unit() })),
-    },
-    curves: {
-      endpoint: curves.get("endpoint").nonEmpty(),
+    version: 2,
+    status,
+    note,
+    s1: {
+      endpoint: s1.get("endpoint").nonEmpty(),
+      threshold: s1.get("threshold").nullable((x) => x.unit()),
+      threshold_note: s1.get("threshold_note").str(),
       budget,
-      arms: uniqueIds(curves, curves.get("arms").items().map((a) => readCurveArm(a, budget)), "arm"),
+      shared_prefix: shared,
+      arms: uniqueIds(s1, s1.get("arms").items().map((a) => readS1Arm(a, budget, 2)), "arm"),
     },
+    h1: {
+      endpoint: h1.get("endpoint").nonEmpty(),
+      status: h1Status,
+      arms: h1Arms,
+      references: readReferences(h1.get("references")),
+    },
+    sources: root.has("sources") ? root.get("sources").items().map(readSource) : [],
   };
 }
 

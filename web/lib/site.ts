@@ -23,6 +23,7 @@ export interface NavItem {
 /** Primary navigation, in reading order. */
 export const NAV: readonly NavItem[] = [
   { href: "/", label: "Overview", wideOnly: true },
+  { href: "/part/", label: "Your part" },
   { href: "/benchmark/", label: "Benchmark" },
   { href: "/results/", label: "Results" },
   { href: "/compute/", label: "Compute" },

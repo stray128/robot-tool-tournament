@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { medianCurve } from "@/components/charts/BestSoFarChart";
+import { medianCurve } from "@/lib/results";
 import { labelRows } from "@/components/charts/ForestPlot";
 
 describe("chart helpers", () => {

@@ -21,6 +21,7 @@ from rtt.cloud.nebius_jobs import (
     NebiusCLI,
     NebiusCLIError,
     NebiusJobs,
+    NoCapacityError,
     ProvisioningTimeoutError,
     _extract_job_id,
     parse_capacity,
@@ -442,3 +443,114 @@ def test_retry_attempt_renames_the_job_in_its_env(tmp_path: Path) -> None:
     creates = [c for c in fake.calls if c[1:4] == ["ai", "job", "create"]]
     assert "RTT_JOB_NAME=rtt-m1-test" in creates[0]
     assert "RTT_JOB_NAME=rtt-m1-test-r1" in creates[1]
+
+
+def test_every_attempt_timing_out_raises_no_capacity_with_the_attempts(tmp_path: Path) -> None:
+    fake = FakeNebius({"gpu-h100-sxm": ["PROVISIONING"], "gpu-h200-sxm": ["PROVISIONING"]})
+    jobs, _ = _service(fake)
+    ledger = SpendLedger(tmp_path / "spend.jsonl", cap_usd=10.0)
+    with pytest.raises(NoCapacityError, match="every candidate timed out") as err:
+        jobs.run(_spec(), DEFAULT_CANDIDATES[:2], ledger=ledger, provisioning_timeout_s=60, poll_s=60,
+                 check_capacity=False)  # fmt: skip
+    assert [a.platform for a in err.value.attempts] == ["gpu-h100-sxm", "gpu-h200-sxm"]
+    assert isinstance(err.value, RuntimeError)  # older callers catch RuntimeError
+    assert len(read_spend(ledger.path)) == 2
+
+
+# --------------------------------------------------------------------------- spend across processes
+
+
+def test_run_holds_a_reservation_and_releases_it_on_every_path(tmp_path: Path) -> None:
+    ledger = SpendLedger(tmp_path / "spend.jsonl", cap_usd=10.0)
+    seen: list[float] = []
+
+    def watch(update: Any) -> None:
+        seen.append(ledger.reserved_usd())
+
+    fake = FakeNebius({"gpu-h100-sxm": ["RUNNING", "COMPLETED"]})
+    jobs, _ = _service(fake)
+    jobs.run(_spec(), DEFAULT_CANDIDATES[:1], ledger=ledger, check_capacity=False, poll_s=1, on_update=watch)
+    worst = (900 + 600) * 4.5 / 3600
+    assert seen and seen[0] == pytest.approx(worst)  # held while the job ran
+    assert ledger.inflight() == []  # ...and released with the spend recorded
+    # provisioning timeouts, cap cancellations and abandoned jobs release theirs too
+    fake = FakeNebius({"gpu-h100-sxm": ["PROVISIONING"], "gpu-h200-sxm": ["PROVISIONING"]})
+    jobs, _ = _service(fake)
+    with pytest.raises(NoCapacityError):
+        jobs.run(_spec(), DEFAULT_CANDIDATES[:2], ledger=ledger, provisioning_timeout_s=60, poll_s=60,
+                 check_capacity=False)  # fmt: skip
+    assert ledger.inflight() == []
+    fake = FakeNebius({"gpu-h100-sxm": ["RUNNING"]})
+    flaky = FlakyGets(fake, set(range(2, 7)))
+    clock = FakeClock()
+    jobs = NebiusJobs(NebiusCLI("nebius", "rtt", flaky), CONFIG, sleep=clock.sleep, clock=clock)
+    with pytest.raises(NebiusCLIError):
+        jobs.run(_spec(), DEFAULT_CANDIDATES[:1], ledger=ledger, check_capacity=False)
+    assert ledger.inflight() == []
+
+
+def test_a_concurrent_run_cannot_push_spend_past_the_cap(tmp_path: Path) -> None:
+    path = tmp_path / "spend.jsonl"
+    other = SpendLedger(path, cap_usd=3.0)  # another `rtt job` process on the same ledger
+    held = other.reserve(1.0, "rtt-search-other")
+    # 1.0 held elsewhere + this job's worst case 2.25 (1800 s of H100) > 3.0: refused before submit
+    fake = FakeNebius({"gpu-h100-sxm": ["RUNNING"]})
+    jobs, _ = _service(fake)
+    with pytest.raises(SpendCapError, match="held by 1 job"):
+        jobs.run(_spec(), DEFAULT_CANDIDATES[:1], ledger=SpendLedger(path, cap_usd=3.0),
+                 provisioning_timeout_s=900, expected_run_s=900, check_capacity=False)  # fmt: skip
+    assert not any(c[1:4] == ["ai", "job", "create"] for c in fake.calls)
+
+    # a job that fits is cancelled once the other process's live spend leaves it no budget
+    clock = FakeClock()
+
+    def sleep(s: float) -> None:
+        clock.sleep(s)
+        if clock.t >= 600:
+            other.hold(held, 1.9)  # the other job ran long and now holds $1.90
+
+    fake = FakeNebius({"gpu-h100-sxm": ["RUNNING"]})
+    jobs = NebiusJobs(NebiusCLI("nebius", "rtt", fake), CONFIG, sleep=sleep, clock=clock)
+    ledger = SpendLedger(path, cap_usd=3.0)
+    with pytest.raises(SpendCapError, match="allows 880 s"):
+        jobs.run(_spec(), DEFAULT_CANDIDATES[:1], ledger=ledger, provisioning_timeout_s=900,
+                 expected_run_s=600, poll_s=300, check_capacity=False)  # fmt: skip
+    assert len(fake.cancelled) == 1 and clock.t == 900  # (3.00 - 1.90) / $4.50 per hour = 880 s
+    assert [r.token for r in ledger.inflight()] == [held]  # only the other job's hold is left
+
+
+def test_a_cap_that_can_no_longer_be_checked_cancels_the_running_job(tmp_path: Path) -> None:
+    # the in-flight file turns unreadable while the job runs: the ledger fails closed, and
+    # the job must be cancelled (not left running unwatched until its timeout)
+    ledger = SpendLedger(tmp_path / "spend.jsonl", cap_usd=10.0)
+    clock = FakeClock()
+
+    def sleep(s: float) -> None:
+        clock.sleep(s)
+        if clock.t >= 60:
+            ledger.inflight_path.write_text("{not json", encoding="utf-8")
+
+    fake = FakeNebius({"gpu-h100-sxm": ["RUNNING"]})
+    jobs = NebiusJobs(NebiusCLI("nebius", "rtt", fake), CONFIG, sleep=sleep, clock=clock)
+    with pytest.raises(SpendCapError):
+        jobs.run(_spec(), DEFAULT_CANDIDATES[:1], ledger=ledger, check_capacity=False, poll_s=30)
+    assert fake.cancelled == ["aijob-0001"]
+    assert clock.t < 120  # stopped at the first poll after the failure, not after wait_cancelled's 300 s
+    assert [e.state for e in read_spend(ledger.path)] == ["CANCELLED"]  # its spend is still recorded
+
+
+def test_reprs_hide_account_ids() -> None:
+    text = repr(_spec())
+    for private in ("vpcsubnet-test", "project-test", "storagebucket-test", "tf-api-key", "abc123"):
+        assert private not in text
+    assert "rtt-m1-test" in text and "NEBIUS_API_KEY" in text
+    job = Job.from_json(_job_json("aijob-1", "rtt-x", "RUNNING"))
+    assert "abc123" not in repr(job) and job.image == DIGEST_IMAGE
+    with pytest.raises(ValueError) as err:
+        _spec(image="cr.eu-north1.nebius.cloud/abc123/rtt-sim:latest").validate()
+    assert "abc123" not in str(err.value) and "rtt-sim:latest" in str(err.value)
+    with pytest.raises(ValueError) as err:
+        _spec(volumes=["storagebucket-test"]).validate()
+    assert "storagebucket-test" not in str(err.value)
+    secret_id = NebiusConfig(secret_name="mbsec-0123456789abcdef").__repr__()
+    assert "mbsec-0123456789abcdef" not in secret_id and "secret_name=<set>" in secret_id

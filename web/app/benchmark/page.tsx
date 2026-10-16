@@ -108,7 +108,7 @@ export default function BenchmarkPage() {
         </ul>
       </section>
 
-      <TitleBlock title="Benchmark" drawing="/benchmark" sheet="2 of 5" />
+      <TitleBlock title="Benchmark" drawing="/benchmark" sheet="3 of 6" />
     </>
   );
 }

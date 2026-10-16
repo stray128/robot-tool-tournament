@@ -74,11 +74,20 @@ export function syntheticResults({ runs = 10, budget = 40, seed = 20261015 } = {
   }));
   return {
     schema: "rtt-web-results",
-    version: 1,
+    version: 2,
     status: "synthetic",
     note: "Both arms are drawn from one distribution, so the layout implies no finding. The pre-registered analysis replaces this file.",
-    forest: {
-      endpoint: "Run-level held-out success rate",
+    s1: {
+      endpoint: "S1: simulated designs needed to reach the training-success threshold",
+      threshold: 0.8,
+      threshold_note: "Synthetic layout value",
+      budget,
+      shared_prefix: 0,
+      arms: curveArms.map((arm) => ({ ...arm, runs: arm.runs.map((r) => ({ ...r, job_id: null })) })),
+    },
+    h1: {
+      endpoint: "H1: run-level held-out success rate",
+      status: "available",
       arms: forestArms,
       references: [
         { label: "Straight entrant", value: round(clamp01(0.45 + 0.1 * normal(rand))) },
@@ -86,7 +95,7 @@ export function syntheticResults({ runs = 10, budget = 40, seed = 20261015 } = {
         { label: "Hooked entrant", value: round(clamp01(0.45 + 0.1 * normal(rand))) },
       ],
     },
-    curves: { endpoint: "Best training success so far", budget, arms: curveArms },
+    sources: [],
   };
 }
 

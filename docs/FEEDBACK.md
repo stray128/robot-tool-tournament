@@ -140,6 +140,44 @@ What surprised us:
 - **Budgets are console-only.** There is no CLI command for budgets or alerts, so our
   spend cap is enforced client-side from a ledger of wall-time estimates.
 
+### 2026-10-16: CPU jobs in uk-south2, and a second region
+
+Sources: `docs/NEBIUS.md` (targets section), the spend ledger and the fetched runs
+`runs/cloud/{m1-20261015-171556,search-20261015-172651,probe-20261015-173010}`.
+
+What worked:
+
+- **CPU Serverless Jobs are the right tool for CPU physics.** The same 40-design random
+  search took 132 s wall on `cpu-d3` 16 vCPU ($0.019) against 146 s on the H100 preset
+  ($0.182). Physics ran at 30.1k vs 31.0k simulation steps/s. The `cpu-d3` 16-vCPU preset
+  is $0.528/h against $4.50/h, so a scored job costs 8-10x less.
+- **Reproducible across Nebius hosts.** The search's episode, design and history tables
+  from the AMD EPYC Genoa CPU host and from the H100 host were byte-identical; only a
+  timestamp differed. (Our laptop, a Zen 3 CPU, differed in 1 of 1,920 success flags for
+  the same seed, so the experiment's executor of record is pinned to the Nebius CPU
+  platform.)
+- **Secrets by ID across projects.** A uk-south2 job referenced the eu-north1 MysteryBox
+  secret by its ID and received the key; a second copy of the secret was not needed.
+
+What surprised us:
+
+- **Storage class quota trap.** The tenant had no quota for the standard storage class in
+  uk-south2, so the first upload to a new bucket failed with `QuotaLimitExceeded`. Forcing
+  the enhanced-throughput class fixed it. *Suggestion:* name the storage class in the
+  error, and show per-class quota next to the bucket create command.
+- **Cross-region image pulls fail late.** A uk-south2 job could not pull its image from the
+  eu-north1 registry. The dry run passed; the job then spent about 64 s pulling and ended
+  `StartFailed`. We now push the same digest to a registry in each region. *Suggestion:*
+  have `--dry-run` check that the job's region can pull the image, or say in the error
+  that the registry is in another region.
+- **Capacity advice is GPU-only.** `capacity resource-advice list` has no CPU rows, so our
+  CPU capacity check reads the vCPU quota instead.
+- **CPU preset prices are split across two pages** (per vCPU-hour and per GiB-hour). We had
+  to add them up to price a preset ($0.015 x 16 + $0.0045 x 64 = $0.528/h). *Suggestion:* a
+  per-preset price table like the GPU one.
+- **Provisioning overhead is the same on CPU:** about 110 s from creation to container
+  start on both platforms, against 21-22 s of actual work for these jobs.
+
 ## NVIDIA Nemotron models
 
 ### 2026-10-15: proposer output-mode probe (2 calls per model and mode)
@@ -188,6 +226,28 @@ Super reached through `--env-secret`.
   (per-parameter minimum moves), or loosen it. This has to be decided before
   pre-registration; it is not a Token Factory issue.
 
+### 2026-10-16: fixing near-copy proposals, and the Grasp Engineer agent
+
+Sources: `docs/PROPOSER.md`, `runs/proposer_dev/` (ledgers and recordings) and the agent's
+session files in `runs/agent/sessions/`.
+
+- **Super cannot audit its own proposals against a long history.** We asked it to name the
+  nearest already-tested design in the same cell and its distance before proposing. Over
+  194 slots its "nearest" design was the true nearest in only 56, it overstated the
+  distance by more than 50 points (of 100) in 100, and 17 of its 42 "untried cell" claims
+  were wrong. Prompt changes alone moved random fallbacks from 14/32 to 13/32.
+- **Reserves fixed it.** Asking for 4 reserve designs per call, used in order when a slot is
+  rejected, brought fallbacks to 2/32 and 7/32 on two development seeds, at $0.11 per
+  40-design run (max_tokens 16,384, median call about 14 s). The simulator still never
+  sees a design the model did not write.
+- **Super as a tool-calling agent** (`tool_choice="auto"`, 8 tools) ran 7-12 tool calls per
+  session. Each Super turn cost $0.0007-0.0016 and took about 1-2 s; whole sessions cost
+  $0.011-0.027. Lightning step summaries cost about $0.00005 each.
+- **Lightning once invented a verdict.** At a step that produced no pass/fail result, its
+  summary said the design passed. We now drop, in code, any summary sentence that claims a
+  pass when the step's computed verdict is not a pass. *Suggestion:* small summarisers
+  need an explicit "no verdict" signal; worth a line in model guidance.
+
 ## Onboarding: zero to hello world
 
 ### 2026-10-15
@@ -203,6 +263,10 @@ Super reached through `--env-secret`.
   retry and throttling code carried over.
 
 ## Would we build again?
+
+After day 2: still yes. Moving the physics to CPU jobs in uk-south2 cut the price of a
+scored job by 8-10x with identical results. What it cost us: a storage-class quota error,
+and a cross-region image pull that failed only after the dry run passed.
 
 After day 1: yes for Token Factory, and yes for AI Cloud with caveats. An OpenAI-compatible
 endpoint, four NVIDIA models behind one key, and limits that match the docs got us from zero

@@ -6,7 +6,8 @@ import DesignPreviewLazy from "@/components/design/DesignPreviewLazy";
 import { PageHeader } from "@/components/PageHeader";
 import { designChip, ProvenanceChips } from "@/components/ProvenanceChips";
 import { TitleBlock } from "@/components/TitleBlock";
-import { getBouts, getDesign, getDesigns } from "@/lib/data";
+import { summarizeCertificate } from "@/lib/certificate";
+import { certificateIdsByDesign, getBouts, getCertificate, getDesign, getDesigns } from "@/lib/data";
 import { formatPercent } from "@/lib/format";
 import { humanize, PARAM_LABELS } from "@/lib/labels";
 import { dataUrl } from "@/lib/paths";
@@ -99,6 +100,9 @@ export default async function DesignPage({ params }: Params) {
   const { params: specs } = getDesigns();
   const bouts = getBouts().bouts.filter((b) => design.bouts.includes(b.id));
   const cert = design.certificate;
+  const certId = certificateIdsByDesign().get(design.id);
+  const published = certId ? getCertificate(certId) : undefined;
+  const certSummary = published ? summarizeCertificate(published) : null;
 
   return (
     <>
@@ -206,7 +210,36 @@ export default async function DesignPage({ params }: Params) {
         <h2 id="cert-title" className="heading text-xl">
           Robustness certificate
         </h2>
-        {cert ? (
+        {published && certSummary ? (
+          <>
+            <p className="mt-1 text-sm text-ink-3">
+              Each check reruns the grasp with one disturbance on {certSummary.objects} training objects; the count is how
+              many episodes still held.
+            </p>
+            <ul className="mt-4 border-t border-rule-strong text-sm">
+              {(
+                [
+                  ["Placement error", "Object up to 3 mm off target, along x and along y", certSummary.category.placement],
+                  ["Shake during hold", "Palm shakes along x, y and z while holding the object", certSummary.category.shake],
+                  ["Lateral push", "Sideways push at the object's top, along x and along y", certSummary.category.push],
+                ] as const
+              ).map(([name, condition, c]) => (
+                <li key={name} className="grid gap-x-6 gap-y-0.5 border-b border-rule py-2.5 sm:grid-cols-[14rem_minmax(0,1fr)_8rem]">
+                  <span className="text-ink">{name}</span>
+                  <span className="text-ink-2">{condition}</span>
+                  <span className="num text-ink sm:text-right">
+                    {c.passed} of {c.total}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-3 text-sm">
+              <Link className="link" href={`/certificate/${published.id}/`}>
+                Open the full certificate: placement-error curve, every shake and push, provenance
+              </Link>
+            </p>
+          </>
+        ) : cert ? (
           <>
             <p className="mt-1 text-sm text-ink-3">
               {cert.status === "issued"
@@ -247,7 +280,7 @@ export default async function DesignPage({ params }: Params) {
         </section>
       ) : null}
 
-      <TitleBlock title={`${humanize(design.name)} finger`} drawing={`/design/${design.id}`} sheet="Detail of sheet 2" />
+      <TitleBlock title={`${humanize(design.name)} finger`} drawing={`/design/${design.id}`} sheet="Detail of sheet 3" />
     </>
   );
 }

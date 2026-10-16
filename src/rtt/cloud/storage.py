@@ -72,7 +72,12 @@ class BucketStore:
 
     @classmethod
     def from_config(cls, config: NebiusConfig) -> BucketStore:
-        config.require("bucket_name")
+        """The bucket of ``config``'s region (use ``config.for_region(...)`` for another region).
+
+        The S3 profile is required, never defaulted: without it boto3 would fall back to
+        the machine's default AWS credentials.
+        """
+        config.require("bucket_name", "s3_profile")
         assert config.bucket_name is not None
         return cls(config.bucket_name, config.s3_profile, config.s3_endpoint)
 

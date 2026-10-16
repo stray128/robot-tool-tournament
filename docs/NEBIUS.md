@@ -62,6 +62,13 @@ Measured on 2026-10-15 (eu-north1, H100 80GB, driver 580.173.02): about 2 min pr
   - In practice, every NVIDIA model accepted forced `tool_choice`, strict `response_format` json_schema and `chat_template_kwargs`.
   - Strict json_schema was **not** enforced for Nemotron 3.5 Lightning: it returned free text first. See [PROBE_LLM.md](PROBE_LLM.md).
 
+> **Superseded defaults.** The sections from here down to "uk-south2 CPU jobs" describe
+> the first day's setup, when every job ran on the eu-north1 H100. Since then the default
+> target for scored jobs is `uks2-cpu` (uk-south2, `cpu-d3`, CPU MuJoCo), with the H100 as
+> fallback only; see [uk-south2 CPU jobs](#uk-south2-cpu-jobs-the-default-target-for-scored-runs-2026-10-15).
+> Scored images are built from a commit (`make image`, i.e. `build_image.sh --ref HEAD`),
+> never from the working tree.
+
 ## Simulation image and the G1 gate on Serverless Jobs (2026-10-15)
 
 ### Image
@@ -188,3 +195,178 @@ suite (`2dc46d1f79d8`).
 - **CPU throughput.** Physics on the job's 16 vCPUs ran about 3.3x faster than on the
   shared laptop (104 against 31 episodes/s), so one full arm takes about 3 minutes of CPU
   time per 10 runs. The GPU idles throughout; see the CPU-quota note above.
+
+## uk-south2 CPU jobs: the default target for scored runs (2026-10-15)
+
+CPU MuJoCo is the executor of record (Addendum B), and eu-north1 has no non-GPU vCPU
+quota. Scored jobs therefore run on CPU-only VMs in uk-south2, which has a 200 vCPU quota.
+The H100 in eu-north1 is now the fallback only.
+
+### Targets
+
+`rtt.cloud.nebius_jobs` names two region profiles:
+
+| Target | Region | Platforms, in order | Role |
+|---|---|---|---|
+| `uks2-cpu` | uk-south2 | `cpu-d3` (AMD EPYC Genoa), preset `16vcpu-64gb` | Default. `--vcpus 2…256` picks another preset with 4 GiB per vCPU. |
+| `eun1-gpu` | eu-north1 | `gpu-h100-sxm`, `gpu-h200-sxm`, `gpu-l40s-a` | Fallback. |
+
+uk-south2 offers one CPU platform, `cpu-d3`; there is no `cpu-e2` there. The only GPU
+platform in the region is `gpu-rtx6000-a`.
+
+`python -m rtt.cloud run` (and `rtt job`) submits to `uks2-cpu`. The job moves to
+`eun1-gpu` in three cases:
+
+- uk-south2 is not configured.
+- The free vCPU quota does not cover the preset.
+- The job ends before its container starts, for example a `StartFailed` image pull.
+
+`--no-fallback` disables the move. `--target eun1-gpu`, or `--platform gpu-h100-sxm`, asks
+for the GPU directly. `job.json` records `target`, `region`, `fallback_from`, `price` and
+every attempt, including failed ones. The site's cost therefore covers the whole job.
+
+Capacity advice has no rows for CPU platforms. For a CPU target, the capacity check reads
+the `compute.instance.non-gpu.vcpu` quota (`quotas quota-allowance get-by-name`) instead.
+
+```bash
+python -m rtt.cloud capacity                          # both targets: CPU quota, GPU advice, prices
+rtt job m1                                            # uks2-cpu, falling back to eun1-gpu
+python -m rtt.cloud run search --arm random --runs 1 --budget 40 --seeds 101
+python -m rtt.cloud run search --arm random --runs 10 --budget 40 --vcpus 32
+python -m rtt.cloud run m1 --target eun1-gpu          # the H100 on purpose
+```
+
+### Configuration
+
+Each uk-south2 resource is set by the same variable as its eu-north1 counterpart, with an
+`_UKSOUTH2` suffix. These live in `~/.config/rtt/nebius.env` and `image.env`, never in the
+repository.
+
+| Variable | uk-south2 resource |
+|---|---|
+| `NEBIUS_PROJECT_ID_UKSOUTH2` | the project |
+| `NEBIUS_SUBNET_ID_UKSOUTH2` | the project's default subnet |
+| `NEBIUS_BUCKET_NAME_UKSOUTH2`, `NEBIUS_BUCKET_ID_UKSOUTH2` | bucket `rtt-runs-uks2-<random suffix>` |
+| `NEBIUS_S3_PROFILE_UKSOUTH2`, `NEBIUS_S3_ENDPOINT_UKSOUTH2` | AWS profile `nebius-uks2`, `https://storage.uk-south2.nebius.cloud` (the bucket's `status.domain_name`) |
+| `NEBIUS_REGISTRY_ID_UKSOUTH2`, `RTT_IMAGE_UKSOUTH2` | registry `rtt-uks2` and the digest reference pushed there |
+| `NEBIUS_SECRET_NAME_UKSOUTH2` | the eu-north1 `tf-api-key` secret, by ID |
+
+`NebiusConfig.for_region("uk-south2")` builds the region's settings. It never inherits the
+eu-north1 project, subnet, bucket, S3 profile, registry or image. A missing value is
+reported under its suffixed name and never silently replaced by the eu-north1 one.
+`check_same_image` refuses a run when the two registries hold different digests. The CPU
+job and its H100 fallback always run the same build.
+
+`jobs/nebius/build_image.sh --ref HEAD` builds from a `git archive` of one commit, so the
+image never picks up half-written files from the working tree. `jobs/nebius/push_image.sh`
+pushes to every configured registry. The digest is the same in both regions.
+
+| Image | Value |
+|---|---|
+| Image | `rtt-sim@sha256:07d0bea9b8fa…` |
+| Built from | `b184c81c5b93`, `git_dirty: false` |
+| Push to eu-north1 | 60 s (5 s on a re-push) |
+| First push to the new uk-south2 registry | 94 s |
+
+The S3 key for the existing service account `rtt-automation` was created with the
+uk-south2 project as its parent. The account is in the tenant's `editors` group, so the
+bucket needs no extra grant. The key went straight into the AWS profile.
+
+Gate and random-search jobs no longer get the Token Factory key. Only the probe and the
+`nemotron`/`zeroshot` search arms get it. See `needs_token_factory`.
+
+### Prices
+
+CPU-only VMs are billed per vCPU-hour plus per GiB-hour. The rates are from
+https://docs.nebius.com/compute/resources/pricing (from 2026-10-01, read 2026-10-15). The
+marketing page's "AMD EPYC Genoa from $0.13" equals the 4 vCPU / 16 GiB preset at these
+rates.
+
+| Platform / preset | USD per hour | Tag |
+|---|---|---|
+| `cpu-d3` vCPU | $0.015 per vCPU-hour | [sourced] |
+| `cpu-d3` RAM | $0.0045 per GiB-hour | [sourced] |
+| `cpu-d3` `16vcpu-64gb` | **$0.528** | [sourced] |
+| `cpu-d3` `32vcpu-128gb` | $1.056 | [sourced] |
+| `cpu-e2` (Intel Ice Lake, eu-north1 only) | $0.012 per vCPU-hour + $0.0045 per GiB-hour | [sourced] |
+| `gpu-h100-sxm` `1gpu-16vcpu-200gb` | $4.50 | [sourced] |
+| Enhanced-throughput object storage | $0.11 per GiB-month | [sourced]; a run is about 1 MB |
+
+The wall-based estimate is still the upper bound that the spend cap enforces [assumed].
+
+The cap also holds when several `rtt job` processes share the ledger, for example the
+random and Nemotron arms launched side by side. Before submitting, each job reserves its
+worst case in `runs/cloud/spend.jsonl.inflight.json` under a file lock. While it runs,
+it raises that reservation to its live spend. A new job is refused when recorded spend
+plus every reservation plus its own worst case would pass the cap. A running job is
+cancelled once its spend reaches what the cap leaves after everything else. Reservations
+of processes that have died are dropped. `python -m rtt.cloud spend` lists the jobs in
+flight.
+
+### Measured: uk-south2 `cpu-d3` against eu-north1 H100
+
+Both columns are jobs from this session's image or the last H100 image, with the same task
+(`823e58a28a93`) and the same training suite. States were polled every 10 s.
+
+| | m1, H100 (`…133917`) | m1, `cpu-d3` (`…171556`) | random search, H100 (`…134158`) | random search, `cpu-d3` (`…172651`) |
+|---|---|---|---|---|
+| `PROVISIONING` | 54–67 s (earlier H100 jobs) | about 55 s | | about 55 s |
+| `STARTING` | 43–47 s (earlier H100 jobs) | about 43 s | | about 43 s |
+| `IMAGE_PULLING` (717 MB, same-region registry) | about 22 s | about 21 s | | about 22 s |
+| Created → container start | 114 s | 112 s | 124 s | 111 s |
+| Container run | 8 s | 22 s | 22 s | 21 s |
+| Work inside the container | gate 4.6 s | gate 20.7 s | 40 designs, 1,920 episodes, evaluator 18.4 s | 40 designs, 1,920 episodes, evaluator 18.7 s |
+| Physics | 20,495 steps, 31.0k steps/s | 20,495 steps, 30.1k steps/s | 104 episodes/s | 103 episodes/s |
+| Headless GL renderer | NVIDIA EGL | Mesa llvmpipe (software) | | |
+| Wall | 122 s | 134 s | 146 s | 132 s |
+| **Estimated cost, wall-based** | **$0.153** | **$0.020** | **$0.182** | **$0.019** |
+| Estimated cost, run-only | $0.010 | $0.003 | $0.027 | $0.003 |
+
+- **Same results, 8–10x cheaper.** The CPU random search reproduced the H100 run byte for
+  byte, on a different CPU vendor: `episodes.parquet`, `designs.parquet`, `designs.jsonl`
+  and `history.jsonl` have identical sha256 hashes. The frozen pick (d06, 93.75 %)
+  differs only in its `frozen_at` timestamp. Gate G1 took the same 20,495 steps on both.
+- **Physics speed is unchanged.** 16 Genoa vCPUs run the search at the speed of the H100
+  host's 16 vCPUs (18.7 s against 18.4 s).
+- **`--vcpus 32` should halve the evaluator time [assumed, not measured].** It costs the
+  same per CPU-second, plus the provisioning overhead.
+- **Rendering is the one slowdown.** Without a GPU, the 7 MP4s render on llvmpipe. The
+  gate takes 20.7 s instead of 4.6 s, which is still under 1 cent. `--no-video` removes
+  the cost when no video is needed.
+- **Provisioning dominates both platforms** (about 110 s before the container starts). One
+  job carrying many runs amortises it better than many small jobs.
+- **Probe job `…173010`**, `cpu-d3`, 116 s wall, $0.017. The secret, referenced by ID from
+  the eu-north1 project, arrived in the uk-south2 job (`token_factory_key_present: true`).
+  The Nemotron arm can therefore run in uk-south2 without a copy of the key.
+- **Spend:**
+  - The failed first m1 attempt (`…170620`, cross-region pull) cost about $0.026.
+  - All four uk-south2 jobs together cost about **$0.08**, wall-based.
+  - The ledger total is $1.07, under the $3 development cap.
+
+### Observations (feedback)
+
+- **A new bucket can be unusable by default.**
+  - In uk-south2 the tenant has no `storage.bucket.size.standard` quota, only
+    `enhanced-throughput`.
+  - `storage bucket create` succeeded with the default STANDARD class. The first
+    `PutObject` then failed with `QuotaLimitExceeded … used 0 of 0`.
+  - Fix: `bucket update --default-storage-class enhanced_throughput --force-storage-class`.
+  - Bucket create could pick a class the region has quota for, or warn.
+- **A job cannot pull from a registry in another project of the same tenant.**
+  - A uk-south2 job ran `IMAGE_PULLING` for about 60 s against the eu-north1 registry. It
+    then ended in `ERROR`/`StartFailed` with "Could not pull the image… registry
+    credentials allow access".
+  - `--dry-run` had passed.
+  - Fix: a second registry in uk-south2 with the same digest pushed to it.
+  - A dry run that checks pull access, or tenant-wide registry read for jobs, would have
+    saved one failed job.
+- **Secrets are per project, but a cross-project ID works.**
+  - `--env-secret NAME=tf-api-key` fails in the uk-south2 dry run with `SecretNotFound`.
+  - The eu-north1 secret's **ID** passes the dry run and is delivered at run time. This is
+    useful, but undocumented.
+- **Capacity advice is GPU-only.** CPU capacity has to be inferred from the vCPU quota. A
+  CPU row in `capacity resource-advice` would make one capacity check work for both.
+- **CPU prices are split across two pages.** nebius.com/prices shows only "from $0.13".
+  The per-vCPU and per-GiB rates needed to price a preset are on the docs pricing page.
+- **No `NEBIUS_JOB_ID` inside the container** (unchanged). The laptop still stores the ID
+  next to each run.
