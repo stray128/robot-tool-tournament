@@ -27,6 +27,7 @@ dependencies = [
     "uvicorn",
     "imageio",
     "imageio-ffmpeg",
+    "pillow==12.3.0",  # PNG stills, GLB textures and scan visuals (rtt.render, rtt.sim.gso_visual); was only transitive
 ]
 
 [project.optional-dependencies]
