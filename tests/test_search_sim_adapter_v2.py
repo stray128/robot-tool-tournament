@@ -100,20 +100,18 @@ class Placement:
 
 @dataclass(frozen=True)
 class Condition:
+    """Track O's PartCondition shape (the part id comes from the part)."""
+
     condition_id: str
     part: PartSpec
     placement: Placement
     seeds: tuple[int, ...]
     placement_label: str
 
-    @property
-    def part_id(self) -> str:
-        return self.part.part_id
-
 
 @dataclass(frozen=True)
 class Suite:
-    """Track S's SuiteV2 shape: every part x c0-c3 x 2 seeds."""
+    """Track O's PartSuite shape: every part x c0-c3 x 2 seeds; ``parts()`` is a method."""
 
     name: str
     conditions: tuple[Condition, ...]
@@ -121,9 +119,8 @@ class Suite:
     def __iter__(self):  # type: ignore[no-untyped-def]
         return iter(self.conditions)
 
-    @property
     def parts(self) -> tuple[PartSpec, ...]:
-        return tuple({c.part_id: c.part for c in self.conditions}.values())
+        return tuple({c.part.part_id: c.part for c in self.conditions}.values())
 
     def digest(self) -> str:
         return "suite-digest"
@@ -146,22 +143,23 @@ def fake_simulator(designs, suite, *, builder, executor, workers, task):  # type
     assert executor == "cpu" and task == "task-v2"
     out = []
     for design in designs:
-        pairs = {p.part_id: builder(design, p, task) for p in suite.parts}
+        pairs = {p.part_id: builder(design, p, task) for p in suite.parts()}
         for cond in suite:
+            pid = cond.part.part_id
             for seed in cond.seeds:
-                did = pairs[cond.part_id].design_id
+                did = pairs[pid].design_id
                 u = (
                     int(hashlib.sha256(f"{did}:{cond.condition_id}:{seed}".encode()).hexdigest()[:8], 16)
                     / 2**32
                 )
                 lift = u < 0.8
                 registered = lift and abs(cond.placement.err_x) < 0.0025 and u < 0.6
-                jam = lift and not registered and cond.part_id == "block_a"
+                jam = lift and not registered and pid == "block_a"
                 bad = seed == 12 and cond.condition_id == TEE_C3
                 out.append(
                     {
                         "design_id": did,
-                        "part_id": cond.part_id,
+                        "part_id": pid,
                         "condition_id": cond.condition_id,
                         "placement_label": cond.placement_label,
                         "seed": seed,

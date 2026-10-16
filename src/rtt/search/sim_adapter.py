@@ -405,14 +405,20 @@ def episode_from_record_v2(
     )
 
 
+def _part_id(condition: Any) -> str:
+    pid = getattr(condition, "part_id", None)
+    return str(pid if pid is not None else condition.part.part_id)
+
+
 class SimEvaluatorV2:
     """Training-suite evaluator for ``freeform-v2`` recipes (spec sections 7, 8 and 12).
 
     Args:
-        suite: The ``train_v2`` suite: track S's :class:`~rtt.sim.conditions.SuiteV2` (or any
-            object with ``name``, ``parts`` and conditions that carry ``condition_id``,
-            ``part_id``, ``placement_label``, ``placement`` with ``err_x`` / ``err_yaw``, and
-            ``seeds``). Its parts are the training parts, in training order.
+        suite: The ``train_v2`` suite (default: track O's ``rtt.parts.suite.train_suite()``): a
+            :class:`~rtt.parts.suite.PartSuite`, or any iterable of conditions that carry
+            ``condition_id``, ``part``, ``placement_label``, ``placement`` (``err_x``,
+            ``err_yaw``) and ``seeds``, with a ``name``. Its parts are the training parts, in
+            suite order.
         task: The v2 task (default: ``rtt.sim.task.default_task_v2()``).
         evaluate_records: ``(designs, suite, *, builder, executor, workers, task) -> records``,
             records ordered by design, condition, then seed (default: track S's
@@ -429,7 +435,7 @@ class SimEvaluatorV2:
 
     def __init__(
         self,
-        suite: Any,
+        suite: Any = None,
         task: Any = None,
         *,
         evaluate_records: Any = None,
@@ -444,6 +450,10 @@ class SimEvaluatorV2:
         from rtt.search.space import V2, get_space
         from rtt.search.space_v2 import V2Context
 
+        if suite is None:
+            from rtt.parts.suite import train_suite
+
+            suite = train_suite()
         if task is None:
             from rtt.sim.task import default_task_v2
 
@@ -451,10 +461,13 @@ class SimEvaluatorV2:
         self.space = get_space(V2)
         self.suite = suite
         self.task = task
-        self.parts = tuple(suite.parts)
+        self.conditions = tuple(suite)
+        parts: dict[str, Any] = {}
+        for c in self.conditions:
+            parts.setdefault(_part_id(c), c.part)
+        self.parts = tuple(parts.values())
         if not self.parts:
             raise ValueError("a v2 evaluator needs the training parts")
-        self.conditions = tuple(suite)
         self.n_per_design = sum(len(c.seeds) for c in self.conditions)
         self._evaluate = evaluate_records
         self._builder = builder
@@ -489,16 +502,12 @@ class SimEvaluatorV2:
             dx = round(1000.0 * float(getattr(c.placement, "err_x", 0.0)), 3) + 0.0
             dyaw = round(math.degrees(float(getattr(c.placement, "err_yaw", 0.0))), 3) + 0.0
             label = str(getattr(c, "placement_label", "") or c.condition_id)
+            pid = _part_id(c)
             placements.setdefault(label, PlacementInfo(label, dx, dyaw))
             conditions.append(
-                ConditionInfo(
-                    c.condition_id,
-                    c.part_id,
-                    f"{c.part_id}, {dx:+g} mm across, {dyaw:g} deg",
-                    width[c.part_id],
-                )
+                ConditionInfo(c.condition_id, pid, f"{pid}, {dx:+g} mm across, {dyaw:g} deg", width[pid])
             )
-            links.append(ConditionV2(c.condition_id, c.part_id, label))
+            links.append(ConditionV2(c.condition_id, pid, label))
         seeds = {len(c.seeds) for c in self.conditions}
         if len(seeds) != 1:
             raise ValueError("every v2 training condition must have the same number of jitter seeds")
@@ -562,7 +571,7 @@ class SimEvaluatorV2:
                 f"{self.n_per_design} episodes"
             )
         self.last_records = records
-        part_of = {c.condition_id: c.part_id for c in self.conditions}
+        part_of = {c.condition_id: _part_id(c) for c in self.conditions}
         placement_of = {
             c.condition_id: str(getattr(c, "placement_label", "") or c.condition_id) for c in self.conditions
         }
