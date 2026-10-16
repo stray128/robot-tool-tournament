@@ -457,6 +457,15 @@ def test_gv3_decision_after_the_last_iteration() -> None:
     assert gv3_decision(headroom_only, 3) == ("declare_miss_and_freeze", ["headroom"])
     entrants_off = _report(GOOD_SOBOL, entrants=[0.05, 0.40, 0.50, 0.45])
     assert gv3_decision(entrants_off, 3)[0] == "f1"
+    # founder ruling 6: a spread miss is declared too, alone or with the headroom
+    flat = _report([20] * 50 + [22] * 6 + [26] * 8)
+    assert flat.failing() == ["sobol_sd"]
+    assert gv3_decision(flat, 2)[0] == "iterate"
+    assert gv3_decision(flat, 3) == ("declare_miss_and_freeze", ["sobol_sd"])
+    both = _report([20] * 60 + [26] * 4)
+    assert set(both.failing()) == {"sobol_sd", "headroom"}
+    assert gv3_decision(both, 3)[0] == "declare_miss_and_freeze"
+    assert calibrate_v2.DECLARABLE == {"headroom", "sobol_sd"}
 
 
 def test_physics_invalid_share_is_reported_not_gating() -> None:

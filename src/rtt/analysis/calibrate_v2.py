@@ -30,8 +30,9 @@ window the simulator's scorer labels, so the two can never disagree.
   physics or task setting: friction stays 0.3 and the grip force 25 N per jaw, because the
   fixed claims (PREREG A13) and the hashed engineering notes are stated at those values.
 * The registration tolerances change in at most one iteration.
-* After the last iteration: pass -> freeze; only the headroom criterion failing -> declare
-  the miss and freeze; anything else -> fallback F1 (v1 protocol), the founder's go/no-go.
+* After the last iteration: pass -> freeze; only declarable criteria failing (the headroom,
+  and by founder ruling 6 of 2026-10-16 the Sobol spread) -> declare the miss and freeze;
+  anything else -> fallback F1 (v1 protocol), the founder's go/no-go.
 
 The freeze records the SHA-256 of ``configs/task_v2.yaml``, ``configs/suites/train_v2.yaml``,
 ``configs/entrants_v2.yaml`` and ``configs/parts_v2.yaml`` (:func:`freeze_hashes`).
@@ -81,8 +82,10 @@ DEV_SEEDS: Final[frozenset[int]] = frozenset(
 )
 MAX_ITERATIONS: Final = 3
 MAX_TOLERANCE_CHANGES: Final = 1
-#: Criteria whose miss may be declared instead of failing over to F1.
-DECLARABLE: Final[frozenset[str]] = frozenset({"headroom"})
+#: Criteria whose miss may be declared instead of failing over to F1: the headroom (as v1's
+#: G3), and the Sobol spread (founder ruling 6 of 2026-10-16: "a miss on the Sobol spread
+#: target is declared in PREREG, as G3 was for v1").
+DECLARABLE: Final[frozenset[str]] = frozenset({"headroom", "sobol_sd"})
 FREEZE_FILES: Final[tuple[str, ...]] = (
     "configs/task_v2.yaml",
     "configs/suites/train_v2.yaml",
