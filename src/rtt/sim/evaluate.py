@@ -408,7 +408,9 @@ class EpisodeRecordV2:
     criterion. Registration values are millimetres and degrees at the registration moment
     (NaN when the episode ended before it; :meth:`to_dict` writes ``None`` for every NaN).
     ``jam_on_close`` and ``off_centre`` are the registration sub-flags as booleans (also in
-    ``registration_flags``). ``hold_creep_mm`` is logged, never scored. ``bad_qacc`` counts
+    ``registration_flags``). ``tilt_max_deg`` is the part's largest tilt from vertical before the
+    outcome was decided (the hero rule's visible-failure test). ``hold_creep_mm`` is logged, never
+    scored. ``bad_qacc`` counts
     MuJoCo state resets. ``geometry_hash`` identifies the jaw pair built for this part (empty
     for an ``invalid_build``). ``err_z_mm`` is a held-out height error (0 in training).
     ``wall_time_s`` is the only field that is not deterministic.
@@ -430,6 +432,7 @@ class EpisodeRecordV2:
     reg_dyaw_deg: float
     reg_tilt_deg: float
     reg_hold_tilt_deg: float
+    tilt_max_deg: float
     registration_flags: tuple[str, ...]
     hold_creep_mm: float
     bad_qacc: int
@@ -507,6 +510,7 @@ def make_record_v2(
         reg_dyaw_deg=_finite(reg.dyaw_deg),
         reg_tilt_deg=_finite(reg.tilt_deg),
         reg_hold_tilt_deg=_finite(reg.hold_tilt_deg),
+        tilt_max_deg=_finite(m["tilt_max_deg"]),
         registration_flags=tuple(reg.sub_flags),
         hold_creep_mm=_finite(m["hold_creep_mm"]),
         bad_qacc=int(result.bad_qacc),
@@ -553,6 +557,7 @@ def invalid_record_v2(
         reg_dyaw_deg=nan,
         reg_tilt_deg=nan,
         reg_hold_tilt_deg=nan,
+        tilt_max_deg=nan,
         registration_flags=(),
         hold_creep_mm=nan,
         bad_qacc=0,

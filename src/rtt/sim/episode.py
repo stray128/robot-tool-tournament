@@ -534,6 +534,7 @@ def run_episode_v2(
     creep_ref: np.ndarray | None = None
     creep_max = math.nan
     pen_max = pen_hold = 0.0
+    tilt_cos_min = 1.0  # cos of the largest tilt of the part from vertical so far
     hold_contacts: list[int] = []
     tick = 0
     while tick < max_ticks:
@@ -563,6 +564,7 @@ def run_episode_v2(
         if tick == reg_tick:
             reg_pose = part_pose_in_palm(data, ids)
             reg_q = mean_closure(data, ids)
+            tilt_cos_min = min(tilt_cos_min, math.cos(reg_pose.tilt))
         if tick % ticks_per_check:
             continue
 
@@ -591,6 +593,7 @@ def run_episode_v2(
         tracker.update(t, float(data.xpos[ids.object_body][2]))
         if not had_success and tracker.success_at is not None:
             hold_tilt = part_pose_in_palm(data, ids).tilt
+        tilt_cos_min = min(tilt_cos_min, float(data.xmat[ids.object_body][8]))
         n_con, depth = jaw_object_contacts()
         pen_max = max(pen_max, depth)
         if creep_tick <= tick < creep_end_tick:
@@ -652,6 +655,7 @@ def run_episode_v2(
         palm_object_force_max=checks.palm_object_force_max,
         carry_palm_force_max=checks.carry_palm_force_max,
         hold_creep_mm=1000.0 * creep_max if math.isfinite(creep_max) else math.nan,
+        tilt_max_deg=math.degrees(math.acos(max(-1.0, min(1.0, tilt_cos_min)))),
         bad_qacc=float(checks_bad),
         **registration.as_metrics(),
     )

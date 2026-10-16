@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import math
 
 import mujoco
 import numpy as np
@@ -194,6 +195,9 @@ def test_evaluate_designs_v2_records_every_episode_and_invalid_builds() -> None:
     assert all(r.geometry_hash and r.design_space == "freeform-v2" for r in sim)
     assert all(r.success <= r.lift_success and r.success == r.registered for r in sim)
     assert all(r.jam_on_close == ("jam_on_close" in r.registration_flags) for r in sim)
+    for r in sim:
+        measured = [t for t in (r.reg_tilt_deg, r.reg_hold_tilt_deg) if math.isfinite(t)]
+        assert r.tilt_max_deg >= max(measured, default=0.0) - 1e-6
     d = sim[0].to_dict()
     assert d["registration_flags"] == list(sim[0].registration_flags) and d["record_version"] == 2
     scores = score_designs_v2(records)
