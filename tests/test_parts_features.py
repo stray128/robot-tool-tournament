@@ -92,7 +92,7 @@ def test_through_bore_runs_the_full_height(parts: dict[str, PartSpec]) -> None:
 
 def test_inside_reports_material(parts: dict[str, PartSpec]) -> None:
     block = parts["block"]
-    pts = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.031], [0.0149, 0.0, 0.0]])
+    pts = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.031], [0.0099, 0.0, 0.0]])
     assert F.inside(block, pts).tolist() == [True, False, True]
 
 
