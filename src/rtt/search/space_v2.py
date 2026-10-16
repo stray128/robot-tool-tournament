@@ -247,6 +247,19 @@ def quantise(name: str, value: float) -> float:
     return round(steps * step, 2 if step < 0.1 else 1) + 0.0
 
 
+#: Values this far outside a parameter's bounds are rejected before quantising (any value that
+#: quantises into the bounds is well inside this margin), so a hostile 1e308 cannot overflow.
+_FAR: Final = 1000.0
+
+
+def _finite(value: numbers.Real) -> bool:
+    """``value`` converts to a finite float (an integer too large for a float does not)."""
+    try:
+        return math.isfinite(float(value))
+    except OverflowError:
+        return False
+
+
 def _short(value: object, limit: int = 40) -> str:
     text = repr(value)
     return text if len(text) <= limit else text[: limit - 3] + "..."
@@ -295,8 +308,11 @@ def canonical_params(
             errors.append(f"{needs} needs {name} ({lo:g} to {hi:g})")
             continue
         value = raw[name]
-        if isinstance(value, bool) or not isinstance(value, numbers.Real) or not math.isfinite(float(value)):
+        if isinstance(value, bool) or not isinstance(value, numbers.Real) or not _finite(value):
             errors.append(f"{name} must be a finite number, got {_short(value)}")
+            continue
+        if not lo - _FAR <= float(value) <= hi + _FAR:  # quantising 1e308 would overflow
+            errors.append(f"{name} = {float(value):g} is outside {lo:g} to {hi:g}")
             continue
         q = quantise(name, float(value))
         if abs(q - float(value)) > 1e-9:

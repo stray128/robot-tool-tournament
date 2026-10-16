@@ -132,6 +132,13 @@ def test_design_id_is_a_pinned_sha256_of_the_generator_and_the_canonical_recipe(
         ({"pad": "flat", "tip": "blunt", **BASE, "finger_width_mm": float("nan")}, "must be a finite number"),
         ({"pad": "flat", "tip": "blunt", **BASE, "finger_width_mm": "wide"}, "must be a finite number"),
         ({"pad": "flat", "tip": "blunt", **BASE, "finger_width_mm": 44.0}, "outside 14 to 40"),
+        # Magnitudes a JSON tool call can carry: rejected, never an OverflowError that ends the run.
+        (
+            {"pad": "flat", "tip": "blunt", **BASE, "pad_height_mm": 1e308},
+            "pad_height_mm = 1e+308 is outside",
+        ),
+        ({"pad": "flat", "tip": "blunt", **BASE, "pad_height_mm": -1e308}, "is outside 8 to 30"),
+        ({"pad": "flat", "tip": "blunt", **BASE, "finger_width_mm": 10**400}, "must be a finite number"),
     ],
 )
 def test_planted_invalid_recipes_are_rejected_with_specific_messages(raw: dict, message: str) -> None:
