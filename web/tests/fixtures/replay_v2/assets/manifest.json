@@ -1,0 +1,66 @@
+{
+  "format": "rtt-asset-manifest",
+  "version": 1,
+  "assets": {
+    "4c6c52eb7c8afc2a": {
+      "uri": "assets/4c6c52eb7c8afc2a.glb",
+      "sha256": "4c6c52eb7c8afc2a2625b872f8456f0866f46d6d614dcec15711129b9332a6a5",
+      "bytes": 1968,
+      "role": "gripper_frame",
+      "license": "Apache-2.0",
+      "attribution": "Robot Tool Tournament (Apache-2.0)",
+      "changes": [],
+      "label": "palm block",
+      "media_type": "model/gltf-binary",
+      "source": {
+        "kind": "generated",
+        "generator": "tests/fixtures/replay_v2/make_fixture.mjs"
+      }
+    },
+    "861cfea480e5f985": {
+      "uri": "assets/861cfea480e5f985.glb",
+      "sha256": "861cfea480e5f9851b9f0def689062bfc47e98b35416ffde38def6e2f0e7f69c",
+      "bytes": 3708,
+      "role": "finger_right",
+      "license": "Apache-2.0",
+      "attribution": "Robot Tool Tournament (Apache-2.0)",
+      "changes": [],
+      "label": "straight entrant, right jaw",
+      "media_type": "model/gltf-binary",
+      "source": {
+        "kind": "generated",
+        "generator": "tests/fixtures/replay_v2/make_fixture.mjs"
+      }
+    },
+    "c8b622d10d363f11": {
+      "uri": "assets/c8b622d10d363f11.glb",
+      "sha256": "c8b622d10d363f11e4f80bc74cac6034781744f41b60cf5981e48c0b9028e6a7",
+      "bytes": 3704,
+      "role": "finger_left",
+      "license": "Apache-2.0",
+      "attribution": "Robot Tool Tournament (Apache-2.0)",
+      "changes": [],
+      "label": "straight entrant, left jaw",
+      "media_type": "model/gltf-binary",
+      "source": {
+        "kind": "generated",
+        "generator": "tests/fixtures/replay_v2/make_fixture.mjs"
+      }
+    },
+    "f9d13fa997c7f6e5": {
+      "uri": "assets/f9d13fa997c7f6e5.glb",
+      "sha256": "f9d13fa997c7f6e5d4e8e338309710ce4559facc20d01ef68b2f3e01321c0065",
+      "bytes": 1984,
+      "role": "object",
+      "license": "Apache-2.0",
+      "attribution": "Robot Tool Tournament (Apache-2.0)",
+      "changes": [],
+      "label": "box 90 x 40 x 120 mm",
+      "media_type": "model/gltf-binary",
+      "source": {
+        "kind": "generated",
+        "generator": "tests/fixtures/replay_v2/make_fixture.mjs"
+      }
+    }
+  }
+}
