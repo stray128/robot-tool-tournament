@@ -165,6 +165,13 @@ const MUTATIONS: [string, (h: Header) => void][] = [
     },
   ],
   ["static visual names an unlisted asset", (h) => (h.static_visuals[0].asset = "0123456789abcdef")],
+  [
+    "asset listed but not drawn",
+    (h) => {
+      const [id, entry] = asset("glTF spare prop", "prop", "Apache-2.0", "Robot Tool Tournament (Apache-2.0)", []);
+      h.assets[id] = entry;
+    },
+  ],
   ["zero scale", (h) => (h.bodies[1].visuals[0].scale = [1, 0, 1])],
   ["geom colour out of range", (h) => (h.bodies[2].geoms[0].rgba = [2, 0, 0, 1])],
 ];

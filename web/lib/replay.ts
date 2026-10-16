@@ -242,13 +242,19 @@ export function parseReplayHeaderV2(raw: unknown, file = "replay.json"): ReplayH
   if (n_bodies !== bodies.length) root.get("n_bodies").fail(`header lists ${bodies.length} bodies, n_bodies is ${n_bodies}`);
   const static_visuals = root.has("static_visuals") ? root.get("static_visuals").items().map(readVisual) : [];
   const unknown = (where: Node, v: ReplayVisual) => {
-    if (!(v.asset in assets)) where.fail(`visual draws asset ${v.asset}, which the header's assets map does not list`);
+    if (!Object.hasOwn(assets, v.asset)) where.fail(`visual draws asset ${v.asset}, which the header's assets map does not list`);
   };
   root
     .get("bodies")
     .items()
     .forEach((b, i) => bodies[i]!.visuals.forEach((v, j) => unknown(b.get("visuals").items()[j]!, v)));
   static_visuals.forEach((v, j) => unknown(root.get("static_visuals").items()[j]!, v));
+  // The map holds exactly the entries the visuals draw (rtt.sim.replay.check_header), so a
+  // header's credits and payload never count an asset that is not on screen.
+  const drawn = new Set(referencedAssets({ bodies, static_visuals }));
+  for (const id of Object.keys(assets)) {
+    if (!drawn.has(id)) root.get("assets").get(id).fail(`asset ${id} is listed, but no visual draws it`);
+  }
   return {
     format: "rtt-replay",
     version: 2,
