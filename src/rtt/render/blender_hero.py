@@ -60,6 +60,27 @@ def blender_quat(q_xyzw: Any) -> tuple[float, float, float, float]:
     return (w, x, y, z)
 
 
+AUTHORED_PALM_YAW_DEG = 180.0  # cameras and lights below are authored for this palm yaw
+
+
+def rig_turn_deg(header: dict[str, Any], poses: np.ndarray, frame: int = 0) -> float:
+    """How far to turn the authored cameras and lights so they keep their place relative to
+    the gripper (the same rule as rtt.render.studio.align_to_palm)."""
+    names = [b["name"] for b in header["bodies"]]
+    if "palm" not in names:
+        return 0.0
+    x, y, z, w = (float(c) for c in poses[frame, names.index("palm"), 3:])
+    yaw = math.degrees(math.atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z)))
+    return (yaw - AUTHORED_PALM_YAW_DEG + 180.0) % 360.0 - 180.0
+
+
+def turn_xy(point: Any, deg: float, centre: Any = (0.0, 0.0)) -> tuple[float, float, float]:
+    """``point`` turned about the vertical axis through ``centre`` (x, y) by ``deg``."""
+    c, s = math.cos(math.radians(deg)), math.sin(math.radians(deg))
+    x, y = float(point[0]) - float(centre[0]), float(point[1]) - float(centre[1])
+    return (c * x - s * y + float(centre[0]), s * x + c * y + float(centre[1]), float(point[2]))
+
+
 def caption(header: dict[str, Any]) -> str:
     """The burned-in caption of an offline render (same rule as rtt.render.playback)."""
     prov, meta = header.get("provenance") or {}, header.get("meta") or {}
@@ -150,7 +171,7 @@ def main(argv: list[str]) -> int:  # pragma: no cover - runs inside Blender only
     bm.free()
     for poly in cyc.data.polygons:
         poly.use_smooth = True
-    cyc.rotation_euler = Euler((0.0, 0.0, math.radians(-51.0)))
+    cyc.rotation_euler = Euler((0.0, 0.0, math.radians(-51.0 + rig_turn_deg(header, poses, frame))))
     m = bpy.data.materials.new("cyc")
     m.use_nodes = True
     m.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (0.62, 0.62, 0.63, 1.0)
@@ -184,12 +205,23 @@ def main(argv: list[str]) -> int:  # pragma: no cover - runs inside Blender only
     bsdf.inputs["Roughness"].default_value = 0.7
     work.data.materials.append(gm)
 
+    names = [b["name"] for b in header["bodies"]]
+    obj_i = names.index("object") if "object" in names else len(names) - 1
+    rest = poses[0, obj_i, :3].astype(float)
+    now = poses[frame, obj_i, :3].astype(float)
+    turn = rig_turn_deg(header, poses, frame)
+
+    def placed(p: tuple) -> Vector:  # authored around the origin, turned with the palm, moved to the part
+        x, y, z = turn_xy(p, turn)
+        return Vector((x + rest[0], y + rest[1], z))
+
     def area(name: str, loc: tuple, size: float, power: float, color: tuple = (1, 1, 1)) -> None:
         light = bpy.data.lights.new(name, "AREA")
         light.size, light.energy, light.color = size, power, color
         obj = link(bpy.data.objects.new(name, light))
-        obj.location = Vector(loc)
-        obj.rotation_euler = (Vector((0.0, 0.0, 0.08)) - Vector(loc)).to_track_quat("-Z", "Y").to_euler()
+        obj.location = placed(loc)
+        aim = Vector((rest[0], rest[1], 0.08))
+        obj.rotation_euler = (aim - obj.location).to_track_quat("-Z", "Y").to_euler()
 
     area("key", (0.55, -0.55, 0.85), 0.6, 14.0, (1.0, 0.97, 0.92))
     area("fill", (0.5, 0.75, 0.35), 1.0, 5.0, (0.9, 0.95, 1.0))
@@ -200,23 +232,25 @@ def main(argv: list[str]) -> int:  # pragma: no cover - runs inside Blender only
     world.node_tree.nodes["Background"].inputs["Color"].default_value = (0.55, 0.55, 0.56, 1.0)
     world.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.25
 
-    target = bodies[-1].location.copy()
+    lift = float(now[2] - rest[2])
 
     def camera(name: str, loc: tuple, look: tuple, lens: float, fstop: float | None = None) -> Any:
         cam = bpy.data.cameras.new(name)
         cam.lens, cam.sensor_width = lens, 36.0
+        eye, at = placed(loc), placed(look)
         if fstop:
             cam.dof.use_dof = True
-            cam.dof.focus_distance = (Vector(loc) - Vector(look)).length
+            cam.dof.focus_distance = (eye - at).length
             cam.dof.aperture_fstop = fstop
         obj = link(bpy.data.objects.new(name, cam))
-        obj.location = Vector(loc)
-        obj.rotation_euler = (Vector(look) - Vector(loc)).to_track_quat("-Z", "Y").to_euler()
+        obj.location = eye
+        obj.rotation_euler = (at - eye).to_track_quat("-Z", "Y").to_euler()
         return obj
 
+    follow = 0.7 * lift  # the wide framing eases up with the lift, as in the MuJoCo studio
     views = {
-        "wide": camera("wide", (0.42, 0.34, 0.33), (0.0, 0.0, 0.085), 50.0),
-        "close": camera("close", (0.24, 0.13, target.z + 0.035), (0.0, 0.006, target.z + 0.012), 55.0, 16.0),
+        "wide": camera("wide", (0.42, 0.34, 0.33 + follow), (0.0, 0.0, 0.085 + follow), 50.0),
+        "close": camera("close", (0.24, 0.13, now[2] + 0.035), (0.0, 0.006, now[2] + 0.012), 55.0, 16.0),
     }
     scene.render.engine = "CYCLES" if a.engine == "cycles" else "BLENDER_EEVEE_NEXT"
     if a.engine == "cycles":
