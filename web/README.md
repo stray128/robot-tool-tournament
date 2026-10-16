@@ -16,7 +16,7 @@ talks to a local API.
 | `/results` | S1, the primary endpoint (best-so-far curves, designs-to-threshold dot plot), H1 held-out success as secondary; stamped `PILOT` or `SYNTHETIC` until the final analysis |
 | `/certificate/<id>` | One design's robustness certificate: placement-error curve, every shake and push, provenance |
 | `/benchmark`, `/bout/<id>`, `/design/<id>`, `/compute`, `/about` | Bouts, designs (now linking their certificate, with studio, x-ray, cutaway and turntable views of the jaws on the part), jobs, method |
-| `/credits` | Third-party models (from `public/assets/manifest.json`), scans, software and fonts, with licences and what was changed |
+| `/credits` | Third-party models (from `public/assets/manifest.json`), scans, software and fonts, with licences and what was changed. The short credits that assets and replays carry (`... (full credit: /credits#gripper)`, `#gso`) link to these anchors, and every clip that draws a third-party model shows its short credit with that link |
 
 ## Commands
 
@@ -33,9 +33,9 @@ Run from `web/` with Node 20.9 or newer and pnpm.
 | `pnpm dev` | Development server |
 | `pnpm build` | Static export to `out/`; fails if any data file is malformed, a lane's replay is missing or does not match its header, a design links a missing file, a session's part STL is missing, or a certificate does not parse |
 | `pnpm start` | Serve `out/` locally at http://127.0.0.1:4173/ |
-| `pnpm test` | Unit tests (replay decoding, overlays, data validation, session/SSE/STL/certificate/S1 parsers, import scripts) |
+| `pnpm test` | Unit tests (replay decoding, overlays, data validation, session/SSE/STL/certificate/S1 parsers, import scripts). The GLB compression test runs only where the glTF Transform modules are available: in `web/node_modules`, or in the `node_modules` directory named by `RTT_GLTF_MODULES` |
 | `pnpm typecheck` | TypeScript check |
-| `node scripts/compress_glb.mjs SPEC.json [--map MAP.json]` | Meshopt-compress the GLBs a spec lists (WebP textures, optional simplification for scans) and add them to `public/assets/` as `<sha256[:16]>.glb` with their manifest entries; `--check` verifies the manifest against the files without any dependency. Compression needs `@gltf-transform/{core,extensions,functions}` and `meshoptimizer` (and `sharp` for textures), from `web/node_modules` or `--modules DIR` |
+| `node scripts/compress_glb.mjs SPEC.json [--map MAP.json]` | Meshopt-compress the GLBs a spec lists (WebP textures, optional simplification for scans) and add them to `public/assets/` as `<sha256[:16]>.glb` with their manifest entries; Identical output under a different role, licence, credit, change list or source is refused, and nothing is written unless every input passes. `--check` verifies the manifest against the files without any dependency. Compression needs `@gltf-transform/{core,extensions,functions}` and `meshoptimizer` (and `sharp` for textures), from `web/node_modules` or `--modules DIR` |
 | `node scripts/smoke_v2.mjs` | After `pnpm build`: the v2 look in headless Chromium, with the replay v2 fixture (`tests/fixtures/replay_v2`, or `--fixture DIR --stem NAME`) served in place of one v1 lane; checks GLB decoding, caption, offset readout, x-ray and collision toggles, the 300 000-byte hero payload, the design views and the credits page. Screenshots go to `.smoke/v2/` |
 | `pnpm smoke` | After `pnpm build`: open every page in headless Chromium at 1280 px and 375 px; fail on console errors, horizontal scroll, replays that do not load or missing canvases. On `/part` it also drops the example STL (a preview canvas and size readout must appear) and plays the first demo session to its end (an illustrative session must be labelled illustrative, never recorded). Screenshots go to `.smoke/` |
 
