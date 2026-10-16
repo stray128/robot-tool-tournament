@@ -151,13 +151,16 @@ def check_width(width: float, part_id: str | None) -> None:
 
 
 def check_convex(pieces: Sequence[Any], part_id: str, jaw: str) -> None:
-    from scipy.spatial import ConvexHull
+    from scipy.spatial import ConvexHull, QhullError
 
     from rtt.design.freeform.tip import piece_volume
 
     for i, pc in enumerate(pieces):
         vol = piece_volume(pc)
-        hull = ConvexHull(pc.vertices).volume
+        try:
+            hull = ConvexHull(pc.vertices).volume
+        except QhullError:  # a flat piece has no hull volume: it is not a convex solid
+            hull = 0.0
         rtol = CONVEX_RTOL
         if vol <= 0 or abs(hull - vol) > rtol * hull:
             raise InvalidDesign(

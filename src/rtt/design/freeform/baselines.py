@@ -225,8 +225,9 @@ def build_stock_pair(baseline: Baseline, part: Any, task: Any) -> Any:
     import manifold3d as m3d
 
     from rtt.design.freeform.export import inertia6, mass_properties, stl_sha256
+    from rtt.design.freeform.generate import checked_part_geometry
     from rtt.design.freeform.hashing import design_id, geometry_hash
-    from rtt.design.freeform.outline import PartGeometry, part_geometry
+    from rtt.design.freeform.outline import PartGeometry
     from rtt.design.freeform.predict import capture_report
     from rtt.design.freeform.types import PLA_DENSITY, FingerPair, JawGeometry
     from rtt.design.freeform.validate import InvalidDesign
@@ -242,7 +243,7 @@ def build_stock_pair(baseline: Baseline, part: Any, task: Any) -> Any:
     else:
         left, right = hulls
     part_id = str(getattr(part, "part_id", None) or part.name)
-    g, gm = part_geometry(part)
+    g, gm = checked_part_geometry(part, part_id)
     h = float(g.height)
     c = task.controller
     reach = float(-min(p[:, 2].min() for p in left))

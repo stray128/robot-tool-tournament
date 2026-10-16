@@ -212,3 +212,25 @@ def test_printability_checkers() -> None:
     ):
         with pytest.raises(InvalidDesign, match=code):
             check_printability(SimpleNamespace(**{**ok, **change}), "p", "left")
+
+
+def test_a_flat_part_piece_is_a_specific_rejection_not_a_crash() -> None:
+    """validate_design returns a report (never raises) even for a part with a flat piece."""
+    import dataclasses
+
+    blk = training_parts()[1]
+    flat = np.array([[0, 0, 0.01], [0.01, 0, 0.01], [0, 0.01, 0.01], [0.01, 0.01, 0.01]], float)
+    bad = dataclasses.replace(
+        blk, pieces=(*blk.pieces, flat), faces=(*blk.faces, np.array([[0, 1, 2], [1, 3, 2]]))
+    )
+    rep = validate_design(_raw(), [bad], TASK)
+    assert not rep.valid and rep.code == "build_failed" and "degenerate convex piece" in rep.message
+    with pytest.raises(InvalidDesign, match="build_failed"):
+        build_pair_full(FingerRecipe(**_raw()), bad, TASK)
+
+
+def test_convexity_checker_reports_a_flat_piece() -> None:
+    sec = np.array([[0.0, 0.0, 0.0], [0.0, 0.01, 0.0], [0.0, 0.01, 0.01]])
+    piece = Piece(np.concatenate([sec, sec + [0.01, 0.0, 0.0]]) * [1, 1, 0], np.array([[0, 1, 2]]), "pad")
+    with pytest.raises(InvalidDesign, match="not_convex"):
+        V.check_convex([piece], "p", "left")

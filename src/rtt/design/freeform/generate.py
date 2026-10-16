@@ -343,6 +343,20 @@ def _plan_hook(jaw: JawPlan, spec: PairSpec, tip_height: float) -> None:
         jaw.gap = min(jaw.gap, _hook_gap(jaw.geometry, jaw.xk, hk, tip_height, _snap(hh), reach))
 
 
+def checked_part_geometry(part: Any, part_id: str) -> tuple[PartGeometry, PartGeometry]:
+    """:func:`~rtt.design.freeform.outline.part_geometry`, with a flat or degenerate part piece
+    reported as a ``build_failed`` rejection instead of a geometry-library error."""
+    from scipy.spatial import QhullError
+
+    try:
+        return part_geometry(part)
+    except (QhullError, ValueError) as exc:
+        first = str(exc).strip().splitlines()[0] if str(exc).strip() else type(exc).__name__
+        raise V.InvalidDesign(
+            "build_failed", f"the part has a flat or degenerate convex piece ({first[:120]})", part_id
+        ) from exc
+
+
 def plan_pair(
     design: Any,
     part: Any,
@@ -365,7 +379,7 @@ def plan_pair(
         raise V.InvalidDesign(
             "schema", "the hook (height + protrusion) does not fit inside the pad band", part_id
         )
-    g, gm = part_geometry(part)
+    g, gm = checked_part_geometry(part, part_id)
     height = float(g.height)
     c = task.controller
     if spec.tip_height is not None:
