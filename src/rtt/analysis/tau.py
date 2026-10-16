@@ -259,18 +259,35 @@ def _with_scores(run: RunRecord, scores: tuple[float, ...]) -> RunRecord:
     return RunRecord(**{**asdict(run), "scores": scores})
 
 
+#: The GV3 report writes scores rounded to 6 decimals (``rtt.analysis.calibrate_v2``), so a
+#: score there lies within 5e-7 of its 1/48 grid point; the loader snaps it back to the point.
+CALIBRATION_ROUNDING: Final = 5e-7
+
+
+def snap_to_grid(scores: Sequence[float], grid: float = GRID_V2, *, what: str = "scores") -> list[float]:
+    """Each score as the exact multiple of ``grid`` it was rounded from (within
+    :data:`CALIBRATION_ROUNDING`); anything farther from the grid is refused."""
+    out = []
+    for s in scores:
+        k = round(s / grid)
+        if abs(s - k * grid) > CALIBRATION_ROUNDING + 1e-12:
+            raise ValueError(f"{what}: {s!r} is not on the 1/{round(1 / grid)} grid")
+        out.append(k * grid)
+    check_on_grid(out, grid, what=what)
+    return out
+
+
 def load_calibration_v2(path: str | Path) -> tuple[list[float], list[float]]:
     """``(sobol_scores, round0_entrant_scores)`` from a GV3 ``calibration_v2.json``.
 
     Reference entrants (scored outside the budget) are not round 0 and are not returned.
+    Scores are snapped to the 1/48 grid (the report rounds them to 6 decimals).
     """
     data = json.loads(Path(path).read_text(encoding="utf-8"))
     if data.get("schema") != CALIBRATION_SCHEMA_V2:
         raise ValueError(f"{path}: schema {data.get('schema')!r}, expected {CALIBRATION_SCHEMA_V2!r}")
-    sobol = [float(d["score"]) for d in data["sobol"]]
-    entrants = [float(d["score"]) for d in data["entrants"]]
-    check_on_grid(sobol, what=f"{path} sobol")
-    check_on_grid(entrants, what=f"{path} entrants")
+    sobol = snap_to_grid([float(d["score"]) for d in data["sobol"]], what=f"{path} sobol")
+    entrants = snap_to_grid([float(d["score"]) for d in data["entrants"]], what=f"{path} entrants")
     return sobol, entrants
 
 

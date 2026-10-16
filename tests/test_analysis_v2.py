@@ -332,6 +332,21 @@ def test_load_calibration_v2_checks_schema(tmp_path: Path) -> None:
         tau.load_calibration_v2(f)
 
 
+def test_load_calibration_v2_snaps_the_reports_six_decimal_scores(tmp_path: Path) -> None:
+    """The GV3 report rounds scores to 6 decimals (29/48 -> 0.604167); the loader restores the
+    grid point, and refuses a score that is off the grid by more than that rounding."""
+    f = tmp_path / "c.json"
+    sobol = [{"score": round((k % 49) / 48, 6)} for k in range(64)]
+    entrants = [{"score": round(k / 48, 6)} for k in (12, 15, 28, 15)]
+    f.write_text(json.dumps({"schema": tau.CALIBRATION_SCHEMA_V2, "entrants": entrants, "sobol": sobol}))
+    got_sobol, got_entrants = tau.load_calibration_v2(f)
+    assert got_sobol[29] == 29 * GRID_V2 and got_entrants == [k * GRID_V2 for k in (12, 15, 28, 15)]
+    sobol[3] = {"score": 3 / 48 + 2e-6}
+    f.write_text(json.dumps({"schema": tau.CALIBRATION_SCHEMA_V2, "entrants": entrants, "sobol": sobol}))
+    with pytest.raises(ValueError, match="grid"):
+        tau.load_calibration_v2(f)
+
+
 # --------------------------------------------------------------------------- R rule and GV6
 
 
