@@ -11,7 +11,7 @@ import { TitleBlock } from "@/components/TitleBlock";
 import { summarizeCertificate } from "@/lib/certificate";
 import { certificateIdsByDesign, getBouts, getCertificate, getDesign, getDesigns } from "@/lib/data";
 import { formatPercent } from "@/lib/format";
-import { humanize, PARAM_LABELS } from "@/lib/labels";
+import { humanize, objectLabel, PARAM_LABELS } from "@/lib/labels";
 import { dataUrl } from "@/lib/paths";
 import type { Bout, Design, Lane, ParamSpec, PhaseSpan } from "@/lib/types";
 
@@ -96,12 +96,6 @@ const FILE_ROWS: { key: keyof Design["files"]; label: string; name: (d: Design) 
   { key: "glb", label: "Gripper preview", name: (d) => `${d.name}-gripper.glb`, what: "GLB, metres, Y-up" },
 ];
 
-function objectLabel(lane: Lane): string {
-  const [a = 0, b = 0, c = 0] = lane.object.size_mm;
-  if (lane.object.kind === "box") return `Box ${a} x ${b} x ${c} mm`;
-  return `${lane.object.kind === "capsule" ? "Rod" : "Cylinder"} ${a} mm x ${b} mm`;
-}
-
 /**
  * Replays of this design to show seated on a part: one per part, held grasps first,
  * at most six (the "same recipe on several parts" switcher).
@@ -113,7 +107,7 @@ function studioEntries(design: Design, bouts: Bout[]): { entries: DesignStudioEn
   const seen = new Set<string>();
   let phases: PhaseSpan[] = [];
   for (const { lane, bout } of lanes) {
-    const label = objectLabel(lane);
+    const label = objectLabel(lane.object);
     if (seen.has(label) || entries.length >= 6) continue;
     seen.add(label);
     if (entries.length === 0) phases = bout.task.phases;

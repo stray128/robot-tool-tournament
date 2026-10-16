@@ -1,5 +1,205 @@
 {
-  "format": "rtt-asset-manifest",
-  "version": 1,
-  "assets": {}
+ "assets": {
+  "0b3cdd57c84bff89": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 6972,
+   "changes": [],
+   "label": "flanged_bushing, right jaw, design 9a4ba2f37696",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "finger_right",
+   "sha256": "0b3cdd57c84bff89b065693d394fc77fba72bac232ebb20d922465f98f484da9",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/0b3cdd57c84bff89.glb"
+  },
+  "26d45b09f38e2df9": {
+   "attribution": "An open-source parallel gripper, CC BY 4.0, modified (full credit: /credits#gripper)",
+   "bytes": 47296,
+   "changes": [
+    "re-posed into the palm and jaw frames",
+    "re-encoded as GLB"
+   ],
+   "label": "open-source gripper frame",
+   "license": "CC-BY-4.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "26d45b09f38e2df950bb5fe160075cacc01a02c56d206f68c43df5911539f8e5",
+   "source": {
+    "commit": "190eb162c9e59d7f6dceab850ea1b5c6a4539c14",
+    "kind": "upstream",
+    "path": "simulation/urdf/meshes/link5_1.stl",
+    "sha256": "3041844df75a779802f55d50bcbfcb42edaa4fdf7702ee612c06ecb958eebb9d",
+    "url": "https://github.com/roboninecom/SO-ARM-102"
+   },
+   "uri": "assets/26d45b09f38e2df9.glb"
+  },
+  "3a5211080f3909fb": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 7860,
+   "changes": [],
+   "label": "block, left jaw, design 2546f843c3bb",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "finger_left",
+   "sha256": "3a5211080f3909fbf3022d1f1a6d3ce7c818ebb867d7e728b74ef89750eb1f29",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/3a5211080f3909fb.glb"
+  },
+  "3b370252255adc1e": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 8088,
+   "changes": [],
+   "label": "block, right jaw, design 2546f843c3bb",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "finger_right",
+   "sha256": "3b370252255adc1e11f131a9b6580de4a30fb81e0913865e5fd85534f286a15b",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/3b370252255adc1e.glb"
+  },
+  "432b06e9f7deaf88": {
+   "attribution": "An open-source parallel gripper, CC BY 4.0, modified (full credit: /credits#gripper)",
+   "bytes": 6156,
+   "changes": [
+    "cut at the jaw root plane",
+    "re-posed into the palm and jaw frames",
+    "re-encoded as GLB"
+   ],
+   "label": "stock finger, left jaw",
+   "license": "CC-BY-4.0",
+   "media_type": "model/gltf-binary",
+   "role": "finger_left",
+   "sha256": "432b06e9f7deaf88b595086a51ce18bca0ed29ecd6ba4352d3a6ccf36f2ef238",
+   "source": {
+    "commit": "190eb162c9e59d7f6dceab850ea1b5c6a4539c14",
+    "kind": "upstream",
+    "path": "simulation/urdf/meshes/clamp1_1.stl",
+    "sha256": "a0276124d4a92276256883e4b4e09e820107ea2ad1ec86369ef979194073ada5",
+    "url": "https://github.com/roboninecom/SO-ARM-102"
+   },
+   "uri": "assets/432b06e9f7deaf88.glb"
+  },
+  "559419de7e9dfd69": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 3476,
+   "changes": [],
+   "label": "flanged_bushing",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "object",
+   "sha256": "559419de7e9dfd69024dabe80517f4d0a370792f977472034b51e3fe1e960e7d",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/559419de7e9dfd69.glb"
+  },
+  "6be8e086d53d0a68": {
+   "attribution": "An open-source parallel gripper, CC BY 4.0, modified (full credit: /credits#gripper)",
+   "bytes": 9692,
+   "changes": [
+    "cut at the jaw root plane",
+    "re-posed into the palm and jaw frames",
+    "re-encoded as GLB"
+   ],
+   "label": "gripper carriage, left jaw",
+   "license": "CC-BY-4.0",
+   "media_type": "model/gltf-binary",
+   "role": "carriage",
+   "sha256": "6be8e086d53d0a687602a307bd3dc355f8977b3e264aef5856f00ab7952890ce",
+   "source": {
+    "commit": "190eb162c9e59d7f6dceab850ea1b5c6a4539c14",
+    "kind": "upstream",
+    "path": "simulation/urdf/meshes/clamp1_1.stl",
+    "sha256": "a0276124d4a92276256883e4b4e09e820107ea2ad1ec86369ef979194073ada5",
+    "url": "https://github.com/roboninecom/SO-ARM-102"
+   },
+   "uri": "assets/6be8e086d53d0a68.glb"
+  },
+  "7fe6adb5a1b0c769": {
+   "attribution": "An open-source parallel gripper, CC BY 4.0, modified (full credit: /credits#gripper)",
+   "bytes": 6176,
+   "changes": [
+    "cut at the jaw root plane",
+    "re-posed into the palm and jaw frames",
+    "re-encoded as GLB"
+   ],
+   "label": "stock finger, right jaw",
+   "license": "CC-BY-4.0",
+   "media_type": "model/gltf-binary",
+   "role": "finger_right",
+   "sha256": "7fe6adb5a1b0c76997b143890155ba4a063ea310f15a6d57ad7bb3f4728fdaa0",
+   "source": {
+    "commit": "190eb162c9e59d7f6dceab850ea1b5c6a4539c14",
+    "kind": "upstream",
+    "path": "simulation/urdf/meshes/clamp2_1.stl",
+    "sha256": "fb0b0db6def0e54da5a4a7dd06d089050db311c130f24013a9a98839497e3dc6",
+    "url": "https://github.com/roboninecom/SO-ARM-102"
+   },
+   "uri": "assets/7fe6adb5a1b0c769.glb"
+  },
+  "9240b8aceb886fea": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 6712,
+   "changes": [],
+   "label": "flanged_bushing, left jaw, design 9a4ba2f37696",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "finger_left",
+   "sha256": "9240b8aceb886fea1188c764484503148cfbb6eb4c4b9158e11e6183249bf7e2",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/9240b8aceb886fea.glb"
+  },
+  "df57c097729419c9": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 2088,
+   "changes": [],
+   "label": "block",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "object",
+   "sha256": "df57c097729419c9e18186b1fce62d17b9232b473ef1124ecbff9c7ef33d4c40",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/df57c097729419c9.glb"
+  },
+  "ebe7298e6b0969f1": {
+   "attribution": "An open-source parallel gripper, CC BY 4.0, modified (full credit: /credits#gripper)",
+   "bytes": 9788,
+   "changes": [
+    "cut at the jaw root plane",
+    "re-posed into the palm and jaw frames",
+    "re-encoded as GLB"
+   ],
+   "label": "gripper carriage, right jaw",
+   "license": "CC-BY-4.0",
+   "media_type": "model/gltf-binary",
+   "role": "carriage",
+   "sha256": "ebe7298e6b0969f1f24ec9e41516ab5cbdd53c44dbc67cfc6b449164758a46c4",
+   "source": {
+    "commit": "190eb162c9e59d7f6dceab850ea1b5c6a4539c14",
+    "kind": "upstream",
+    "path": "simulation/urdf/meshes/clamp2_1.stl",
+    "sha256": "fb0b0db6def0e54da5a4a7dd06d089050db311c130f24013a9a98839497e3dc6",
+    "url": "https://github.com/roboninecom/SO-ARM-102"
+   },
+   "uri": "assets/ebe7298e6b0969f1.glb"
+  }
+ },
+ "format": "rtt-asset-manifest",
+ "version": 1
 }

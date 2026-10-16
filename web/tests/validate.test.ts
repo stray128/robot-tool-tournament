@@ -20,9 +20,26 @@ describe("published data", () => {
     parseJobs(read("jobs.json"));
     parseResults(read("results.json"));
     expect(bouts.bouts.length).toBeGreaterThan(0);
-    // every lane's design id resolves to a design page
+    // every v1 lane's design id resolves to a design page (v2 recipes have no design page yet,
+    // so their lanes, on parts, are shown without a design link)
     const ids = new Set(designs.designs.map((d) => d.id));
-    for (const lane of bouts.bouts.flatMap((b) => b.lanes)) expect(ids.has(lane.design_id)).toBe(true);
+    for (const lane of bouts.bouts.flatMap((b) => b.lanes)) {
+      if (lane.object.kind !== "part") expect(ids.has(lane.design_id)).toBe(true);
+    }
+  });
+
+  it("include a bout of v2 lanes on parts, each naming its part", () => {
+    const lanes = parseBouts(read("bouts.json")).bouts.flatMap((b) => b.lanes);
+    const parts = lanes.filter((l) => l.object.kind === "part");
+    expect(parts.length).toBeGreaterThan(0);
+    for (const lane of parts) {
+      const header = parseAnyReplayHeader(read(`${lane.replay}.json`));
+      expect(header.version).toBe(2);
+      if (header.version !== 2) continue;
+      expect(header.meta.part_id).toBe(lane.object.part_id);
+      expect(header.meta.design_id).toBe(lane.design_id);
+      expect(lane.controller_setting).toBeNull();
+    }
   });
 
   it("only links files that exist", () => {
@@ -44,6 +61,21 @@ describe("validation errors", () => {
     const doc = read("bouts.json");
     doc.bouts[0].lanes[0].outcome.hold_s = "2";
     expect(() => parseBouts(doc)).toThrow(/bouts\.json: \$\.bouts\[0\]\.lanes\[0\]\.outcome\.hold_s: expected a finite number/);
+  });
+
+  it("read v2 lanes: a part object needs its id and family, and v2 failure modes are known", () => {
+    const doc = read("bouts.json");
+    const lane = doc.bouts[0].lanes[0];
+    lane.object = { kind: "part", size_mm: [36, 36, 35], part_id: "flanged_bushing", family: "flanged_bushing" };
+    lane.controller_setting = null;
+    lane.outcome = { ...lane.outcome, success: false, failure_mode: "not_registered" };
+    const parsed = parseBouts(doc).bouts[0]!.lanes[0]!;
+    expect(parsed.object).toEqual(lane.object);
+    expect(parsed.outcome.failure_mode).toBe("not_registered");
+    delete lane.object.part_id;
+    expect(() => parseBouts(doc)).toThrow(/object\.part_id/);
+    lane.object = { kind: "part", size_mm: [36, 36], part_id: "x", family: "y" };
+    expect(() => parseBouts(doc)).toThrow(/expected 3 numbers/);
   });
 
   it("reject a success that carries a failure mode", () => {

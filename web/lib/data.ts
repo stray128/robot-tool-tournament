@@ -63,6 +63,22 @@ export function checkReplayFiles(index: BoutsIndex, dataDir: string = DATA_DIR):
         throw new DataError("bouts.json", where, `replay has ${header.n_frames} frames; the lane says ${lane.n_frames}`);
       }
       if (isV2(header)) {
+        // A lane's label and design link must describe the replay it plays: a v2 header says
+        // which design and part it shows, so a lane pointing at another lane's replay fails the build.
+        if (header.meta.design_id !== lane.design_id) {
+          throw new DataError(
+            "bouts.json",
+            `$.bouts[${b}].lanes[${l}].design_id`,
+            `lane ${lane.id} says design ${lane.design_id}, but its replay shows design ${header.meta.design_id}`,
+          );
+        }
+        if (lane.object.kind === "part" && header.meta.part_id !== lane.object.part_id) {
+          throw new DataError(
+            "bouts.json",
+            `$.bouts[${b}].lanes[${l}].object.part_id`,
+            `lane ${lane.id} says part ${lane.object.part_id}, but its replay shows part ${header.meta.part_id}`,
+          );
+        }
         if (header.overlays) {
           const ovl = path.join(path.dirname(headerFile), header.overlays.bin);
           const want = header.n_frames * header.overlays.channels.length * 2;

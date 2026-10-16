@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { TitleBlock } from "@/components/TitleBlock";
 import { getBouts, getDesigns } from "@/lib/data";
 import { formatInt } from "@/lib/format";
-import { humanize } from "@/lib/labels";
+import { humanize, objectLabel } from "@/lib/labels";
 import type { Bout } from "@/lib/types";
 
 export const metadata: Metadata = {
@@ -22,7 +22,13 @@ const KIND_LABELS: Record<Bout["kind"], string> = {
 };
 
 function objectsOf(bout: Bout): string {
-  const set = new Set(bout.lanes.map((l) => `${l.object.size_mm.map((v) => Number(v.toFixed(1))).join(" x ")} mm ${l.object.kind}`));
+  const set = new Set(
+    bout.lanes.map((l) =>
+      l.object.kind === "part"
+        ? objectLabel(l.object)
+        : `${l.object.size_mm.map((v) => Number(v.toFixed(1))).join(" x ")} mm ${l.object.kind}`,
+    ),
+  );
   return [...set].join(", ");
 }
 
