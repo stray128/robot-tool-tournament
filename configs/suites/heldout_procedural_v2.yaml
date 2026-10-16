@@ -1,0 +1,64 @@
+# Procedural held-out suite v2 (commit-reveal). Load with
+# rtt.parts.heldout.load_heldout_config(); draw with heldout_procedural_suite(secret,
+# commitment=...). The suite is a pure function of the secret, this file, the parts library
+# (configs/parts_v2.yaml) and the task's gripper; the search never sees these parts, and
+# recipes are recompiled against each one. An invalid build on a held-out part scores as a
+# failure (pre-registered).
+#
+# 100 conditions x 2 jitter seeds:
+#   * 70 % are new instances of the six training families (stratified over the families),
+#     sized near / down / up in fixed shares 40 / 30 / 30, so 60 % of them lie outside the
+#     training dimensions:
+#       near: one overall factor in near_scale, and each free dimension of the family
+#             (rtt.parts.library FAMILIES[...].free) times its own factor in near_aspect;
+#       down / up: one factor for every length, 15-30 % below / above the training part;
+#   * 30 % come from two families never used in training: a 90 deg slip pipe elbow and an
+#     involute spur gear lying flat (both exact convex pieces).
+# Placement, beyond every training range: nominal x, y uniform in +-80 mm and yaw over a full
+# turn (where the controller aims); a pose error unknown to the controller uniform in a 3 mm
+# disc (across the jaw and along the closing axis), +-8 deg of yaw and +-1.5 mm of height.
+# A drawn part must fit the gripper (84 mm opening minus 5 mm), stand 6-100 mm tall and weigh
+# at most the grip cap mu_min * F / (g * 1.5) = 0.917 kg at task_v1 values; otherwise its size
+# is drawn again from the same stream.
+name: heldout_procedural_v2
+n_conditions: 100
+seeds_per_condition: 2
+parts_file: ../parts_v2.yaml
+
+families:
+  training_share: 0.7
+
+sizes:
+  mode_probs: {near: 0.4, down: 0.3, up: 0.3}
+  near_scale: [0.85, 1.15]
+  near_aspect: [0.90, 1.10]
+  down: [0.70, 0.85]
+  up: [1.15, 1.30]
+
+unseen:
+  pipe_elbow:
+    material: pvc_white
+    params: {body_od: 27.0, hub_od: 28.5, socket_id: 21.5, socket_depth: 16.5, hub_length: 6.0,
+             centre_to_end: 30.0, segments: 16}
+    scale: [0.70, 1.30]
+    aspect: [0.90, 1.10]       # on centre_to_end (the leg length)
+  spur_gear:
+    material: ground_steel
+    module: [1.5, 2.0]          # mm
+    teeth: [16, 24]             # inclusive
+    face_width_mm: [10.0, 16.0]
+    bore_frac: 0.25             # bore diameter as a fraction of the pitch diameter
+    pressure_angle_deg: 20.0
+
+placement:
+  xy_mm: 80.0
+  err_disc_mm: 3.0
+  err_yaw_deg: 8.0
+  err_z_mm: 1.5
+
+limits:
+  max_grip_width_mm: 79.0
+  min_height_mm: 6.0
+  max_height_mm: 100.0
+  mass_safety_factor: 1.5
+  max_tries: 64

@@ -1,0 +1,27 @@
+# Training suite v2: the six self-modelled industrial parts of configs/parts_v2.yaml, each at
+# four placements, two jitter seeds each: 6 x 4 x 2 = 48 episodes per design.
+# Load with rtt.parts.suite.train_suite(); every design sees the same conditions and the
+# same jitter seeds (common random numbers).
+#
+# Parts (exact convex pieces, unbranded, Apache-2.0): pipe_tee (the hero: an imprint jams on
+# the branch, a V keys it), block (no lead-in: the clearest jam case), hex_standoff (yaw
+# registration, 6-fold), flanged_bushing (a hook can catch under the flange), l_bracket
+# (reach, and the two jaws see different outlines), steel_slug (a round part at mu 0.3: the
+# honest null for registration).
+#
+# Placements: err_x is the pose error across the jaw (the object-frame x axis, along the
+# finger width), unknown to the controller; err_yaw is the yaw error. Nominal x, y and yaw
+# are 0 (the gripper aims at the table centre). Seed jitter is a task setting (task_v2:
+# +-0.5 mm, +-1 deg, +-10 % mu), applied on top with the seeds below.
+# Height and closing-axis errors appear only in the held-out suite.
+name: train_v2
+base_seed: 20261018              # public: derives each condition's jitter seeds
+jitter_seeds_per_condition: 2    # no controller-setting grid in v2: grip height is a design parameter
+parts_file: ../parts_v2.yaml
+parts: [pipe_tee, block, hex_standoff, flanged_bushing, l_bracket, steel_slug]
+
+placements:
+  c0: {}                                    # centred
+  c1: {err_x_mm: 2.0}                       # +2 mm across the jaw
+  c2: {err_x_mm: -3.0}                      # -3 mm across the jaw
+  c3: {err_x_mm: 1.0, err_yaw_deg: 6.0}     # +1 mm across with +6 deg yaw
