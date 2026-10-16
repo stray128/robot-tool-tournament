@@ -21,7 +21,8 @@ always pass. :func:`check_shot` returns every violation for a shot's object list
 render or video pipeline can refuse a frame before it is written.
 
 Attribution: a textured scan is a modified CC BY 4.0 asset; :func:`visual_attribution`
-gives its credit with the changes made for the visual.
+gives its credit with the changes made for the visual, and :func:`scan_asset_fields` the
+licence, changes, ``brand_visible`` and pinned source of its asset-manifest entry.
 """
 
 from __future__ import annotations
@@ -286,3 +287,56 @@ def check_shot(objects: Iterable[ShotObject], screen: VisualScreen | None = None
                 + "; render it clay or pick a cleared object"
             )
     return out
+
+
+# --------------------------------------------------------------------------- asset manifest
+
+#: Changes recorded in an asset-manifest entry for a scan's visual GLB (a list, as the
+#: manifest wants it). Simulation-side changes (the CoACD pieces) belong to the physics model.
+SCAN_ASSET_CHANGES_TEXTURED = (
+    "re-posed to the stable resting pose of its physics model",
+    "texture kept",
+    "re-encoded as GLB",
+)
+SCAN_ASSET_CHANGES_CLAY = (
+    "re-posed to the stable resting pose of its physics model",
+    "texture removed (clay)",
+    "re-encoded as GLB",
+)
+
+
+def scan_asset_fields(
+    name: str,
+    source: Any,
+    *,
+    pose_index: int,
+    textured: bool,
+    file_sha256: str,
+    screen: VisualScreen | None = None,
+) -> dict[str, Any]:
+    """The licence-side fields of an asset-manifest entry for one scan's visual GLB.
+
+    Returns ``license``, ``changes`` (a list), ``brand_visible`` and an upstream ``source``
+    block (the commit-pinned URL of the scan file, the commit, the path and the file's
+    SHA-256 ``file_sha256``). A clay GLB has no texture, so it never shows a brand; a textured
+    one shows a brand unless the brand screen cleared ``name`` in ``pose_index``. The short
+    ``attribution`` line is the asset store's (the render code owns it).
+    """
+    from rtt.sim.gso import ASSET_LICENSE
+
+    sha = str(file_sha256)
+    if len(sha) != 64 or any(c not in "0123456789abcdef" for c in sha):
+        raise ValueError(f"{name}: file_sha256 must be 64 lower-case hex digits")
+    visible = (screen or load_visual_screen()).brand_visible(name, pose_index) if textured else False
+    return {
+        "license": ASSET_LICENSE,
+        "changes": list(SCAN_ASSET_CHANGES_TEXTURED if textured else SCAN_ASSET_CHANGES_CLAY),
+        "brand_visible": bool(visible),
+        "source": {
+            "kind": "upstream",
+            "url": source.raw_url(name),
+            "commit": source.commit,
+            "path": f"models/{name}/{source.mesh_file}",
+            "sha256": sha,
+        },
+    }

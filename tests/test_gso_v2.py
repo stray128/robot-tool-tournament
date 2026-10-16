@@ -349,6 +349,41 @@ def test_brand_screen_rules() -> None:
     assert len(bad) == 1 and "not cleared" in bad[0]
 
 
+def test_scan_asset_fields_follow_the_brand_screen() -> None:
+    src = gso.load_gso_config(gso.DEFAULT_CONFIG_V2).source
+    screen = gv.visual_screen_from_dict(
+        {"objects": {"Plain_Grey_Thing": {"brand_visible": False, "poses": [0]}}}
+    )
+    sha = hashlib.sha256(b"scan bytes").hexdigest()
+    ok = gv.scan_asset_fields(
+        "Plain_Grey_Thing", src, pose_index=0, textured=True, file_sha256=sha, screen=screen
+    )
+    assert ok["license"] == "CC-BY-4.0" and ok["brand_visible"] is False
+    assert ok["changes"] == list(gv.SCAN_ASSET_CHANGES_TEXTURED) and all(ok["changes"])
+    assert ok["source"] == {
+        "kind": "upstream",
+        "url": src.raw_url("Plain_Grey_Thing"),
+        "commit": src.commit,
+        "path": "models/Plain_Grey_Thing/model.obj",
+        "sha256": sha,
+    }
+    other_pose = gv.scan_asset_fields(
+        "Plain_Grey_Thing", src, pose_index=1, textured=True, file_sha256=sha, screen=screen
+    )
+    assert other_pose["brand_visible"] is True
+    unlisted = gv.scan_asset_fields(
+        "Loud_Label_Thing", src, pose_index=0, textured=True, file_sha256=sha, screen=screen
+    )
+    assert unlisted["brand_visible"] is True
+    clay = gv.scan_asset_fields(
+        "Loud_Label_Thing", src, pose_index=0, textured=False, file_sha256=sha, screen=screen
+    )
+    assert clay["brand_visible"] is False and "texture removed (clay)" in clay["changes"]
+    json.dumps(clay)  # manifest-ready
+    with pytest.raises(ValueError, match="64 lower-case hex"):
+        gv.scan_asset_fields("A", src, pose_index=0, textured=False, file_sha256="ABC")
+
+
 @pytest.mark.parametrize(
     "raw, error",
     [
