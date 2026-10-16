@@ -103,6 +103,27 @@
    "bouts": [
     "v2-bout"
    ]
+  },
+  {
+   "id": "local-v2-hero-l-bracket",
+   "source": "export:v2-hero-l-bracket",
+   "name": "v2 bout",
+   "purpose": "3 recorded v2 episodes from train_v2.",
+   "kind": "local",
+   "executor": "cpu",
+   "platform": null,
+   "preset": null,
+   "region": null,
+   "status": "completed",
+   "started_at": "2026-10-16T18:40:31Z",
+   "ended_at": "2026-10-16T18:40:34Z",
+   "wall_s": 3.047,
+   "cost_usd": null,
+   "episodes": 3,
+   "sim_steps": 18070,
+   "bouts": [
+    "v2-hero-l-bracket"
+   ]
   }
  ]
 }

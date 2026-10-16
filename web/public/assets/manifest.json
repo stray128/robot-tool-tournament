@@ -36,6 +36,21 @@
    },
    "uri": "assets/26d45b09f38e2df9.glb"
   },
+  "35c08296325576f9": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 2192,
+   "changes": [],
+   "label": "l_bracket",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "object",
+   "sha256": "35c08296325576f9da425247de3520e277d0b46ec9f9522d07502984cc0b8831",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/35c08296325576f9.glb"
+  },
   "3a5211080f3909fb": {
    "attribution": "Robot Tool Tournament (Apache-2.0)",
    "bytes": 7860,
@@ -103,6 +118,21 @@
    },
    "uri": "assets/559419de7e9dfd69.glb"
   },
+  "695e55e679bf5cf4": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 6048,
+   "changes": [],
+   "label": "l_bracket, right jaw, design 3cef65c4f379",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "finger_right",
+   "sha256": "695e55e679bf5cf4ea5646ed4c2e62e5753d97b20c5c4ca7058f1836e7e8d240",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/695e55e679bf5cf4.glb"
+  },
   "6be8e086d53d0a68": {
    "attribution": "An open-source parallel gripper, CC BY 4.0, modified (full credit: /credits#gripper)",
    "bytes": 9692,
@@ -147,6 +177,21 @@
    },
    "uri": "assets/7fe6adb5a1b0c769.glb"
   },
+  "8903f463502a7f50": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 7016,
+   "changes": [],
+   "label": "l_bracket, right jaw, design 2546f843c3bb",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "finger_right",
+   "sha256": "8903f463502a7f502704101ef26ea7a84316ef73b236453e026ae75ac07fd160",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/8903f463502a7f50.glb"
+  },
   "9240b8aceb886fea": {
    "attribution": "Robot Tool Tournament (Apache-2.0)",
    "bytes": 6712,
@@ -161,6 +206,21 @@
     "kind": "generated"
    },
    "uri": "assets/9240b8aceb886fea.glb"
+  },
+  "a9f2f2010a6b8675": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 6120,
+   "changes": [],
+   "label": "l_bracket, left jaw, design 3cef65c4f379",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "finger_left",
+   "sha256": "a9f2f2010a6b86754c8a6c9860dccd5c5e4886139c5f5b78ab5c2d42ffe73d4d",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/a9f2f2010a6b8675.glb"
   },
   "df57c097729419c9": {
    "attribution": "Robot Tool Tournament (Apache-2.0)",
@@ -198,6 +258,21 @@
     "url": "https://github.com/roboninecom/SO-ARM-102"
    },
    "uri": "assets/ebe7298e6b0969f1.glb"
+  },
+  "fc4a56c288446a97": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 6932,
+   "changes": [],
+   "label": "l_bracket, left jaw, design 2546f843c3bb",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "finger_left",
+   "sha256": "fc4a56c288446a975aac14cd00fdda447109d6187f6d641f6b528f1e00f96e8b",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/fc4a56c288446a97.glb"
   }
  },
  "format": "rtt-asset-manifest",

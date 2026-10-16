@@ -807,6 +807,173 @@
      }
     }
    ]
+  },
+  {
+   "id": "v2-hero-l-bracket",
+   "source": "export:v2-hero-l-bracket",
+   "kind": "training",
+   "title": "L-bracket 3 mm off centre: the imprint stops short, a drafted V-funnel centres it",
+   "summary": "Three recorded episodes of the v2 training suite (train_v2), all on the L-bracket at placement c2 (the part 3 mm off centre across the jaw), each the condition's first jitter seed: the stock blade, the configurator imprint and a drafted V-funnel recipe (design sobol_00 of the GV3 calibration sample, a random design, not a search result). The hero screen found no part where the stock blade fails visibly, so this is the offset contrast the hero rule prescribes: the stock blade holds the bracket where it landed, the imprint jams short of its seat, and the V-funnel's drafted walls pull the bracket to centre. Single episodes, not a score. Replayed from the recordings, never re-simulated.",
+   "featured": false,
+   "recorded_at": "2026-10-16T18:40:34Z",
+   "task": {
+    "name": "task_v2",
+    "phases": [
+     {
+      "name": "settle",
+      "start_s": 0,
+      "end_s": 0.3
+     },
+     {
+      "name": "descend",
+      "start_s": 0.3,
+      "end_s": 1.3
+     },
+     {
+      "name": "close",
+      "start_s": 1.3,
+      "end_s": 2.6
+     },
+     {
+      "name": "lift",
+      "start_s": 2.6,
+      "end_s": 4.1
+     },
+     {
+      "name": "hold",
+      "start_s": 4.1,
+      "end_s": null
+     }
+    ],
+    "success_lift_m": 0.1,
+    "success_hold_s": 2.0,
+    "record_tail_s": 0.5,
+    "max_time_s": 12.0,
+    "grip_force_n": 50.0,
+    "max_opening_mm": 84.0
+   },
+   "compute": {
+    "kind": "local",
+    "executor": "cpu",
+    "engine": "MuJoCo 3.15.0",
+    "host": "Developer laptop",
+    "wall_s": 3.047,
+    "sim_steps": 18070,
+    "note": "Local run on a developer laptop, not a Nebius job. Replays recorded from the scored v2 episodes."
+   },
+   "lanes": [
+    {
+     "id": "stock_l_bracket_c2",
+     "replay": "replays/v2-hero-l-bracket/stock_l_bracket_c2",
+     "label": "Stock blade",
+     "condition": "l bracket, 3 mm off centre across the jaw",
+     "entrant": "stock",
+     "design_id": "d623c048e05a0d8bac6e73106a99b60631fc4631b7c0b98ed876e6174e62f0b1",
+     "object": {
+      "kind": "part",
+      "size_mm": [
+       40.0,
+       30.0,
+       40.0
+      ],
+      "part_id": "l_bracket",
+      "family": "l_bracket"
+     },
+     "controller_setting": null,
+     "grasp_height_frac": null,
+     "seed": 7936365254780240449,
+     "n_frames": 181,
+     "duration_s": 6.0,
+     "outcome": {
+      "success": false,
+      "failure_mode": "not_registered",
+      "max_lift_mm": 149.8,
+      "hold_s": 2.0,
+      "flags": [],
+      "source": "scorer",
+      "wall_s": 1.26,
+      "sim_steps": 6020
+     },
+     "design_provenance": {
+      "kind": "manual",
+      "note": "The gripper's own clamp blade, as shipped"
+     }
+    },
+    {
+     "id": "imprint_l_bracket_c2",
+     "replay": "replays/v2-hero-l-bracket/imprint_l_bracket_c2",
+     "label": "Configurator imprint",
+     "condition": "l bracket, 3 mm off centre across the jaw",
+     "entrant": "imprint_configurator",
+     "design_id": "2546f843c3bbaa81ec26545c38aadcbd9f4b5e2a319911cf4fa7a8383bc4db44",
+     "object": {
+      "kind": "part",
+      "size_mm": [
+       40.0,
+       30.0,
+       40.0
+      ],
+      "part_id": "l_bracket",
+      "family": "l_bracket"
+     },
+     "controller_setting": null,
+     "grasp_height_frac": null,
+     "seed": 7936365254780240449,
+     "n_frames": 181,
+     "duration_s": 6.0,
+     "outcome": {
+      "success": false,
+      "failure_mode": "not_registered",
+      "max_lift_mm": 149.8,
+      "hold_s": 2.0,
+      "flags": [],
+      "source": "scorer",
+      "wall_s": 0.84,
+      "sim_steps": 6020
+     },
+     "design_provenance": {
+      "kind": "manual",
+      "note": "Hand-designed baseline entrant"
+     }
+    },
+    {
+     "id": "vfunnel_l_bracket_c2",
+     "replay": "replays/v2-hero-l-bracket/vfunnel_l_bracket_c2",
+     "label": "Drafted V-funnel (calibration design sobol_00)",
+     "condition": "l bracket, 3 mm off centre across the jaw",
+     "entrant": "recipe",
+     "design_id": "3cef65c4f379ec306c0756fcbdabed0f80270c055341c051a6aee84c2e42e215",
+     "object": {
+      "kind": "part",
+      "size_mm": [
+       40.0,
+       30.0,
+       40.0
+      ],
+      "part_id": "l_bracket",
+      "family": "l_bracket"
+     },
+     "controller_setting": null,
+     "grasp_height_frac": null,
+     "seed": 7936365254780240449,
+     "n_frames": 181,
+     "duration_s": 6.0,
+     "outcome": {
+      "success": true,
+      "failure_mode": null,
+      "max_lift_mm": 149.2,
+      "hold_s": 2.0,
+      "flags": [],
+      "source": "scorer",
+      "wall_s": 0.947,
+      "sim_steps": 6030
+     },
+     "design_provenance": {
+      "kind": "manual",
+      "note": "Recipe given in the bout spec"
+     }
+    }
+   ]
   }
  ]
 }
