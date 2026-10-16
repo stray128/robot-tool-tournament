@@ -19,6 +19,16 @@ Where the physics ran comes from the run itself: a run fetched from a Nebius job
 carries ``job.json`` (job ID, platform, preset, region, wall time, estimated cost) and
 is labelled as a Nebius job; anything else is a local run and says so.
 
+Replays are published as version 1 by default, which is what the site's parser reads today.
+With ``replay_version=2`` every lane is published as a replay v2 header
+(``src/rtt/sim/replay_v2.schema.json``): v1 replays are lifted on the way
+(:func:`rtt.pipeline.replays.lift_to_v2`: the open-source gripper's frame and carriages,
+each jaw's own asset, the stock entrant drawn with the stock blade's CAD), v2 replays are
+copied with their overlay sidecar, and every GLB they draw is copied, sha256-checked, into
+``assets_dir`` (default ``web/public/assets``) with its entry merged into that directory's
+``manifest.json``. A run directory that holds v2 replays keeps their asset store in
+``<run_dir>/assets/``.
+
 Entries are owned by a ``source`` tag, ``export:<run name>``: re-exporting a run
 replaces exactly its own entries and keeps everyone else's (the demo importer uses
 ``demo-m1``). A design that another source already lists is not duplicated.
@@ -65,6 +75,7 @@ class ExportResult:
     jobs: list[str] = field(default_factory=list)
     replays: int = 0
     skipped: list[str] = field(default_factory=list)
+    assets: list[str] = field(default_factory=list)
 
     def describe(self) -> str:
         return (
@@ -375,10 +386,52 @@ class _Staged:
     jobs: list[dict[str, Any]] = field(default_factory=list)
     copies: list[tuple[Path, str]] = field(default_factory=list)  # (source file, path under data dir)
     design_dirs: list[tuple[Path, str]] = field(default_factory=list)  # (staged dir, design id)
+    assets: dict[str, tuple[Path, dict[str, Any]]] = field(default_factory=dict)  # id -> (GLB, entry)
+
+
+def _stage_v2_replay(
+    replay: Any,
+    run_dir: Path,
+    rel: str,
+    staging: Path,
+    staged: _Staged,
+    *,
+    stock: bool,
+    run_id: str,
+    code_version: str,
+) -> None:
+    """Stage one lane as a replay v2 (lifting a v1 replay) plus the GLBs it draws."""
+    from rtt.pipeline.replays import lift_to_v2
+    from rtt.render.glb import AssetStore
+    from rtt.sim.replay import write_replay
+
+    if replay.version == 1:
+        store = AssetStore(staging / "assets")
+        replay = lift_to_v2(replay, store, run_id=run_id, code_version=code_version, stock_blade=stock)
+        asset_root = store.root
+    else:
+        asset_root = run_dir / "assets"
+    stem = staging / "replays_v2" / rel
+    bin_path, json_path = write_replay(replay, stem)
+    staged.copies += [(bin_path, f"{rel}.bin"), (json_path, f"{rel}.json")]
+    if replay.overlays is not None:
+        staged.copies.append((stem.with_name(stem.name + ".ovl.bin"), f"{rel}.ovl.bin"))
+    for aid, entry in replay.header["assets"].items():
+        src = asset_root / f"{aid}.glb"
+        if not src.is_file():
+            raise FileNotFoundError(
+                f"{run_dir}: replay {rel} draws asset {aid}, which is not in {asset_root}"
+            )
+        staged.assets[aid] = (src, dict(entry))
 
 
 def _slice_entries(
-    run_dir: Path, summary: Mapping[str, Any], known_designs: set[str], staging: Path, source: str
+    run_dir: Path,
+    summary: Mapping[str, Any],
+    known_designs: set[str],
+    staging: Path,
+    source: str,
+    replay_version: int = 1,
 ) -> _Staged:
     from rtt.design.validate import validate
     from rtt.sim.conditions import training_suite
@@ -411,10 +464,29 @@ def _slice_entries(
             raise ValueError(
                 f"{run_dir}: replay {stem} has {replay.n_frames} frames, slice.json says {lane['n_frames']}"
             )
-        staged.copies += [
-            (run_dir / f"{lane['replay']}.bin", f"{rel}.bin"),
-            (run_dir / f"{lane['replay']}.json", f"{rel}.json"),
-        ]
+        if replay_version == 2:
+            from rtt.sim.replay import normalise_code_version
+
+            _stage_v2_replay(
+                replay,
+                run_dir,
+                rel,
+                staging,
+                staged,
+                stock=entry.get("origin") == "entrant" and entry.get("name") == "stock",
+                run_id=bout_id,
+                code_version=normalise_code_version((summary.get("code") or {}).get("git_sha")),
+            )
+        elif replay.version != 1:
+            raise ValueError(
+                f"{run_dir}: replay {stem} is version {replay.version}; export it with replay_version=2 "
+                "(the site must then read replay v2)"
+            )
+        else:
+            staged.copies += [
+                (run_dir / f"{lane['replay']}.bin", f"{rel}.bin"),
+                (run_dir / f"{lane['replay']}.json", f"{rel}.json"),
+            ]
         origin = entry["origin"]
         if origin == "entrant":
             label = f"Baseline: {entry['name']} finger"
@@ -669,12 +741,18 @@ def export_web(
     data_dir: str | Path = DEFAULT_DATA_DIR,
     *,
     featured: str | None = None,
+    replay_version: int = 1,
+    assets_dir: str | Path | None = None,
 ) -> ExportResult:
     """Export ``run_dirs`` into ``data_dir`` (default ``web/public/data``).
 
     ``featured`` names a bout id to mark as the landing page's featured bout (other
     bouts this export writes are not featured; other sources' flags are untouched).
+    ``replay_version=2`` publishes replay v2 headers and their GLB assets into
+    ``assets_dir`` (default: ``assets`` next to ``data_dir``).
     """
+    if replay_version not in (1, 2):
+        raise ValueError(f"replay_version must be 1 or 2, got {replay_version}")
     data = Path(data_dir)
     data.mkdir(parents=True, exist_ok=True)
     files = {name: data / f"{name}.json" for name in ("bouts", "designs", "jobs")}
@@ -695,7 +773,7 @@ def export_web(
             known |= {d["id"] for d in combined.designs}
             if (run_dir / "slice.json").is_file():
                 summary = json.loads((run_dir / "slice.json").read_text(encoding="utf-8"))
-                staged = _slice_entries(run_dir, summary, known, staging, source)
+                staged = _slice_entries(run_dir, summary, known, staging, source, replay_version)
             elif (run_dir / "heldout.json").is_file():
                 report = json.loads((run_dir / "heldout.json").read_text(encoding="utf-8"))
                 staged = _heldout_entries(run_dir, report, source)
@@ -710,6 +788,7 @@ def export_web(
             combined.jobs += staged.jobs
             combined.copies += staged.copies
             combined.design_dirs += staged.design_dirs
+            combined.assets.update(staged.assets)
 
         if featured is not None:
             for bout in combined.bouts:
@@ -732,6 +811,10 @@ def export_web(
             dst = data / "designs" / design_id
             shutil.rmtree(dst, ignore_errors=True)
             shutil.copytree(staged_dir, dst)
+        if combined.assets:
+            _publish_assets(
+                combined.assets, Path(assets_dir) if assets_dir is not None else data.parent / "assets"
+            )
         _write_json(
             files["bouts"],
             {
@@ -760,8 +843,32 @@ def export_web(
     result.bouts = [b["id"] for b in combined.bouts]
     result.designs = [d["id"] for d in combined.designs]
     result.jobs = [j["id"] for j in combined.jobs]
-    result.replays = len(combined.copies) // 2
+    result.replays = sum(1 for _, rel in combined.copies if rel.endswith(".json"))
+    result.assets = sorted(combined.assets)
     return result
+
+
+def _publish_assets(assets: Mapping[str, tuple[Path, Mapping[str, Any]]], assets_dir: Path) -> None:
+    """Copy content-addressed GLBs (sha256-checked) and merge their manifest entries."""
+    import hashlib
+
+    from rtt.render.glb import AssetStore, check_entry
+
+    for aid, (src, entry) in sorted(assets.items()):
+        data = src.read_bytes()
+        if hashlib.sha256(data).hexdigest() != entry["sha256"] or len(data) != entry["bytes"]:
+            raise ValueError(f"asset {aid}: {src.name} does not match its manifest entry")
+        errs = check_entry(aid, entry)
+        if errs:
+            raise ValueError("; ".join(errs))
+    assets_dir.mkdir(parents=True, exist_ok=True)
+    store = AssetStore(assets_dir)
+    for aid, (src, entry) in sorted(assets.items()):
+        dst = assets_dir / f"{aid}.glb"
+        if not dst.is_file() or dst.read_bytes() != src.read_bytes():
+            shutil.copyfile(src, dst)
+        store.entries[aid] = dict(entry)
+    store.write_manifest()
 
 
 def _run_name(run_dir: Path) -> str:
