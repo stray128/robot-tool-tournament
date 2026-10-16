@@ -212,3 +212,16 @@ def test_asymmetric_pairs_are_checked_for_their_own_mass_properties() -> None:
     assert asym["pairs"] and asym["own_mass_properties"]
     for row in asym["pairs"].values():
         assert row["mass_g"] == row["compiled_mass_g"] and row["mass_g"][0] != row["mass_g"][1]
+
+
+def test_agreement_splits_registered_and_held() -> None:
+    from rtt.sim.gates_v2 import _agreement
+
+    a = [_fake(True, True, 0.1, 0.1), _fake(False, True, 0.1, 0.1), _fake(False, False, 0.1, 0.1)]
+    b = [_fake(True, True, 0.1, 0.1), _fake(True, True, 0.1, 0.1), _fake(False, True, 0.1, 0.1)]
+    out = _agreement(a, b)
+    assert out["n"] == 3 and out["disagreements"] == [1, 2]
+    assert out["outcome_agreement"] == pytest.approx(1 / 3)
+    assert out["registered_agreement"] == pytest.approx(2 / 3)
+    assert out["held_agreement"] == pytest.approx(2 / 3)
+    assert _agreement([], [])["n"] == 0

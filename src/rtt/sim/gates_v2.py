@@ -152,11 +152,14 @@ def _agreement(a: Sequence[EpisodeResult], b: Sequence[EpisodeResult]) -> dict[s
     n = len(a)
     if not n:
         return {"n": 0, "outcome_agreement": math.nan, "failure_mode_agreement": math.nan}
-    diff = [i for i, (x, y) in enumerate(zip(a, b, strict=True)) if _outcome(x) != _outcome(y)]
-    same_mode = sum(x.failure_mode == y.failure_mode for x, y in zip(a, b, strict=True))
+    pairs = list(zip(a, b, strict=True))
+    diff = [i for i, (x, y) in enumerate(pairs) if _outcome(x) != _outcome(y)]
+    same_mode = sum(x.failure_mode == y.failure_mode for x, y in pairs)
     return {
         "n": n,
         "outcome_agreement": 1.0 - len(diff) / n,
+        "registered_agreement": sum(_outcome(x)[0] == _outcome(y)[0] for x, y in pairs) / n,
+        "held_agreement": sum(_outcome(x)[1] == _outcome(y)[1] for x, y in pairs) / n,
         "failure_mode_agreement": same_mode / n,
         "success_rate": [sum(x.success for x in a) / n, sum(y.success for y in b) / n],
         "disagreements": diff,
@@ -225,6 +228,9 @@ def matrix_stats(results: Sequence[EpisodeResult]) -> dict[str, Any]:
         "held_rate": len(held) / n if n else math.nan,
         "pen_held_max_mm": max(pen_held) if pen_held else math.nan,
         "pen_held_over_1mm": sum(v > PEN_HELD_MAX_MM for v in pen_held),
+        "pen_registered_over_1mm": sum(
+            r.metrics["obj_finger_pen_max"] * 1000.0 > PEN_HELD_MAX_MM for r in results if r.success
+        ),
         "pen_p99_mm": _pct(pen_all, 99),
         "pen_max_mm": max(pen_all) if pen_all else math.nan,
         "creep_p95_mm": _pct(creep, 95),
