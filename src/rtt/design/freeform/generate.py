@@ -237,7 +237,9 @@ def _configurator_depth(p_left: np.ndarray, p_right: np.ndarray, task: Any) -> f
     pl, pr = float(np.max(p_left[np.isfinite(p_left)])), float(np.max(p_right[np.isfinite(p_right)]))
     half_extent = 0.5 * (pl + pr)
     q_max = V.Q_SEAT_RANGE[1]
-    stroke_cap = min(pl, pr) - (task.gripper.open_half_gap - q_max) + CARRIAGE_INNER_Y
+    # at q_max the carriage face is at open_half_gap - q_max + 0.4 mm from the centre, and the
+    # pad's innermost point (P - depth at seat) may come no closer: q_seat stays <= q_max
+    stroke_cap = min(pl, pr) - (task.gripper.open_half_gap - q_max) - CARRIAGE_INNER_Y
     return max(0.004, min(0.4 * half_extent, stroke_cap))
 
 

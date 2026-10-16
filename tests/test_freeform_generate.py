@@ -423,6 +423,26 @@ def test_cache_keeps_part_ids_and_repair_notes_apart() -> None:
     assert not any("inactive" in n for n in b.auto_repairs)
 
 
+def test_configurator_stroke_cap_keeps_q_seat_in_the_stroke() -> None:
+    """Where the stroke cap sets the imprint depth, the imprint seats at q_max exactly
+    (it used to come out 0.8 mm past it and fail q_seat_range)."""
+    from freeform_parts import ALU, box, make_part
+
+    part = make_part(
+        "step_block",
+        "block",
+        [
+            box((-0.015, -0.030, 0.0), (0.015, 0.030, 0.005)),
+            box((-0.015, -0.008, 0.005), (0.015, 0.030, 0.040)),  # 8 mm on the right jaw's side
+        ],
+        ALU,
+    )
+    entrant = {b.name: b for b in load_entrants_v2()}["imprint_configurator"]
+    b = build_pair_full(entrant, part, TASK)
+    assert b.pair.q_seat == pytest.approx(0.040, abs=1e-7)
+    assert any("depth on step_block: 5.6 mm" in n for n in b.pair.auto_repairs)
+
+
 _HASH_SCRIPT = r"""
 import json, sys
 sys.path.insert(0, sys.argv[1])
