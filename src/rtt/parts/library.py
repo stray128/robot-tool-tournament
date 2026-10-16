@@ -4,7 +4,8 @@ Each family is a pure function from its dimensions (millimetres, as in the confi
 exact convex pieces (:mod:`rtt.parts.pieces`), declared features, yaw symmetry and
 registration axes. :func:`build_part` turns that into a :class:`~rtt.parts.types.PartSpec`
 in the object frame (metres, z up, bounding box centred on the origin, y the closing axis,
-the left jaw at +y).
+the left jaw at +y). A family may put the x/y origin elsewhere (``Shape.origin_xy``): the
+origin is where the jaws aim, so the L-bracket's is the centre of the leg the jaws grip.
 
 Training families (``configs/parts_v2.yaml``, the ``train_v2`` suite):
 
@@ -12,11 +13,13 @@ Training families (``configs/parts_v2.yaml``, the ``train_v2`` suite):
   jaw). Hubs, three blind sockets (16-gon walls), solid core. The hero part.
 * ``block``: a plain rectangular block with sharp edges (no lead-in): the clearest jam case.
 * ``hex_standoff``: a standing hex bar with flats facing the jaws and a tapped top hole.
-  ``yaw_symmetry`` 6.
+  ``yaw_symmetry`` 6. Twelve full-height sectors around the bore plus a plug under the hole,
+  so no internal seam crosses the gripped flats (a horizontal seam gave the pads a ledge).
 * ``flanged_bushing``: a standing bushing, flange up, with a through bore. Round: yaw is not
   registered.
-* ``l_bracket``: a stamped L-bracket lying on one leg, the other leg standing at +y. The two
-  jaws see different outlines.
+* ``l_bracket``: a stamped L-bracket lying flat on one leg, the other leg standing at the
+  +x end with its edges toward the jaws. The object frame is centred on the standing leg
+  (where the jaws grip it), so the centre of mass sits 9.5 mm off the grip axis.
 * ``slug``: a solid round slug (32-gon). Round: yaw is not registered.
 
 Held-out-only families (``rtt.parts.heldout``): ``pipe_elbow`` (a 90 degree slip elbow lying
@@ -70,6 +73,9 @@ class Shape:
     features: tuple[Feature, ...] = ()
     yaw_symmetry: int = 1
     register_axes: tuple[RegisterAxis, ...] = REGISTER_AXES
+    #: the natural-frame (x, y) point that becomes the object frame's x/y origin (where the
+    #: jaws aim); ``None`` is the bounding-box centre. z is always bounding-box centred.
+    origin_xy: tuple[float, float] | None = None
 
 
 @dataclass(frozen=True)
@@ -220,9 +226,15 @@ def _hex_standoff(p: Mapping[str, float]) -> Shape:
     hexagon = pc.ngon(p["across_flats"] / 2 * MM, 6, flat_at_deg=90.0)  # flats face +-y
     length, depth = p["length"] * MM, p["hole_depth"] * MM
     r_hole = p["hole_d"] / 2 * MM
-    pieces = [pc.prism(hexagon, "z", 0.0, length - depth)]
-    # 12-gon hole with vertices on the hex corners and flat midpoints: keeps the 6-fold symmetry
-    pieces += pc.sector_pieces(hexagon, r_hole, 12, "z", length - depth, length, flat_at_deg=-15.0)
+    # Twelve full-height sectors between the hexagon and the 12-gon bore, plus a plug under the
+    # blind hole. No seam runs across a gripped flat: a solid base under hole-height sectors
+    # left a horizontal internal face that MuJoCo gave the pads as a ledge (gate GV2: the part
+    # was carried at mu 0.05). The bore's vertices sit 15 deg off the hex corners and flat
+    # midpoints, so the seams on the flats facing the jaws are 2.3 mm either side of centre and
+    # no seam lies on a hex edge; the 6-fold symmetry is kept. (Two full-height slabs for the
+    # gripped flats are cheaper but thin: libccd's MPR then reported 17 mm penetrations.)
+    pieces = pc.sector_pieces(hexagon, r_hole, 12, "z", 0.0, length, flat_at_deg=0.0)
+    pieces.append(pc.prism(pc.ngon(r_hole, 12, flat_at_deg=0.0), "z", 0.0, length - depth))
     hole = Feature("socket", "tapped_hole", (0.0, 0.0, length), (0.0, 0.0, 1.0), r_hole, depth)
     return Shape(tuple(pieces), (hole,), yaw_symmetry=6)
 
@@ -265,12 +277,18 @@ def _bracket_check(p: Mapping[str, float]) -> list[str]:
 
 
 def _l_bracket(p: Mapping[str, float]) -> Shape:
+    """Lying flat on leg ``a`` (along x), leg ``b`` standing at the +x end; ``width`` along y.
+
+    The jaws close on the standing leg's two edges: the frame is centred on that leg, so
+    every jaw width meets material in the pad band (bounding-box centred, the leg would sit
+    16 mm off the grip axis and a 20 mm wide pad would miss it).
+    """
     a, b, w, t = (p[k] * MM for k in ("leg_a", "leg_b", "width", "wall"))
     pieces = (
-        pc.box((-w / 2, -a / 2, 0.0), (w / 2, a / 2 - t, t)),  # leg on the table
-        pc.box((-w / 2, a / 2 - t, 0.0), (w / 2, a / 2, b)),  # standing leg at +y
+        pc.box((-a / 2, -w / 2, 0.0), (a / 2 - t, w / 2, t)),  # leg on the table
+        pc.box((a / 2 - t, -w / 2, 0.0), (a / 2, w / 2, b)),  # standing leg at +x
     )
-    return Shape(pieces)
+    return Shape(pieces, origin_xy=(a / 2 - t / 2, 0.0))
 
 
 def _slug_check(p: Mapping[str, float]) -> list[str]:
@@ -413,7 +431,7 @@ FAMILIES: MappingProxyType[str, Family] = MappingProxyType(
                 _l_bracket,
                 _bracket_check,
                 free=("leg_a", "leg_b", "width"),
-                description="L-bracket lying on one leg, the other standing toward the left jaw",
+                description="L-bracket lying flat on one leg, gripped on the edges of the standing leg",
             ),
             Family(
                 "slug",
@@ -474,11 +492,15 @@ def assemble(
     source_sha256: str = "",
     visual_asset: str | None = None,
 ) -> PartSpec:
-    """A :class:`PartSpec` from a :class:`Shape`: centred on its bounding box, with exact
-    mass properties of the union of its pieces."""
+    """A :class:`PartSpec` from a :class:`Shape`: centred on its bounding box (x/y on
+    ``shape.origin_xy`` when the family sets it), with exact mass properties of the union of
+    its pieces."""
     pts = np.concatenate([p.verts for p in shape.pieces])
     lo, hi = pts.min(axis=0), pts.max(axis=0)
-    shift = pc.quantize(-(lo + hi) / 2.0)
+    centre = (lo + hi) / 2.0
+    if shape.origin_xy is not None:
+        centre[0], centre[1] = shape.origin_xy
+    shift = pc.quantize(-centre)
     pieces = [pc._piece_from_polys(pc.quantize(p.verts + shift), p.polys) for p in shape.pieces]
     props = pc.mass_properties(pieces)
     return PartSpec(

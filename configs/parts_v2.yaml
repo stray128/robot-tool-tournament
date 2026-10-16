@@ -9,7 +9,8 @@
 #
 # Object frame: metres, z up, bounding box centred on the origin, y the closing axis, the
 # left jaw at +y. Each part keeps the pose it is gripped in (it is not turned to its
-# narrowest extent).
+# narrowest extent). The L-bracket's x/y origin is the centre of its standing leg, where the
+# jaws grip it (rtt.parts.library.Shape.origin_xy).
 #
 # Masses at these densities (rtt.parts.materials, handbook values [assumed]):
 # pipe_tee 39.9 g, block 194.4 g, hex_standoff 82.9 g, flanged_bushing 90.9 g, l_bracket 71.6 g,
@@ -41,7 +42,7 @@ parts:
   - name: l_bracket
     family: l_bracket
     material: stamped_steel
-    description: 40 x 40 x 30 mm L-bracket, 4 mm wall, lying on one leg, the other standing at +y
+    description: 40 x 40 mm L-bracket, 30 mm wide, 4 mm wall, lying flat on one leg; the jaws grip the standing leg's edges
     params: {leg_a: 40.0, leg_b: 40.0, width: 30.0, wall: 4.0}
   - name: steel_slug
     family: slug

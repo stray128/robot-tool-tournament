@@ -162,7 +162,12 @@ def test_union_is_one_watertight_solid_with_the_stated_mass(parts: dict[str, Par
     scale = max(full[:3])
     assert np.allclose(part.unit_inertia, full, rtol=0, atol=1e-5 * scale)
     lo, hi = np.concatenate(part.pieces).min(axis=0), np.concatenate(part.pieces).max(axis=0)
-    assert np.allclose(lo, -hi, atol=2e-7)  # bounding box centred on the origin
+    assert lo[2] == pytest.approx(-hi[2], abs=2e-7)  # z: bounding box centred on the origin
+    if name == "l_bracket":  # x/y: centred on the standing leg, which the jaws grip
+        leg = part.pieces[1]
+        assert np.allclose(leg[:, :2].min(axis=0), -leg[:, :2].max(axis=0), atol=2e-7)
+    else:
+        assert np.allclose(lo, -hi, atol=2e-7)  # bounding box centred on the origin
     assert len(part.pieces) <= 128
     assert part.decomposition == "exact"
 
@@ -176,7 +181,7 @@ def test_training_parts_have_the_specified_dimensions_and_roles(parts: dict[str,
     assert size_mm("hex_standoff")[1:] == [17.0, 45.0]  # 17 across flats, on the closing axis
     assert size_mm("hex_standoff")[0] == pytest.approx(17.0 / math.cos(math.pi / 6), abs=1e-3)
     assert size_mm("flanged_bushing") == [36.0, 36.0, 35.0]  # 20 x 30 body, 36 x 5 flange on top
-    assert size_mm("l_bracket") == [30.0, 40.0, 40.0]
+    assert size_mm("l_bracket") == [40.0, 30.0, 40.0]  # lying flat, standing leg's edges toward the jaws
     assert size_mm("steel_slug") == [40.0, 40.0, 50.0]
     mass_g = {n: 1000 * p.mass for n, p in parts.items()}
     assert mass_g["steel_slug"] == pytest.approx(490, rel=0.015)
@@ -201,11 +206,15 @@ def test_tee_branch_socket_faces_the_left_jaw(parts: dict[str, PartSpec]) -> Non
     assert branch.radius == pytest.approx(0.01075) and branch.depth == pytest.approx(0.0165)
 
 
-def test_l_bracket_jaws_see_different_outlines(parts: dict[str, PartSpec]) -> None:
-    pts = np.concatenate(parts["l_bracket"].pieces)
-    high = pts[pts[:, 2] > 0.0]  # above mid-height only the standing leg remains
-    assert high[:, 1].min() > 0.015  # at +y: the right jaw must reach in 36 mm
-    assert pts[:, 1].min() == pytest.approx(-0.02)
+def test_l_bracket_is_gripped_on_its_standing_leg(parts: dict[str, PartSpec]) -> None:
+    part = parts["l_bracket"]
+    pts = np.concatenate(part.pieces)
+    high = pts[pts[:, 2] > -0.016]  # above the 4 mm leg on the table only the standing leg remains
+    # on the grip axis, with its edges toward the jaws
+    assert np.allclose(high[:, 0].min(), -0.002) and np.allclose(high[:, 0].max(), 0.002)
+    assert np.allclose(high[:, 1].min(), -0.015) and np.allclose(high[:, 1].max(), 0.015)
+    assert pts[:, 0].min() == pytest.approx(-0.038)  # the leg on the table reaches out to -x
+    assert part.com[0] == pytest.approx(-0.0095, abs=2e-4)  # 9.5 mm off the grip axis
 
 
 def test_part_specs_match_their_mesh_objects(parts: dict[str, PartSpec]) -> None:
@@ -271,9 +280,9 @@ def test_hashes_are_identical_across_processes(parts: dict[str, PartSpec]) -> No
 EXPECTED_GEOMETRY_SHA256 = {
     "pipe_tee": "98740094d82da2f86be41147051213c143fc57b37f34729654ab186a8596c7a3",
     "block": "e8ea8c7bb6df0bc934c8e77fda68923fa6fb1f7d851b69e426d854b00a314a8c",
-    "hex_standoff": "bb184cb28c3cdcc2f54be336473aa621343c9c4ed0c7fc6236355c3a511dfb83",
+    "hex_standoff": "c0692629573c666b8d5754016fb7d6d473aa72c44e6080819abce607054ec380",
     "flanged_bushing": "1a1523da52fbefe9b43bed3d1a7407ab8c16dfa884d4c71ede23cacbf07c0042",
-    "l_bracket": "a35c2d0be3bfc6a5f982877313c5a421ce49735eed6792065f660ed02041ef63",
+    "l_bracket": "04568f49bb463d38b8d224e3cff4295ab5bc6be123ae7f11b90c43564cf0668b",
     "steel_slug": "3ce55fded0d427e50055d04951aa8c235771a4bb26154ae71be4ea598ad647b6",
 }
 
@@ -381,7 +390,9 @@ def test_random_dimensions_build_exactly_or_fail_with_a_message(data: st.DataObj
         assert abs(hull.volume - pc.piece_volume(p)) <= 1e-9 * hull.volume
     assert part.volume > 0 and math.isfinite(part.mass)
     lo, hi = np.concatenate(part.pieces).min(axis=0), np.concatenate(part.pieces).max(axis=0)
-    assert np.allclose(lo, -hi, atol=2e-7)
+    assert lo[2] == pytest.approx(-hi[2], abs=2e-7)
+    if family != "l_bracket":  # the L-bracket's x/y origin is its standing leg
+        assert np.allclose(lo, -hi, atol=2e-7)
 
 
 def test_mirror_y_is_exact_and_flips_the_jaw_sides(parts: dict[str, PartSpec]) -> None:
@@ -401,7 +412,8 @@ def test_mirror_y_is_exact_and_flips_the_jaw_sides(parts: dict[str, PartSpec]) -
     assert check_features(m) == []
     assert lib.mirror_y(m).geometry_sha256 == tee.geometry_sha256
     bracket = parts["l_bracket"]
-    assert lib.mirror_y(bracket).geometry_sha256 != bracket.geometry_sha256  # asymmetric in y
+    mirrored_com = (bracket.com[0], -bracket.com[1], bracket.com[2])  # symmetric in y
+    assert np.allclose(lib.mirror_y(bracket).com, mirrored_com)
     assert lib.mirror_y(parts["block"]).size == parts["block"].size
 
 
