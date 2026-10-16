@@ -332,6 +332,11 @@ and reference entrants plus 64 valid Sobol designs (seed 20261020), scored on `t
 Reported, not gating: lift-only scores, `jam_on_close` and `off_centre` counts, and the
 `physics_invalid` share (above 1 %: a deviation).
 
+Scoring is defensive: an episode record that claims a registered grasp but did not lift,
+is not `registered`, carries a `not_registered` sub-flag, or (with the frozen seat
+tolerance) has a seat shortfall above it, is refused rather than scored. So a jammed part
+never counts as registered.
+
 **Procedure:**
 
 - At most 3 iterations, each logged in `calibration_log.json` with its file hashes,

@@ -518,6 +518,75 @@ def test_score_designs_v2_with_harness_records() -> None:
         score_designs_v2([{"design_id": "x", "success_v2": True}] * 48, {"x": ("x", "sobol")})
 
 
+def _sim_record(**over: object) -> dict[str, object]:
+    """A v2 record shaped like the simulator's ``EpisodeRecordV2.to_dict()`` (track S)."""
+    rec: dict[str, object] = {
+        "design_id": "d",
+        "part_id": "tee",
+        "condition_id": "train_v2/tee/c1",
+        "placement_label": "c1",
+        "seed": 0,
+        "success": True,
+        "lift_success": True,
+        "failure_mode": None,
+        "registered": True,
+        "jam_on_close": False,
+        "off_centre": False,
+        "seat_short_mm": 0.2,
+        "reg_dx_mm": 0.1,
+        "reg_dy_mm": 0.0,
+        "reg_dyaw_deg": 0.3,
+        "reg_tilt_deg": 0.5,
+        "reg_hold_tilt_deg": 0.8,
+        "registration_flags": [],
+        "bad_qacc": 0,
+    }
+    rec.update(over)
+    return rec
+
+
+def test_simulator_records_are_read_flags_placements_and_all() -> None:
+    eo = calibrate_v2.episode_outcome
+    assert eo(_sim_record()) == (True, True)
+    jam = _sim_record(
+        success=False,
+        registered=False,
+        failure_mode="not_registered",
+        seat_short_mm=5.0,
+        registration_flags=["jam_on_close"],
+    )
+    assert eo(jam) == (False, True)
+    # a registered success carrying a not_registered flag in the list is refused
+    for flag in ("jam_on_close", "off_centre", "tilt_after_hold", "not_measured"):
+        with pytest.raises(ValueError, match="inconsistent"):
+            eo(_sim_record(registration_flags=[flag]))
+    recs = [_sim_record(placement_label=p, seed=k) for p in ("c0", "c1", "c2", "c3") for k in range(12)]
+    recs[:6] = [{**jam, "placement_label": "c0", "seed": k} for k in range(6)]
+    (row,) = score_designs_v2(recs, {"d": ("imprint", "entrant")})
+    assert row.jam_on_close == 6 and row.score == pytest.approx(42 / 48)
+    assert row.by_placement == {"c0": pytest.approx(0.5), "c1": 1.0, "c2": 1.0, "c3": 1.0}
+
+
+def test_seat_tolerance_cross_check_refuses_a_jam_scored_as_registered() -> None:
+    eo = calibrate_v2.episode_outcome
+    jammed_but_registered = _sim_record(seat_short_mm=5.0)  # no sub-flag, flags and numbers disagree
+    assert eo(jammed_but_registered) == (True, True)  # without the tolerance it cannot be seen
+    with pytest.raises(ValueError, match="seat tolerance"):
+        eo(jammed_but_registered, seat_short_max_mm=1.0)
+    with pytest.raises(ValueError, match="measured seat_short_mm"):
+        eo(_sim_record(seat_short_mm=None), seat_short_max_mm=1.0)
+    assert eo(_sim_record(seat_short_mm=1.0), seat_short_max_mm=1.0) == (True, True)
+    # failures need no seat measurement
+    assert eo(_sim_record(success=False, registered=False, seat_short_mm=None), seat_short_max_mm=1.0) == (
+        False,
+        True,
+    )
+    recs = [_sim_record(seed=k) for k in range(48)]
+    recs[7] = jammed_but_registered
+    with pytest.raises(ValueError, match="seat tolerance"):
+        score_designs_v2(recs, {"d": ("x", "sobol")}, seat_short_max_mm=1.0)
+
+
 def test_screening_seed_and_knob_rules() -> None:
     check_screening_seed(calibrate_v2.SCREENING_SEED_V2, forbidden=[1001, 1002])
     for bad in (101, 20261018, 205):
@@ -729,6 +798,31 @@ def test_screen_episode_from_v2_record() -> None:
     assert ep.mode == "slip_during_lift" and not ep.physics_invalid
     bad = ScreenEpisode.from_record({**rec, "registered": True, "bad_qacc": 3})
     assert bad.physics_invalid and not bad.success_v2
+
+
+def test_screen_episode_from_simulator_record() -> None:
+    """The simulator's records: condition from placement_label, hold tilt from reg_hold_tilt_deg."""
+    rec = _sim_record(
+        placement_label="x+2",
+        success=False,
+        registered=False,
+        failure_mode="not_registered",
+        registration_flags=["tilt_after_hold"],
+        reg_tilt_deg=2.0,
+        reg_hold_tilt_deg=14.0,
+    )
+    ep = ScreenEpisode.from_record(rec)
+    assert ep.condition == "x+2" and ep.tilt_deg == 14.0 and not ep.success_v2
+    # a stock blade that tips the part over after the hold fails visibly
+    stock = [ScreenEpisode.from_record(_sim_record(**{**rec, "placement_label": c})) for c in HERO_CONDITIONS]
+    assert evaluate_part("p", stock, {"d": _eps()}).stock_visible == 7
+    harness = {
+        "placement": "yaw+5",
+        "condition_id": "hero_screen_v2/tee/yaw+5",
+        "success": True,
+        "lift_success": True,
+    }
+    assert ScreenEpisode.from_record(harness).condition == "yaw+5"
 
 
 def test_unmeasured_values_count_against_qualification() -> None:

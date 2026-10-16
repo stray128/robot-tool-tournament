@@ -39,6 +39,7 @@ from __future__ import annotations
 import datetime as _dt
 import hashlib
 import json
+import math
 import statistics
 from collections import Counter, defaultdict
 from collections.abc import Iterable, Mapping, Sequence
@@ -86,6 +87,10 @@ FREEZE_FILES: Final[tuple[str, ...]] = (
 _TOLERANCES: Final[frozenset[str]] = frozenset(
     {"seat_short_max_mm", "dx_max_mm", "dy_max_mm", "yaw_max_deg", "tilt_max_deg", "hold_tilt_max_deg"}
 )
+#: ``not_registered`` sub-flags (``registration_flags`` in the simulator's v2 records).
+_NOT_REGISTERED_FLAGS: Final[frozenset[str]] = frozenset(
+    {"jam_on_close", "off_centre", "tilt_after_hold", "not_measured"}
+)
 Origin = Literal["entrant", "reference", "sobol"]
 Decision = Literal["freeze", "iterate", "declare_miss_and_freeze", "f1"]
 
@@ -118,13 +123,25 @@ class DesignScoreV2:
         return d
 
 
-def episode_outcome(rec: Mapping[str, Any]) -> tuple[bool, bool | None]:
+def _sub_flags(rec: Mapping[str, Any]) -> set[str]:
+    """The record's ``not_registered`` sub-flags: its booleans plus its ``registration_flags`` list."""
+    flags = {str(f) for f in rec.get("registration_flags") or ()}
+    for name in ("jam_on_close", "off_centre"):
+        if rec.get(name):
+            flags.add(name)
+    return flags
+
+
+def episode_outcome(
+    rec: Mapping[str, Any], *, seat_short_max_mm: float | None = None
+) -> tuple[bool, bool | None]:
     """``(success_v2, lift_success)`` of one v2 episode record, whichever convention wrote it.
 
     Two record conventions exist, and both are read:
 
-    * the search harness (``EpisodeOutcome`` in ``rtt.search.base``): ``success`` *is*
-      ``success_v2`` and ``lift_success`` is the lift-only result;
+    * the search harness (``EpisodeOutcome`` in ``rtt.search.base``) and the simulator's
+      ``EpisodeRecordV2`` (``rtt.sim.evaluate``): ``success`` *is* ``success_v2`` and
+      ``lift_success`` is the lift-only result;
     * a sim-level record without ``lift_success``: ``success`` is lift-only, and
       ``success_v2`` is either explicit or ``success`` and ``registered``. With an explicit
       ``success_v2`` and no ``success``, the lift-only result is unknown (``None``).
@@ -132,7 +149,10 @@ def episode_outcome(rec: Mapping[str, Any]) -> tuple[bool, bool | None]:
     An explicit ``success_v2`` always wins. A record that contradicts itself is refused
     rather than scored: a registered success that did not lift, that is not
     ``registered``, or that carries a ``not_registered`` sub-flag (``jam_on_close``,
-    ``off_centre``). So a jammed part never counts as a registered grasp.
+    ``off_centre``, ``tilt_after_hold`` or ``not_measured``, as a boolean or in
+    ``registration_flags``). With ``seat_short_max_mm`` (the frozen seat tolerance of
+    ``task_v2``), a registered success must also carry a measured ``seat_short_mm`` within
+    it. So a jammed part never counts as a registered grasp.
     """
     lift_raw = rec.get("lift_success")
     if lift_raw is not None:  # harness convention: success is success_v2
@@ -154,12 +174,26 @@ def episode_outcome(rec: Mapping[str, Any]) -> tuple[bool, bool | None]:
             raise ValueError("inconsistent episode record: success_v2 without a lift-only success")
         if rec.get("registered") is not None and not bool(rec["registered"]):
             raise ValueError("inconsistent episode record: success_v2 on an episode that is not registered")
-        if rec.get("jam_on_close") or rec.get("off_centre"):
-            raise ValueError(
-                "inconsistent episode record: success_v2 with a not_registered sub-flag "
-                "(jam_on_close or off_centre)"
-            )
+        if flags := sorted(_sub_flags(rec) & _NOT_REGISTERED_FLAGS):
+            raise ValueError(f"inconsistent episode record: success_v2 with not_registered sub-flags {flags}")
+        if seat_short_max_mm is not None:
+            short = rec.get("seat_short_mm")
+            if short is None or not math.isfinite(float(short)):
+                raise ValueError("inconsistent episode record: success_v2 without a measured seat_short_mm")
+            if float(short) > seat_short_max_mm + 1e-9:
+                raise ValueError(
+                    f"inconsistent episode record: success_v2 with seat_short_mm {float(short):.3f} "
+                    f"above the {seat_short_max_mm} mm seat tolerance (a jam)"
+                )
     return reg_ok, lift
+
+
+def _placement_label(rec: Mapping[str, Any]) -> str | None:
+    for key in ("placement", "placement_label"):
+        value = rec.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return None
 
 
 def _invalid(rec: Mapping[str, Any]) -> bool:
@@ -172,13 +206,16 @@ def score_designs_v2(
     *,
     episodes_per_design: int | None = 48,
     masses_g: Mapping[str, float] | None = None,
+    seat_short_max_mm: float | None = None,
 ) -> list[DesignScoreV2]:
     """Score every design in ``names`` (design_id -> (name, origin)) from its episode records.
 
     ``success_v2`` and the lift-only result come from :func:`episode_outcome` (either record
-    convention; contradictory records are refused); a ``physics_invalid`` episode
+    convention; contradictory records are refused, and with ``seat_short_max_mm`` a
+    registered success must be seated within it); a ``physics_invalid`` episode
     (``bad_qacc`` or that failure mode) is a failure on both. Every design must have
-    ``episodes_per_design`` episodes (``None``: any number).
+    ``episodes_per_design`` episodes (``None``: any number). The placement breakdown reads
+    ``placement`` (harness) or ``placement_label`` (simulator).
     """
     grouped: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
     for rec in records:
@@ -190,7 +227,7 @@ def score_designs_v2(
             raise ValueError(f"{name} ({design_id}): no episode records")
         if episodes_per_design is not None and len(recs) != episodes_per_design:
             raise ValueError(f"{name} ({design_id}): {len(recs)} episodes, expected {episodes_per_design}")
-        outcomes = [episode_outcome(r) for r in recs]
+        outcomes = [episode_outcome(r, seat_short_max_mm=seat_short_max_mm) for r in recs]
         ok = [reg and not _invalid(r) for r, (reg, _) in zip(recs, outcomes, strict=True)]
         if any(lift is None for _, lift in outcomes):
             raise ValueError(f"{name} ({design_id}): an episode record has no lift-only result")
@@ -200,8 +237,8 @@ def score_designs_v2(
         for r, s in zip(recs, ok, strict=True):
             if r.get("part_id") is not None:
                 by_part[str(r["part_id"])].append(s)
-            if r.get("placement") is not None:
-                by_place[str(r["placement"])].append(s)
+            if (place := _placement_label(r)) is not None:
+                by_place[place].append(s)
         modes = Counter(str(r["failure_mode"]) for r in recs if r.get("failure_mode"))
         out.append(
             DesignScoreV2(
@@ -215,8 +252,8 @@ def score_designs_v2(
                 by_part={k: sum(v) / len(v) for k, v in sorted(by_part.items())},
                 by_placement={k: sum(v) / len(v) for k, v in sorted(by_place.items())},
                 failure_modes=dict(sorted(modes.items())),
-                jam_on_close=sum(bool(r.get("jam_on_close")) for r in recs),
-                off_centre=sum(bool(r.get("off_centre")) for r in recs),
+                jam_on_close=sum("jam_on_close" in _sub_flags(r) for r in recs),
+                off_centre=sum("off_centre" in _sub_flags(r) for r in recs),
                 physics_invalid=sum(_invalid(r) for r in recs),
             )
         )

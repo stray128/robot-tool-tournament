@@ -160,8 +160,15 @@ class ScreenEpisode:
 
     @classmethod
     def from_record(cls, rec: Mapping[str, Any], *, condition: str | None = None) -> ScreenEpisode:
-        """From a v2 episode record (``RECORD_VERSION = 2`` field names)."""
-        cond = condition if condition is not None else str(rec.get("hero_condition", rec.get("condition")))
+        """From a v2 episode record (``RECORD_VERSION = 2`` field names).
+
+        The condition is ``condition`` if given, else the record's ``hero_condition``,
+        ``condition``, ``placement_label`` (simulator records of the hero screen suite) or
+        ``placement`` (harness records), the first that is a string. Tilt is the largest of
+        ``tilt_max_deg``, ``reg_tilt_deg`` and the hold tilt (``reg_hold_tilt_deg``, or
+        ``hold_tilt_deg``).
+        """
+        cond = condition if condition is not None else _record_condition(rec)
         ok, _ = episode_outcome(rec)
         mode = rec.get("failure_mode")
         invalid = bool(rec.get("bad_qacc")) or mode == "physics_invalid"
@@ -177,7 +184,8 @@ class ScreenEpisode:
                 raise ValueError(f"{key} = {raw!r} on a valid episode")
             return value
 
-        tilts = [t for t in map(measured, ("tilt_max_deg", "reg_tilt_deg", "hold_tilt_deg")) if t is not None]
+        tilt_keys = ("tilt_max_deg", "reg_tilt_deg", "reg_hold_tilt_deg", "hold_tilt_deg")
+        tilts = [t for t in map(measured, tilt_keys) if t is not None]
         dx, dy = measured("reg_dx_mm"), measured("reg_dy_mm")
         return cls(
             condition=cond,
@@ -188,6 +196,14 @@ class ScreenEpisode:
             offset_mm=None if dx is None or dy is None else math.hypot(dx, dy),
             physics_invalid=invalid,
         )
+
+
+def _record_condition(rec: Mapping[str, Any]) -> str:
+    for key in ("hero_condition", "condition", "placement_label", "placement"):
+        value = rec.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return "None"  # refused by ScreenEpisode as an unknown condition
 
 
 @dataclass(frozen=True)
