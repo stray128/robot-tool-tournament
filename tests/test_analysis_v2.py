@@ -991,3 +991,11 @@ def test_v2_analysis_modules_stay_light(name: str) -> None:
     code = f"import sys, rtt.analysis.{name}; print(int(any(m in sys.modules for m in {sorted(heavy)!r})))"
     out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True)
     assert out.stdout.strip() == "0"
+
+
+def test_power_table_command_covers_every_r_and_speedup(capsys) -> None:
+    assert power.main(["table", "--q", "0.1", "--runs", "8,16", "--speedups", "1,2", "--nsim", "60"]) == 0
+    out = json.loads(capsys.readouterr().out)
+    cells = {(c["runs_per_arm"], c["speedup"]): c["power"] for c in out["cells"]}
+    assert set(cells) == {(8, 1.0), (8, 2.0), (16, 1.0), (16, 2.0)}
+    assert all(0.0 <= p <= 1.0 for p in cells.values()) and set(out["mde_speedup"]) == {"8", "16"}

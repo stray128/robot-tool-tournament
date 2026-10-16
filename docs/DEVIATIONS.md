@@ -16,8 +16,10 @@ before the tag.
 - **Decision:** Part A (v2), with the stricter rules declared below; F1 is not taken. GV4
   (Nebius parity) and GV5 (harness) must still pass by their deadlines, or F1 applies.
 - **Gates:** GV0 [x], GV1 [x], GV2 [x] (cost miss declared), GV3 [x] (spread miss declared,
-  frozen), GV-H [x] (0 heroes: offset-contrast fallback), GV4 [ ] (not run yet); GV5 by
-  Tue Oct 20, 22:00 [ ]. Numbers in `docs/BENCH_V2.md`.
+  frozen), GV-H [x] (0 heroes: offset-contrast fallback), GV4 [x] (2026-10-16: 384 of 384
+  episodes agree on outcome, every geometry and hull hash equal), GV5 [x] (2026-10-16:
+  harness tests, diversity bars on the training parts, probe 100 % valid after reserves,
+  one local B = 40 Nemotron run). Numbers in `docs/BENCH_V2.md`.
 - **Decided by, and when:** the founder, 2026-10-16, after round 4 integration (rulings
   below); gates re-run and GV3 frozen the same night.
 

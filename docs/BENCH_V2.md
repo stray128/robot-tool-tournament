@@ -52,6 +52,8 @@ standoff without a horizontal seam). Machine load average 3 to 12 (the gates' ow
 | GV2 physics | pass; the cost criterion misses (3.57x against 1.5x), a declared deviation |
 | GV3 calibration | the Sobol spread misses (SD 0.113 against 0.15), declared under ruling 6; every other target met; frozen |
 | GV-H hero screen | 0 heroes, so the hook uses the offset contrast only (the rule's fallback) |
+| GV4 Nebius parity | pass: 384 of 384 episodes agree on outcome, every part, jaw-pair, design and hull hash equal |
+| GV5 search harness | pass: harness tests, the diversity bars on the training parts, the probe (100 % valid after reserves, 0 repairs) and a local B = 40 Nemotron run |
 
 ### GV0: geometry (2,048 Sobol recipes x 6 parts)
 
@@ -176,6 +178,78 @@ No part qualifies: the stock blade fails registration on most conditions but nev
 therefore uses the imprint-vs-designed offset contrast only (`hook_mode
 offset_contrast_only`). The L-bracket shows that contrast in full: the imprint is short or
 off-centre on 6 of 6 errors and the best design passes 7 of 7.
+
+### GV4: Nebius parity (2026-10-16, 23:50 IST)
+
+`rtt.sim.gv4` builds and simulates a fixed set of v2 designs exactly as a search scores them
+(`SimEvaluatorV2`): the six entrants of `configs/entrants_v2.yaml` and two Sobol recipes
+(seed 20261024, used by nothing else) on the 48 episodes of `train_v2`, 384 episodes. The
+jaws are built where the episodes run. The same code ran on the laptop and as a Nebius job
+(`python -m rtt.cloud run gv4 --no-fallback --vcpus 32`), and `python -m rtt.sim.gv4 compare`
+matched the two reports episode by episode.
+
+| Criterion | Limit | Measured |
+|---|---|---|
+| Episodes | at least 100 | 384, the same on both sides |
+| Outcome agreement (`success_v2`, lift-only, failure mode) | at least 99 % | 384 of 384 (100 %) |
+| Records bit for bit (every field but wall time) | reported | 257 of 384; the other 127 differ by at most 8.9e-16 mm (hold creep) and 4.4e-16 mm (`reg_dy`) |
+| Training-part geometry hashes | equal | 6 of 6 |
+| Jaw-pair geometry hash of every episode | equal | 384 of 384 |
+| Design `geometry_id` | equal | 8 of 8 |
+| Stock-blade hull file | equal | `501782c6...` on both |
+| Task and suite digests | equal | yes |
+
+Scores match the GV3 freeze for all six entrants (stock 25.0 %, configurator 58.3 %, ...).
+Since the hashes agree, jobs build the jaws in-job; the spec's fallback (build once, score
+stored geometry) is not needed.
+
+| | Laptop | Nebius job |
+|---|---|---|
+| Machine | AMD Ryzen 7 5800H, 14 workers | AMD EPYC Genoa, `cpu-d3` `32vcpu-128gb`, uk-south2 |
+| Evaluate (build + 384 episodes) | 44.6 s | 12.9 s |
+| Job | | `aijob-e05ppqtwhtxanj89ze` (`gv4-20261016-181945`): provisioning 119 s, run 16 s, wall 135 s, $0.040 wall-based ($0.005 run-only) |
+| Image | | `rtt-sim@sha256:74a3abc58ce7...`, built from `032a39f` (clean) |
+
+### GV5: search harness (2026-10-16, 23:20 to 23:55 IST)
+
+| Criterion | Measured |
+|---|---|
+| `test_budget_equal` (v2) | pass: every run of every arm (random, Nemotron with 40 % invalid, 30 % near-copy and 20 % garbage output, a hostile proposer) simulates exactly 40 valid, distinct designs; invalid output costs no budget (12 tests) |
+| Round 0 byte-identical across arms | pass (`test_v2_round0_is_byte_identical_across_arms`) |
+| `test_llm_cache_replay` | pass: a v2 run replays with 0 API calls; a changed notes block misses the cache instead of calling (8 tests). On real data: the B = 40 run below, replayed with `rtt replay-llm`: 0 live API calls, the same run fingerprint (40 designs, 1,920 episodes re-simulated) |
+| De-duplication and canonicalisation | pass: `test_search_dedup` (25), `test_freeform_canon` (11) |
+| Leak test | pass: `test_no_heldout_in_prompts` (8, including the v2 part names and dimensions), `test_vault_isolation` (6), `test_leak_check` (8); `scripts/leak_check.sh` clean |
+| Diversity bars (rule D6) on the patched training parts | t = 0.070 (63 points), explore bar 0.15; see below |
+| Probe: 5 calls of Super with the v2 tool, at least 90 % valid after reserves, at most 1 repair | pass: 80 % valid primary, **100 % valid after reserves**, 0 calls needing a repair, 80 % accepted after the screen; $0.030 |
+| One local B = 40 Nemotron run completes | pass: 40 designs, 1,920 episodes, 15 calls, $0.114, 3 of 32 slots `fallback_random`, 8.3 min |
+
+**Diversity bars.** `python -m rtt.search.threshold_v2` applies the threshold rule with the
+full section-13 validators on the six training parts under `task_v2` (seed 20261016): 2,000
+valid designs from 3,179 Sobol draws (62.9 % valid), 10,000 pairs. Pair-distance quantiles
+p0.5 / p1 / p5 / p50 = 0.057 / 0.070 / 0.137 / 0.405, so t = **0.070** (it was 0.080 with the
+schema rules only) and the explore bar, the median same-cell distance, is **0.15** (was
+0.17). Recorded with its input hashes in `configs/diversity_v2.json`; the arms use these bars
+from now on, for the shared screen of every arm as well as the Nemotron prompt (63 points).
+
+**Probe on the real prompt.** Track P's probe of 2026-10-16 put synthetic parts in the prompt
+and checked the slots with the schema rules only: 100 % valid, but re-checked with the
+geometry validators only 35 % valid after reserves (4 calls needing a repair, 32 analytic
+rejections). The GV5 probe (`python -m rtt.search.probe_v2 --live --real`) sends each call
+arm C's real round-1 prompt: the six training parts and `task_v2`, the four v2 entrants and
+four screened Sobol recipes in round 0, scored by the CPU simulator on `train_v2`. Five calls,
+12.6k prompt and 2.1-3.2k completion tokens each, 10.6-15.0 s; the 4 invalid primary slots
+were 3 seat-closure misses on the hex standoff (41.9-47.4 mm against 40) and draft outside a
+V-funnel's 15-70 deg range, all filled by the call's own reserves. The pass rule keeps 4 slots
+plus 4 reserves.
+
+**Local B = 40 Nemotron run** (`rtt search --arm nemotron --space freeform-v2`, seed 20261015,
+a development seed, laptop, 14 workers): best-so-far after 8 / 16 / 24 / 32 / 40 designs
+0.625 / 0.646 / 0.708 / 0.750 / 0.750 (the best round-0 design, a Sobol recipe, 62.5 %).
+29 of the 32 arm slots are Nemotron designs (14 of them reserves; 22 from main calls, 3 from repairs, 4 from reflections); 52 rejections: 25 invalid,
+20 too similar, 4 not novel, 3 duplicate designs. 15 calls: 225k prompt and 51.6k completion
+tokens (17.4k reasoning), p50 latency 15.8 s, max 31.1 s. Evaluator 202 s of the 8.3 min wall
+time; the rest is the model and the geometry validators. One development run, not evidence
+about S1.
 
 ### Cost
 

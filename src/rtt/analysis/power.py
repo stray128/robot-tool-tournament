@@ -370,8 +370,37 @@ def main(argv: Sequence[str] | None = None) -> int:
     g.add_argument("--runs", type=int, required=True, help="R per arm")
     g.add_argument("--speedup", type=float, default=2.0)
     g.add_argument("--nsim", type=int, default=2000)
+    t = sub.add_parser("table", help="power of S1 over R and speed-up at a given q (JSON)")
+    t.add_argument("--q", type=float, required=True)
+    t.add_argument("--runs", default="8,10,12,16,24,32", help="comma-separated R per arm")
+    t.add_argument("--speedups", default="1,1.5,2,3", help="comma-separated speed-ups (1 = the null)")
+    t.add_argument("--posterior", default=None, help="a,b: also draw q from Beta(a, b) per experiment")
+    t.add_argument("--nsim", type=int, default=4000)
+    t.add_argument("--seed", type=int, default=20261016)
     sub.add_parser("rule", help="print the R rule constants and digest")
     args = ap.parse_args(argv)
+    if args.cmd == "table":
+        runs = [int(x) for x in args.runs.split(",") if x.strip()]
+        speedups = [float(x) for x in args.speedups.split(",") if x.strip()]
+        post = tuple(float(x) for x in args.posterior.split(",")) if args.posterior else None
+        rows = []
+        for i, (r_, s_) in enumerate((r_, s_) for r_ in runs for s_ in speedups):
+            cell = power(args.q, s_, r_, nsim=args.nsim, seed=args.seed + i)
+            row = {"runs_per_arm": r_, "speedup": s_, "power": cell.power, "mean_t_a": cell.mean_t_a,
+                   "mean_t_c": cell.mean_t_c, "reach_a": cell.reach_a, "reach_c": cell.reach_c}  # fmt: skip
+            if post is not None:
+                row["power_q_posterior"] = power(
+                    args.q, s_, r_, nsim=args.nsim, q_posterior=(post[0], post[1]), seed=args.seed + 1000 + i
+                ).power
+            rows.append(row)
+        mde = {r_: minimum_detectable_speedup(args.q, r_, nsim=max(100, args.nsim // 2)) for r_ in runs}
+        print(
+            json.dumps(
+                {"q": args.q, "nsim": args.nsim, "posterior": post, "cells": rows, "mde_speedup": mde},
+                indent=1,
+            )
+        )
+        return 0
     if args.cmd == "rule":
         rule = RRuleV2()
         print(json.dumps({**asdict(rule), "digest": rule.digest()}, indent=1))
