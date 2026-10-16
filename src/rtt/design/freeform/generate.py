@@ -49,6 +49,7 @@ from rtt.design.freeform.outline import (
     max_y_in_box,
     part_geometry,
     polyline_gap,
+    within,
 )
 from rtt.design.freeform.pad import (
     dilate_x,
@@ -252,6 +253,7 @@ def _contact_gap(
     A chamfer bevels the face back by ``(band bottom + chamfer - z)`` below the chamfer top.
     """
     lo, hi = band
+    g = within(g, lo, hi, float(xk[0]), float(xk[-1]))  # material the jaw can push, not just graze
     if chamfer <= 0.0:
         return _floor_gap(polyline_gap(g, xk, yk, lo, hi))
     zc = min(lo + chamfer, hi)
@@ -262,6 +264,7 @@ def _contact_gap(
 def _hook_gap(g: PartGeometry, xk: np.ndarray, hk: np.ndarray, z0: float, hh: float, top: float) -> float:
     """First contact of the hook: its front is vertical up to ``z0 + hh``, then recedes at 45 degrees."""
     zr = z0 + hh
+    g = within(g, z0, max(zr, top), float(xk[0]), float(xk[-1]))
     gap = min(polyline_gap(g, xk, hk, z0, zr), polyline_gap(g, xk, hk, zr, max(zr, top), kz=1.0, z_ref=zr))
     return _floor_gap(gap)
 
@@ -372,9 +375,11 @@ def plan_pair(
     V.check_length(length, part_id)
     xs = _grid(spec.width)
     band = (tip, tip + spec.pad_height)
-    p_left = cell_outline(g, xs, band[0], band[1])
+    # the outline counts material inside the band, not a face that only lies on its boundary
+    # plane (a flange top exactly at the pad bottom): the jaw slides over that, it never seats
+    p_left = cell_outline(within(g, *band), xs, band[0], band[1])
     V.check_outline(p_left, part_id, "left", band)
-    p_right = cell_outline(gm, xs, band[0], band[1])
+    p_right = cell_outline(within(gm, *band), xs, band[0], band[1])
     V.check_outline(p_right, part_id, "right", band)
     depth = spec.depth
     notes = list(repairs)

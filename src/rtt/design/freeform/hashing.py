@@ -16,7 +16,7 @@ from collections.abc import Iterable, Mapping, Sequence
 import numpy as np
 
 #: Bump whenever generated geometry changes for an unchanged recipe.
-GENERATOR_VERSION = "rtt-freeform-gen/1"
+GENERATOR_VERSION = "rtt-freeform-gen/2"
 
 #: Vertices are rounded to this many decimals of a metre (1e-7 m) before hashing.
 VERTEX_DECIMALS = 7

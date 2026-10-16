@@ -112,6 +112,42 @@ class PartGeometry:
         return PartGeometry._assemble(hs)
 
 
+#: Pieces that reach less than this into a band (or a jaw's width) only touch its boundary.
+TOUCH_TOL = 1e-9  # m
+
+
+def within(
+    g: PartGeometry | None,
+    z_lo: float,
+    z_hi: float,
+    x_lo: float = -np.inf,
+    x_hi: float = np.inf,
+    tol: float = TOUCH_TOL,
+) -> PartGeometry | None:
+    """The pieces whose interior can meet the open box ``(x_lo, x_hi) x (z_lo, z_hi)``.
+
+    A piece that only touches a boundary plane of the box (for example a flange whose top
+    face lies exactly at the bottom of the pad band) cannot stop a jaw moving along y: the
+    jaw slides over it. Such pieces are left out of the outline and contact queries, so the
+    seat is where the part really blocks the jaw. For every other piece the closure of its
+    intersection with the open box is its intersection with the closed box, so the queries
+    are unchanged. ``None`` when no piece is left.
+    """
+    if g is None:
+        return None
+    keep = []
+    for h in g.pieces:
+        lo, hi = h.vertices.min(axis=0), h.vertices.max(axis=0)
+        if hi[2] <= z_lo + tol or lo[2] >= z_hi - tol or hi[0] <= x_lo + tol or lo[0] >= x_hi - tol:
+            continue
+        keep.append(h)
+    if len(keep) == len(g.pieces):
+        return g
+    if not keep:
+        return None
+    return PartGeometry._assemble(tuple(keep))
+
+
 @dataclass(frozen=True, eq=False)
 class _Packed:
     """Every piece's halfspaces in padded ``(P, F)`` arrays, split by the sign of their y normal.
@@ -244,9 +280,11 @@ def band_rows(g: PartGeometry, z_lo: float, z_hi: float, n_rows: int = 25, max_e
     return np.unique(np.concatenate([base, extra]))
 
 
-def cell_outline_rows(g: PartGeometry, xs: np.ndarray, zs: np.ndarray) -> np.ndarray:
+def cell_outline_rows(g: PartGeometry | None, xs: np.ndarray, zs: np.ndarray) -> np.ndarray:
     """``(len(xs), len(zs))``: per-cell maximum y at each row height (exact per row)."""
     xs = np.asarray(xs, dtype=np.float64)
+    if g is None:
+        return np.full((len(xs), len(zs)), _NEG)
     dx = float(xs[1] - xs[0])
     bounds = np.concatenate([xs - dx / 2.0, [xs[-1] + dx / 2.0]])
     env = envelope(g, bounds, zs)
@@ -310,7 +348,7 @@ def _band_points(g: PartGeometry, z_lo: float, z_hi: float) -> np.ndarray:
     return np.concatenate(pts)
 
 
-def band_max_cells(g: PartGeometry, bounds: np.ndarray, z_lo: float, z_hi: float) -> np.ndarray:
+def band_max_cells(g: PartGeometry | None, bounds: np.ndarray, z_lo: float, z_hi: float) -> np.ndarray:
     """Exact largest y of the part in each cell ``[bounds[i], bounds[i+1]] x [z_lo, z_hi]``.
 
     The maximum of y over a convex piece clipped by a slab is attained at a vertex of the
@@ -321,6 +359,8 @@ def band_max_cells(g: PartGeometry, bounds: np.ndarray, z_lo: float, z_hi: float
     """
     bounds = np.asarray(bounds, dtype=np.float64)
     out = np.full(len(bounds) - 1, _NEG)
+    if g is None:
+        return out
     pts = _band_points(g, z_lo, z_hi)
     _bin_max(out, bounds, pts[:, 0], pts[:, 1])
     j, p = _plane_crossings(g, bounds, z_lo, z_hi)
@@ -333,7 +373,7 @@ def band_max_cells(g: PartGeometry, bounds: np.ndarray, z_lo: float, z_hi: float
 
 
 def cell_outline(
-    g: PartGeometry, xs: np.ndarray, z_lo: float, z_hi: float, n_rows: int | None = None
+    g: PartGeometry | None, xs: np.ndarray, z_lo: float, z_hi: float, n_rows: int | None = None
 ) -> np.ndarray:
     """Per-cell maximum y over the band ``[z_lo, z_hi]``, exact (:func:`band_max_cells`).
 
@@ -347,7 +387,7 @@ def cell_outline(
 
 
 def polyline_gap(
-    g: PartGeometry,
+    g: PartGeometry | None,
     xk: np.ndarray,
     yk: np.ndarray,
     z_lo: float,
@@ -365,7 +405,7 @@ def polyline_gap(
     """
     xk = np.asarray(xk, dtype=np.float64)
     yk = np.asarray(yk, dtype=np.float64)
-    if z_hi < z_lo:
+    if g is None or z_hi < z_lo:
         return np.inf
     best = np.inf
     pts = _band_points(g, z_lo, z_hi)

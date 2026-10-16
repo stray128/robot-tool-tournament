@@ -201,10 +201,13 @@ def stock_seat(
     its innermost surface) is compared with the part's outline; the coupled jaws stop where
     the first row touches: ``Y0 = max(part - front)``.
     """
-    from rtt.design.freeform.outline import band_rows, cell_outline_rows
+    from rtt.design.freeform.outline import band_rows, cell_outline_rows, within
 
     root = tip + reach
     lo, hi = tip, min(height, root)
+    part_g = within(part_g, lo, hi)  # a face lying on the band's boundary is slid over, not pushed
+    if part_g is None:
+        return -np.inf, np.full(len(xs), -np.inf), np.full(len(xs), -np.inf)
     rows = np.unique(
         np.concatenate([band_rows(part_g, lo, hi), band_rows(jaw_g, lo - root, hi - root) + root])
     )

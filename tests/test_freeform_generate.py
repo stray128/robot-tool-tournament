@@ -187,6 +187,39 @@ def test_both_jaws_touch_the_centred_part_at_q_seat(name: str) -> None:
             assert gaps[(side, -5e-5)] >= 4e-5, (name, part.name, side, gaps)
 
 
+def test_q_seat_is_where_the_part_blocks_the_jaws() -> None:
+    """Closing 0.1 mm past q_seat pushes both jaws into the part: the seat is a blocking
+    contact, not a face lying on the pad band's boundary plane that the jaws slide over.
+
+    The stand-in bushing's flange bottom lies exactly at the top of the entrants' pad band
+    (grip 0.5, pad 20 mm on a 30 mm part); the seat is on its body, not on the flange rim.
+    """
+    ohg = TASK.gripper.open_half_gap
+    checked = 0
+    for part in training_parts():
+        target = _part_table(part)
+        for entrant in load_entrants_v2():
+            if entrant.kind != "recipe":
+                continue
+            try:
+                b = build_pair_full(entrant, part, TASK)
+            except InvalidDesign:
+                continue
+            pair, zr = b.pair, b.plan.z_root_table
+            for side, jaw in (("left", pair.left), ("right", pair.right)):
+                past = _manifold(_palm_pieces(jaw, side, ohg - (pair.q_seat + 1e-4), zr))
+                before = _manifold(_palm_pieces(jaw, side, ohg - (pair.q_seat - 2e-5), zr))
+                assert (past ^ target).volume() > 1e-3, (entrant.name, part.name, side)  # mm^3
+                assert (before ^ target).volume() < 1e-6, (entrant.name, part.name, side)  # may touch, no cut
+            checked += 1
+    assert checked >= 20
+    flat = {b.name: b for b in load_entrants_v2()}["flat"]
+    body_r = 0.010  # the bushing's body radius: the flat pads seat on it, 0.4 mm off the carriage
+    assert build_pair_full(flat, flanged_bushing(), TASK).pair.q_seat == pytest.approx(
+        ohg - (body_r - CARRIAGE_INNER_Y), abs=1e-7
+    )
+
+
 @pytest.mark.parametrize("name", ["conform", "imprint", "v_funnel", "hook"])
 def test_pad_keeps_its_clearance_at_the_designed_pose(name: str) -> None:
     recipe = RECIPES[name]
