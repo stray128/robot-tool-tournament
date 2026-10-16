@@ -82,8 +82,9 @@ FREEZE_FILES: Final[tuple[str, ...]] = (
     "configs/entrants_v2.yaml",
     "configs/parts_v2.yaml",
 )
+#: The registration tolerances, by their keys in ``configs/task_v2.yaml`` (``registration:``).
 _TOLERANCES: Final[frozenset[str]] = frozenset(
-    {"seat_short_mm", "centre_dx_mm", "centre_dy_mm", "yaw_deg", "tilt_close_deg", "tilt_hold_deg"}
+    {"seat_short_max_mm", "dx_max_mm", "dy_max_mm", "yaw_max_deg", "tilt_max_deg", "hold_tilt_max_deg"}
 )
 Origin = Literal["entrant", "reference", "sobol"]
 Decision = Literal["freeze", "iterate", "declare_miss_and_freeze", "f1"]

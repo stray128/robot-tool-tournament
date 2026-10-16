@@ -527,7 +527,16 @@ def test_screening_seed_and_knob_rules() -> None:
         check_screening_seed(777, forbidden=[777])
     assert check_knob("part:block.length_mm") == "part"
     assert check_knob("placement:c2") == "placement"
-    assert check_knob("tolerance:seat_short_mm") == "tolerance"
+    # tolerance knobs are named by their keys in configs/task_v2.yaml (registration:)
+    for key in (
+        "seat_short_max_mm",
+        "dx_max_mm",
+        "dy_max_mm",
+        "yaw_max_deg",
+        "tilt_max_deg",
+        "hold_tilt_max_deg",
+    ):
+        assert check_knob(f"tolerance:{key}") == "tolerance"
     for bad in (
         # friction and grip force are fixed: the claims (PREREG A13) and notes are stated at them
         "task:mu",
@@ -537,6 +546,8 @@ def test_screening_seed_and_knob_rules() -> None:
         "task:timestep",
         "physics:impratio",
         "tolerance:x",
+        "tolerance:seat_short_mm",  # a record field, not the task_v2 key
+        "tolerance:settle_time",  # when registration is measured is not a tolerance
         "mu",
     ):
         with pytest.raises(ValueError):
@@ -559,10 +570,10 @@ def test_calibration_log_enforces_the_procedure(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="iteration 3"):
         log.record(_report(GOOD_SOBOL, iteration=3), changes={"placement:c2": (-3.0, -2.5)})
     second = _report([0] * 22 + [20] * 22 + [24] * 16 + [30] * 4, iteration=2)
-    assert log.record(second, changes={"tolerance:seat_short_mm": (1.0, 1.2)})[0] == "iterate"
+    assert log.record(second, changes={"tolerance:seat_short_max_mm": (1.0, 1.2)})[0] == "iterate"
     # tolerances may change only once
     with pytest.raises(ValueError, match="at most one iteration"):
-        log.record(_report(GOOD_SOBOL, iteration=3), changes={"tolerance:yaw_deg": (2.0, 2.5)})
+        log.record(_report(GOOD_SOBOL, iteration=3), changes={"tolerance:yaw_max_deg": (2.0, 2.5)})
     # reopened from disk, the log still knows where it is
     log2 = CalibrationLog.open(path)
     assert len(log2.iterations) == 2 and log2.tolerance_changes() == 1
