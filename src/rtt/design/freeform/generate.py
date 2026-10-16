@@ -65,6 +65,7 @@ from rtt.design.freeform.tip import (
     MIN_LAND,
     Piece,
     hook_height,
+    hook_lofts,
     hook_pieces,
     pad_strips,
     piece_from_sections,
@@ -80,6 +81,7 @@ from rtt.design.freeform.types import (
 DX = 1e-4  # m; the pad grid
 MIN_STRIP_WALL = 0.003  # m; pad strips reach this far behind the deepest pad point
 MIN_LENGTH_OVER_PAD = 0.015  # m; finger length >= pad height + 15 mm
+PRINT_ROOT_SETBACK = 5e-5  # m; printed root block front behind the carriage face
 _DEC = 7
 
 
@@ -660,20 +662,18 @@ def _print_mesh(
         perm = np.array([[0.0, 0.0, 1.0, -(hw + 1.0)], [1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0]])
         solid = solid - m3d.Manifold.extrude(cs, 2.0 * hw + 2.0).transform(perm)
     parts = [solid]
-    x_lo, x_hi = float(xk[0]), float(xk[-1])
+    if info["hook_local"] is not None:  # one lofted solid per run of hook pieces: no internal faces
+        for hv, hf in hook_lofts(
+            jaw.xk, info["yk"], info["hook_local"], profile.z0, _snap(jaw.hook_h or 0.0)
+        ):
+            parts.append(m3d.Manifold(m3d.Mesh(vert_properties=q(hv), tri_verts=hf.astype(np.uint32))))
     for pc in pieces:
-        if pc.role not in ("hook", "locator"):
-            continue
-        v = q(pc.vertices) if pc.role == "hook" else pc.vertices * S
-        if pc.role == "hook":  # neighbouring hook pieces share a face: overlap them by 1 um to fuse
-            lo, hi = v[:, 0].min(), v[:, 0].max()
-            if lo > x_lo + 1e-6:
-                v[v[:, 0] == lo, 0] -= 1e-3
-            if hi < x_hi - 1e-6:
-                v[v[:, 0] == hi, 0] += 1e-3
-        parts.append(m3d.Manifold.hull_points(v))
+        if pc.role == "locator":
+            parts.append(m3d.Manifold.hull_points(pc.vertices * S))
     rx0, rx1 = qf(B.ROOT_BLOCK_X[0]), qf(B.ROOT_BLOCK_X[1])
-    ry0, ry1 = qf(B.ROOT_BLOCK_Y[0]), qf(B.root_block_y_back(profile))
+    # the printed root block's front sits 50 um behind the carriage face, so a pad edge that
+    # reaches the carriage face (y = 0.4 mm) never lies exactly in the block's front plane
+    ry0, ry1 = qf(B.ROOT_BLOCK_Y[0] + PRINT_ROOT_SETBACK), qf(B.root_block_y_back(profile))
     rh = qf(B.ROOT_BLOCK_H)
     parts.append(m3d.Manifold.cube([rx1 - rx0, ry1 - ry0, rh]).translate([rx0, ry0, -rh]))
     solid = m3d.Manifold.batch_boolean(parts, m3d.OpType.Add)

@@ -27,6 +27,7 @@ import numpy as np
 
 _NEG = -np.inf
 MIN_FEATURE = 0.0016  # m; printable feature width (ribs narrower than this are trimmed)
+LIFT_TOL = 1e-12  # m; a polyline this close to its floor is on it (float rounding; the grid is 1e-7 m)
 
 
 def dilate_x(p: np.ndarray, k: int) -> np.ndarray:
@@ -158,15 +159,15 @@ def simplify_upper(xs: np.ndarray, f: np.ndarray, max_seg: int) -> tuple[np.ndar
     for _ in range(200):
         line = np.interp(xs, xs[idx], yk)
         dip = f - line
-        if float(dip.max()) <= 0.0:
+        if float(dip.max()) <= LIFT_TOL:
             break
         lift = np.zeros_like(yk)
         for j in range(len(idx) - 1):
             a, b = idx[j], idx[j + 1]
             v = float(dip[a : b + 1].max())
-            if v > 0.0:
-                lift[j] = max(lift[j], v)
-                lift[j + 1] = max(lift[j + 1], v)
+            if v > LIFT_TOL:
+                lift[j] = max(lift[j], v + LIFT_TOL)
+                lift[j + 1] = max(lift[j + 1], v + LIFT_TOL)
         yk += lift
     else:  # pragma: no cover - the lift loop always converges well before this
         raise RuntimeError("pad simplification did not converge")
@@ -190,15 +191,15 @@ def lift_polyline(xs: np.ndarray, xk: np.ndarray, yk: np.ndarray, floor: np.ndar
     idx = np.searchsorted(xs, xk)
     for _ in range(200):
         dip = floor - np.interp(xs, xk, yk)
-        if not np.isfinite(dip).any() or float(np.nanmax(np.where(np.isfinite(dip), dip, _NEG))) <= 0.0:
+        if not np.isfinite(dip).any() or float(np.nanmax(np.where(np.isfinite(dip), dip, _NEG))) <= LIFT_TOL:
             return yk
         lift = np.zeros_like(yk)
         for j in range(len(xk) - 1):
             a, b = idx[j], idx[j + 1]
             seg = dip[a : b + 1]
             seg = seg[np.isfinite(seg)]
-            if seg.size and float(seg.max()) > 0.0:
-                v = float(seg.max())
+            if seg.size and float(seg.max()) > LIFT_TOL:
+                v = float(seg.max()) + LIFT_TOL
                 lift[j] = max(lift[j], v)
                 lift[j + 1] = max(lift[j + 1], v)
         yk += lift
