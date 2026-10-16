@@ -170,7 +170,11 @@ export type FailureMode =
   | "slip_during_lift"
   | "ejected_on_close"
   | "unstable_hold"
-  | "finger_env_collision";
+  | "finger_env_collision"
+  // task v2 (registered grasp, src/rtt/sim/score.py FAILURE_MODES_V2)
+  | "not_registered"
+  | "physics_invalid"
+  | "invalid_build";
 
 /** Where the physics ran. Only `nebius` runs are scored results. */
 export type ComputeProvenance =
@@ -233,9 +237,13 @@ export interface TaskSummary {
 }
 
 export interface ObjectSummary {
-  kind: "box" | "cylinder" | "capsule";
-  /** Object-frame extents in mm (box: x y z; cylinder/capsule: diameter, length). */
+  /** `part`: a v2 part (procedural industrial part or scan) with its own GLB, named by `part_id`. */
+  kind: "box" | "cylinder" | "capsule" | "part";
+  /** Object-frame extents in mm (box and part: x y z; cylinder/capsule: diameter, length). */
   size_mm: number[];
+  /** Parts only: the part's id (the replay header's `meta.part_id`) and family. */
+  part_id?: string;
+  family?: string;
 }
 
 export interface LaneOutcome {
@@ -259,7 +267,8 @@ export interface Lane {
   entrant: string;
   design_id: string;
   object: ObjectSummary;
-  controller_setting: number;
+  /** Index into the v1 task's grasp heights; null for v2 lanes (the grip height is part of the recipe). */
+  controller_setting: number | null;
   grasp_height_frac: number | null;
   seed: number;
   n_frames: number;

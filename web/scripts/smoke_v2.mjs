@@ -2,26 +2,25 @@
 /**
  * Headless check of the v2 look on the exported site (run `pnpm build` first).
  *
- *   node scripts/smoke_v2.mjs [--fixture DIR] [--stem sample] [--bout m1-entrants]
- *                             [--lane replays/m1/straight] [--shots DIR] [--port 4175]
+ *   node scripts/smoke_v2.mjs [--bout m1-entrants] [--v2-bout ID] [--shots DIR] [--port 4175]
  *
  * Serves web/out and, in Chromium, checks that:
  *   - a bout of version 1 replays still plays in the drawing look, and in the studio look;
- *   - the same bout plays with one lane swapped for a version 2 replay (the fixture's
- *     <stem>.json, .bin, .ovl.bin and assets/, served in place of --lane by request
- *     interception): GLBs decode, the caption and the offset readout show, x-ray and
- *     collision toggles work, and the v2 lane's download stays within the hero payload
- *     budget (300 000 bytes);
+ *   - a published bout of version 2 lanes (--v2-bout, default: the first bout whose lanes are
+ *     all v2 parts) plays each lane under its own label: the label on every lane is the
+ *     bout's, and the replay that lane loads shows that lane's design and part (no lane is
+ *     swapped in from another bout). GLBs decode, captions and the offset readout show,
+ *     x-ray and collision toggles work, every lane's download fits the hero payload budget
+ *     (300 000 bytes), third-party models link their short credits to the credits page,
+ *     and the page never names the gripper's maker (that credit lives on /credits/);
  *   - design pages show the studio views (x-ray, cutaway, turntable) without errors;
- *   - a v2 lane that draws third-party models links their short credits to the credits page;
  *   - /credits/ lists the third-party credits, links the CC BY 4.0 licence, carries the
  *     gripper's copyright notice and has the anchors short credits point at;
  *   - no page has console errors or horizontal scroll at 1280 and 375 px.
- * The default fixture is tests/fixtures/replay_v2 (Apache-2.0 geometry made from a
- * recorded v1 episode). Screenshots go to --shots (default web/.smoke/v2).
+ * Screenshots go to --shots (default web/.smoke/v2).
  */
 
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
@@ -33,21 +32,37 @@ import { startServer } from "./serve.mjs";
 const webDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const { values } = parseArgs({
   options: {
-    fixture: { type: "string", default: path.join(webDir, "tests", "fixtures", "replay_v2") },
-    stem: { type: "string", default: "sample" },
     bout: { type: "string", default: "m1-entrants" },
-    lane: { type: "string", default: "replays/m1/straight" },
+    "v2-bout": { type: "string" },
     shots: { type: "string", default: path.join(webDir, ".smoke", "v2") },
     port: { type: "string", default: "4175" },
   },
 });
 const HERO_BUDGET = 300_000;
-const fixtureDir = path.resolve(values.fixture);
-const header = JSON.parse(readFileSync(path.join(fixtureDir, `${values.stem}.json`), "utf8"));
-const laneDir = values.lane.slice(0, values.lane.lastIndexOf("/") + 1);
-const designs = JSON.parse(readFileSync(path.join(webDir, "public/data/designs.json"), "utf8")).designs;
-const bouts = JSON.parse(readFileSync(path.join(webDir, "public/data/bouts.json"), "utf8")).bouts;
+/** The gripper's maker is credited on /credits/ (and in README, NOTICE, docs/ATTRIBUTION.md), never on a replay page. */
+const MAKER = "Robonine";
+const DATA = path.join(webDir, "public", "data");
+const designs = JSON.parse(readFileSync(path.join(DATA, "designs.json"), "utf8")).designs;
+const bouts = JSON.parse(readFileSync(path.join(DATA, "bouts.json"), "utf8")).bouts;
 const designWithBout = designs.find((d) => d.bouts.length > 0);
+const v2Bout = values["v2-bout"]
+  ? bouts.find((b) => b.id === values["v2-bout"])
+  : bouts.find((b) => b.lanes.length > 0 && b.lanes.every((l) => l.object.kind === "part"));
+if (!v2Bout) {
+  console.error(`smoke_v2: no published bout of v2 lanes${values["v2-bout"] ? ` called ${values["v2-bout"]}` : ""}`);
+  process.exit(1);
+}
+
+/** A lane's download as published: header, poses, overlays and each GLB it draws (lib/assets.ts replayPayload). */
+function lanePayload(lane) {
+  const file = path.join(DATA, `${lane.replay}.json`);
+  const h = JSON.parse(readFileSync(file, "utf8"));
+  const dir = path.dirname(file);
+  let bytes = statSync(file).size + statSync(path.join(dir, h.bin)).size;
+  if (h.overlays) bytes += statSync(path.join(dir, h.overlays.bin)).size;
+  for (const a of Object.values(h.assets)) bytes += a.bytes;
+  return { header: h, bytes };
+}
 
 mkdirSync(values.shots, { recursive: true });
 const server = await startServer({ dir: path.join(webDir, "out"), port: Number(values.port) });
@@ -56,41 +71,20 @@ const browser = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=sw
 const failures = [];
 const report = {};
 
-/** Serve the v2 fixture in place of one v1 lane; returns the byte counter for the swapped lane. */
-async function swapLane(page) {
-  const counted = { bytes: 0, files: [] };
-  const serveFile = async (route, file, type) => {
-    const body = readFileSync(file);
-    counted.bytes += body.byteLength;
-    counted.files.push(path.basename(file));
-    await route.fulfill({ status: 200, body, contentType: type });
-  };
-  await page.route(`**/data/${values.lane}.json`, (r) => serveFile(r, path.join(fixtureDir, `${values.stem}.json`), "application/json"));
-  await page.route(`**/data/${laneDir}${header.bin}`, (r) => serveFile(r, path.join(fixtureDir, header.bin), "application/octet-stream"));
-  if (header.overlays) {
-    await page.route(`**/data/${laneDir}${header.overlays.bin}`, (r) =>
-      serveFile(r, path.join(fixtureDir, header.overlays.bin), "application/octet-stream"),
-    );
-  }
-  await page.route("**/assets/*.glb", (r) => {
-    const name = new URL(r.request().url()).pathname.split("/").pop();
-    const file = path.join(fixtureDir, "assets", name);
-    return existsSync(file) ? serveFile(r, file, "model/gltf-binary") : r.continue();
-  });
-  return counted;
-}
-
-async function open(context, route, { swap = false } = {}) {
+async function open(context, route) {
   const page = await context.newPage();
   const errors = [];
+  const glbs = [];
   page.on("console", (msg) => {
     if (msg.type() === "error") errors.push(msg.text());
   });
   page.on("pageerror", (err) => errors.push(String(err)));
-  const counted = swap ? await swapLane(page) : null;
+  page.on("response", (r) => {
+    if (r.url().endsWith(".glb")) glbs.push(new URL(r.url()).pathname.split("/").pop());
+  });
   const res = await page.goto(origin + route, { waitUntil: "networkidle" });
   if (res?.status() !== 200) errors.push(`HTTP ${res?.status()}`);
-  return { page, errors, counted };
+  return { page, errors, glbs };
 }
 
 async function settle(page, errors) {
@@ -165,25 +159,43 @@ for (const vp of [
     await page.close();
   }
 
-  // 2. Same bout with one lane served as a v2 replay.
+  // 2. The published v2 bout: every lane under its own label, playing its own replay.
   {
-    const { page, errors, counted } = await open(context, `/bout/${values.bout}/`, { swap: true });
+    const { page, errors, glbs } = await open(context, `/bout/${v2Bout.id}/`);
     await settle(page, errors);
     const m = await metrics(page);
     const problems = [];
     if (m.loadErrors) problems.push(`${m.loadErrors} load errors`);
     if (m.scrollWidth > m.innerWidth) problems.push(`horizontal scroll ${m.scrollWidth} > ${m.innerWidth}`);
     if (!m.text.includes("simulation replay · MuJoCo")) problems.push("no v2 caption");
-    if (header.overlays?.channels.includes("offset_mm") && !m.text.includes("Offset")) problems.push("no offset readout");
-    if (counted.bytes > HERO_BUDGET) problems.push(`v2 lane payload ${counted.bytes} B > ${HERO_BUDGET}`);
-    if (!counted.files.some((f) => f.endsWith(".glb"))) problems.push("no GLB was requested");
-    const thirdParty = Object.values(header.assets).some((a) => a.license !== "Apache-2.0");
-    if (thirdParty && !(await page.locator('[data-credits] a[href*="/credits/#"]').count())) {
-      problems.push("third-party models drawn without a credit link");
+    if (m.text.includes(MAKER)) problems.push(`the bout page names the gripper's maker ("${MAKER}"); that credit belongs on /credits/`);
+    if (!glbs.length) problems.push("no GLB was requested");
+    if (new Set(glbs).size !== glbs.length) problems.push(`a GLB was fetched twice: ${glbs.join(", ")}`);
+    const sizes = [];
+    for (const lane of v2Bout.lanes) {
+      const { header, bytes } = lanePayload(lane);
+      sizes.push(bytes);
+      report[`${vp.name}_${lane.id}_payload_bytes`] = bytes;
+      if (bytes > HERO_BUDGET) problems.push(`lane ${lane.id} downloads ${bytes} B > ${HERO_BUDGET}`);
+      // the swapped-label check: the lane's label belongs to the replay it plays
+      if (header.meta.design_id !== lane.design_id) problems.push(`lane ${lane.id} plays design ${header.meta.design_id}, labelled ${lane.design_id}`);
+      if (header.meta.part_id !== lane.object.part_id) problems.push(`lane ${lane.id} plays part ${header.meta.part_id}, labelled ${lane.object.part_id}`);
+      const fig = page.locator(`figure[data-lane="${lane.replay}"]`).first();
+      if ((await fig.count()) === 0) {
+        problems.push(`no lane figure for ${lane.replay}`);
+        continue;
+      }
+      const shown = (await fig.locator(".heading").first().innerText()).trim();
+      if (shown !== lane.label) problems.push(`lane ${lane.id} shows the label "${shown}", the bout says "${lane.label}"`);
+      const caption = (await fig.locator("figcaption").innerText()).trim();
+      if (!caption.toLowerCase().startsWith(lane.condition.toLowerCase())) problems.push(`lane ${lane.id} caption "${caption}" is not its condition`);
+      if (header.overlays?.channels.includes("offset_mm") && !(await fig.innerText()).includes("Offset")) problems.push(`lane ${lane.id}: no offset readout`);
+      const thirdParty = Object.values(header.assets).some((a) => a.license !== "Apache-2.0");
+      if (thirdParty && !(await fig.locator('[data-credits] a[href*="/credits/#"]').count())) {
+        problems.push(`lane ${lane.id} draws third-party models without a credit link`);
+      }
     }
-    // The swapped lane, wherever it sits in the bout.
-    const lane = page.locator(`figure[data-lane="${values.lane}"]`).first();
-    if ((await lane.count()) === 0) problems.push(`no lane figure for ${values.lane}`);
+    const lane = page.locator(`figure[data-lane="${v2Bout.lanes[0].replay}"]`).first();
     const plain = await shot(page, lane, `${vp.name}-v2-studio`);
     await press(page, "X-ray");
     const xray = await shot(page, lane, `${vp.name}-v2-xray`);
@@ -191,12 +203,12 @@ for (const vp of [
     const coll = await shot(page, lane, `${vp.name}-v2-collision`);
     await press(page, "Angled");
     const angled = await shot(page, lane, `${vp.name}-v2-angled`);
+    await page.screenshot({ path: path.join(values.shots, `${vp.name}-v2-bout.png`), fullPage: true });
     if (plain < 8000) problems.push(`v2 lane looks blank (${plain} B png)`);
     if (xray === plain && coll === plain) problems.push("x-ray and collision did not change the image");
-    report[`${vp.name}_v2_payload_bytes`] = counted.bytes;
-    report[`${vp.name}_v2_files`] = counted.files.length;
-    const detail = `payload=${counted.bytes}B files=${counted.files.length} png=${plain}/${xray}/${coll}/${angled}`;
-    record(`${vp.name} v2 lane in a v1 bout`, [...errors, ...problems], detail);
+    report[`${vp.name}_v2_glbs`] = glbs.length;
+    const detail = `lanes=${v2Bout.lanes.length} payload=${sizes.join("/")}B glbs=${glbs.length} png=${plain}/${xray}/${coll}/${angled}`;
+    record(`${vp.name} v2 bout ${v2Bout.id}`, [...errors, ...problems], detail);
     await page.close();
   }
 
@@ -225,23 +237,7 @@ for (const vp of [
     await page.close();
   }
 
-  // 4. Design page with the v2 fixture swapped in for one of its lanes.
-  if (designWithBout) {
-    const bout = bouts.find((b) => designWithBout.bouts.includes(b.id));
-    const lane = bout?.lanes.find((l) => l.design_id === designWithBout.id);
-    if (lane && lane.replay === values.lane) {
-      const { page, errors } = await open(context, `/design/${designWithBout.id}/`, { swap: true });
-      await page.waitForSelector("[data-design-studio] canvas", { timeout: 20000 }).catch(() => errors.push("no design studio canvas"));
-      await page.waitForTimeout(1500);
-      const stage = page.locator("[data-design-studio]").first();
-      const png = await shot(page, stage.locator("[data-stage]"), `${vp.name}-design-v2`);
-      const problems = png < 8000 ? [`v2 design view looks blank (${png} B)`] : [];
-      record(`${vp.name} design studio, v2 lane`, [...errors, ...problems], `png=${png}`);
-      await page.close();
-    }
-  }
-
-  // 5. Credits.
+  // 4. Credits.
   {
     const { page, errors } = await open(context, "/credits/");
     const m = await metrics(page);

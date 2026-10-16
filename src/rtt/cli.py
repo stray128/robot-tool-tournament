@@ -403,8 +403,16 @@ def _cmd_slice(args: argparse.Namespace) -> int:
 def _cmd_export_web(args: argparse.Namespace) -> int:
     from rtt.pipeline.export_web import export_web
 
-    result = export_web(args.runs, args.data_dir, featured=args.featured)
+    result = export_web(
+        args.runs,
+        args.data_dir,
+        featured=args.featured,
+        replay_version=args.replay_version,
+        compress=False if args.no_compress else None,
+    )
     print(result.describe())
+    for rel, size in sorted(result.payload_bytes.items()):
+        print(f"  {rel}: {size:,} bytes")
     return 0 if not result.skipped else 1
 
 
@@ -651,9 +659,17 @@ def build_parser() -> argparse.ArgumentParser:
     sl.set_defaults(handler=_cmd_slice)
 
     ew = sub.add_parser("export-web", help="publish run directories into web/public/data")
-    ew.add_argument("runs", type=Path, nargs="+", help="slice, search or held-out run directories")
+    ew.add_argument("runs", type=Path, nargs="+", help="slice, v2 bout, search or held-out run directories")
     ew.add_argument("--data-dir", type=Path, default=REPO_ROOT / "web" / "public" / "data")
     ew.add_argument("--featured", default=None, help="bout id to feature on the landing page")
+    ew.add_argument(
+        "--replay-version",
+        type=int,
+        choices=(1, 2),
+        default=1,
+        help="2: publish replay v2 lanes with meshopt-compressed GLBs (needed for v2 bouts)",
+    )
+    ew.add_argument("--no-compress", action="store_true", help="with --replay-version 2: serve raw GLBs")
     ew.set_defaults(handler=_cmd_export_web)
 
     jb = sub.add_parser(

@@ -57,6 +57,7 @@ __all__ = [
     "mesh_from_pieces",
     "mesh_from_trimesh",
     "read_glb",
+    "read_glb_json",
     "scan_mesh",
 ]
 
@@ -434,6 +435,19 @@ def _quat_mat(q: Sequence[float]) -> np.ndarray:
             [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)],
         ]
     )
+
+
+def read_glb_json(data: bytes) -> dict[str, Any]:
+    """The JSON chunk of any GLB 2.0 file (compressed or not), without decoding its meshes."""
+    if len(data) < 20:
+        raise ValueError("not a glTF 2.0 binary")
+    magic, version, total = struct.unpack_from("<III", data, 0)
+    if magic != _MAGIC or version != 2 or total != len(data):
+        raise ValueError("not a glTF 2.0 binary")
+    jlen, jtype = struct.unpack_from("<II", data, 12)
+    if jtype != _JSON:
+        raise ValueError("GLB: first chunk is not JSON")
+    return json.loads(data[20 : 20 + jlen])
 
 
 def read_glb(data: bytes) -> GlbDocument:

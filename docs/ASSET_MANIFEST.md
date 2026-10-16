@@ -55,10 +55,14 @@ Format version: 1. Owner: the render and replay code (`rtt.render`, `rtt.sim.rep
 3. **Right jaws are their own assets.** A replay places assets with a positive `scale` only
    (the schema enforces it), so a right jaw is never drawn as a mirrored left jaw.
 4. **Encoding.** `rtt.render.glb` writes deterministic GLBs with quantised attributes
-   (`KHR_mesh_quantization`) and the credit in `asset.copyright`. The web build may then
-   meshopt-compress them, with WebP textures and scans simplified to 50%; the id is always
-   the hash of the served file. A compressing store keeps the uncompressed GLB under its
-   `raw_root` with the same id, for the offline renderers (MuJoCo studio, Blender).
+   (`KHR_mesh_quantization`) and the credit in `asset.copyright`. The web export
+   (`rtt export-web --replay-version 2`, `rtt.render.compress`) serves them
+   meshopt-compressed by `web/scripts/compress_glb.mjs`, with WebP textures and scans
+   simplified to 50%; the id is always the hash of the served file, and the published
+   replay headers point at the served ids. The compressor keeps `asset.copyright` and
+   `asset.extras`, and the export checks it did. Run directories keep the uncompressed
+   GLBs, which the offline renderers (MuJoCo studio, Blender) read. A compressing store
+   keeps the uncompressed GLB under its `raw_root` with the same id.
 5. **Licences.** Every third-party asset (any licence other than our own Apache-2.0) needs
    a non-empty `changes` list and its `attribution` line (the schema enforces it). Its
    `attribution` is the short credit, which links to the full credit line on the credits

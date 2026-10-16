@@ -20,7 +20,8 @@ from rtt.part.pack import PACK_V2_FILES, make_print_pack_v2
 from rtt.pipeline.export_web import export_web
 from rtt.pipeline.replays import lift_to_v2
 from rtt.pipeline.slice import SliceConfig, read_slice, run_slice
-from rtt.render.glb import AssetStore, read_glb
+from rtt.render.compress import compression_available
+from rtt.render.glb import AssetStore, read_glb, read_glb_json
 from rtt.render.gripper import load_lock
 from rtt.search.fakes import ScriptedProposer
 from rtt.search.nemotron import make_proposer_client
@@ -32,7 +33,10 @@ from schema_lite import Validator
 
 REPO = Path(__file__).resolve().parents[1]
 VALIDATOR = Validator(json.loads((REPO / "src" / "rtt" / "sim" / "replay_v2.schema.json").read_text()))
-HERO_PAYLOAD_BYTES = 300 * 1024  # GV-R: a hero replay with its GLBs, before web compression
+HERO_PAYLOAD_BYTES = 300_000  # GV-R: one lane's download (header, poses, overlays, GLBs) as served
+needs_compressor = pytest.mark.skipif(
+    not compression_available(), reason="GLB compression needs node and web/node_modules (pnpm install)"
+)
 
 
 @pytest.fixture(scope="module")
@@ -49,14 +53,24 @@ def slice_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
 def _payload(data: Path, assets: Path, lane: dict[str, Any]) -> int:
     header = json.loads((data / f"{lane['replay']}.json").read_text())
     files = [data / f"{lane['replay']}.json", data / f"{lane['replay']}.bin"]
+    if header.get("overlays"):
+        files.append(data / f"{lane['replay']}.ovl.bin")
     files += [assets / f"{aid}.glb" for aid in header["assets"]]
     return sum(f.stat().st_size for f in files)
 
 
+@needs_compressor
 def test_export_v2_lifts_lanes_and_publishes_assets(slice_dir: Path, tmp_path: Path) -> None:
     data, assets = tmp_path / "public" / "data", tmp_path / "public" / "assets"
     result = export_web([slice_dir], data, replay_version=2)
     assert result.replays == 5 and result.assets
+    assert set(result.payload_bytes) == {
+        lane["replay"] for lane in json.loads((data / "bouts.json").read_text())["bouts"][0]["lanes"]
+    }
+    for aid in result.assets:  # served meshopt-compressed, credit kept in the file
+        doc = read_glb_json((assets / f"{aid}.glb").read_bytes())
+        assert "EXT_meshopt_compression" in doc["extensionsRequired"]
+        assert doc["asset"]["copyright"]
     manifest = json.loads((assets / "manifest.json").read_text())
     assert set(result.assets) <= set(manifest["assets"])
     bout = json.loads((data / "bouts.json").read_text())["bouts"][0]
@@ -72,7 +86,7 @@ def test_export_v2_lifts_lanes_and_publishes_assets(slice_dir: Path, tmp_path: P
         licences = {e["role"]: e["license"] for e in fingers}
         stock = lane["entrant"] == "stock"
         assert licences["finger_left"] == ("CC-BY-4.0" if stock else "Apache-2.0")
-        assert _payload(data, assets, lane) <= HERO_PAYLOAD_BYTES
+        assert _payload(data, assets, lane) == result.payload_bytes[lane["replay"]] <= HERO_PAYLOAD_BYTES
     # the default export is unchanged: version 1 headers, no assets
     v1 = export_web([slice_dir], tmp_path / "v1" / "data")
     lane = json.loads((tmp_path / "v1" / "data" / "bouts.json").read_text())["bouts"][0]["lanes"][0]
@@ -90,11 +104,129 @@ def test_v2_run_directories_export_with_their_own_assets(slice_dir: Path, tmp_pa
     store.write_manifest()
     with pytest.raises(ValueError, match="replay_version=2"):
         export_web([run], tmp_path / "a" / "data")
-    result = export_web([run], tmp_path / "b" / "data", replay_version=2)
-    assert result.replays == 5 and set(result.assets) <= set(store.entries)
+    result = export_web([run], tmp_path / "b" / "data", replay_version=2, compress=False)
+    assert result.replays == 5 and set(result.assets) <= set(store.entries)  # served raw: the store's ids
     (run / "assets" / f"{result.assets[0]}.glb").write_bytes(b"tampered")
     with pytest.raises(ValueError, match="does not match"):
-        export_web([run], tmp_path / "c" / "data", replay_version=2)
+        export_web([run], tmp_path / "c" / "data", replay_version=2, compress=False)
+
+
+# --------------------------------------------------------------------------- v2 bouts
+
+BOUT_EPISODES = (
+    {"stem": "flat_block_c1", "design": "flat", "part": "block", "placement": "c1"},
+    {
+        "stem": "stock_block_c1",
+        "design": "stock",
+        "part": "block",
+        "placement": "c1",
+        "label": "Stock blade, as shipped",
+    },
+)
+
+
+@pytest.fixture(scope="module")
+def bout_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    from rtt.pipeline.replays import record_bout_v2
+
+    out = tmp_path_factory.mktemp("bout") / "v2-test-bout"
+    record_bout_v2(out, BOUT_EPISODES, run_id="v2-test-bout", title="Two v2 jaws", summary="Test bout.")
+    return out
+
+
+def test_record_bout_v2_writes_lanes_with_scored_outcomes(bout_dir: Path) -> None:
+    doc = json.loads((bout_dir / "bout.json").read_text())
+    assert doc["format"] == "rtt-bout" and doc["version"] == 2 and doc["run_id"] == "v2-test-bout"
+    assert [lane["stem"] for lane in doc["lanes"]] == ["flat_block_c1", "stock_block_c1"]
+    flat, stock = doc["lanes"]
+    assert flat["label"] == "Flat pad" and stock["label"] == "Stock blade, as shipped"
+    assert flat["condition"] == "block, 2 mm off centre across the jaw"
+    for lane in doc["lanes"]:
+        header = read_replay(bout_dir / lane["stem"]).header
+        assert header["version"] == 2 and VALIDATOR.errors(header) == []
+        assert (
+            header["meta"]["design_id"] == lane["design_id"] and header["meta"]["part_id"] == lane["part_id"]
+        )
+        assert (
+            header["meta"]["success"] == lane["success"]
+            and header["meta"]["failure_mode"] == lane["failure_mode"]
+        )
+        assert header["provenance"]["condition"] == lane["condition_id"] == "train_v2/block/c1"
+        text = (bout_dir / f"{lane['stem']}.json").read_text()
+        assert (
+            text == json.dumps(json.loads(text), separators=(",", ":"), ensure_ascii=False) + "\n"
+        )  # compact
+
+
+@needs_compressor
+def test_export_v2_bout_publishes_labelled_part_lanes_within_budget(bout_dir: Path, tmp_path: Path) -> None:
+    data, assets = tmp_path / "public" / "data", tmp_path / "public" / "assets"
+    with pytest.raises(ValueError, match="replay_version=2"):
+        export_web([bout_dir], data)
+    result = export_web([bout_dir], data, replay_version=2)
+    bout = json.loads((data / "bouts.json").read_text())["bouts"][0]
+    assert (
+        bout["id"] == "v2-test-bout" and bout["title"] == "Two v2 jaws" and bout["task"]["name"] == "task_v2"
+    )
+    manifest = json.loads((assets / "manifest.json").read_text())["assets"]
+    labels = {lane["id"]: lane["label"] for lane in bout["lanes"]}
+    assert labels == {"flat_block_c1": "Flat pad", "stock_block_c1": "Stock blade, as shipped"}
+    for lane in bout["lanes"]:
+        assert lane["object"]["kind"] == "part" and lane["object"]["part_id"] == "block"
+        assert lane["controller_setting"] is None and lane["outcome"]["source"] == "scorer"
+        header = json.loads((data / f"{lane['replay']}.json").read_text())
+        assert VALIDATOR.errors(header) == []
+        assert header["meta"]["design_id"] == lane["design_id"]  # the label describes this replay
+        assert _payload(data, assets, lane) == result.payload_bytes[lane["replay"]] <= HERO_PAYLOAD_BYTES
+        for aid, entry in header["assets"].items():
+            blob = (assets / f"{aid}.glb").read_bytes()
+            assert hashlib.sha256(blob).hexdigest() == entry["sha256"] and entry["attribution"]
+            assert manifest[aid] == entry
+            assert "EXT_meshopt_compression" in read_glb_json(blob)["extensionsRequired"]
+        jaws = {b["name"]: b for b in header["bodies"]}
+        if lane["entrant"] == "stock":  # the blade's 80 hulls are not published; the CAD is drawn
+            assert "geoms" not in jaws["finger_left"] and "geoms" not in jaws["finger_right"]
+            assert header["meta"]["collision_overlay_omitted"] == ["finger_left", "finger_right"]
+        else:
+            assert jaws["finger_left"]["geoms"] and jaws["finger_right"]["geoms"]
+
+
+def test_export_v2_bout_refuses_a_lane_labelled_for_another_replay(bout_dir: Path, tmp_path: Path) -> None:
+    run = tmp_path / "swapped"
+    shutil.copytree(bout_dir, run)
+    doc = json.loads((run / "bout.json").read_text())
+    doc["lanes"][0]["stem"], doc["lanes"][1]["stem"] = doc["lanes"][1]["stem"], doc["lanes"][0]["stem"]
+    (run / "bout.json").write_text(json.dumps(doc))
+    with pytest.raises(ValueError, match="another lane's label"):
+        export_web([run], tmp_path / "data", replay_version=2, compress=False)
+
+
+def test_export_v2_refuses_a_lane_over_the_payload_budget(bout_dir: Path, tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="byte budget"):
+        export_web([bout_dir], tmp_path / "data", replay_version=2, compress=False, payload_budget=50_000)
+    assert not (tmp_path / "data" / "bouts.json").exists()  # nothing half-published
+
+
+@needs_compressor
+def test_compression_is_deterministic_and_keeps_each_credit(bout_dir: Path) -> None:
+    from rtt.render.compress import compress_assets, remap_header_assets
+
+    store = AssetStore(bout_dir / "assets")
+    raw = {aid: (store.path(aid).read_bytes(), store.entry(aid)) for aid in sorted(store.entries)}
+    first, again = compress_assets(raw), compress_assets(raw)
+    assert {k: v[0] for k, v in first.items()} == {k: v[0] for k, v in again.items()}
+    assert sum(len(b) for b, _ in first.values()) < 0.6 * sum(len(b) for b, _ in raw.values())
+    for aid, (blob, entry) in first.items():
+        for key in ("role", "license", "attribution", "changes", "source"):
+            assert entry[key] == raw[aid][1][key]
+        doc = read_glb_json(blob)
+        assert doc["asset"]["copyright"] == entry["attribution"]
+        assert doc["asset"]["extras"]["license"] == entry["license"]
+    header = read_replay(bout_dir / "stock_block_c1").header
+    remap_header_assets(header, first)
+    served = {e["sha256"][:16] for _, e in first.values()}
+    assert set(header["assets"]) <= served
+    assert all(v["asset"] in header["assets"] for b in header["bodies"] for v in b["visuals"])
 
 
 # --------------------------------------------------------------------------- print pack v2
@@ -250,3 +382,106 @@ def test_print_pack_v2_refuses_a_jaw_that_misses_its_carriage(pair: Any, tmp_pat
     with pytest.raises(ValueError, match="carriage block"):
         make_print_pack_v2(detached, stls["left"], stls["right"], tmp_path, recipe={})
     assert not any(tmp_path.iterdir())  # nothing half-written
+
+
+# --------------------------------------------------------------------------- print pack v2, real jaws
+
+#: Real generator builds (rtt.design.freeform) on library parts (rtt.parts): every pad strategy,
+#: a hook, a sweep and four different parts. Each jaw carries the 46 mm root block measured on
+#: the gripper's clamp cut face and two blind M3 holes opening on its root plane.
+REAL_PAIRS = (
+    ("flat", "block"),
+    ("imprint_configurator", "pipe_tee"),
+    ("imprint_swept", "steel_slug"),
+    ("ref_wrap", "flanged_bushing"),
+    ("ref_hook", "hex_standoff"),
+)
+
+
+def _real_build(entrant: str, part: str) -> Any:
+    from rtt.design.freeform import build_pair_full, load_entrants_v2
+    from rtt.parts.library import get_part
+    from rtt.sim.task import default_task_v2
+
+    design = {e.name: e for e in load_entrants_v2()}[entrant]
+    return build_pair_full(design, get_part(part), default_task_v2())
+
+
+def _real_stls(build: Any) -> tuple[bytes, bytes]:
+    from rtt.design.freeform import stl_bytes
+
+    return (
+        stl_bytes(build.left_mesh.vertices, build.left_mesh.faces),
+        stl_bytes(build.right_mesh.vertices, build.right_mesh.faces),
+    )
+
+
+def _solid(blob: bytes) -> trimesh.Trimesh:
+    m = trimesh.load(io.BytesIO(blob), file_type="stl", force="mesh")
+    m.merge_vertices()
+    return m
+
+
+@pytest.mark.parametrize(("entrant", "part"), REAL_PAIRS)
+def test_print_pack_v2_packs_real_jaws_as_single_watertight_solids(
+    entrant: str, part: str, tmp_path: Path
+) -> None:
+    from manifold3d import Manifold, OpType
+
+    from rtt.design.freeform import body as B
+    from rtt.part.mount import manifold_from_trimesh
+    from rtt.part.pack import V2_BLOCK_SOURCE
+
+    build = _real_build(entrant, part)
+    l_stl, r_stl = _real_stls(build)
+    zpath = make_print_pack_v2(build.pair, l_stl, r_stl, tmp_path, recipe=build.recipe_record())
+    with zipfile.ZipFile(zpath) as zf:
+        folder = zf.namelist()[0].split("/")[0]
+        read = {n.split("/", 1)[1]: zf.read(n) for n in zf.namelist()}
+    assert sorted(read) == sorted(PACK_V2_FILES)
+    manifest = json.loads(read["manifest.json"])
+    assert manifest["clamp_interface"]["block_width_mm"] == {"value": 46.0, "source": V2_BLOCK_SOURCE}
+    for side, jaw_stl in (("left", l_stl), ("right", r_stl)):
+        jaw, mount = _solid(read[f"{side}.stl"]), _solid(read[f"mount_{side}.stl"])
+        for name, m in ((f"{side}.stl", jaw), (f"mount_{side}.stl", mount)):
+            assert m.is_watertight and m.is_winding_consistent and m.is_volume, name
+            assert m.body_count == 1 and m.volume > 0.0, name
+            assert manifest["files"][name]["volume_mm3"] == pytest.approx(m.volume, rel=1e-6)
+        assert jaw.extents[0] == pytest.approx(46.0, abs=1e-3)  # the measured root block
+        assert mount.extents[0] == pytest.approx(46.0, abs=1e-3)  # the block is as wide as the jaw
+        # the bare jaw keeps its two bolt holes (filling them adds their volume) ...
+        holes = []
+        sy = 1.0 if side == "left" else -1.0
+        r, depth = 500.0 * B.MOUNT_HOLE_DIAMETER, 1000.0 * B.MOUNT_HOLE_DEPTH
+        for sx in (-1.0, 1.0):
+            cyl = Manifold.cylinder(depth, r, r, 64)
+            holes.append(cyl.translate((sx * 1000.0 * B.MOUNT_HOLE_X, sy * 1000.0 * B.MOUNT_HOLE_Y, -depth)))
+        frame_jaw = _solid(jaw_stl)
+        filled = Manifold.batch_boolean([manifold_from_trimesh(frame_jaw), *holes], OpType.Add).volume()
+        assert filled - frame_jaw.volume == pytest.approx(2 * np.pi * r * r * depth, rel=0.05)
+        # ... and the one-piece mount has them filled: no sealed void left inside the print
+        assert manifest["files"][f"mount_{side}.stl"]["voids_filled"] == 2
+    assert folder.startswith("print_pack_")
+
+
+def test_print_pack_v2_refuses_a_block_narrower_than_the_jaw(tmp_path: Path) -> None:
+    from rtt.part.mount import ClampInterface
+
+    build = _real_build("flat", "block")
+    with pytest.raises(ValueError, match="wider than the 42 mm carriage block"):
+        make_print_pack_v2(build.pair, *_real_stls(build), tmp_path, recipe={}, clamp=ClampInterface())
+    assert not any(tmp_path.iterdir())
+
+
+def test_one_solid_check_names_an_enclosed_void() -> None:
+    from rtt.part.pack import _check_one_solid, _fill_voids
+
+    outer = trimesh.creation.box(extents=(10.0, 10.0, 10.0))
+    cavity = trimesh.creation.box(extents=(2.0, 2.0, 2.0))
+    cavity.invert()
+    hollow = trimesh.util.concatenate([outer, cavity])
+    with pytest.raises(ValueError, match="encloses 1 void"):
+        _check_one_solid(hollow, "hollow")
+    solid, n = _fill_voids(hollow, "hollow")
+    assert n == 1 and solid.volume == pytest.approx(1000.0)
+    _check_one_solid(solid, "filled")

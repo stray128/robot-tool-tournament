@@ -14,11 +14,15 @@ geometry, replays) are released as described in `NOTICE`.
 | This file, `NOTICE`, README, the site's credits page | the full credit lines below |
 | `assets/gripper/so_arm_102/SOURCE.md` | the full credit, the pinned commit and file hashes |
 | Asset manifest entries and replay v2 headers (`attribution`) | the short credit, which names the licence, says "modified" and points at the credits page anchor (`/credits#gripper`, `/credits#gso`) |
-| Each GLB file (`asset.copyright`, `asset.extras`) | the same short credit, plus the licence, role and changes |
+| Each GLB file (`asset.copyright`, `asset.extras`) | the same short credit, plus the licence, role and changes; the web export's meshopt compression keeps both, and checks it did |
+| A v2 print pack's `ATTRIBUTION.txt` | the full gripper credit (the carriage block is drawn from its dimensions) |
 | Burned-in video and still captions | nothing third-party: they say "simulation replay · MuJoCo · run … · design …" |
 | Video end card | "Gripper CAD: an open-source parallel gripper (CC BY 4.0, modified). Scanned objects: Google Scanned Objects (CC BY 4.0, modified)." |
 
-On screen the gripper is always called "an open-source parallel gripper".
+On screen the gripper is always called "an open-source parallel gripper". `tests/test_gvr.py`
+checks that the maker is named only in the files above and the vendored provenance in
+`assets/gripper/so_arm_102/`, and that no burned-in caption carries a third-party credit;
+`web/scripts/smoke_v2.mjs` checks the same on the rendered bout page.
 
 ## Gripper: simulation meshes (CC BY 4.0)
 

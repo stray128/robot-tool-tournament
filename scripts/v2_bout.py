@@ -13,15 +13,17 @@ The whole v2 path, with no stand-in anywhere:
 Every episode is a ``train_v2`` condition with its own jitter seed (the first of the two the
 suite gives it), so each clip is an episode the scored suite runs: nothing is staged.
 
-``OUT_DIR`` becomes a replay v2 fixture the web app can play: ``<stem>.json``, ``<stem>.bin``,
-``<stem>.ovl.bin`` and ``assets/<id>.glb``. For example::
+``OUT_DIR`` becomes a v2 bout directory: ``<stem>.json``, ``<stem>.bin``, ``<stem>.ovl.bin``,
+``assets/<id>.glb`` and ``bout.json`` (each lane's label and scored outcome). Publish it on the
+site as a bout of v2 lanes (GLBs meshopt-compressed) and check it in a browser::
 
     python scripts/v2_bout.py --out OUT_DIR --stills OUT_DIR/stills
-    node web/scripts/smoke_v2.mjs --fixture OUT_DIR --stem designed_bushing_c1 --shots OUT_DIR/web
+    rtt export-web OUT_DIR --replay-version 2
+    (cd web && pnpm build && node scripts/smoke_v2.mjs --v2-bout v2-bout)
 
 ``--spec FILE`` replaces the default episodes: a JSON list of objects with ``stem``,
 ``design`` (an entrant name, or a recipe as a JSON object), ``part``, ``placement`` (a
-``train_v2`` label) and optionally ``still`` (``{"label", "view", "frame": "grasp" | "hold",
+``train_v2`` label) and optionally ``label`` (the lane's title) and ``still`` (``{"label", "view", "frame": "grasp" | "hold",
 "xray"}``). A JSON summary (outcomes, registration, pose residuals, payload sizes) is printed.
 """
 
@@ -71,101 +73,73 @@ EPISODES: tuple[dict[str, Any], ...] = (
 )
 
 
-def _trimesh(mesh: Any) -> Any:
-    import trimesh
-
-    return trimesh.Trimesh(mesh.vertices, mesh.faces, process=False)
-
-
-def _design(spec: Any, entrants: dict[str, Any]) -> tuple[str, Any]:
-    from rtt.design.freeform import FingerRecipe
-
-    if isinstance(spec, str):
-        return spec, entrants[spec]
-    recipe = FingerRecipe.model_validate(spec)
-    return recipe.name or "recipe", recipe
+TITLE = "Look check: three v2 jaws with the part 2 mm off centre"
+SUMMARY = (
+    "Three recorded episodes of the v2 training suite (train_v2) at placement c1, the part 2 mm off centre "
+    "across the jaw, each the condition's first jitter seed: the drafted wrap on the flanged bushing, the stock "
+    "blade on the same bushing and the configurator imprint on the block. They were picked to show the look "
+    "(gate GV-F); single episodes, not a score. Replayed from the recordings, never re-simulated."
+)
 
 
-def run(out: Path, episodes: Sequence[dict[str, Any]], run_id: str) -> dict[str, Any]:
-    from rtt.design.freeform import build_pair, load_entrants_v2
-    from rtt.design.freeform.generate import build_pair_full
-    from rtt.parts.suite import train_suite
-    from rtt.pipeline.replays import lift_freeform_to_v2
+def run(
+    out: Path,
+    episodes: Sequence[dict[str, Any]],
+    run_id: str,
+    *,
+    title: str | None = None,
+    summary: str | None = None,
+) -> dict[str, Any]:
+    """Record the episodes as a v2 bout (``rtt.pipeline.replays.record_bout_v2``: replays, GLB
+    store and ``bout.json``) and check each one renders at its recorded poses."""
+    from rtt.pipeline.replays import record_bout_v2
     from rtt.render.glb import AssetStore
     from rtt.render.playback import pose_residual
     from rtt.render.studio import build_render_scene
-    from rtt.sim.episode import run_episode_v2
-    from rtt.sim.replay import code_version, read_replay, write_replay
-    from rtt.sim.task import default_task_v2, task_digest
+    from rtt.sim.replay import read_replay
 
-    task = default_task_v2()
-    entrants = {e.name: e for e in load_entrants_v2()}
-    suite = train_suite()
-    conds = {(c.part.name, c.placement_label): c for c in suite}
+    doc = record_bout_v2(out, episodes, run_id=run_id, title=title, summary=summary, repo=REPO)
     store = AssetStore(out / "assets")
-    code = code_version(REPO)
-    summary: dict[str, Any] = {"code_version": code, "task_digest": task_digest(task), "episodes": {}}
-    for ep in episodes:
-        stem, part_name, label = ep["stem"], ep["part"], ep["placement"]
-        design_name, design = _design(ep["design"], entrants)
-        cond = conds[(part_name, label)]
-        seed = int(cond.seeds[0])
-        t0 = time.perf_counter()
-        if getattr(design, "kind", None) == "stock":
-            pair, meshes = build_pair(design, cond.part, task), None
-        else:
-            built = build_pair_full(design, cond.part, task)
-            pair, meshes = built.pair, (_trimesh(built.left_mesh), _trimesh(built.right_mesh))
-        res = run_episode_v2(pair, cond.part, cond.placement, seed, record=True, task=task)
-        v2 = lift_freeform_to_v2(
-            res.replay,
-            store,
-            pair,
-            part=cond.part,
-            overlays=res.overlays,
-            jaw_meshes=meshes,
-            run_id=run_id,
-            code_version=code,
-            episode=stem,
-            suite=suite.name,
-            condition=cond.condition_id,
-            seed=seed,
-        )
-        write_replay(v2, out / stem)
+    report: dict[str, Any] = {
+        "code_version": doc["code_version"],
+        "task_digest": doc["task"]["digest"],
+        "episodes": {},
+    }
+    for lane in doc["lanes"]:
+        stem = lane["stem"]
         back = read_replay(out / stem)
         scene = build_render_scene(back.header, store)
-        reg = res.registration
-        payload = (out / f"{stem}.json").stat().st_size + (out / f"{stem}.bin").stat().st_size
-        ovl = out / f"{stem}.ovl.bin"
-        payload += ovl.stat().st_size if ovl.is_file() else 0
+        payload = sum(
+            (out / name).stat().st_size
+            for name in (f"{stem}.json", f"{stem}.bin", f"{stem}.ovl.bin")
+            if (out / name).is_file()
+        )
         payload += sum(store.entries[a]["bytes"] for a in back.header["assets"])
-        summary["episodes"][stem] = {
-            "design": design_name,
-            "design_id": pair.design_id,
-            "part": part_name,
-            "condition": cond.condition_id,
-            "seed": seed,
-            "registered_success": bool(res.success),
-            "lift_success": bool(res.lift_success),
-            "failure_mode": res.failure_mode,
+        report["episodes"][stem] = {
+            "label": lane["label"],
+            "design": lane["design"],
+            "design_id": lane["design_id"],
+            "part": lane["part_id"],
+            "condition": lane["condition_id"],
+            "seed": lane["seed"],
+            "registered_success": lane["success"],
+            "lift_success": lane["lift_success"],
+            "failure_mode": lane["failure_mode"],
             "registration": None
-            if reg is None
+            if lane["registration"] is None
             else {
-                "registered": bool(reg.registered),
-                "flags": list(reg.sub_flags),
-                "seat_short_mm": reg.seat_short_mm,
-                "dx_mm": reg.dx_mm,
-                "dy_mm": reg.dy_mm,
+                "registered": lane["registered"],
+                "flags": lane["registration_flags"],
+                **lane["registration"],
             },
-            "q_seat_mm": round(1000.0 * pair.q_seat, 2),
+            "q_seat_mm": lane["q_seat_mm"],
             "frames": back.n_frames,
-            "sim_s": round(time.perf_counter() - t0, 2),
+            "sim_s": lane["wall_time_s"],
             "pose_residual": pose_residual(scene, back.frames),
-            "payload_bytes": payload,
+            "payload_bytes": payload,  # raw GLBs; the site serves them meshopt-compressed
             "assets": sorted(back.header["assets"]),
         }
-    store.write_manifest()
-    return summary
+    return report
 
 
 def stills(out: Path, still_dir: Path, episodes: Sequence[dict[str, Any]]) -> dict[str, str]:
@@ -217,8 +191,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = ap.parse_args(argv)
     args.out.mkdir(parents=True, exist_ok=True)
-    episodes = EPISODES if args.spec is None else tuple(json.loads(args.spec.read_text(encoding="utf-8")))
-    summary = run(args.out, episodes, args.run_id)
+    if args.spec is None:
+        episodes, title, text = EPISODES, TITLE, SUMMARY
+    else:
+        episodes, title, text = tuple(json.loads(args.spec.read_text(encoding="utf-8"))), None, None
+    summary = run(args.out, episodes, args.run_id, title=title, summary=text)
     if args.stills is not None:
         t0 = time.perf_counter()
         summary["stills"] = stills(args.out, args.stills, episodes)

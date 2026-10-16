@@ -30,9 +30,10 @@
  * directory is listed. It exits 1 on any problem.
  *
  * Compression needs @gltf-transform/core, @gltf-transform/extensions,
- * @gltf-transform/functions and meshoptimizer (and sharp for WebP textures). They are
- * looked up in web/node_modules, or in `--modules DIR` (a node_modules directory) when
- * they are not dependencies of web/ yet.
+ * @gltf-transform/functions and meshoptimizer (and sharp for WebP textures): pinned dev
+ * dependencies of web/, so `pnpm install` provides them. `--modules DIR` (a node_modules
+ * directory) loads them from elsewhere. The repository's web export
+ * (`rtt export-web --replay-version 2`, src/rtt/render/compress.py) runs this script.
  */
 
 import { createHash } from "node:crypto";

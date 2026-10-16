@@ -254,17 +254,19 @@ describe("TS reader and JSON schema agree", () => {
 });
 
 describe("parseAnyReplayHeader", () => {
-  it("still reads every committed v1 replay", () => {
-    let n = 0;
+  it("still reads every committed v1 replay, next to the published v2 ones", () => {
+    const seen = { 1: 0, 2: 0 };
     for (const dir of readdirSync(V1_DIR)) {
       for (const f of readdirSync(path.join(V1_DIR, dir)).filter((f) => f.endsWith(".json"))) {
-        const h = parseAnyReplayHeader(JSON.parse(readFileSync(path.join(V1_DIR, dir, f), "utf8")), f);
-        expect(h.version).toBe(1);
-        expect(isV2(h)).toBe(false);
-        n += 1;
+        const raw = JSON.parse(readFileSync(path.join(V1_DIR, dir, f), "utf8"));
+        const h = parseAnyReplayHeader(raw, f);
+        expect(h.version).toBe(raw.version);
+        expect(isV2(h)).toBe(raw.version === 2);
+        seen[h.version] += 1;
       }
     }
-    expect(n).toBeGreaterThan(0);
+    expect(seen[1]).toBeGreaterThan(0);
+    expect(seen[2]).toBeGreaterThan(0);
   });
 
   it("reads version 2 and refuses unknown versions", () => {
@@ -428,9 +430,29 @@ describe("build-time replay check (lib/data.ts)", () => {
     mkdirSync(path.join(data, "replays", "v2"), { recursive: true });
     for (const f of ["sample.json", "sample.bin", "sample.ovl.bin"]) cpSync(path.join(FIXTURE, f), path.join(data, "replays", "v2", f));
     cpSync(path.join(FIXTURE, "assets"), path.join(dir, "assets"), { recursive: true });
-    const index = { bouts: [{ lanes: [{ replay: "replays/v2/sample", n_frames: 182 }] }] } as unknown as BoutsIndex;
+    const meta = JSON.parse(readFileSync(path.join(FIXTURE, "sample.json"), "utf8")).meta;
+    const lane = { id: "sample", replay: "replays/v2/sample", n_frames: 182, design_id: meta.design_id, object: { kind: "box" } };
+    const index = { bouts: [{ lanes: [lane] }] } as unknown as BoutsIndex;
     return { dir, data, index };
   }
+
+  it("fails the build on a lane that plays another design's or another part's replay", () => {
+    const { dir, data, index } = site();
+    try {
+      const lane = index.bouts[0]!.lanes[0]!;
+      const design = lane.design_id;
+      lane.design_id = "0123456789ab";
+      expect(() => checkReplayFiles(index, data)).toThrow(/says design 0123456789ab, but its replay shows design/);
+      lane.design_id = design;
+      const part = JSON.parse(readFileSync(path.join(FIXTURE, "sample.json"), "utf8")).meta.part_id;
+      lane.object = { kind: "part", size_mm: [1, 2, 3], part_id: "not_this_part", family: "block" };
+      expect(() => checkReplayFiles(index, data)).toThrow(/says part not_this_part, but its replay shows part/);
+      lane.object = { kind: "part", size_mm: [1, 2, 3], part_id: part, family: "block" };
+      expect(() => checkReplayFiles(index, data)).not.toThrow();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 
   it("accepts a v2 lane whose overlays and assets are all served", () => {
     const { dir, data, index } = site();

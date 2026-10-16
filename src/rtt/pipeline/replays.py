@@ -19,6 +19,10 @@ collision overlay. This is how v1 bouts (the F1 fallback) get the v2 look.
 the simulated :class:`~rtt.design.freeform.FingerPair` gets its own GLB (its print mesh, or
 the union of its convex pieces), the part its own (:func:`part_asset`, or a scan visual from
 :func:`scan_asset`), and the episode's per-frame readouts go into the overlay sidecar.
+
+:func:`record_bout_v2` runs a few ``train_v2`` episodes end to end and writes them as a v2 bout
+directory (replays, GLB store and ``bout.json`` with each lane's scored outcome), which the web
+export publishes as a bout of v2 lanes.
 """
 
 from __future__ import annotations
@@ -42,12 +46,16 @@ if TYPE_CHECKING:
     from rtt.render.materials import Look
 
 __all__ = [
+    "BOUT_FILE",
+    "ENTRANT_LABELS",
     "RecordedReplay",
     "ReplayMismatchError",
     "ReplayRequest",
+    "describe_placement",
     "lift_freeform_to_v2",
     "lift_to_v2",
     "part_asset",
+    "record_bout_v2",
     "record_replays",
     "scan_asset",
 ]
@@ -538,3 +546,203 @@ def lift_freeform_to_v2(
         overlays=ovl,
         channels=channels,
     )
+
+
+# --------------------------------------------------------------------------- v2 bouts
+
+BOUT_FORMAT: Final = "rtt-bout"
+BOUT_VERSION: Final = 2
+BOUT_FILE: Final = "bout.json"
+
+#: What a lane says for each entrant of ``configs/entrants_v2.yaml`` (a recipe says "Designed").
+ENTRANT_LABELS: Final[Mapping[str, str]] = {
+    "stock": "Stock blade",
+    "flat": "Flat pad",
+    "imprint_configurator": "Configurator imprint",
+    "imprint_swept": "Swept imprint",
+    "ref_wrap": "Drafted wrap",
+    "ref_hook": "Hooked wrap",
+}
+ENTRANT_NOTES: Final[Mapping[str, str]] = {
+    "stock": "The gripper's own clamp blade, as shipped",
+    "ref_wrap": "Reference entrant, scored outside the budget",
+    "ref_hook": "Reference entrant, scored outside the budget",
+}
+
+
+def describe_placement(part_name: str, placement: Any) -> str:
+    """A lane's condition in words, for example "flanged bushing, 2 mm off centre across the jaw"."""
+    import math
+
+    part = part_name.replace("_", " ")
+    bits = []
+    x, y = 1000.0 * float(placement.err_x), 1000.0 * float(placement.err_y)
+    yaw = math.degrees(float(placement.err_yaw))
+    if abs(x) > 1e-9:
+        bits.append(f"{abs(x):g} mm off centre across the jaw")
+    if abs(y) > 1e-9:
+        bits.append(f"{abs(y):g} mm off centre along the closing axis")
+    if abs(yaw) > 1e-9:
+        bits.append(f"turned {abs(yaw):g} deg")
+    return f"{part}, {' and '.join(bits) if bits else 'centred'}"
+
+
+def _part_size_mm(part: Any) -> list[float]:
+    import numpy as np
+
+    pts = np.concatenate([np.asarray(p, dtype=np.float64).reshape(-1, 3) for p in part.pieces])
+    return [round(1000.0 * float(e), 3) for e in pts.max(axis=0) - pts.min(axis=0)]
+
+
+def record_bout_v2(
+    out_dir: str | Path,
+    episodes: Sequence[Mapping[str, Any]],
+    *,
+    run_id: str,
+    title: str | None = None,
+    summary: str | None = None,
+    repo: str | Path | None = None,
+) -> dict[str, Any]:
+    """Run v2 episodes with recording on and write them as a v2 bout directory.
+
+    Each episode is ``{"stem", "design", "part", "placement"}`` plus an optional ``"label"``:
+    ``design`` is an entrant name of ``configs/entrants_v2.yaml`` or a recipe (a mapping of
+    :class:`~rtt.design.freeform.FingerRecipe` fields), ``part`` a ``train_v2`` part and
+    ``placement`` a ``train_v2`` placement label. Every episode is that suite condition with
+    its first jitter seed, so each lane is an episode the scored suite runs; nothing is staged.
+
+    Writes ``<stem>.json`` (replay v2, from :func:`lift_freeform_to_v2`), ``<stem>.bin``,
+    ``<stem>.ovl.bin``, ``assets/`` (the GLB store, with its manifest) and :data:`BOUT_FILE`:
+    the bout's lanes with their outcomes from the scorer, which
+    :func:`rtt.pipeline.export_web.export_web` (``replay_version=2``) publishes as a bout.
+    Returns the bout document.
+    """
+    import time
+    from datetime import UTC, datetime
+
+    import trimesh
+
+    from rtt.design.freeform import FingerRecipe, build_pair, load_entrants_v2
+    from rtt.design.freeform.generate import build_pair_full
+    from rtt.parts.suite import train_suite
+    from rtt.render.glb import AssetStore
+    from rtt.sim.episode import run_episode_v2
+    from rtt.sim.replay import code_version as _code_version
+    from rtt.sim.task import default_task_v2, task_digest
+    from rtt.store.manifest import write_json_atomic
+
+    out = Path(out_dir)
+    stems = [str(ep["stem"]) for ep in episodes]
+    if not stems or len(set(stems)) != len(stems):
+        raise ValueError("a bout needs at least one episode, and unique stems")
+    task = default_task_v2()
+    entrants = {e.name: e for e in load_entrants_v2()}
+    suite = train_suite()
+    conds = {(c.part.name, c.placement_label): c for c in suite}
+    store = AssetStore(out / "assets")
+    code = _code_version(repo) if repo is not None else _code_version()
+    started = datetime.now(UTC)
+    lanes = []
+    for ep in episodes:
+        stem, part_name, label = str(ep["stem"]), str(ep["part"]), str(ep["placement"])
+        if (part_name, label) not in conds:
+            raise ValueError(
+                f"{stem}: no {suite.name} condition for part {part_name!r} at placement {label!r}"
+            )
+        cond = conds[(part_name, label)]
+        spec = ep["design"]
+        if isinstance(spec, str):
+            if spec not in entrants:
+                raise ValueError(f"{stem}: unknown entrant {spec!r}; known: {sorted(entrants)}")
+            design, name, kind = entrants[spec], spec, "entrant"
+        else:
+            design = FingerRecipe.model_validate(dict(spec))
+            name, kind = design.name or "recipe", "recipe"
+        seed = int(cond.seeds[0])
+        t0 = time.perf_counter()
+        if getattr(design, "kind", None) == "stock":
+            pair, meshes = build_pair(design, cond.part, task), None
+        else:
+            built = build_pair_full(design, cond.part, task)
+            pair = built.pair
+            meshes = tuple(
+                trimesh.Trimesh(m.vertices, m.faces, process=False)
+                for m in (built.left_mesh, built.right_mesh)
+            )
+        res = run_episode_v2(pair, cond.part, cond.placement, seed, record=True, task=task)
+        if res.replay is None:
+            raise RuntimeError(f"{stem}: the episode was not recorded")
+        v2 = lift_freeform_to_v2(
+            res.replay,
+            store,
+            pair,
+            part=cond.part,
+            overlays=res.overlays,
+            jaw_meshes=meshes,  # type: ignore[arg-type]
+            run_id=run_id,
+            code_version=code,
+            episode=stem,
+            suite=suite.name,
+            condition=cond.condition_id,
+            seed=seed,
+        )
+        write_replay(v2, out / stem)
+        reg = res.registration
+        lanes.append(
+            {
+                "stem": stem,
+                "label": str(ep.get("label") or ENTRANT_LABELS.get(name) or f"Designed: {name}"),
+                "design": name,
+                "design_kind": kind,
+                "design_note": ENTRANT_NOTES.get(name)
+                or (
+                    "Hand-designed baseline entrant" if kind == "entrant" else "Recipe given in the bout spec"
+                ),
+                "design_id": pair.design_id,
+                "part_id": pair.part_id,
+                "part_family": cond.part.family,
+                "part_size_mm": _part_size_mm(cond.part),
+                "condition_id": cond.condition_id,
+                "condition": describe_placement(part_name, cond.placement),
+                "placement": label,
+                "seed": seed,
+                "n_frames": v2.n_frames,
+                "success": bool(res.success),
+                "lift_success": bool(res.lift_success),
+                "failure_mode": res.failure_mode,
+                "registered": bool(reg.registered) if reg is not None else False,
+                "registration_flags": list(reg.sub_flags) if reg is not None else [],
+                "registration": None
+                if reg is None
+                else {"seat_short_mm": reg.seat_short_mm, "dx_mm": reg.dx_mm, "dy_mm": reg.dy_mm},
+                "max_lift_m": float(res.max_lift),
+                "hold_time_s": float(res.hold_time),
+                "flags": [f.split("@", 1)[0] for f in res.flags],
+                "n_steps": int(res.n_steps),
+                "wall_time_s": round(time.perf_counter() - t0, 3),
+                "q_seat_mm": round(1000.0 * pair.q_seat, 3),
+            }
+        )
+    store.write_manifest()
+    finished = datetime.now(UTC)
+    doc = {
+        "format": BOUT_FORMAT,
+        "version": BOUT_VERSION,
+        "run_id": run_id,
+        "kind": "training",
+        "title": title or f"{len(lanes)} recorded v2 episodes from {suite.name}",
+        "summary": summary
+        or (
+            f"Recorded episodes of the v2 training suite ({suite.name}), each the condition's first jitter "
+            "seed, replayed from the recording."
+        ),
+        "task": {"name": task.name, "digest": task_digest(task)},
+        "suite": suite.name,
+        "code_version": code,
+        "started_at": started.isoformat(timespec="seconds").replace("+00:00", "Z"),
+        "finished_at": finished.isoformat(timespec="seconds").replace("+00:00", "Z"),
+        "wall_s": round((finished - started).total_seconds(), 3),
+        "lanes": lanes,
+    }
+    write_json_atomic(out / BOUT_FILE, doc)
+    return doc
