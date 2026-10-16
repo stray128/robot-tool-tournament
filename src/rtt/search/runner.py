@@ -357,7 +357,9 @@ def run_search(
         "config": config.to_json(),
         "model": _model_facts(llm_client) if strategies[0].uses_llm else None,
         "provider": PROVIDER if strategies[0].uses_llm else None,
-        "prompt_hashes": _prompt_hashes(design_space.name, info) if strategies[0].uses_llm else None,
+        "prompt_hashes": (
+            _prompt_hashes(design_space.name, info, config.proposer) if strategies[0].uses_llm else None
+        ),
         "design_space": design_space.name,
     }
     write_manifest(out / "manifest.json", {**base_manifest, "status": "running"})
@@ -537,12 +539,12 @@ def _context_json(task: Any) -> Any:
     return to_json() if callable(to_json) else repr(task)
 
 
-def _prompt_hashes(space: str, info: Any) -> dict[str, str]:
+def _prompt_hashes(space: str, info: Any, proposer: ProposerConfig) -> dict[str, str]:
     if space == V1:
         return prompt_spec_hashes()
     from rtt.search.nemotron_v2 import prompt_spec_hashes_v2
 
-    return prompt_spec_hashes_v2(info)
+    return prompt_spec_hashes_v2(info, proposer)  # the run's own reserves and diversity bars
 
 
 def _sampler_stats(strategy: SearchStrategy) -> dict[str, Any] | None:

@@ -44,8 +44,6 @@ from rtt.search import prompts
 from rtt.search.base import Evaluated, EvaluatorInfo, Rejection, V2Info
 from rtt.search.diversity import (
     BASELINE_CELL,
-    EXPLORE_MIN_DISTANCE_V2,
-    MIN_DISTANCE_V2,
     POINTS_PER_RANGE,
     UNREACHABLE_POINTS,
     cell_name,
@@ -734,11 +732,15 @@ class NemotronProposerV2(NemotronProposer):
 # --------------------------------------------------------------------------- hashes
 
 
-def prompt_spec_hashes_v2(info: EvaluatorInfo | None = None) -> dict[str, str]:
+def prompt_spec_hashes_v2(
+    info: EvaluatorInfo | None = None, config: ProposerConfig | None = None
+) -> dict[str, str]:
     """Hashes of everything that shapes a v2 prompt besides the run's own data (for PREREG).
 
     With ``info``, also the rendered engineering-notes block, task and parts table (they carry
     the task's numbers); the templates, tools, parameter table and points rule are always in.
+    ``config`` is the run's proposer config (default: the v2 defaults), so the hashed tool and
+    rules carry the reserves and diversity bars the run's prompts actually used.
     """
     from rtt.search.zeroshot import ZEROSHOT_SLOTS
 
@@ -746,21 +748,22 @@ def prompt_spec_hashes_v2(info: EvaluatorInfo | None = None) -> dict[str, str]:
         return hashlib.sha256(canonical_json(obj).encode("utf-8")).hexdigest()
 
     space = _space()
+    cfg = config or ProposerConfig.for_space(V2)
     out = {
         **{f"template:{k}": v for k, v in prompts.template_hashes(prompts.TEMPLATE_NAMES_V2).items()},
         "tool:proposer": h(
             submit_designs_tool(
                 PROPOSER_SLOTS,
                 explain=NemotronProposerV2.explain_changes,
-                reserves=ProposerConfig().reserves,
+                reserves=cfg.reserves,
                 space=space,
             )
         ),
         "tool:zeroshot": h(submit_designs_tool(ZEROSHOT_SLOTS, space=space)),
         "parameter_table": h(space.describe()),
-        "points_rule": h(render_points_rule_v2(MIN_DISTANCE_V2, space)),
-        "distance_rule": h(render_distance_rule_v2(MIN_DISTANCE_V2, space)),
-        "explore_min_distance": h(EXPLORE_MIN_DISTANCE_V2),
+        "points_rule": h(render_points_rule_v2(cfg.min_distance, space)),
+        "distance_rule": h(render_distance_rule_v2(cfg.min_distance, space)),
+        "explore_min_distance": h(cfg.explore_min_distance),
         "guard": h(FORBIDDEN_PROMPT_TEXT_V2.pattern),
     }
     if info is not None and info.v2 is not None:

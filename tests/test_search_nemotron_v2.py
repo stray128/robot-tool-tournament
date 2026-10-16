@@ -282,6 +282,33 @@ def test_v2_runs_record_v2_prompt_hashes(tmp_path: Path) -> None:
     assert "template:v2/proposer_user.md" in hashes and "engineering_notes" in hashes
     assert out.manifest["gripper_task"]["design_space"] == V2
     assert out.manifest["entrants"][0]["name"] == "stock"
+    assert hashes == prompt_spec_hashes_v2(FakeEvaluatorV2(0).describe())  # the default v2 config
+
+
+def test_v2_prompt_hashes_follow_the_runs_own_bars_and_reserves(tmp_path: Path) -> None:
+    """A run with recomputed diversity bars or the 3 + 3 fallback hashes the rules its prompts used."""
+    from dataclasses import replace
+
+    from rtt.search.nemotron import ProposerConfig
+    from rtt.search.runner import SearchConfig
+
+    proposer = replace(ProposerConfig.for_space(V2), min_distance=0.095, explore_min_distance=0.2, reserves=3)
+    out = run_search(
+        "nemotron",
+        1,
+        16,
+        [3],
+        FakeEvaluatorV2(0),
+        tmp_path / "c",
+        client_for(ScriptedProposerV2(1)),
+        entrants=stub_entrants(),
+        config=SearchConfig(proposer=proposer),
+    )
+    hashes = out.manifest["prompt_hashes"]
+    default = prompt_spec_hashes_v2(FakeEvaluatorV2(0).describe())
+    assert hashes == prompt_spec_hashes_v2(FakeEvaluatorV2(0).describe(), proposer)
+    for key in ("points_rule", "distance_rule", "explore_min_distance", "tool:proposer"):
+        assert hashes[key] != default[key], key
 
 
 def test_probe_v2_offline_scores_slots_and_replays_without_calls(tmp_path) -> None:
