@@ -28,9 +28,7 @@ pieces (mesh objects) by flat ``vertices`` (x, y, z triples, geom frame) and
 from __future__ import annotations
 
 import json
-import os
 import re
-import subprocess
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -240,29 +238,31 @@ def visual(
     }
 
 
-def code_version(repo: str | Path | None = None) -> str:
-    """The git commit of ``repo`` (default: this checkout), ``+dirty`` if modified.
+def normalise_code_version(sha: str | None) -> str:
+    """A git SHA as replay provenance wants it: 12 hex digits, ``+dirty`` for a modified tree.
 
-    ``RTT_CODE_VERSION`` overrides it (job images built from a clean export have no ``.git``).
+    Accepts the run manifests' form (:func:`rtt.store.manifest.git_sha`: full SHA with an
+    optional ``-dirty`` suffix) and this module's own form.
     """
-    env = os.environ.get("RTT_CODE_VERSION")
-    if env:
-        if not _CODE_VERSION.match(env):
-            raise ValueError(f"RTT_CODE_VERSION={env!r} is not a git commit (optionally +dirty)")
-        return env
-    cwd = Path(repo) if repo is not None else Path(__file__).resolve().parent
+    if not sha:
+        raise ValueError("no code version: run from a git checkout or set RTT_GIT_SHA")
+    sha = sha.strip().lower()
+    dirty = sha.endswith(("-dirty", "+dirty"))
+    core = sha[:-6] if dirty else sha
+    if not re.fullmatch(r"[0-9a-f]{7,40}", core):
+        raise ValueError(f"{sha!r} is not a git commit (optionally -dirty or +dirty)")
+    return core[:12] + ("+dirty" if dirty else "")
 
-    def git(*args: str) -> str:
-        return subprocess.run(
-            ["git", *args], cwd=cwd, capture_output=True, text=True, check=True
-        ).stdout.strip()
 
-    try:
-        sha = git("rev-parse", "--short=12", "HEAD")
-        dirty = bool(git("status", "--porcelain", "--untracked-files=no"))
-    except (OSError, subprocess.CalledProcessError) as exc:
-        raise RuntimeError("no git checkout here; set RTT_CODE_VERSION to the commit that ran") from exc
-    return sha + ("+dirty" if dirty else "")
+def code_version(repo: str | Path | None = None) -> str:
+    """The commit of the running code for ``provenance.code_version``.
+
+    Uses :func:`rtt.store.manifest.git_sha` (so ``RTT_GIT_SHA`` wins, as in job images built
+    from a clean export without ``.git``), normalised by :func:`normalise_code_version`.
+    """
+    from rtt.store.manifest import git_sha
+
+    return normalise_code_version(git_sha(repo) if repo is not None else git_sha())
 
 
 def provenance(*, run_id: str, code_version: str, product_mode: bool = False, **extra: Any) -> dict[str, Any]:

@@ -218,11 +218,12 @@ def test_visual_and_provenance_helpers(monkeypatch: pytest.MonkeyPatch) -> None:
     assert p["product_mode"] is True and "seed" not in p and p["suite"] == "train_v2"
     assert re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", p["created_utc"])
     assert re.fullmatch(r"[0-9a-f]{12}(\+dirty)?", rp.code_version(REPO))
-    monkeypatch.setenv("RTT_CODE_VERSION", "0123456789ab")
-    assert rp.code_version() == "0123456789ab"
-    monkeypatch.setenv("RTT_CODE_VERSION", "not-a-sha")
-    with pytest.raises(ValueError, match="RTT_CODE_VERSION"):
-        rp.code_version()
+    monkeypatch.setenv("RTT_GIT_SHA", "0123456789abcdef0123456789abcdef01234567-dirty")
+    assert rp.code_version() == "0123456789ab+dirty"
+    assert rp.normalise_code_version("ABCDEF1") == "abcdef1"
+    for bad in ("main", "", None, "0123456-clean"):
+        with pytest.raises(ValueError):
+            rp.normalise_code_version(bad)
 
 
 def test_upgrade_header_needs_known_bodies(episode: Any) -> None:
