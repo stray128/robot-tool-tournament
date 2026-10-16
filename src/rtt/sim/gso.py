@@ -1421,7 +1421,10 @@ def selection_part_suite(
 
     Same conditions, seeds and order as :func:`selection_suite`; each object becomes a
     :class:`~rtt.parts.types.PartSpec` of family ``gso`` (same pieces and geometry hash,
-    yaw symmetry detected from the footprint, density from the screen rules' task).
+    yaw symmetry detected from the footprint). The density is the object's own when set,
+    else the scan material's (:data:`rtt.parts.materials.SCAN_CLAY`, 1200 kg/m^3, the
+    task_v1 object density the screen's mass cap used); a task with another object density
+    needs the objects' ``density`` set before this call.
     ``visual_assets`` maps object names to asset ids of their visual meshes.
     """
     from rtt.parts.library import part_from_mesh_object
