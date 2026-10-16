@@ -7,12 +7,39 @@ import { PHASE_LABELS } from "@/lib/labels";
 import { phaseAt } from "@/lib/replay";
 import type { PhaseSpan } from "@/lib/types";
 
-import { SPEEDS, usePlayback, usePlaybackStore, type ViewName } from "./playback";
+import { SPEEDS, usePlayback, usePlaybackStore, type LookName, type ViewName } from "./playback";
 
 const VIEWS: { id: ViewName; label: string }[] = [
   { id: "front", label: "Side" },
   { id: "iso", label: "Angled" },
 ];
+
+const LOOKS: { id: LookName; label: string }[] = [
+  { id: "drawing", label: "Drawing" },
+  { id: "studio", label: "Studio" },
+];
+
+/** Which optional controls a bout offers. */
+export interface TransportFeatures {
+  /** The drawing/studio switch (version 1 lanes only; v2 lanes are always studio). */
+  look: boolean;
+  /** The collision-geometry outline (some lane carries v1-style geoms). */
+  collision: boolean;
+}
+
+function Toggle({ label, pressed, onChange, disabled }: { label: string; pressed: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={pressed}
+      disabled={disabled}
+      onClick={() => onChange(!pressed)}
+      className={`num border border-rule px-2 py-1 text-xs disabled:opacity-50 ${pressed ? "bg-ink text-paper" : "text-ink-2 hover:text-ink"}`}
+    >
+      {label}
+    </button>
+  );
+}
 
 function Segmented<T extends string | number>({
   label,
@@ -47,14 +74,25 @@ function Segmented<T extends string | number>({
   );
 }
 
-/** Play/pause, scrubber with phase bands, speed and view controls for a bout's shared clock. */
-export function Transport({ phases, disabled = false }: { phases: PhaseSpan[]; disabled?: boolean }) {
+/** Play/pause, scrubber with phase bands, speed, view and look controls for a bout's shared clock. */
+export function Transport({
+  phases,
+  disabled = false,
+  features = { look: false, collision: false },
+}: {
+  phases: PhaseSpan[];
+  disabled?: boolean;
+  features?: TransportFeatures;
+}) {
   const store = usePlaybackStore();
   const t = usePlayback((s) => s.t);
   const duration = usePlayback((s) => s.duration);
   const playing = usePlayback((s) => s.playing);
   const speed = usePlayback((s) => s.speed);
   const view = usePlayback((s) => s.view);
+  const look = usePlayback((s) => s.look);
+  const xray = usePlayback((s) => s.xray);
+  const collision = usePlayback((s) => s.collision);
   const scrubId = useId();
   const phase = phaseAt(t, phases);
   const span = duration || 1;
@@ -110,6 +148,15 @@ export function Transport({ phases, disabled = false }: { phases: PhaseSpan[]; d
             onChange={(v) => store.getState().setView(v)}
             disabled={disabled}
           />
+          {features.look ? (
+            <Segmented label="Look" options={LOOKS} value={look} onChange={(l) => store.getState().setLook(l)} disabled={disabled} />
+          ) : null}
+          {look === "studio" ? (
+            <Toggle label="X-ray" pressed={xray} onChange={(v) => store.getState().setXray(v)} disabled={disabled} />
+          ) : null}
+          {look === "studio" && features.collision ? (
+            <Toggle label="Collision" pressed={collision} onChange={(v) => store.getState().setCollision(v)} disabled={disabled} />
+          ) : null}
         </div>
       </div>
       <label htmlFor={scrubId} className="sr-only">
