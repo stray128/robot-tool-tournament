@@ -38,7 +38,11 @@ from rtt.design.freeform.schema import SCORED_PARAMS, recipe_from_unit
 from rtt.design.freeform.validate import CODES, InvalidDesign
 from rtt.sim.task import default_task
 
-SEAT_BACKOFF = 1e-5  # m; a jaw this far before its seat must not touch the part
+SEAT_BACKOFF = 1e-5  # m; a jaw this far before its seat must not cut into the part (it may touch)
+SEAT_PUSH = 1e-4  # m; a jaw this far past its seat must cut into the part (the seat blocks it)
+CUT_TOL_MM3 = 1e-6  # overlap volume that still counts as touching, mm^3
+BLOCK_MIN_MM3 = 1e-7  # overlap volume 0.1 mm past the seat that shows the part blocks the jaw, mm^3
+# (a point contact on a curved part overlaps only ~1e-4 mm^3 there; a graze overlaps nothing)
 TOUCH_TOL = 2e-6  # m; at its seat a jaw is within this of the part
 CLEARANCE_TOL = 2e-5  # m; designed-pose distance >= clearance - 0.02 mm
 HAUSDORFF_MAX = 5e-5  # m
@@ -105,7 +109,13 @@ def seat_checks(build: Any, task: Any, part_m: Any) -> dict[str, float]:
     pair, plan = build.pair, build.plan
     ohg = float(task.gripper.open_half_gap)
     zr = pair.tip_height + pair.finger_length
-    out: dict[str, float] = {"touch": 0.0, "early": math.inf, "clear_margin": math.inf}
+    out: dict[str, float] = {
+        "touch": 0.0,
+        "early": math.inf,
+        "early_cut_mm3": 0.0,
+        "blocked_mm3": math.inf,
+        "clear_margin": math.inf,
+    }
     for side, jaw, jp in (("left", pair.left, plan.left), ("right", pair.right, plan.right)):
         sgn = 1.0 if side == "left" else -1.0
         pieces = list(jaw.pieces)
@@ -114,8 +124,14 @@ def seat_checks(build: Any, task: Any, part_m: Any) -> dict[str, float]:
             shift = np.array([0.0, sgn * (ohg - q), zr])
             return _manifold(pieces, shift).min_gap(part_m, 3.0) / 1000.0
 
+        def cut_at(q: float, pieces: list[np.ndarray] = pieces, sgn: float = sgn) -> float:
+            shift = np.array([0.0, sgn * (ohg - q), zr])
+            return (_manifold(pieces, shift) ^ part_m).volume()  # mm^3
+
         out["touch"] = max(out["touch"], gap_at(pair.q_seat))
-        out["early"] = min(out["early"], gap_at(pair.q_seat - SEAT_BACKOFF))
+        out["early"] = min(out["early"], gap_at(pair.q_seat - SEAT_BACKOFF))  # 0 = touching (allowed)
+        out["early_cut_mm3"] = max(out["early_cut_mm3"], cut_at(pair.q_seat - SEAT_BACKOFF))
+        out["blocked_mm3"] = min(out["blocked_mm3"], cut_at(pair.q_seat + SEAT_PUSH))
         if plan.spec.pad != "flat":
             out["clear_margin"] = min(out["clear_margin"], gap_at(pair.q_seat - jp.gap) - plan.spec.clearance)
     return out
@@ -302,6 +318,9 @@ def summarize(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "stl_not_watertight": sum(not p["stl_watertight"] for p in built),
         "max_touch_gap_mm": max((p["touch"] for p in built), default=0.0) * 1000.0,
         "min_early_gap_mm": min((p["early"] for p in built), default=math.inf) * 1000.0,
+        "touching_before_seat": sum(p["early"] <= 0.0 for p in built),
+        "max_early_cut_mm3": max((p["early_cut_mm3"] for p in built), default=0.0),
+        "min_blocked_mm3": min((p["blocked_mm3"] for p in built), default=math.inf),
         "min_clearance_margin_mm": min((p["clear_margin"] for p in built), default=math.inf) * 1000.0,
         "hausdorff_samples": len(haus),
         "max_hausdorff_print_mm": max((p["hausdorff_print_mm"] for p in haus), default=0.0),
@@ -325,8 +344,10 @@ def gate_failures(s: dict[str, Any]) -> list[str]:
         out.append(f"{s['stl_not_watertight']} print STLs are not watertight")
     if s["max_touch_gap_mm"] > TOUCH_TOL * 1000.0:
         out.append(f"a jaw does not touch the part at its seat ({s['max_touch_gap_mm']:.4f} mm)")
-    if s["min_early_gap_mm"] <= 0.0:
-        out.append("a jaw touches the part before its seat (the pad cuts into the part)")
+    if s["max_early_cut_mm3"] > CUT_TOL_MM3:
+        out.append(f"a jaw cuts into the part before its seat ({s['max_early_cut_mm3']:.2e} mm^3)")
+    if s["min_blocked_mm3"] <= BLOCK_MIN_MM3:
+        out.append("a jaw closes past its seat without meeting the part (the seat is only a graze)")
     if s["min_clearance_margin_mm"] < -CLEARANCE_TOL * 1000.0:
         out.append(f"a jaw breaks its clearance at the designed pose ({s['min_clearance_margin_mm']:.4f} mm)")
     if max(s["max_hausdorff_print_mm"], s["max_hausdorff_collision_mm"]) > HAUSDORFF_MAX * 1000.0:
@@ -373,7 +394,8 @@ def test_any_recipe_builds_or_is_rejected_with_a_code(u: list[float], k: int) ->
         return
     assert pair["convex_rel"] <= CONVEX_RTOL
     assert pair["stl_watertight"]
-    assert pair["touch"] <= TOUCH_TOL and pair["early"] > 0.0
+    assert pair["touch"] <= TOUCH_TOL and pair["early_cut_mm3"] <= CUT_TOL_MM3
+    assert pair["blocked_mm3"] > BLOCK_MIN_MM3
     assert pair["clear_margin"] >= -CLEARANCE_TOL
 
 
@@ -400,13 +422,20 @@ def test_checks_catch_a_jaw_that_cuts_into_the_part() -> None:
     part_m = _part_manifold(block())
     ok = seat_checks(b, task, part_m)
     assert ok["touch"] <= TOUCH_TOL and ok["early"] > 0.0 and ok["clear_margin"] >= -CLEARANCE_TOL
+    assert ok["early_cut_mm3"] <= CUT_TOL_MM3 and ok["blocked_mm3"] > BLOCK_MIN_MM3
 
     class Late:
         pair = replace(b.pair, q_seat=b.pair.q_seat + 0.0005)  # 0.5 mm past contact
         plan = b.plan
 
     bad = seat_checks(Late, task, part_m)
-    assert bad["early"] <= 0.0
+    assert bad["early"] <= 0.0 and bad["early_cut_mm3"] > CUT_TOL_MM3
+
+    class Early:  # a seat 0.5 mm before contact, as a graze on a band-boundary face gave
+        pair = replace(b.pair, q_seat=b.pair.q_seat - 0.0005)
+        plan = b.plan
+
+    assert seat_checks(Early, task, part_m)["blocked_mm3"] <= BLOCK_MIN_MM3
     d1, d2 = pad_zone_hausdorff(b, np.random.default_rng(0))
     assert max(d1, d2) <= HAUSDORFF_MAX
     from rtt.design.freeform.export import JawMesh
