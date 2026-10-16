@@ -39,8 +39,10 @@ Command line, with builder, parts and designs given as ``module:function``::
         --det-designs freeform_fixtures:determinism_designs
 
 With the generator and the part library: ``--builder rtt.design.freeform:build_pair --parts
-rtt.parts.library:training_parts --designs rtt.sim.gates_v2:generator_gv2_designs`` (gv1:
-``rtt.sim.gates_v2:generator_gv1_designs``).
+rtt.parts.library:training_parts --designs rtt.sim.gates_v2:generator_gv2_designs
+--det-designs rtt.sim.gates_v2:generator_determinism_designs`` (gv1:
+``--designs rtt.sim.gates_v2:generator_gv1_designs``). The determinism criterion needs at
+least 10 designs, so a gv2 run without ``--det-designs`` (3 designs) fails it.
 """
 
 from __future__ import annotations
@@ -67,7 +69,7 @@ from rtt.sim.conditions import derive_seed
 from rtt.sim.controller import plan_grasp_v2
 from rtt.sim.episode import EpisodeResult, run_episode, run_episode_v2
 from rtt.sim.exec_cpu import CpuExecutor, EpisodeJob
-from rtt.sim.fingers_v2 import jaw_mass_properties, lowest_point
+from rtt.sim.fingers_v2 import check_pair, jaw_mass_properties, lowest_point
 from rtt.sim.register import seat_clearance
 from rtt.sim.scene import build_model_v2
 from rtt.sim.task import TaskConfig, TaskV2, default_task_v2
@@ -80,6 +82,7 @@ PEN_P99_MAX_MM = 2.0
 CREEP_P95_MAX_MM = 0.5
 PARITY_MIN = 0.99
 PARITY_MIN_EPISODES = 200
+DETERMINISM_MIN_DESIGNS = 10  # spec GV2: 10 designs x 3 fresh processes
 COST_RATIO_MAX = 1.5
 TOO_HIGH = 0.03  # m above the part's top
 LOW_MU = 0.05
@@ -132,6 +135,11 @@ def _outcome(r: EpisodeResult) -> tuple[bool, bool]:
     return (bool(r.success), bool(getattr(r, "lift_success", r.success)))
 
 
+def _worst_abs(values: Sequence[float]) -> float:
+    """Largest ``|v|``, infinite if any value is not finite."""
+    return max((abs(v) if math.isfinite(v) else math.inf for v in values), default=math.inf)
+
+
 def _pct(values: Sequence[float], q: float) -> float:
     vals = [v for v in values if math.isfinite(v)]
     return float(np.percentile(vals, q)) if vals else math.nan
@@ -169,15 +177,19 @@ def _agreement(a: Sequence[EpisodeResult], b: Sequence[EpisodeResult]) -> dict[s
 def build_pairs(
     builder: Builder, parts: Sequence[Any], designs: Mapping[str, Any], task: TaskConfig
 ) -> tuple[dict[tuple[str, str], Any], dict[tuple[str, str], str]]:
-    """``({(design, part_id): pair}, {(design, part_id): build error})``."""
+    """``({(design, part_id): pair}, {(design, part_id): build error})``; a pair the scene
+    refuses (:func:`rtt.sim.fingers_v2.check_pair`, e.g. a non-convex piece) is a build error."""
     pairs: dict[tuple[str, str], Any] = {}
     invalid: dict[tuple[str, str], str] = {}
     for dname, design in designs.items():
         for part in parts:
             try:
-                pairs[(dname, part.part_id)] = builder(design, part, task)
+                pair = builder(design, part, task)
+                check_pair(pair)
             except ValueError as exc:
                 invalid[(dname, part.part_id)] = str(exc)
+                continue
+            pairs[(dname, part.part_id)] = pair
     return pairs, invalid
 
 
@@ -299,8 +311,10 @@ def run_gv1(
             probe = seat_clearance(model, ids, plan, obj, pair.q_seat, [clearance])
             gaps = [probe["left"][0], probe["right"][0]]
             contacts = probe["first_contact"]
-            gap_err = max(abs(g - clearance) for g in gaps) * 1000.0
-            seat_err = max(abs(q - pair.q_seat) for q in contacts) * 1000.0
+            # a jaw that never touches the part has a NaN first contact: an infinite error
+            # (max() would silently drop a NaN that is not its first argument)
+            gap_err = _worst_abs([g - clearance for g in gaps]) * 1000.0
+            seat_err = _worst_abs([q - pair.q_seat for q in contacts]) * 1000.0
             worst_gap, worst_seat = max(worst_gap, gap_err), max(worst_seat, seat_err)
             ok = gap_err <= FIDELITY_TOL_MM and seat_err <= FIDELITY_TOL_MM
             clearance_ok &= ok
@@ -646,12 +660,19 @@ def determinism_jobs(
     return labels, jobs
 
 
-def native_ccd_rule(v1_agreement: float, v2_agreement: float, lips: Mapping[str, Any]) -> dict[str, Any]:
-    """Spec section 6: switch to native CCD only if both parities are >= 99 % and the
-    lip-edge regression is reproduced and shown fixed; otherwise keep it off."""
+def native_ccd_rule(
+    v1_agreement: float,
+    v2_agreement: float,
+    lips: Mapping[str, Any],
+    v1_n: int = PARITY_MIN_EPISODES,
+    v2_n: int = PARITY_MIN_EPISODES,
+) -> dict[str, Any]:
+    """Spec section 6: switch to native CCD only if both parities are >= 99 % (the v1 parity
+    set and >= 200 v2 episodes) and the lip-edge regression is reproduced and shown fixed;
+    otherwise keep it off. ``v1_n`` and ``v2_n`` are the episode counts behind the parities."""
     checks = {
-        "v1_parity": bool(v1_agreement >= PARITY_MIN),
-        "v2_parity": bool(v2_agreement >= PARITY_MIN),
+        "v1_parity": bool(v1_agreement >= PARITY_MIN and v1_n >= PARITY_MIN_EPISODES),
+        "v2_parity": bool(v2_agreement >= PARITY_MIN and v2_n >= PARITY_MIN_EPISODES),
         "lip_regression_reproduced": bool(lips["v1_regression_reproduced"]),
         "lip_regression_fixed_on_v2_geometry": bool(lips["v2_analogues_fixed_with_native"]),
     }
@@ -759,7 +780,7 @@ def run_gv2(
             f"matrix_with_native_{not task.physics.native_ccd}": matrix_stats([other[i] for i in in_matrix]),
             "lip_regression": lips,
         }
-        v1_agree = math.nan
+        v1_agree, v1_n = math.nan, 0
         if v1_parity_n:
             from rtt.sim.bench import parity_jobs
             from rtt.sim.task import default_task
@@ -769,7 +790,9 @@ def run_gv2(
             v1_on = _run(_with_physics(v1_jobs, native_ccd=True), workers)
             nccd["v1_parity_set_off_vs_on"] = _agreement(v1_off, v1_on)
             v1_agree = nccd["v1_parity_set_off_vs_on"]["outcome_agreement"]
-        nccd["rule"] = native_ccd_rule(v1_agree, nccd["v2_off_vs_on"]["outcome_agreement"], lips)
+            v1_n = nccd["v1_parity_set_off_vs_on"]["n"]
+        v2 = nccd["v2_off_vs_on"]
+        nccd["rule"] = native_ccd_rule(v1_agree, v2["outcome_agreement"], lips, v1_n, v2["n"])
         nccd["decision"] = task.physics.native_ccd
         report["native_ccd"] = nccd
         passed["native_ccd_decision_recorded"] = True
@@ -777,7 +800,11 @@ def run_gv2(
         dd = det_designs or designs
         labels, det_jobs = determinism_jobs(builder, parts, dd, task)
         report["determinism"] = {"episodes": labels, **fresh_process_hashes(det_jobs, fresh_processes)}
-        passed["determinism"] = report["determinism"]["identical"] and len(det_jobs) == len(dd)
+        passed["determinism"] = (
+            report["determinism"]["identical"]
+            and len(det_jobs) == len(dd)
+            and len(det_jobs) >= DETERMINISM_MIN_DESIGNS
+        )
     if cost_samples:
         report["cost"] = cost_ratio(jobs, cost_samples)
         passed["cost"] = report["cost"]["ratio"] <= COST_RATIO_MAX
@@ -814,6 +841,55 @@ def generator_gv2_designs() -> dict[str, Any]:
             pad="conform", pad_depth_mm=4.0, wall_draft_deg=30.0, clearance_mm=0.4, **common
         ),
         "v_funnel": FingerRecipe(pad="v_funnel", pad_depth_mm=6.0, wall_draft_deg=45.0, **common),
+    }
+
+
+def generator_determinism_designs() -> dict[str, Any]:
+    """GV2 determinism: ten distinct FingerRecipes covering every pad strategy, the chamfer
+    and hook tips, straight and drafted walls and several widths and clearances (needs the
+    generator track's code)."""
+    from rtt.design.freeform.schema import FingerRecipe
+
+    c = {"tip": "blunt", "grip_height_frac": 0.5, "pad_height_mm": 20.0, "finger_width_mm": 40.0}
+    return {
+        **generator_gv2_designs(),
+        "conform_d0": FingerRecipe(
+            pad="conform", pad_depth_mm=6.0, wall_draft_deg=0.0, clearance_mm=0.4, **c
+        ),
+        "conform_d45": FingerRecipe(
+            pad="conform", pad_depth_mm=5.0, wall_draft_deg=45.0, clearance_mm=0.6, **c
+        ),
+        "v_funnel_30": FingerRecipe(
+            pad="v_funnel", pad_depth_mm=8.0, wall_draft_deg=30.0, **{**c, "finger_width_mm": 36.0}
+        ),
+        "flat_narrow_high": FingerRecipe(
+            pad="flat", **{**c, "finger_width_mm": 16.0, "grip_height_frac": 0.7, "pad_height_mm": 10.0}
+        ),
+        "chamfer": FingerRecipe(
+            pad="conform",
+            pad_depth_mm=4.0,
+            wall_draft_deg=20.0,
+            clearance_mm=0.4,
+            tip="chamfer",
+            tip_size_mm=3.0,
+            grip_height_frac=0.4,
+            pad_height_mm=16.0,
+            finger_width_mm=30.0,
+        ),
+        "hook": FingerRecipe(
+            pad="conform",
+            pad_depth_mm=2.0,
+            wall_draft_deg=30.0,
+            clearance_mm=0.4,
+            tip="hook",
+            tip_size_mm=6.0,
+            grip_height_frac=0.5,
+            pad_height_mm=20.0,
+            finger_width_mm=30.0,
+        ),
+        "wide_clear": FingerRecipe(
+            pad="conform", pad_depth_mm=8.0, wall_draft_deg=30.0, clearance_mm=1.2, **c
+        ),
     }
 
 

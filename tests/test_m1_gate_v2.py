@@ -153,6 +153,28 @@ def test_native_ccd_rule_needs_every_condition() -> None:
     assert not native_ccd_rule(1.0, 1.0, {**lips, "v2_analogues_fixed_with_native": False})[
         "switch_to_native"
     ]
+    # the parities count only over enough episodes: the v1 parity set and >= 200 v2 episodes
+    assert not native_ccd_rule(1.0, 1.0, lips, v1_n=200, v2_n=180)["switch_to_native"]
+    assert not native_ccd_rule(1.0, 1.0, lips, v1_n=50, v2_n=216)["switch_to_native"]
+
+
+def test_worst_error_treats_a_missing_contact_as_infinite() -> None:
+    from rtt.sim.gates_v2 import _worst_abs
+
+    # max() keeps a NaN only when it comes first: a jaw that never touches must still fail GV1
+    assert _worst_abs([0.0, math.nan]) == math.inf and _worst_abs([math.nan, 0.0]) == math.inf
+    assert _worst_abs([0.01, -0.02]) == pytest.approx(0.02)
+
+
+def test_the_determinism_criterion_needs_ten_designs() -> None:
+    from rtt.sim.gates_v2 import DETERMINISM_MIN_DESIGNS, generator_determinism_designs
+
+    assert DETERMINISM_MIN_DESIGNS == 10
+    pytest.importorskip("rtt.design.freeform.schema")
+    designs = generator_determinism_designs()
+    assert len(designs) == DETERMINISM_MIN_DESIGNS
+    assert {d.pad for d in designs.values()} == {"flat", "conform", "v_funnel"}
+    assert {d.tip for d in designs.values()} == {"blunt", "chamfer", "hook"}
 
 
 def test_the_lip_edge_regression_is_reproduced_on_v1_primitives() -> None:

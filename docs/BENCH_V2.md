@@ -15,9 +15,14 @@ python -m rtt.sim.gates_v2 gv2 --builder freeform_fixtures:build_fixture_pair \
     --det-designs freeform_fixtures:determinism_designs --out gv2.json
 
 # the generator and the part library
+python -m rtt.sim.gates_v2 gv1 --builder rtt.design.freeform:build_pair \
+    --parts rtt.parts.library:training_parts --designs rtt.sim.gates_v2:generator_gv1_designs
 python -m rtt.sim.gates_v2 gv2 --builder rtt.design.freeform:build_pair \
-    --parts rtt.parts.library:training_parts --designs rtt.sim.gates_v2:generator_gv2_designs
+    --parts rtt.parts.library:training_parts --designs rtt.sim.gates_v2:generator_gv2_designs \
+    --det-designs rtt.sim.gates_v2:generator_determinism_designs
 ```
+
+The determinism criterion needs 10 designs, so a gv2 run without `--det-designs` fails it.
 
 Add `--native-ccd true` to run a gate with MuJoCo's native collision instead of libccd.
 
