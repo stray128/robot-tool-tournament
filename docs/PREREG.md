@@ -1,21 +1,419 @@
-# Pre-registration (DRAFT, not frozen)
+# Pre-registration (DRAFT v2, not frozen)
 
 **Status: draft for approval. Not tagged.** This file becomes the protocol of record when
 the commit that holds it is tagged `prereg-v1`. The tag must precede the first
 confirmatory job. Until then every number here may change; after it, every change goes in
 `docs/DEVIATIONS.md`.
 
-**Scope.** This draft covers the v1 design space: 14-box fingers, `task_v1`, `train_v1`.
-A richer design space is in development. If it passes its gates in time, a v2
-pre-registration replaces this file before any confirmatory run. If not, this protocol
-runs as written.
+This file holds two protocols. Exactly one of them runs:
 
-Items marked **[decide]** need a decision before the tag. Items marked **[at freeze]** are
-filled in by the freeze steps at the end.
+- **Part A, the v2 protocol** (part-shaped fingers, `freeform-v2`, `task_v2`,
+  `train_v2`). It runs if the v2 gates pass in time (section A0).
+- **Part B, fallback F1** (14-box fingers, `task_v1`, `train_v1`). It is the v1 draft of
+  2026-10-16, unchanged apart from heading levels. It runs if the v2 gates miss their
+  deadlines.
+
+The go/no-go decision is written into section A0 and `docs/DEVIATIONS.md` before the tag,
+and the protocol that does not run is kept here, marked "not run".
+
+Items marked **[decide]** need a founder decision before the tag. Items marked
+**[at freeze]** are filled in by the freeze steps at the end of each part.
 
 ---
 
-## 1. Question and primary endpoint (S1)
+# Part A. The v2 protocol
+
+## A0. Which protocol runs
+
+| Deadline (IST) | Condition | If not met |
+|---|---|---|
+| Mon Oct 19, 22:00 | Gates GV0 (geometry), GV1 (fidelity and fairness), GV2 (physics), GV3 (calibration) and GV4 (Nebius parity) green | F1: Part B runs |
+| Tue Oct 20, 22:00 | Gate GV5 (search harness) green | F1: Part B runs |
+
+Under F1, `freeform-v2` is used for product mode and visuals only, and every clip that
+shows it is labelled "product mode".
+
+**Decision:** [at freeze] (date, time, which gates, who decided).
+
+## A1. Question and primary endpoint (S1)
+
+**Question.** Does NVIDIA Nemotron 3 Super, reading its own run's simulator results, reach
+a good part-shaped finger recipe in fewer simulated designs than random search with the
+same budget?
+
+**Design score.** A design is a part-relative recipe, compiled against each training part
+into a left and a right jaw (`docs/TASK_V2.md`). Its **training score** is its mean
+registered-grasp success (`success_v2`) over the 48 episodes of `train_v2` (6 parts x 4
+placements x 2 jitter seeds). There is no best-of-k step. Scores lie on a 1/48 grid.
+
+`success_v2` requires lift and hold as in v1, plus, 0.25 s after closing and before the
+lift: seat shortfall at most 1.0 mm, |dx| and |dy| at most 0.75 mm, yaw at most 2 deg
+(modulo the part's symmetry), tilt at most 3 deg; and tilt at most 5 deg after the hold.
+These tolerances may change once, during GV3, and are frozen in `docs/TASK_V2.md`.
+
+**S1: evaluations to tau.** As in v1:
+
+- Each run simulates exactly B = 40 valid designs, numbered 1 to 40 in evaluation order.
+  Designs 1-8 are the shared round 0: the four round-0 entrants (`stock`, `flat`,
+  `imprint_configurator`, `imprint_swept`), then 4 Sobol designs seeded only by the run
+  seed. For a given seed, round 0 is byte-identical in every arm.
+- **T** is the index of the first design **proposed by the arm** (index 9 or later) whose
+  training score is at least tau. A run that never gets there is censored at T = 41.
+  Round-0 designs never count toward T.
+
+**tau = [at freeze]**, set by the rule in A1.1 from the pilot.
+
+**Hypotheses.** H0: the arms' T values are exchangeable. H1: arm C needs fewer
+evaluations than arm A.
+
+**Test.** One-sided exact permutation test of the restricted mean of T, alpha = 0.05,
+over every relabelling of the 2R runs into two groups of R (`permutation_test` in
+`src/rtt/analysis/s1.py`). Ties count against H1. The reasons for this test are those of
+Part B, section B1.
+
+**Effect estimate.** mean(T_A) - mean(T_C) with a 95 % percentile bootstrap interval
+(10,000 resamples of runs within each arm, seed 0; `restricted_mean_ci`). Also reported:
+the share of runs that reached tau by each evaluation count, per arm (`reach_curve`).
+
+### A1.1 The tau rule (fixed before the pilot)
+
+Implemented by `derive_tau_v2` in `src/rtt/analysis/tau.py`; constants in `TauRuleV2`.
+
+1. Inputs: exactly three random-arm pilot runs (B = 40, seeds 101-103) and the Sobol-64
+   screening sample of gate GV3 (`calibration_v2.json`). The Nemotron pilots never enter
+   the rule; they are used only for valid and fallback rates.
+2. The pool is every Sobol-64 score plus every non-entrant design score of the three
+   random pilots.
+3. Bootstrap 20,000 random runs of B = 40: the four round-0 entrants' scores plus 36
+   scores drawn with replacement from the pool (seed 20261021). Best-at-B is the maximum.
+4. tau_raw is the median of the bootstrapped best-at-B. tau is tau_raw rounded to the
+   1/48 grid, halves up.
+5. tau is raised, if needed, to 2/48 above the best round-0 score seen before the tag:
+   the maximum over the four round-0 entrants and the round-0 designs of the three random
+   pilots. tau is capped at 1; a capped tau is reported as degenerate.
+6. A pilot that used a confirmatory seed (`configs/seeds_main.yaml`) is refused.
+
+Rule digest (`TauRuleV2().digest()`, draft): `e4db295272c0818d8a5148b0d1b32b2104a1db6018947a050480253c22b9b695`.
+The freeze recomputes it with the file hash.
+
+Result on the pilot: [at freeze] (tau_raw, floor, binding, pool size, per-design hit rate
+at tau, pilot best-at-B).
+
+## A2. Arms
+
+| Arm | What it is | Status |
+|---|---|---|
+| **A: random** | Scrambled Sobol over the 7 continuous recipe parameters, uniform over the 9 pad x tip cells, canonicalised, then rejection-sampled until the validators accept (`rtt.search.space_v2`). The valid rate is logged. | confirmatory |
+| **C: Nemotron with feedback** | `nvidia/nemotron-3-super-120b-a12b` on Nebius Token Factory, `submit_designs` v2 tool. Settings below. | confirmatory |
+| **Z: zero-shot Nemotron** | The same model and tool, 40 designs, no feedback. | **[decide]** at freeze, from measured cost. Recommended: exploratory unless it gets the same reserves as C. |
+| **T: TPE** | Tree-structured Parzen estimator over the same space (`optuna`, extra `tpe`). | **[decide]** at freeze, from measured cost. Recommended: not run. |
+
+**Arm C settings** [at freeze, from `ProposerConfig` and the v2 run manifests]:
+
+- Sampling as in v1 (temperature 1.0, top_p 0.95, max_tokens 16,384, reasoning at the
+  model's default). Token Factory has no seed parameter, so every request and response is
+  cached by SHA-256 and the run replays with zero API calls.
+- Output: a forced `submit_designs` v2 call. Each design gives `pad`, `tip`, `params`,
+  `hypothesis`, `changes` and `same_cell_distances`. Only active parameters are required;
+  inactive ones are ignored and logged. **4 slots plus 4 reserves** per call, or 3 plus 3
+  if the probe (5 calls) is below 90 % valid after reserves or needs more than one repair.
+- The prompt adds the training parts table (family, dimensions, features, material,
+  mass), the placement conditions and the registration tolerances, per-part and
+  per-placement success vectors, `jam_on_close` and `off_centre` counts, and for each
+  elite its capture report, mass and piece count. Held-out parts never appear in a
+  prompt.
+- **Engineering-notes block**, shared by C and Z and hashed: the friction rule (draft at
+  most 90 deg - atan(mu) - 5 deg, about 68 deg at mu 0.3), the capture rule (clearance +
+  depth x tan(draft) + chamfer at least the error band), the stroke cap and print rules.
+  It is guidance, never a validator.
+- The capture report (the static predictor in `rtt.design.freeform.predict`) is returned
+  in feedback. It never rejects a design.
+- Caps: at most 16 model calls per run, 1 repair and 1 reflection per call. A slot still
+  empty after reserves, repair and reflection is filled at random and logged
+  `fallback_random`. Invalid proposals cost no simulator budget.
+
+**Canonicalisation, IDs and duplicates** (identical for every arm, before hashing,
+building or distance): inactive parameters reset to their fixed values (logged); values
+quantised to 0.1 mm, 0.5 deg and 0.01. `design_id` = SHA-256 of the generator version and
+the canonical recipe; `geometry_id` = SHA-256 over the 6 training-part geometry hashes. A
+design whose `geometry_id` matches an earlier design's is rejected as
+`duplicate_geometry`, in every arm.
+
+**Diversity threshold** (fixed before the pilot): t is the smallest distance such that at
+most 1 % of 10,000 random valid Sobol pairs lie within t on the normalised 9-parameter
+vector. A design within t of a tested design is rejected. Explore designs keep the v1
+rule (an untried cell, or a margin from every design in their cell), with the margin
+rescaled to the v2 vector. Values: [at freeze] (computed by the search code,
+`rtt.search.space_v2`).
+
+**Budget.** B = 40 valid simulated designs per run: round 0 (8) then 4 rounds of 8. Equal
+budget means equal simulator evaluations. Tokens, dollars and wall time are reported
+separately. The reference entrants `ref_wrap` and `ref_hook` are scored outside the budget
+and shown in every comparison.
+
+## A3. Runs and seeds
+
+- **R runs per arm, set by the rule in A7.** [at freeze]
+- Confirmatory seeds: the first R entries of `configs/seeds_main.yaml` (1001 onwards).
+  Run r of every arm uses the same seed. No v2 search may use them before the tag.
+- Pilot seeds (`configs/seeds_pilot.yaml`): random 101-103, Nemotron 101-102, Z (if
+  piloted) 101. The GV3 screening sample uses Sobol seed 20261020, distinct from every
+  gate and search seed (`check_screening_seed`).
+
+## A4. Executor, image and compute
+
+- **Executor of record:** CPU MuJoCo 3.15.0, as in Part B.
+- **Platform:** Nebius Serverless AI Jobs, target `uks2-cpu` (uk-south2, `cpu-d3`), with
+  `--no-fallback`; waits are logged in DEVIATIONS.md.
+- **Geometry:** jaws are built inside the job. Gate GV4 requires at least 99 % of 100 v2
+  episodes to match the laptop and every geometry and hull hash to be equal; otherwise
+  geometry is built once, stored by hash, and the jobs score the stored geometry.
+- **Physics validity:** an episode whose MuJoCo bad-acceleration counter rises is
+  `physics_invalid` and counts as a failure. More than 1 % of a run's episodes flagged is a
+  deviation.
+- **Image:** built from the tagged commit with `make image`, pushed to both regional
+  registries, referenced by digest. Digest [at freeze].
+- **Job order:** all search jobs first; the held-out jobs last, and only they are given
+  the held-out seed.
+- **Compute estimate [derived]:** about 25 CPU-s per design and about 17 CPU-min per run;
+  about 6 CPU-h for 2 arms x R = 10, about 8 CPU-h with the pilot and held-out. Gate GV2
+  caps a v2 episode at 1.5x the v1 median CPU time.
+
+## A5. Frozen inputs
+
+All rows are filled in at freeze.
+
+| Input | SHA-256 / digest |
+|---|---|
+| Design-space version and generator code (`src/rtt/design/freeform/*.py`) | [at freeze] |
+| Parts library (`src/rtt/parts/*.py`, `configs/parts_v2.yaml`) | [at freeze] |
+| `configs/task_v2.yaml` (including the registration tolerances) | [at freeze] |
+| `configs/suites/train_v2.yaml` | [at freeze] |
+| `configs/entrants_v2.yaml` | [at freeze] |
+| CoACD version, seed and threshold | coacd 1.0.14, seed 0, threshold 0.02 |
+| Stock-blade hulls (`stock_blade_hulls.npz`) | [at freeze] |
+| Scanned-object hull hashes (`heldout_real_v2`) | [at freeze] |
+| Hero rule (`src/rtt/analysis/hero_rule.py`; `HeroRule().digest()`) | [at freeze]; digest draft `ba565055b9cd6717f1af7a82ab01b7a1657a1912f53de7a9a94beece1b03850d` |
+| v2 prompts and the engineering-notes block (`src/rtt/search/prompts/v2/*`) | [at freeze] |
+| Tool schema, parameter table, points rule (manifest `prompt_hashes`) | [at freeze] |
+| tau rule (`src/rtt/analysis/tau.py`; `TauRuleV2().digest()`) | [at freeze]; digest draft `e4db295272c0818d8a5148b0d1b32b2104a1db6018947a050480253c22b9b695` |
+| R rule and GV6 checks (`src/rtt/analysis/power.py`; `RRuleV2().digest()`) | [at freeze]; digest draft `903634035020013c3ee5f68839f283001aa78a7e76bb36455a8061de3beba8c4` |
+| Diversity rule (`src/rtt/search/space_v2.py` or its diversity module) | [at freeze] |
+| Analysis scripts (`src/rtt/analysis/s1.py`, `tau.py`, `power.py`, `calibrate_v2.py`) | [at freeze] |
+| `configs/seeds_main.yaml`, `configs/seeds_pilot.yaml` | [at freeze] |
+| Held-out seed commitment (`configs/suites/heldout_procedural_v2.sha256`) | [at freeze] |
+| Real-object rule (`configs/suites/heldout_real_v2.yaml`) | [at freeze] |
+| `uv.lock` | [at freeze] |
+| Git commit, image digest | [at freeze] |
+
+`make prereg-rules` prints the three rule digests.
+
+## A6. Secondary and exploratory endpoints
+
+**Secondary family** (Holm step-down over the members that run, alpha = 0.05; `holm` in
+`s1.py`):
+
+| ID | Endpoint | Test |
+|---|---|---|
+| **H1** | Procedural held-out registered success: run-level mean `success_v2` of each run's frozen top-1 recipe, recompiled against each part of `heldout_procedural_v2` (100 conditions x 2 jitter seeds), C > A | one-sided permutation of run-level means (`permutation_test_means`) |
+| **H2** | Real-object held-out registered success on the scored scan draw (`heldout_real_v2`), C > A | as H1 |
+| **S2** | Area under the best-so-far training curve over designs 9-40, C > A | as H1 |
+| **S3** | S1 for C vs Z, only if Z runs as confirmatory | as S1 |
+
+A recipe that builds invalid on a held-out part scores as a failure on that part.
+
+**Held-out mechanics.** As in Part B, section B6, with a new secret seed for
+`heldout_procedural_v2`: drawn with `secrets.token_hex(32)` into a git-ignored file before
+the tag, only its SHA-256 committed, revealed with the results. Searches run inside the
+vault guard. The real-object draw reuses the v1 selection rule (and the width-band
+decision of Part B, section B6, **[decide]**), with CoACD 0.02 decomposition.
+
+**Lift-only.** Every endpoint above is also computed on lift-only success (exploratory).
+`python -m rtt.analysis.tau analyze` does this for S1 at the frozen tau.
+
+**Exploratory** (labelled as such wherever shown):
+
+- everything listed as exploratory in Part B, section B6;
+- per-part and per-placement success; `jam_on_close` and `off_centre` counts per arm;
+- agreement of the capture-report predictor with the simulator;
+- the certificate battery on finalists: 0, +-1, +-2 and +-3 mm, push and shake, reporting
+  both "held" and "registered" per placement;
+- hold creep and `physics_invalid` rates per arm;
+- the friction sweeps at mu 0.6 and 1.0, shown as a limit.
+
+## A7. Power and the choice of R
+
+**Rule (fixed before the pilot):** R is the smallest value in {8, 10, 12} with Monte Carlo
+power of at least 0.8 for S1, assuming arm C is 2x faster **[assumed]**. If none
+qualifies, R = 12 and the minimum detectable speed-up at R = 12 is declared.
+Implemented by `apply_r_rule` in `src/rtt/analysis/power.py`.
+
+**Model.** The geometric model of Part B, section B7. The per-design hit rate q is the
+pooled hit rate at tau of the random pool that set tau (Sobol-64 plus the three random
+pilots' non-entrant designs, about 170 designs). With three pilot runs a run-level fit
+has at most three events, so it is reported as a sensitivity analysis, as is power with q
+drawn from its Jeffreys posterior.
+
+**What the rule will almost certainly return [derived, Monte Carlo, written before any v2
+data].** At 2x, power at R = 12 is 0.33-0.47 for every q from 0.02 to 0.25 (400-1,000
+experiments per cell), so no R in {8, 10, 12} reaches 0.8 and the rule returns R = 12. The
+declared minimum detectable speed-up at R = 12 is then about 3.0-3.75x (3.25x at q = 0.04).
+This matches Part B: S1 at this budget is powered for large effects only.
+
+**[decide] Raise R before the pilot.** The rule's candidate set is the founder's choice
+and must be fixed before any pilot result is seen. Part B found R = 32 gives 0.83 power
+at 2x. Cost at v1 rates [derived]: CPU about $0.30 (R = 12) or $0.70 (R = 32) for both
+arms; Token Factory about $1.32 or $3.52 for arm C, and more if the v2 prompts are longer
+**[assumed]**.
+
+Result: R = [at freeze], q = [at freeze], MDE = [at freeze].
+
+**GV6 checks on the analysis** (before the tag; `python -m rtt.analysis.power gv6`):
+
+- Null calibration: at the fitted q and the chosen R, randomised exact p-values under
+  s = 1 are uniform (Kolmogorov-Smirnov p at least 0.01), and the conservative test's
+  rejection rate at alpha is at most alpha plus 3 Monte Carlo standard errors.
+- Planted effect: synthetic runs with a planted speed-up, written as score sequences on
+  the 1/48 grid and analysed by the same code as real runs, recover the planted
+  difference in restricted means without bias (within 3 Monte Carlo standard errors), and
+  the 95 % intervals cover it in at least 90 % of experiments (less 3 standard errors).
+  The end-to-end test in `tests/test_analysis_v2.py` runs the same check through run
+  directories on disk and the command line.
+
+Results: [at freeze].
+
+## A8. Hero rule (hashed before calibration)
+
+Implemented by `src/rtt/analysis/hero_rule.py`; applied at gate GV-H (Mon Oct 19) to the
+training parts and the unbranded scanned objects. Every input is a recorded simulation
+episode. **A failure is never staged.**
+
+Screen conditions: +-1, +-2 and +-3 mm across the jaw, and 5 deg yaw at zero offset (7
+conditions). A part qualifies as a **hero** when:
+
+- **(a)** the stock blade fails `success_v2` on at least 4 of 7, and fails **visibly** (a
+  slip during the lift, an ejection on closing, a drop during the hold, or a tilt above
+  10 deg) on at least 2 of 7; and
+- **(c)** the best designed recipe passes `success_v2` with a planar offset of at most
+  0.5 mm on at least 6 of 7.
+
+It is also an **imprint hero** when:
+
+- **(b)** the configurator imprint shows a seat shortfall of at least 2 mm or a planar
+  offset of at least 1 mm on at least 4 of the 6 non-zero translation errors.
+
+Scans with visible branding never qualify. With several episodes per condition, a
+condition shows a property only if a strict majority of its episodes do; ties count
+against qualification. A `physics_invalid` episode never counts as a stock or imprint
+failure, and never as a designed pass.
+
+Heroes are labelled "showcase parts chosen because the stock finger fails". Expected: the
+tee, the block, the steel slug and one unbranded scanned object. If fewer than 3 qualify,
+the video hook uses the imprint-vs-designed offset contrast only.
+
+Result: [GV-H] (`hero_screen.json`, its SHA-256, the heroes and the hook mode).
+
+## A9. Calibration (gate GV3) rules
+
+Implemented by `src/rtt/analysis/calibrate_v2.py`. The screening sample is the round-0
+and reference entrants plus 64 valid Sobol designs (seed 20261020), scored on `train_v2`.
+
+**Targets** (on the screening sample):
+
+- every round-0 entrant scores 20-70 % registered;
+- the Sobol-64 SD (ddof = 1) is at least 0.15;
+- at least 5 of 64 beat the best round-0 entrant outright (or the miss is declared, as
+  with v1's G3);
+- at most 10 % of the Sobol designs score 100 %.
+
+Reported, not gating: lift-only scores, `jam_on_close` and `off_centre` counts, and the
+`physics_invalid` share (above 1 %: a deviation).
+
+**Procedure:**
+
+- At most 3 iterations, each logged in `calibration_log.json` with its file hashes,
+  changes and checks. Iteration 1 is the task as drafted.
+- Only task-level knobs may change: part dimensions, density or material; placements;
+  friction or grip force within the gripper's spec; the registration tolerances. Never
+  anything per design, never an entrant, never a physics setting.
+- The registration tolerances change in at most one iteration.
+- Every iteration scores the same screening sample.
+- After the last iteration: pass, freeze; only the headroom criterion failing, declare the
+  miss and freeze; anything else, F1 (section A0).
+- The freeze records the SHA-256 of `configs/task_v2.yaml`, `configs/suites/train_v2.yaml`,
+  `configs/entrants_v2.yaml` and `configs/parts_v2.yaml` in `docs/TASK_V2.md` and here.
+
+Results: [at freeze].
+
+## A10. Analysis plan
+
+```bash
+python -m rtt.analysis.tau derive --random <3 pilot dirs> --calibration calibration_v2.json --power --out <dir>
+python -m rtt.analysis.power gv6 --q <q> --runs <R>
+python -m rtt.analysis.tau analyze --random <A dirs> --nemotron <C dirs> --tau <frozen tau> --out <dir>
+```
+
+The first command sets tau and R by rule from the pilot. The last produces the primary
+test, the effect interval, the reach curves, both sensitivity analyses (permutation
+log-rank; T counted from design 1) and the lift-only pass, from the fetched job outputs.
+The held-out endpoints are tested with `permutation_test_means` and adjusted with `holm`.
+Every figure is rebuilt from the released Parquet tables.
+
+## A11. Deviations policy
+
+As Part B, section B9: only infrastructure failures are rerun, with the same seed and the
+failed job's ID logged; every change after the tag goes in `docs/DEVIATIONS.md` before the
+affected result is looked at where possible; a result is never dropped. In addition, a run
+with more than 1 % `physics_invalid` episodes is logged as a deviation, and is still
+reported.
+
+## A12. Pilot (Wed Oct 21, before the tag)
+
+| Run | Where | Seeds | Role |
+|---|---|---|---|
+| Random x 3 | Nebius `uks2-cpu`, freeze image | 101, 102, 103 | tau rule (A1.1) and q for the R rule (A7) |
+| Nemotron x 2 | Nebius `uks2-cpu`, freeze image | 101, 102 | valid and fallback rates only |
+| Zero-shot x 1 (optional) | Nebius `uks2-cpu`, freeze image | 101 | cost and fallback rate, for the Z decision |
+
+Pilot bouts may be shown, labelled "pilot". Calibration bouts rendered on Oct 20 are
+labelled "pilot" too.
+
+## A13. Claims fixed now
+
+> "On parts with flat or socket features, the configurator imprint stops short under
+> +-1-3 mm placement error and holds the part where it landed. Drafted designs pull it to
+> centre."
+
+- Round parts at mu 0.3 do not jam, and we say so.
+- Everything is simulated at mu 0.3 and 25 N per jaw. No claim of real-world centring.
+- Product-mode options (the locator pin and body styles) are never in the scored space,
+  and every clip that shows them is labelled "product mode".
+- Rib-windowed bodies are rigid trusses, never presented as compliant.
+
+## Part A freeze steps
+
+1. Record the go/no-go decision in A0 and in DEVIATIONS.md.
+2. Resolve every **[decide]** item in Part A.
+3. Freeze `task_v2`, `train_v2`, `entrants_v2` and `parts_v2` at GV3; record the hero
+   screen (GV-H).
+4. Commit; build the image from that commit (`make image`), push it to both registries,
+   record the digest.
+5. Run the pilot (A12); apply the tau and R rules; run the GV6 checks.
+6. Draw the procedural held-out seed and commit its SHA-256.
+7. Recompute every hash in A5 and fill in the commit and digest.
+8. Mark Part B "not run".
+9. Tag `prereg-v1`. Its time must precede the first confirmatory job.
+
+---
+
+# Part B. Fallback F1: the v1 protocol
+
+This part runs only if F1 is triggered (section A0). It is the v1 draft as written on
+2026-10-16, unchanged except that its headings are now B1-B10. Section numbers inside
+Part B refer to Part B. Its scope note: it covers the v1 design space (14-box fingers,
+`task_v1`, `train_v1`).
+
+## B1. Question and primary endpoint (S1)
 
 **Question.** Does NVIDIA Nemotron 3 Super, reading its own run's simulator results, reach
 a good gripper-finger design in fewer simulated designs than random search with the same
@@ -94,7 +492,7 @@ changed). The freeze reruns the same three seeds on the executor of record and r
 tau. Because the floor binds, tau can only change if the bootstrap median moves above
 0.84375.
 
-## 2. Arms
+## B2. Arms
 
 | Arm | What it is | Status |
 |---|---|---|
@@ -122,7 +520,7 @@ tau. Because the floor binds, tau can only change if the bootstrap median moves 
 budget means equal simulator evaluations. Tokens, dollars and wall time are reported
 separately.
 
-## 3. Runs and seeds
+## B3. Runs and seeds
 
 - **R = 12 runs per arm** (section 7; **[decide]** whether to raise R to 32).
 - Confirmatory seeds: the first R entries of `configs/seeds_main.yaml` (1001 onwards).
@@ -131,7 +529,7 @@ separately.
   confirmatory analysis (`configs/seeds_pilot.yaml`).
 - No search may use a confirmatory seed before the tag.
 
-## 4. Executor, image and compute
+## B4. Executor, image and compute
 
 - **Executor of record:** CPU MuJoCo 3.15.0 (`--executor cpu`). MuJoCo Warp failed the
   determinism gate and is a reported cross-check only (`docs/BENCH_MJWARP.md`).
@@ -146,7 +544,7 @@ separately.
 - **Job order:** all search jobs first; the held-out job last, and it is the only job given
   the held-out seed (`--inject-file`).
 
-## 5. Frozen inputs
+## B5. Frozen inputs
 
 Hashes as of this draft; the freeze recomputes every row.
 
@@ -169,7 +567,7 @@ Hashes as of this draft; the freeze recomputes every row.
 | Real-object rule `configs/suites/heldout_real_v1.yaml` | file `79137740e1435a559242449e0b8c76a440dc0588cb9e6c6dd72ec0bd1679ca3c`, parsed digest `ce272cfb376a7048396d360e291ae669e5794f0c3bc85c172729bfafab23be82` |
 | Git commit, image digest | **[at freeze]** |
 
-## 6. Secondary and exploratory endpoints
+## B6. Secondary and exploratory endpoints
 
 **Secondary family** (Holm step-down over the members that run, alpha = 0.05; `holm` in
 `s1.py`):
@@ -205,7 +603,7 @@ Hashes as of this draft; the freeze recomputes every row.
   McNemar, Wilson intervals).
 - Per-family and per-condition success; certificate scores of finalists.
 
-## 7. Power and the choice of R
+## B7. Power and the choice of R
 
 **Rule (fixed before the pilot):** R is the smallest value in {8, 10, 12} with Monte
 Carlo power of at least 0.8 for S1, assuming arm C is 2x faster **[assumed]**. If none
@@ -247,7 +645,7 @@ throttles Super to 150,000 tokens per minute.
 
 The Token Factory figures exceed a $1 trial-key limit if one still applies.
 
-## 8. Analysis plan
+## B8. Analysis plan
 
 `rtt analyze-s1 --random <A dirs> --nemotron <C dirs> --calibration <calibration.json>
 --tau 0.8125 --compare --out <dir>` produces the primary test, the effect interval, the
@@ -256,7 +654,7 @@ endpoints come from `rtt heldout` and `rtt heldout-real run`, tested with
 `permutation_test_means` and adjusted with `holm`. Every figure is rebuilt from the
 released Parquet tables.
 
-## 9. Deviations policy
+## B9. Deviations policy
 
 - Only infrastructure failures are rerun, with the same seed. A rerun is logged with the
   failed job's ID.
@@ -269,7 +667,7 @@ formally failed on two criteria by narrow margins: the concave entrant scores 75
 (limit 70 %), and 4 of 64 random designs beat the best entrant (5 required). The score
 does respond to geometry (Sobol SD 0.156). Details: `docs/TASK.md`.
 
-## 10. Pilot (before the tag)
+## B10. Pilot (before the tag)
 
 | Run | Where | Seeds | Role |
 |---|---|---|---|
@@ -287,7 +685,7 @@ for valid and fallback rates only.
 than C, which muddies "priors vs feedback". Recommended: Z stays exploratory unless it gets
 the same reserves before the tag.
 
-## Freeze steps
+## Part B freeze steps
 
 1. Resolve every **[decide]** item above.
 2. Commit; build the image from that commit (`make image`), push it to both registries,
