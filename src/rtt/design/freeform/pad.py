@@ -76,15 +76,21 @@ def pad_face(
     draft_rad: float,
     sweep: float = 0.0,
 ) -> np.ndarray:
-    """The strategy's face on the grid (left-jaw convention, part frame y)."""
+    """The strategy's face on the grid (left-jaw convention, part frame y), from the outline ``p``."""
     finite = np.isfinite(p)
     if not finite.any():
         raise ValueError("the part's outline is empty in the pad band")
     if pad == "flat":
         return np.full_like(xs, float(np.max(p[finite])))
     dx = float(xs[1] - xs[0])
-    h = grown_outline(p, dx, clearance, sweep)
+    return face_on_floor(grown_outline(p, dx, clearance, sweep), xs, pad, depth, draft_rad)
+
+
+def face_on_floor(h: np.ndarray, xs: np.ndarray, pad: str, depth: float, draft_rad: float) -> np.ndarray:
+    """The conform or v_funnel face over a grown outline ``h`` (the surface it must stay behind)."""
     fin = np.isfinite(h)
+    if not fin.any():
+        raise ValueError("the part's outline is empty in the pad band")
     P = float(h[fin].max())
     lip = math.inf if draft_rad <= 0.0 else 1.0 / math.tan(draft_rad)
     hx, hv = xs[fin], h[fin]

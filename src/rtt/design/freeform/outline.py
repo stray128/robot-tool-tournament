@@ -188,28 +188,106 @@ def cell_outline_rows(g: PartGeometry, xs: np.ndarray, zs: np.ndarray) -> np.nda
     return cell
 
 
-def cell_outline(g: PartGeometry, xs: np.ndarray, z_lo: float, z_hi: float, n_rows: int = 25) -> np.ndarray:
-    """Per-cell maximum y over the band ``[z_lo, z_hi]`` (see the module docstring)."""
-    return cell_outline_rows(g, xs, band_rows(g, z_lo, z_hi, n_rows)).max(axis=1)
+def _bin_max(out: np.ndarray, bounds: np.ndarray, x: np.ndarray, y: np.ndarray, tol: float = 1e-12) -> None:
+    """Raise ``out[i]`` to ``y`` for every closed cell ``[bounds[i], bounds[i + 1]]`` holding ``x``."""
+    if not len(x):
+        return
+    n = len(out)
+    lo = np.searchsorted(bounds, x - tol, side="left") - 1
+    hi = np.searchsorted(bounds, x + tol, side="right") - 1
+    for k in (lo, hi):
+        keep = (k >= 0) & (k < n)
+        if keep.any():
+            np.maximum.at(out, k[keep], y[keep])
 
 
-def polyline_gap(g: PartGeometry, xk: np.ndarray, yk: np.ndarray, zs: np.ndarray) -> float:
-    """Exact smallest ``face(x) - outline(x)`` over the polyline's x range, at the given rows.
+def _plane_crossings(
+    g: PartGeometry, planes: np.ndarray, z_lo: float, z_hi: float
+) -> tuple[np.ndarray, np.ndarray]:
+    """Where the part's edges cross the planes ``x = planes[j]`` inside the band: (plane index, point)."""
+    a, b = g.edge_a, g.edge_b
+    d = b[:, 0] - a[:, 0]
+    ok = np.abs(d) > 1e-15
+    a, b, d = a[ok], b[ok], d[ok]
+    lo, hi = np.minimum(a[:, 0], b[:, 0]), np.maximum(a[:, 0], b[:, 0])
+    j0 = np.searchsorted(planes, lo, side="left")
+    cnt = np.searchsorted(planes, hi, side="right") - j0
+    total = int(cnt.sum())
+    if total == 0:
+        return np.zeros(0, dtype=np.int64), np.zeros((0, 3))
+    e = np.repeat(np.arange(len(a)), cnt)
+    j = np.repeat(j0, cnt) + (np.arange(total) - np.repeat(np.cumsum(cnt) - cnt, cnt))
+    t = (planes[j] - a[e, 0]) / d[e]
+    p = a[e] + (b[e] - a[e]) * t[:, None]
+    p[:, 0] = planes[j]
+    inside = (p[:, 2] >= z_lo - 1e-12) & (p[:, 2] <= z_hi + 1e-12)
+    return j[inside], p[inside]
 
-    Between consecutive breakpoints of the face (``xk``) and of each piece's row section (its
-    vertices) the difference is linear, so its minimum is at one of those breakpoints. ``inf``
-    if the part is absent.
+
+def _band_points(g: PartGeometry, z_lo: float, z_hi: float) -> np.ndarray:
+    """``(m, 2)`` (x, y): piece vertices inside the band and edge crossings of its two planes."""
+    v = g.vertices
+    m = (v[:, 2] >= z_lo - 1e-12) & (v[:, 2] <= z_hi + 1e-12)
+    return np.concatenate([v[m, :2], slice_points(g, z_lo), slice_points(g, z_hi)])
+
+
+def band_max_cells(g: PartGeometry, bounds: np.ndarray, z_lo: float, z_hi: float) -> np.ndarray:
+    """Exact largest y of the part in each cell ``[bounds[i], bounds[i+1]] x [z_lo, z_hi]``.
+
+    The maximum of y over a convex piece clipped by a slab is attained at a vertex of the
+    clipped piece: a piece vertex inside the slab, an edge crossing one of the slab's four
+    planes, or one of the slab's four edges (lines along y) crossing the piece. All four kinds
+    are evaluated, so the result is exact for any convex pieces (procedural or decomposed).
+    ``-inf`` where the part is absent.
     """
+    bounds = np.asarray(bounds, dtype=np.float64)
+    out = np.full(len(bounds) - 1, _NEG)
+    pts = _band_points(g, z_lo, z_hi)
+    _bin_max(out, bounds, pts[:, 0], pts[:, 1])
+    j, p = _plane_crossings(g, bounds, z_lo, z_hi)
+    for cell in (j - 1, j):
+        keep = (cell >= 0) & (cell < len(out))
+        if keep.any():
+            np.maximum.at(out, cell[keep], p[keep, 1])
+    env = envelope(g, bounds, np.array([z_lo, z_hi])).max(axis=1)
+    return np.maximum(out, np.maximum(env[:-1], env[1:]))
+
+
+def cell_outline(
+    g: PartGeometry, xs: np.ndarray, z_lo: float, z_hi: float, n_rows: int | None = None
+) -> np.ndarray:
+    """Per-cell maximum y over the band ``[z_lo, z_hi]``, exact (:func:`band_max_cells`).
+
+    Cells have width ``dx`` and are centred on the grid points ``xs``. ``n_rows`` is accepted
+    for compatibility and ignored: the maximum no longer depends on sampled rows.
+    """
+    xs = np.asarray(xs, dtype=np.float64)
+    dx = float(xs[1] - xs[0])
+    bounds = np.concatenate([xs - dx / 2.0, [xs[-1] + dx / 2.0]])
+    return band_max_cells(g, bounds, z_lo, z_hi)
+
+
+def polyline_gap(g: PartGeometry, xk: np.ndarray, yk: np.ndarray, z_lo: float, z_hi: float) -> float:
+    """Exact smallest ``face(x) - y`` over the part's material in the band, for ``x`` in the polyline's range.
+
+    ``face`` is the polyline through ``(xk, yk)``. On each of its segments ``face(x) - y`` is
+    linear, so its minimum over the clipped part is at a vertex of the part clipped by the
+    segment's x slab and the band (see :func:`band_max_cells`). ``inf`` if the part is absent.
+    """
+    xk = np.asarray(xk, dtype=np.float64)
+    yk = np.asarray(yk, dtype=np.float64)
     best = np.inf
-    env = envelope(g, xk, zs)
+    pts = _band_points(g, z_lo, z_hi)
+    m = (pts[:, 0] >= xk[0] - 1e-12) & (pts[:, 0] <= xk[-1] + 1e-12)
+    if m.any():
+        best = min(best, float(np.min(np.interp(pts[m, 0], xk, yk) - pts[m, 1])))
+    j, p = _plane_crossings(g, xk, z_lo, z_hi)
+    if len(j):
+        best = min(best, float(np.min(yk[j] - p[:, 1])))
+    env = envelope(g, xk, np.array([z_lo, z_hi])).max(axis=1)
     fin = np.isfinite(env)
     if fin.any():
-        best = min(best, float(np.min((yk[:, None] - env)[fin])))
-    for z in zs:
-        pts = slice_points(g, float(z))
-        m = (pts[:, 0] >= xk[0]) & (pts[:, 0] <= xk[-1])
-        if m.any():
-            best = min(best, float(np.min(np.interp(pts[m, 0], xk, yk) - pts[m, 1])))
+        best = min(best, float(np.min(yk[fin] - env[fin])))
     return best
 
 

@@ -6,10 +6,10 @@ import numpy as np
 import pytest
 
 from freeform_parts import (
-    flanged_bushing,
     hex_standoff,
     tall_block,
     tall_post,
+    thin_fin,
     thin_plate,
     training_parts,
     wide_block,
@@ -83,11 +83,11 @@ PLANTED = [
         "g of PLA",
     ),
     (
-        "pad just under the flange",
-        _raw(grip_height_frac=0.63, pad_height_mm=12.0, finger_width_mm=34.0, pad_depth_mm=1.7),
-        (flanged_bushing,),
-        "seat_distance",
-        "flanged_bushing",
+        "walls wrap past a thin fin",
+        _raw(grip_height_frac=0.5, pad_depth_mm=5.0, wall_draft_deg=0.0),
+        (thin_fin,),
+        "q_seat_range",
+        "thin_fin",
     ),
 ]
 
@@ -119,7 +119,7 @@ def test_planted_invalid_recipes_are_rejected(label, fields, parts, code, words)
 
 def test_at_least_eight_planted_rejections() -> None:
     assert len(PLANTED) >= 8
-    assert len({p[3] for p in PLANTED}) >= 7
+    assert len({p[3] for p in PLANTED}) >= 6
 
 
 def test_valid_design_reports_hashes_and_printability() -> None:

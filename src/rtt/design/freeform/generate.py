@@ -44,7 +44,6 @@ from rtt.design.freeform.export import (
 from rtt.design.freeform.locator import PinPlan, facing_sockets, pin_sections, plan_pin
 from rtt.design.freeform.outline import (
     PartGeometry,
-    band_rows,
     cell_outline,
     column_max,
     max_y_in_box,
@@ -53,7 +52,7 @@ from rtt.design.freeform.outline import (
 )
 from rtt.design.freeform.pad import (
     dilate_x,
-    grown_outline,
+    face_on_floor,
     lift_polyline,
     pad_face,
     remove_thin_ribs,
@@ -70,7 +69,6 @@ from rtt.design.freeform.types import (
 )
 
 DX = 1e-4  # m; the pad grid
-N_ROWS = 25  # z rows per pad band (plus every piece-vertex height inside it)
 MIN_STRIP_WALL = 0.003  # m; pad strips reach this far behind the deepest pad point
 MIN_LENGTH_OVER_PAD = 0.015  # m; finger length >= pad height + 15 mm
 _DEC = 7
@@ -232,9 +230,29 @@ def _configurator_depth(p_left: np.ndarray, p_right: np.ndarray, task: Any) -> f
 
 
 def _contact_gap(g: PartGeometry, xk: np.ndarray, yk: np.ndarray, band: tuple[float, float]) -> float:
-    """How far the face is from first contact with the part, along the closing axis (exact per row)."""
-    gap = polyline_gap(g, xk, yk, band_rows(g, band[0], band[1], N_ROWS))
+    """How far the face is from first contact with the part, along the closing axis (exact)."""
+    gap = polyline_gap(g, xk, yk, band[0], band[1])
     return float(np.floor(gap * 10**_DEC + 1e-6) / 10**_DEC)  # rounded down: never past contact
+
+
+def clearance_floor(
+    g: PartGeometry, xs: np.ndarray, z_lo: float, z_hi: float, clearance: float, sweep: float = 0.0
+) -> np.ndarray:
+    """What a face of the given clearance must stay at or behind, on the grid ``xs``.
+
+    The part's exact outline over the band grown by the clearance in height, taken on a grid
+    reaching past the jaw's edges, dilated sideways by the clearance (plus the baseline-only
+    sweep) and one more half cell, then moved back by the clearance. A face at or behind it,
+    interpolated linearly between grid points, keeps the clearance to the part in every
+    direction (its distance is at least the clearance in the max norm, so also in 3D):
+    material just above or below the band, or just beyond the jaw's edge, is included.
+    """
+    reach = clearance + sweep
+    k = math.ceil(reach / DX + 0.5 - 1e-9) if reach > 0.0 else 0
+    n = len(xs)
+    xs_ext = np.round(xs[0] - k * DX + DX * np.arange(n + 2 * k), _DEC)
+    p = cell_outline(g, xs_ext, z_lo - clearance, z_hi + clearance)
+    return dilate_x(p, k)[k : k + n] + clearance
 
 
 def _plan_face(
@@ -246,9 +264,12 @@ def _plan_face(
     depth: float,
     band: tuple[float, float],
 ) -> JawPlan:
-    clearance = 0.0 if spec.pad == "flat" else spec.clearance
-    face = pad_face(p, xs, spec.pad, clearance, depth, spec.draft, spec.sweep)
-    floor = p.copy() if spec.pad == "flat" else grown_outline(p, DX, clearance, spec.sweep)
+    if spec.pad == "flat":  # a plain plane at first contact (contact is allowed)
+        floor = p.copy()
+        face = pad_face(p, xs, "flat", 0.0, 0.0, 0.0)
+    else:
+        floor = clearance_floor(g, xs, band[0], band[1], spec.clearance, spec.sweep)
+        face = face_on_floor(floor, xs, spec.pad, depth, spec.draft)
     opened = remove_thin_ribs(face, DX)
     xk, yk = simplify_upper(xs, opened, MAX_PAD_SEGMENTS)
     yk = _snap_up(yk)
@@ -273,8 +294,7 @@ def _plan_face(
 def _plan_hook(jaw: JawPlan, spec: PairSpec, tip_height: float) -> None:
     hh = hook_height(spec.tip_size)
     top = tip_height + min(spec.pad_height, hh + spec.tip_size)
-    ph = cell_outline(jaw.geometry, jaw.xs, tip_height, top, N_ROWS)
-    floor = grown_outline(ph, DX, spec.clearance)
+    floor = clearance_floor(jaw.geometry, jaw.xs, tip_height, top, spec.clearance)
     hk = lift_polyline(jaw.xs, jaw.xk, jaw.yk - spec.tip_size, floor)
     hk = np.minimum(_snap_up(hk), jaw.yk)
     jaw.hook_k = hk
@@ -318,9 +338,9 @@ def plan_pair(
     V.check_length(length, part_id)
     xs = _grid(spec.width)
     band = (tip, tip + spec.pad_height)
-    p_left = cell_outline(g, xs, band[0], band[1], N_ROWS)
+    p_left = cell_outline(g, xs, band[0], band[1])
     V.check_outline(p_left, part_id, "left", band)
-    p_right = cell_outline(gm, xs, band[0], band[1], N_ROWS)
+    p_right = cell_outline(gm, xs, band[0], band[1])
     V.check_outline(p_right, part_id, "right", band)
     depth = spec.depth
     notes = list(repairs)
@@ -518,10 +538,12 @@ def _build_jaw(plan: PairPlan, jaw: JawPlan) -> tuple[list[Piece], dict[str, Any
     band_top = plan.tip_height + spec.pad_height
     body_y_in = -math.inf
     if plan.height > band_top + 1e-9:
-        hw = spec.width / 2.0
-        u_above = max_y_in_box(jaw.geometry, -hw, hw, band_top, plan.height)
+        # everything within the body clearance of the body (above the band, across the width
+        # and just beyond it) keeps the body 2 mm away in every direction
+        reach = spec.width / 2.0 + B.BODY_CLEARANCE
+        u_above = max_y_in_box(jaw.geometry, -reach, reach, band_top - B.BODY_CLEARANCE, plan.height)
         if math.isfinite(u_above):
-            body_y_in = _snap(u_above - plan.y0 + B.BODY_CLEARANCE)
+            body_y_in = _snap(u_above - plan.y0 + B.BODY_CLEARANCE)  # at seat
     profile = B.side_profile(z0, z1, float(np.min(yk)), float(np.max(yk)), y_back, body_y_in)
     z_strip = _snap(B.strip_top(profile))
     pieces = pad_strips(jaw.xk, yk, y_back, z0, z_strip, chamfer)
@@ -630,7 +652,9 @@ def _print_mesh(
         holes.append(h.translate([sx * qf(B.MOUNT_HOLE_X), qf(B.MOUNT_HOLE_Y), -depth]))
     solid = solid - m3d.Manifold.batch_boolean(holes, m3d.OpType.Add)
     if solid.status() != m3d.Error.NoError or solid.is_empty():
-        raise V.InvalidDesign("build_failed", f"{jaw.side} print solid failed ({solid.status()})", plan.part_id)
+        raise V.InvalidDesign(
+            "build_failed", f"{jaw.side} print solid failed ({solid.status()})", plan.part_id
+        )
     mesh = solid.to_mesh64()
     verts = np.asarray(mesh.vert_properties, dtype=np.float64)[:, :3] / S
     faces = np.asarray(mesh.tri_verts, dtype=np.int64)

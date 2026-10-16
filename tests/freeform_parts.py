@@ -187,6 +187,14 @@ def thin_plate() -> PartSpec:
 
 
 @functools.cache
+def thin_fin() -> PartSpec:
+    """A 20 x 3 x 30 mm fin standing across the jaws: deep straight walls wrap past it."""
+    return make_part(
+        "thin_fin", "plate", [box((-0.01, -0.0015, 0.0), (0.01, 0.0015, 0.03))], ALU, yaw_symmetry=2
+    )
+
+
+@functools.cache
 def tall_post() -> PartSpec:
     """Ø20 x 120 mm post: the palm-clearance rule makes fingers too long when gripped low."""
     return make_part("tall_post", "post", [cylinder("z", (0, 0, 0.06), 0.010, 0.120)], ALU, yaw_symmetry=0)
