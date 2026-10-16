@@ -17,9 +17,12 @@ suite gives it), so each clip is an episode the scored suite runs: nothing is st
 ``<stem>.ovl.bin`` and ``assets/<id>.glb``. For example::
 
     python scripts/v2_bout.py --out OUT_DIR --stills OUT_DIR/stills
-    node web/scripts/smoke_v2.mjs --fixture OUT_DIR --stem designed_tee_c1 --shots OUT_DIR/web
+    node web/scripts/smoke_v2.mjs --fixture OUT_DIR --stem designed_bushing_c1 --shots OUT_DIR/web
 
-A JSON summary (outcomes, registration, pose residuals, payload sizes) is printed.
+``--spec FILE`` replaces the default episodes: a JSON list of objects with ``stem``,
+``design`` (an entrant name, or a recipe as a JSON object), ``part``, ``placement`` (a
+``train_v2`` label) and optionally ``still`` (``{"label", "view", "frame": "grasp" | "hold",
+"xray"}``). A JSON summary (outcomes, registration, pose residuals, payload sizes) is printed.
 """
 
 from __future__ import annotations
@@ -29,6 +32,7 @@ import json
 import os
 import sys
 import time
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -36,14 +40,34 @@ os.environ.setdefault("MUJOCO_GL", "egl")
 
 REPO = Path(__file__).resolve().parents[1]
 
-#: (stem, design, part, train_v2 placement label). ``design`` is an entrant name from
-#: configs/entrants_v2.yaml. The three shots of the look sign-off (GV-F): a drafted wrap
-#: centring the tee from 2 mm off, the configurator imprint stopping short on the same
-#: placement, and the stock blade on it.
-EPISODES: tuple[tuple[str, str, str, str], ...] = (
-    ("designed_tee_c1", "ref_wrap", "pipe_tee", "c1"),
-    ("imprint_tee_c1", "imprint_configurator", "pipe_tee", "c1"),
-    ("stock_tee_c1", "stock", "pipe_tee", "c1"),
+#: The three shots of the look sign-off (GV-F), all at train_v2 placement c1 (the part 2 mm
+#: off across the jaw): the drafted wrap centring the flanged bushing (the one part that
+#: qualified in the hero-screen rehearsal of 2026-10-16), the stock blade on the same
+#: bushing, and the configurator imprint on the block, the clearest jam case. ``design`` is
+#: an entrant name from configs/entrants_v2.yaml or a recipe (a JSON object of FingerRecipe
+#: fields).
+EPISODES: tuple[dict[str, Any], ...] = (
+    {
+        "stem": "designed_bushing_c1",
+        "design": "ref_wrap",
+        "part": "flanged_bushing",
+        "placement": "c1",
+        "still": {"label": "hero_close_designed_bushing", "view": "close", "frame": "hold"},
+    },
+    {
+        "stem": "imprint_block_c1",
+        "design": "imprint_configurator",
+        "part": "block",
+        "placement": "c1",
+        "still": {"label": "hero_xray_imprint_block", "view": "xray", "frame": "grasp", "xray": True},
+    },
+    {
+        "stem": "stock_bushing_c1",
+        "design": "stock",
+        "part": "flanged_bushing",
+        "placement": "c1",
+        "still": {"label": "hero_wide_stock_bushing", "view": "wide", "frame": "hold"},
+    },
 )
 
 
@@ -53,7 +77,16 @@ def _trimesh(mesh: Any) -> Any:
     return trimesh.Trimesh(mesh.vertices, mesh.faces, process=False)
 
 
-def run(out: Path, episodes: tuple[tuple[str, str, str, str], ...], run_id: str) -> dict[str, Any]:
+def _design(spec: Any, entrants: dict[str, Any]) -> tuple[str, Any]:
+    from rtt.design.freeform import FingerRecipe
+
+    if isinstance(spec, str):
+        return spec, entrants[spec]
+    recipe = FingerRecipe.model_validate(spec)
+    return recipe.name or "recipe", recipe
+
+
+def run(out: Path, episodes: Sequence[dict[str, Any]], run_id: str) -> dict[str, Any]:
     from rtt.design.freeform import build_pair, load_entrants_v2
     from rtt.design.freeform.generate import build_pair_full
     from rtt.parts.suite import train_suite
@@ -72,12 +105,13 @@ def run(out: Path, episodes: tuple[tuple[str, str, str, str], ...], run_id: str)
     store = AssetStore(out / "assets")
     code = code_version(REPO)
     summary: dict[str, Any] = {"code_version": code, "task_digest": task_digest(task), "episodes": {}}
-    for stem, design_name, part_name, label in episodes:
-        design = entrants[design_name]
+    for ep in episodes:
+        stem, part_name, label = ep["stem"], ep["part"], ep["placement"]
+        design_name, design = _design(ep["design"], entrants)
         cond = conds[(part_name, label)]
         seed = int(cond.seeds[0])
         t0 = time.perf_counter()
-        if design.kind == "stock":
+        if getattr(design, "kind", None) == "stock":
             pair, meshes = build_pair(design, cond.part, task), None
         else:
             built = build_pair_full(design, cond.part, task)
@@ -134,9 +168,9 @@ def run(out: Path, episodes: tuple[tuple[str, str, str, str], ...], run_id: str)
     return summary
 
 
-def stills(out: Path, still_dir: Path, summary: dict[str, Any]) -> dict[str, str]:
-    """The GV-F set: wide on the designed lane at the hold, x-ray on the imprint at the end of
-    closing, close-up on the stock lane at the hold (frames from the task's phase times)."""
+def stills(out: Path, still_dir: Path, episodes: Sequence[dict[str, Any]]) -> dict[str, str]:
+    """Each episode's ``still``: at the end of closing (``grasp``) or lifted and held
+    (``hold``), frames from the task's phase times."""
     from rtt.render.glb import AssetStore
     from rtt.render.playback import render_stills
     from rtt.render.studio import View
@@ -146,26 +180,30 @@ def stills(out: Path, still_dir: Path, summary: dict[str, Any]) -> dict[str, str
     c = default_task_v2().controller
     fps = 30
     t_lift = c.settle_time + c.descend_time + c.close_time + c.squeeze_time
-    grasp = round(t_lift * fps) - 2  # jaws closed and squeezing, part still on the mat
-    hold = round((t_lift + c.lift_time) * fps) + 27  # lifted and held
-    close = View((0.0, 0.0, 0.040), 0.32, 228.0, -14.0, 30.0)
-    store = AssetStore(out / "assets")
-    plan = {
-        "designed_tee_c1": (
-            "hero_wide_designed_tee",
-            {"view": "wide", "target": "rest", "follow": 0.7},
-            hold,
-        ),
-        "imprint_tee_c1": ("hero_xray_imprint_tee", {"view": "xray", "xray": True}, grasp),
-        "stock_tee_c1": ("hero_close_stock_tee", {"view": close}, hold),
+    frames = {
+        "grasp": round(t_lift * fps) - 2,  # jaws closed and squeezing, part still on the mat
+        "hold": round((t_lift + c.lift_time) * fps) + 27,  # lifted and held
     }
+    # a little above the jaws, so the frame, both carriages and the floor shadow are in shot
+    views: dict[str, Any] = {"close": View((0.0, 0.0, 0.040), 0.32, 228.0, -14.0, 30.0)}
+    store = AssetStore(out / "assets")
     written: dict[str, str] = {}
-    for stem, (label, shot, frame) in plan.items():
-        if stem not in summary["episodes"]:
+    for ep in episodes:
+        still = ep.get("still")
+        if not still:
             continue
-        rp = read_replay(out / stem)
-        shot = dict(shot, frame=min(frame, rp.n_frames - 1))
-        written.update({k: str(v) for k, v in render_stills(rp, store, {label: shot}, still_dir).items()})
+        rp = read_replay(out / ep["stem"])
+        shot: dict[str, Any] = {
+            "view": views.get(still["view"], still["view"]),
+            "frame": min(frames[still.get("frame", "hold")], rp.n_frames - 1),
+        }
+        if still["view"] == "wide":
+            shot.update(target="rest", follow=0.7)
+        if still.get("xray"):
+            shot["xray"] = True
+        written.update(
+            {k: str(v) for k, v in render_stills(rp, store, {still["label"]: shot}, still_dir).items()}
+        )
     return written
 
 
@@ -174,12 +212,16 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", type=Path, required=True, help="replay v2 fixture directory")
     ap.add_argument("--stills", type=Path, default=None, help="render the GV-F stills into this directory")
     ap.add_argument("--run-id", default="v2-bout")
+    ap.add_argument(
+        "--spec", type=Path, default=None, help="JSON list of episodes (see the module docstring)"
+    )
     args = ap.parse_args(argv)
     args.out.mkdir(parents=True, exist_ok=True)
-    summary = run(args.out, EPISODES, args.run_id)
+    episodes = EPISODES if args.spec is None else tuple(json.loads(args.spec.read_text(encoding="utf-8")))
+    summary = run(args.out, episodes, args.run_id)
     if args.stills is not None:
         t0 = time.perf_counter()
-        summary["stills"] = stills(args.out, args.stills, summary)
+        summary["stills"] = stills(args.out, args.stills, episodes)
         summary["still_render_s"] = round(time.perf_counter() - t0, 1)
     print(json.dumps(summary, indent=1, default=str))
     return 0

@@ -31,7 +31,13 @@ def test_one_designed_episode_goes_from_recipe_to_a_web_ready_replay(tmp_path: P
     from rtt.sim.replay import read_replay
 
     bout = _bout_module()
-    summary = bout.run(tmp_path, (("imprint_block_c1", "imprint_configurator", "block", "c1"),), "test-bout")
+    episode = {
+        "stem": "imprint_block_c1",
+        "design": "imprint_configurator",
+        "part": "block",
+        "placement": "c1",
+    }
+    summary = bout.run(tmp_path, (episode,), "test-bout")
     ep = summary["episodes"]["imprint_block_c1"]
     assert ep["condition"] == "train_v2/block/c1"
     assert ep["pose_residual"]["pos"] <= 1e-6 and ep["pose_residual"]["quat"] <= 1e-6  # GV-R
