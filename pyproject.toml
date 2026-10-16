@@ -13,7 +13,7 @@ dependencies = [
     "scipy==1.18.1",
     "pydantic==2.14.1",
     "trimesh==5.1.1",
-    "manifold3d",
+    "manifold3d==3.5.4",  # boolean union of jaw pieces and bodies (v2 print meshes); pinned to the locked version
     "coacd==1.0.14",  # convex decomposition of uploaded / scanned object meshes (rtt.sim.mesh)
     "networkx==3.7",  # needed by trimesh.poses.compute_stable_poses
     "openai==3.31.0",
@@ -30,7 +30,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "hypothesis", "ruff", "httpx2"]  # httpx2: HTTP mocks in tests/test_llm_client.py
+dev = ["pytest", "hypothesis", "ruff", "httpx2", "jsonschema"]  # httpx2: HTTP mocks in tests/test_llm_client.py; jsonschema: replay v2 schema cross-check
 tpe = ["optuna"]
 
 [project.scripts]

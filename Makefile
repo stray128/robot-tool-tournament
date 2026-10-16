@@ -14,8 +14,13 @@ OUT ?= runs/search/$(ARM)-$(shell date -u +%Y%m%d-%H%M%S)
 # image builds: a clean export of one commit (scored jobs); REF=worktree builds the dirty tree
 REF ?= HEAD
 
+# GV6 checks (v2 analysis): per-design hit rate at tau and runs per arm, from the pilot
+GV6_Q ?= 0.04
+GV6_R ?= 12
+
 .PHONY: help sync test lint format m1 probe-llm calibrate slice search web web-build demo \
-        leak-check hooks image image-dirty push nebius-smoke nebius-m1 serve part-demo
+        leak-check hooks image image-dirty push nebius-smoke nebius-m1 serve part-demo \
+        prereg-rules gv6
 
 help:
 	@echo "make sync         install the locked dependencies plus dev tools (uv sync --extra dev)"
@@ -24,6 +29,8 @@ help:
 	@echo "make format       apply ruff formatting and safe fixes"
 	@echo "make m1           run gate G1 and write replays + MP4s to data/demo/m1/"
 	@echo "make calibrate    gate G3: entrants + Sobol-64 on the training suite"
+	@echo "make prereg-rules print the v2 tau, R and hero rule digests recorded in docs/PREREG.md"
+	@echo "make gv6          GV6 checks of the v2 analysis (GV6_Q=<hit rate> GV6_R=<runs per arm>)"
 	@echo "make slice        vertical slice: one live Nemotron round (spend cap 0.20 USD), replays, web data"
 	@echo "make search       one search arm (ARM=random|nemotron|zeroshot RUNS=1 BUDGET=40 OUT=...)"
 	@echo "make web          import the demo bouts, then build the static site (web/out)"
@@ -60,6 +67,14 @@ probe-llm:
 
 calibrate:
 	$(RTT) calibrate
+
+prereg-rules:
+	$(PY) -m rtt.analysis.tau rule
+	$(PY) -m rtt.analysis.power rule
+	$(PY) -m rtt.analysis.hero_rule
+
+gv6:
+	$(PY) -m rtt.analysis.power gv6 --q $(GV6_Q) --runs $(GV6_R)
 
 slice:
 	$(RTT) slice
