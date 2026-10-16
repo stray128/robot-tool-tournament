@@ -39,18 +39,30 @@ Track G dependency
 
 Until track G lands, this module carries its own implementation of the section-4 schema
 (:class:`FingerRecipeStub`), canonicalisation and ``design_id``, written from the spec.
-Each piece prefers track G's module when it can be imported (:func:`track_g`):
-``rtt.design.freeform.schema.FingerRecipe``, ``...validate`` (the geometry validators of
-spec section 13) and ``build_pair`` (geometry and ``geometry_id``). Without them a design is
-checked against the schema rules only, and :meth:`FreeformSpaceV2.geometry_id` returns
-``None`` (so the ``duplicate_geometry`` check is skipped) unless the context supplies a
-geometry hash function. ``tests/test_search_space.py`` cross-checks the stub against track G
-as soon as G's modules import.
+Each piece switches to track G's module as soon as it imports (:func:`track_g`):
+
+* ``rtt.design.freeform.schema.FingerRecipe``: canonical recipes are G's model (its extra
+  fit rules, such as a hook that must fit inside the pad, then apply at the schema stage);
+* ``rtt.design.freeform.hashing``: ``design_id`` of G's recipes and baselines, the generator
+  version and ``geometry_id``, so search records, built pairs and replays agree;
+* ``rtt.design.freeform.validate.validate_design``: the section-13 battery on the training
+  parts (its codes map to stages through :data:`G_CODE_STAGES`); its geometry id and pairs
+  are cached on the :class:`V2Context`;
+* ``rtt.design.freeform.build_pair`` once ``rtt.design.freeform.generate`` exists;
+* ``rtt.design.freeform.baselines``: ``Baseline`` and ``load_entrants_v2``.
+
+Without them a design is checked against the schema rules only, and
+:meth:`FreeformSpaceV2.geometry_id` returns ``None`` (so ``duplicate_geometry`` is skipped)
+unless the context supplies a geometry hash function. Quantisation rounds half-up, as G's
+schema does. ``tests/test_search_space.py`` cross-checks the stub against track G as soon as
+G's modules import.
 
 Baselines (the stock blade, the configurator and swept imprints) are entrants that are not
-recipes. They are carried as :class:`BaselineEntrant` (or track G's ``Baseline``): a name,
-an optional recipe *point* that places them in the metric (so a proposal that copies the
-flat entrant is a duplicate), and the parameters G needs to build them.
+recipes. They are carried as track G's ``Baseline`` (or :class:`BaselineEntrant` until G
+lands): a name, an optional recipe *point* that places them in the metric (so a proposal
+that copies the flat entrant is a duplicate), and what G needs to build them. A baseline
+that is only a recipe point (``flat``) builds and hashes as that recipe; the stock blade has
+no point and is never run through the recipe validators.
 """
 
 from __future__ import annotations
@@ -86,6 +98,7 @@ __all__ = [
     "FreeformSpaceV2",
     "V2Context",
     "canonical_params",
+    "quantise",
     "track_g",
 ]
 
@@ -155,6 +168,8 @@ _MEANING: Final[dict[str, str]] = {
 }
 #: Stand-in generator version, used in ``design_id`` until track G's generator version exists.
 GENERATOR_VERSION_STUB: Final = "freeform-v2/search-stub-1"
+#: Built jaw pairs a :class:`V2Context` keeps (about 40 designs x 6 parts per run, plus margin).
+PAIR_CACHE: Final = 2048
 
 
 # --------------------------------------------------------------------------- schema stub
@@ -206,9 +221,11 @@ def strategy_errors(params: Mapping[str, Any]) -> list[str]:
     return errors
 
 
-def _quantise(name: str, value: float) -> float:
+def quantise(name: str, value: float) -> float:
+    """``value`` rounded half-up to its step, as a short decimal (the same rule as track G's schema)."""
     step = QUANT_STEPS[name]
-    return round(round(value / step) * step, 6) + 0.0
+    steps = math.floor(float(value) / step + 0.5 + 1e-9)
+    return round(steps * step, 2 if step < 0.1 else 1) + 0.0
 
 
 def _short(value: object, limit: int = 40) -> str:
@@ -262,7 +279,7 @@ def canonical_params(
         if isinstance(value, bool) or not isinstance(value, numbers.Real) or not math.isfinite(float(value)):
             errors.append(f"{name} must be a finite number, got {_short(value)}")
             continue
-        q = _quantise(name, float(value))
+        q = quantise(name, float(value))
         if abs(q - float(value)) > 1e-9:
             quantised.append(f"{name} {float(value):g} -> {q:g}")
         if not lo - 1e-9 <= q <= hi + 1e-9:
@@ -283,59 +300,97 @@ def canonical_params(
 
 @dataclass(frozen=True)
 class _TrackG:
-    """Track G's modules, when they import (each ``None`` until G lands)."""
+    """Track G's v2 modules, when they import (each piece ``None`` until G lands).
 
-    recipe_cls: type | None
-    baseline_cls: type | None
-    validate: Callable[..., Any] | None
-    build_pair: Callable[..., Any] | None
-    generator_version: str | None
+    * ``recipe_cls``: ``rtt.design.freeform.schema.FingerRecipe``;
+    * ``baseline_cls`` / ``load_entrants``: ``rtt.design.freeform.baselines.Baseline`` and
+      ``load_entrants_v2`` (``configs/entrants_v2.yaml``);
+    * ``validate``: ``rtt.design.freeform.validate.validate_design(design, parts, task)``, the
+      section-13 battery, returning a report with ``valid``, ``code``, ``message`` and
+      ``geometry_id``;
+    * ``build_pair``: the frozen ``rtt.design.freeform.build_pair``, only once the generator
+      (``rtt.design.freeform.generate``) exists to implement it;
+    * ``design_id`` / ``geometry_id`` / ``generator_version``: ``rtt.design.freeform.hashing``.
+    """
+
+    recipe_cls: type | None = None
+    baseline_cls: type | None = None
+    load_entrants: Callable[..., Any] | None = None
+    validate: Callable[..., Any] | None = None
+    build_pair: Callable[..., Any] | None = None
+    design_id: Callable[[Any], str] | None = None
+    geometry_id: Callable[[Mapping[str, str]], str] | None = None
+    generator_version: str | None = None
+
+
+def _g_attr(module: str, *names: str) -> Any:
+    """The first of ``names`` that ``module`` defines, or ``None`` when it does not import."""
+    import importlib
+
+    try:
+        mod = importlib.import_module(module)
+    except ImportError:
+        return None
+    for name in names:
+        value = getattr(mod, name, None)
+        if value is not None:
+            return value
+    return None
 
 
 @cache
 def track_g() -> _TrackG:
     """Resolve track G's v2 modules once. Every missing piece falls back to this module's stub."""
-    recipe_cls = baseline_cls = validate = build = version = None
-    try:
-        from rtt.design.freeform.schema import FingerRecipe
-
-        recipe_cls = FingerRecipe
-    except ImportError:
-        pass
-    try:
-        from rtt.design.freeform.baselines import Baseline
-
-        baseline_cls = Baseline
-    except ImportError:
-        pass
-    try:
-        from rtt.design.freeform import validate as g_validate
-
-        validate = getattr(g_validate, "validate_recipe", None) or getattr(g_validate, "validate", None)
-    except ImportError:
-        pass
-    try:
-        from rtt.design.freeform import generate as g_generate
-
-        version = getattr(g_generate, "GENERATOR_VERSION", None)
-    except ImportError:
-        pass
-    try:
-        from rtt.design.freeform import build_pair as g_build
-    except ImportError:
-        g_build = None
-    if g_build is not None:
-        try:
-            g_build(None, None, None)  # the frozen contract stub raises NotImplementedError
-        except NotImplementedError:
-            build = None
-        except Exception:  # noqa: BLE001 - a real implementation rejects the dummy arguments
-            build = g_build
-    return _TrackG(recipe_cls, baseline_cls, validate, build, version)
+    build = None
+    if _g_attr("rtt.design.freeform.generate", "build_pair") is not None:
+        build = _g_attr("rtt.design.freeform", "build_pair")  # the frozen signature, now implemented
+    return _TrackG(
+        recipe_cls=_g_attr("rtt.design.freeform.schema", "FingerRecipe"),
+        baseline_cls=_g_attr("rtt.design.freeform.baselines", "Baseline"),
+        load_entrants=_g_attr("rtt.design.freeform.baselines", "load_entrants_v2", "load_entrants"),
+        validate=_g_attr("rtt.design.freeform.validate", "validate_design"),
+        build_pair=build,
+        design_id=_g_attr("rtt.design.freeform.hashing", "design_id"),
+        geometry_id=_g_attr("rtt.design.freeform.hashing", "geometry_id"),
+        generator_version=_g_attr("rtt.design.freeform.hashing", "GENERATOR_VERSION")
+        or _g_attr("rtt.design.freeform.generate", "GENERATOR_VERSION"),
+    )
 
 
 def _generator_version() -> str:
     return track_g().generator_version or GENERATOR_VERSION_STUB
+
+
+def _is_g_object(obj: object) -> bool:
+    """True for track G's own recipe and baseline objects (their ids come from G's hashing)."""
+    g = track_g()
+    return any(cls is not None and isinstance(obj, cls) for cls in (g.recipe_cls, g.baseline_cls))
+
+
+#: Validator codes of track G (``rtt.design.freeform.validate.CODES``) -> section-13 stage.
+G_CODE_STAGES: Final[dict[str, str]] = {
+    "schema": "schema",
+    "outline_empty": "analytic",
+    "open_clearance": "analytic",
+    "pads_overlap": "analytic",
+    "q_seat_range": "analytic",
+    "length": "analytic",
+    "width": "analytic",
+    "build_failed": "build",
+    "not_convex": "build",
+    "too_many_pieces": "build",
+    "print_not_manifold": "build",
+    "min_wall": "printability",
+    "min_feature": "printability",
+    "mass": "printability",
+    "body_slope": "printability",
+    "pad_cuts_part": "seat",
+    "seat_distance": "seat",
+    "jaws_intersect": "seat",
+    "table_clearance": "seat",
+    "duplicate_geometry": "duplicate",
+    "too_similar": "duplicate",
+}
 
 
 # --------------------------------------------------------------------------- baselines
@@ -343,6 +398,10 @@ def _generator_version() -> str:
 
 #: ``BaselineEntrant.kind`` of an entrant that is simply a named recipe (for example ``flat``).
 RECIPE_KIND: Final = "recipe"
+#: ``source`` of a dumped track-G entrant (``configs/entrants_v2.yaml``), so ``load`` rebuilds G's ``Baseline``.
+ENTRANTS_SOURCE: Final = "entrants_v2"
+#: Track G ``Baseline`` fields kept in a dump's ``params`` besides its name, kind, recipe and rationale.
+_G_BASELINE_FIELDS: Final = ("sweep_mm", "depth_rule", "round0", "reference", "hulls")
 
 
 @dataclass(frozen=True)
@@ -383,6 +442,18 @@ def _is_baseline(obj: object) -> bool:
     return isinstance(obj, BaselineEntrant) or (g is not None and isinstance(obj, g))
 
 
+def _is_named_recipe(obj: object) -> bool:
+    """A baseline that is just a recipe point (``flat``, ``ref_wrap``): it builds and hashes as that recipe."""
+    if isinstance(obj, BaselineEntrant):
+        return obj.kind == RECIPE_KIND and obj.point is not None
+    return _is_baseline(obj) and bool(getattr(obj, "is_point", False))
+
+
+def _is_stock(obj: object) -> bool:
+    """The stock blade: a fixed asset with no recipe (trusted, never run through the recipe validators)."""
+    return _is_baseline(obj) and _baseline_point(obj) is None
+
+
 def _baseline_point(obj: Any) -> Any | None:
     for attr in ("point", "recipe"):
         value = getattr(obj, attr, None)
@@ -407,7 +478,8 @@ class V2Context:
       overrides track G's validators.
 
     The search keeps it in :attr:`rtt.search.base.RunContext.gripper_task`, where v1 keeps
-    its :class:`~rtt.design.schema.GripperTask`.
+    its :class:`~rtt.design.schema.GripperTask`. Built pairs and geometry ids are cached on the
+    context (they depend on its parts and task), never on the process-wide space.
     """
 
     parts: tuple[Any, ...] = ()
@@ -416,10 +488,20 @@ class V2Context:
     geometry_hash_fn: Callable[[Any, str], str] | None = None
     validator: Callable[[Any, V2Context], SpaceCheck | None] | None = None
     label: str = ""
+    pairs: OrderedDict[tuple[str, str], Any] = field(default_factory=OrderedDict, compare=False, repr=False)
+    """``(design_id, part_id) -> FingerPair`` (least recently used dropped beyond :data:`PAIR_CACHE`)."""
+    geometry: dict[str, str | None] = field(default_factory=dict, compare=False, repr=False)
+    """``design_id -> geometry_id`` on these parts (``None`` when it cannot be computed)."""
 
     def __post_init__(self) -> None:
         if self.parts and not self.part_ids:
             object.__setattr__(self, "part_ids", tuple(str(p.part_id) for p in self.parts))
+
+    def remember_pair(self, design_id: str, part_id: str, pair: Any) -> None:
+        self.pairs[(design_id, part_id)] = pair
+        self.pairs.move_to_end((design_id, part_id))
+        while len(self.pairs) > PAIR_CACHE:
+            self.pairs.popitem(last=False)
 
     def to_json(self) -> dict[str, Any]:
         """Manifest summary (part ids only: the parts are hashed into the suite hash)."""
@@ -438,10 +520,6 @@ class FreeformSpaceV2:
     cell_params: Final = CELL_PARAMS
     param_names: Final = SCORED_PARAMS
     categorical_options: Final = {"pad": PAD_OPTIONS, "tip": TIP_OPTIONS}
-
-    def __init__(self) -> None:
-        self._builds: OrderedDict[tuple[str, str], Any] = OrderedDict()
-        self._geometry: dict[str, str | None] = {}
 
     # ------------------------------------------------------------------ identity
 
@@ -466,6 +544,10 @@ class FreeformSpaceV2:
         return _baseline_point(design)
 
     def design_id(self, design: Any) -> str:
+        """Track G's ``design_id`` for G's recipes and baselines, so search records and built pairs agree."""
+        g_id = track_g().design_id
+        if g_id is not None and _is_g_object(design):
+            return str(g_id(design))
         if _is_baseline(design):
             ident = design.design_id
             return str(ident() if callable(ident) else ident)
@@ -475,18 +557,43 @@ class FreeformSpaceV2:
     def dump(self, design: Any) -> dict[str, Any]:
         if _is_baseline(design):
             point = _baseline_point(design)
+            g_baseline = not isinstance(design, BaselineEntrant)
+            params = (
+                {k: getattr(design, k) for k in _G_BASELINE_FIELDS if hasattr(design, k)}
+                if g_baseline
+                else dict(getattr(design, "params", {}) or {})
+            )
             data = {
                 "baseline": str(getattr(design, "kind", design.name)),
                 "name": str(design.name),
-                "params": dict(getattr(design, "params", {}) or {}),
+                "params": params,
                 "point": self.dump(point) if point is not None else None,
             }
+            if g_baseline:
+                data["source"] = ENTRANTS_SOURCE
             if getattr(design, "rationale", None):
                 data["rationale"] = design.rationale
             return data
         return self.params(design)
 
     def load(self, data: Mapping[str, Any]) -> Any:
+        if "baseline" in data and data.get("source") == ENTRANTS_SOURCE:
+            cls = track_g().baseline_cls
+            if cls is None:
+                raise ValueError(f"entrant {data.get('name')!r} needs track G's Baseline to load")
+            point = data.get("point")
+            recipe = None
+            if point:
+                recipe = self.load(point)
+                if hasattr(recipe, "model_copy"):
+                    recipe = recipe.model_copy(update={"name": str(data["name"])})
+            return cls(
+                name=str(data["name"]),
+                kind=str(data["baseline"]),
+                recipe=recipe,
+                rationale=str(data.get("rationale") or ""),
+                **dict(data.get("params") or {}),
+            )
         if "baseline" in data:
             point = data.get("point")
             return BaselineEntrant(
@@ -509,10 +616,8 @@ class FreeformSpaceV2:
 
     def buildable(self, design: Any) -> Any:
         """What the generator builds: the recipe itself, a named recipe entrant's recipe, or the baseline."""
-        if _is_baseline(design) and getattr(design, "kind", None) == RECIPE_KIND:
-            point = _baseline_point(design)
-            if point is not None:
-                return point
+        if _is_named_recipe(design):
+            return _baseline_point(design)
         return design
 
     def rationale(self, design: Any) -> str | None:
@@ -625,7 +730,7 @@ class FreeformSpaceV2:
         """
         if _is_baseline(design):
             point = _baseline_point(design)
-            if getattr(design, "kind", None) == RECIPE_KIND and point is not None:
+            if _is_named_recipe(design):
                 inner = self.validate(point, context)
                 return SpaceCheck(
                     inner.ok,
@@ -659,48 +764,86 @@ class FreeformSpaceV2:
                 )
             metrics = dict(result.metrics) if result is not None else {}
             return SpaceCheck(True, design, (), notes, metrics=metrics)
-        g = track_g().validate
-        if g is not None and isinstance(context, V2Context) and context.parts:
-            result = g(design, context.parts, context.task)
-            ok = bool(getattr(result, "ok", result))
-            if not ok:
-                errors = tuple(getattr(result, "errors", ()) or ("rejected by the geometry validators",))
-                return SpaceCheck(False, None, errors, notes, stage=getattr(result, "stage", "geometry"))
-        return SpaceCheck(True, design, (), notes)
+        validate = track_g().validate
+        target = self.buildable(design)
+        if (
+            validate is None
+            or not isinstance(context, V2Context)
+            or not context.parts
+            or _is_stock(design)  # the fixed stock blade asset is not a recipe
+            or not _is_g_object(target)  # a stub entrant that track G cannot build
+        ):
+            return SpaceCheck(True, design, (), notes)
+        if context.task is None:
+            raise ValueError("the v2 geometry validators need the task (V2Context.task)")
+        report = validate(target, context.parts, context.task)
+        did = self.design_id(design)
+        if getattr(report, "geometry_id", None):
+            context.geometry[did] = str(report.geometry_id)
+        for pair in getattr(report, "pairs", ()) or ():
+            context.remember_pair(did, str(pair.part_id), pair)
+        metrics = {"build_s": float(getattr(report, "build_s", 0.0) or 0.0)}
+        if not report.valid:
+            code = str(report.code or "rejected")
+            return SpaceCheck(
+                False,
+                None,
+                (str(report.message or code),),
+                notes,
+                stage=G_CODE_STAGES.get(code, "geometry"),
+                metrics=metrics,
+            )
+        return SpaceCheck(True, design, (), notes, metrics=metrics)
 
     def build(self, design: Any, part: Any, context: Any = None) -> Any:
-        """Track G's :func:`~rtt.design.freeform.build_pair` for one part, cached by (design, part)."""
+        """Track G's :func:`~rtt.design.freeform.build_pair` for one part (cached on a :class:`V2Context`)."""
         build = track_g().build_pair
         if build is None:
             raise NotImplementedError("the v2 generator (track G) is not available yet")
+        task = getattr(context, "task", None)
+        if task is None:
+            raise ValueError("building a v2 jaw pair needs the task (V2Context.task)")
         key = (self.design_id(design), str(part.part_id))
-        if key in self._builds:
-            self._builds.move_to_end(key)
-            return self._builds[key]
-        pair = build(design, part, getattr(context, "task", None))
-        self._builds[key] = pair
-        while len(self._builds) > 4096:
-            self._builds.popitem(last=False)
+        cached = context.pairs.get(key) if isinstance(context, V2Context) else None
+        if cached is not None:
+            context.pairs.move_to_end(key)
+            return cached
+        pair = build(self.buildable(design), part, task)
+        if isinstance(context, V2Context):
+            context.remember_pair(key[0], key[1], pair)
         return pair
 
     def geometry_id(self, design: Any, context: Any) -> str | None:
-        """SHA-256 over the per-part geometry hashes on the training parts (``None`` if unknown)."""
+        """SHA-256 over the per-part geometry hashes on the training parts (``None`` if unknown).
+
+        Track G's ``hashing.geometry_id`` when the generator built the pairs; with the
+        context's ``geometry_hash_fn`` (offline fakes), a hash of the hashes in part order.
+        """
         if not isinstance(context, V2Context) or not context.part_ids:
             return None
-        key = self.design_id(design) + ":" + ",".join(context.part_ids)
-        if key in self._geometry:
-            return self._geometry[key]
-        hashes: list[str] | None = None
+        did = self.design_id(design)
+        if did in context.geometry:
+            return context.geometry[did]
+        value: str | None = None
         if context.geometry_hash_fn is not None:
             hashes = [context.geometry_hash_fn(design, pid) for pid in context.part_ids]
-        elif track_g().build_pair is not None and context.parts:
-            hashes = [str(self.build(design, part, context).geometry_hash) for part in context.parts]
-        value = (
-            hashlib.sha256(canonical_json({"geometry": hashes}).encode("utf-8")).hexdigest()
-            if hashes is not None
-            else None
-        )
-        self._geometry[key] = value
+            value = hashlib.sha256(canonical_json({"geometry": hashes}).encode("utf-8")).hexdigest()
+        elif (
+            track_g().build_pair is not None
+            and context.parts
+            and context.task is not None
+            and (_is_stock(design) or _is_g_object(self.buildable(design)))
+        ):
+            by_part = {
+                str(p.part_id): str(self.build(design, p, context).geometry_hash) for p in context.parts
+            }
+            g_geometry_id = track_g().geometry_id
+            value = (
+                g_geometry_id(by_part)
+                if g_geometry_id is not None
+                else hashlib.sha256(canonical_json({"geometry": by_part}).encode("utf-8")).hexdigest()
+            )
+        context.geometry[did] = value
         return value
 
     # ------------------------------------------------------------------ metric
@@ -774,7 +917,7 @@ class FreeformSpaceV2:
 
         if _is_baseline(design):
             point = _baseline_point(design)
-            if point is not None and getattr(design, "kind", None) == RECIPE_KIND:
+            if _is_named_recipe(design):
                 return self.params_json(point)  # a named recipe entrant is that recipe
             data: dict[str, Any] = {"baseline": str(design.name)}
             if point is not None:

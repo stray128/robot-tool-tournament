@@ -21,10 +21,12 @@ from rtt.search.space import SPACE_NAMES, V1, V2, DesignSpace, get_space, space_
 from rtt.search.space_v2 import (
     INACTIVE,
     NUMERIC_BOUNDS,
+    NUMERIC_PARAMS,
     QUANT_STEPS,
     SCORED_PARAMS,
     BaselineEntrant,
     FingerRecipeStub,
+    quantise,
     track_g,
 )
 
@@ -165,14 +167,14 @@ def test_v2_metric_points_and_cells() -> None:
     )
     assert V2S.distance(a, a) == 0.0
     assert V2S.distance(a, b) == pytest.approx(1 / 9) == V2S.distance(b, a)
-    assert V2S.params(a)["clearance_mm"] == 0.8  # 0.85 is not on the 0.1 mm grid
+    assert V2S.params(a)["clearance_mm"] == 0.9  # 0.85 is not on the 0.1 mm grid: half-up, as in G
     assert V2S.points(a) == {
         "grip_height_frac": 50,
         "pad_height_mm": 50,
         "finger_width_mm": 50,
         "pad_depth_mm": 50,
         "wall_draft_deg": 50,
-        "clearance_mm": 46,
+        "clearance_mm": 54,
         "tip_size_mm": 50,
     }
     assert V2S.cell(a) == ("conform", "chamfer")
@@ -234,23 +236,35 @@ def test_fake_v2_evaluator_is_batch_invariant_and_has_headroom() -> None:
 
 @pytest.mark.skipif(track_g().recipe_cls is None, reason="track G's FingerRecipe has not landed")
 def test_stub_matches_track_g_schema() -> None:
+    """The stub and track G agree on bounds, steps, inactive rules and quantisation; G's model wins."""
+    import importlib
+
+    schema = importlib.import_module("rtt.design.freeform.schema")
     g = track_g().recipe_cls
-    assert g is not None
-    fields = set(g.model_fields)
-    assert set(SCORED_PARAMS) <= fields
+    assert g is schema.FingerRecipe and set(SCORED_PARAMS) <= set(g.model_fields)
+    assert dict(schema.PARAM_BOUNDS) == NUMERIC_BOUNDS
     stub = FingerRecipeStub.model_json_schema()["properties"]
-    real = g.model_json_schema()["properties"]
-    for name, (lo, hi) in NUMERIC_BOUNDS.items():
-        assert (
-            (real[name].get("minimum"), real[name].get("maximum"))
-            == (lo, hi)
-            == (
-                stub[name]["minimum"],
-                stub[name]["maximum"],
-            )
-        )
+    assert {n: (stub[n]["minimum"], stub[n]["maximum"]) for n in NUMERIC_BOUNDS} == NUMERIC_BOUNDS
+    assert dict(schema.QUANTUM) == QUANT_STEPS
+    assert tuple(schema.SCORED_PARAMS) == SCORED_PARAMS
+    for pad, tip in V2S.cells():
+        inactive = {
+            n for n, (owner, where, _) in INACTIVE.items() if (pad if owner == "pad" else tip) in where
+        }
+        assert set(schema.inactive_params(pad, tip)) == inactive
+    for name, (_, _, fixed) in INACTIVE.items():
+        assert schema.FIXED_VALUES[name] == fixed
+    for name in NUMERIC_PARAMS:
+        lo, hi = NUMERIC_BOUNDS[name]
+        for k in range(81):  # grid points, half steps and points in between
+            value = lo + (hi - lo) * k / 80
+            for v in (value, value + QUANT_STEPS[name] / 2, value + QUANT_STEPS[name] / 3):
+                assert quantise(name, v) == schema.quantize(name, v), (name, v)
     for recipe in V2S.sample_sobol(7, None).sample(200):
         assert isinstance(recipe, g)
+        canon, _ = importlib.import_module("rtt.design.freeform.canon").canonicalize(recipe)
+        assert V2S.params(canon) == V2S.params(recipe)  # the space's canonical form is G's
+        assert V2S.design_id(recipe) == track_g().design_id(recipe)
 
 
 def test_baseline_entrants_validate_and_load() -> None:
@@ -260,3 +274,61 @@ def test_baseline_entrants_validate_and_load() -> None:
         assert isinstance(back, BaselineEntrant) and V2S.design_id(back) == V2S.design_id(entrant)
     assert len({V2S.design_id(e) for e in stub_entrants()}) == 4
     assert not isinstance(stub_entrants()[0], FingerDesign)
+
+
+# --------------------------------------------------------------------------- with track G (skipped until it lands)
+
+needs_g = pytest.mark.skipif(
+    track_g().baseline_cls is None or track_g().load_entrants is None,
+    reason="track G's entrants have not landed",
+)
+
+
+@needs_g
+def test_track_g_entrants_drive_round0_ids_dumps_and_metric() -> None:
+    from rtt.search.runner import DEFAULT_ENTRANTS_V2, _load_entrants_v2, reference_entrants_v2
+
+    if not DEFAULT_ENTRANTS_V2.exists():
+        pytest.skip("configs/entrants_v2.yaml has not landed")
+    round0 = _load_entrants_v2(DEFAULT_ENTRANTS_V2)
+    refs = reference_entrants_v2(DEFAULT_ENTRANTS_V2)
+    assert [e.name for e in round0] == ["stock", "flat", "imprint_configurator", "imprint_swept"]
+    assert {e.name for e in refs} == {"ref_wrap", "ref_hook"}
+    g_id = track_g().design_id
+    for entrant in round0 + refs:
+        assert V2S.is_design(entrant) and V2S.design_id(entrant) == g_id(entrant)
+        assert V2S.validate(entrant, None).ok
+        back = V2S.load(V2S.dump(entrant))
+        assert type(back) is type(entrant) and V2S.design_id(back) == V2S.design_id(entrant)
+    stock, flat, configurator, swept = round0
+    assert V2S.buildable(configurator) is configurator and V2S.cell(configurator) == ("conform", "blunt")
+    assert V2S.cell(stock) is None and V2S.distance(stock, flat) == float("inf")
+    assert V2S.buildable(flat) is flat.recipe and V2S.design_id(flat) == V2S.design_id(flat.recipe)
+    assert V2S.buildable(swept) is swept  # the sweep is outside the search space: G builds the baseline
+    assert len({V2S.design_id(e) for e in round0}) == 4
+    copy = V2S.recipe(**V2S.params(flat.recipe))
+    assert V2S.design_id(copy) == V2S.design_id(flat)  # a proposal that repeats flat is a duplicate
+
+
+@needs_g
+def test_track_g_validators_map_to_stages_and_cache_geometry() -> None:
+    """With the training parts and the v2 task, every design goes through G's section-13 battery."""
+    library = pytest.importorskip("rtt.parts.library")
+    task_mod = pytest.importorskip("rtt.sim.task")
+    if track_g().validate is None or track_g().build_pair is None or not hasattr(task_mod, "default_task_v2"):
+        pytest.skip("track G's validators or track S's task_v2 have not landed")
+    from rtt.search.space_v2 import G_CODE_STAGES, V2Context
+
+    ctx = V2Context(parts=tuple(library.training_parts()), task=task_mod.default_task_v2())
+    designs = V2S.sample_sobol(3, None).sample(12)  # schema-valid: geometry may still reject some
+    stages = []
+    for design in designs:
+        check = V2S.validate(design, ctx)
+        stages.append(check.stage)
+        assert check.ok == (check.stage is None)
+        assert check.stage is None or check.stage in set(G_CODE_STAGES.values())
+        if check.ok:
+            gid = V2S.geometry_id(design, ctx)
+            assert gid is not None and ctx.geometry[V2S.design_id(design)] == gid
+            assert len([k for k in ctx.pairs if k[0] == V2S.design_id(design)]) == len(ctx.parts)
+    assert None in stages  # at least one random recipe builds on all six parts

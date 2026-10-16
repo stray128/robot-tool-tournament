@@ -68,6 +68,7 @@ __all__ = [
     "SearchOutcome",
     "load_seeds",
     "make_strategy",
+    "reference_entrants_v2",
     "run_search",
 ]
 
@@ -504,15 +505,31 @@ def run_search(
 
 
 def _load_entrants_v2(path: Path) -> list[Any]:
-    """Track G's v2 entrants (``configs/entrants_v2.yaml``); a clear error until G lands."""
-    try:
-        from rtt.design.freeform.baselines import load_entrants as load_v2
-    except ImportError as exc:
+    """Track G's round-0 v2 entrants (``configs/entrants_v2.yaml``); a clear error until G lands.
+
+    Reference entrants (``ref_wrap``, ``ref_hook``) are scored outside the budget, so they are
+    not in round 0; :func:`reference_entrants_v2` returns them.
+    """
+    return [
+        e for e in _all_entrants_v2(path) if getattr(e, "round0", True) and not getattr(e, "reference", False)
+    ]
+
+
+def reference_entrants_v2(path: Path = DEFAULT_ENTRANTS_V2) -> list[Any]:
+    """The v2 reference entrants: scored outside the budget and shown in every comparison (spec section 9)."""
+    return [e for e in _all_entrants_v2(path) if getattr(e, "reference", False)]
+
+
+def _all_entrants_v2(path: Path) -> list[Any]:
+    from rtt.search.space_v2 import track_g
+
+    load = track_g().load_entrants
+    if load is None or not path.exists():
         raise FileNotFoundError(
-            "v2 entrants come from track G (rtt.design.freeform.baselines.load_entrants and "
+            "v2 entrants come from track G (rtt.design.freeform.baselines.load_entrants_v2 and "
             f"{path.name}); pass entrants= explicitly until they land"
-        ) from exc
-    return list(load_v2(path))
+        )
+    return list(load(path))
 
 
 def _context_json(task: Any) -> Any:
