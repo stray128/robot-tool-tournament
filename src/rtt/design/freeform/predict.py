@@ -43,14 +43,39 @@ def slide_limit_deg(mu: float, margin_deg: float = MARGIN_DEG) -> float:
     return 90.0 - math.degrees(math.atan(mu)) - margin_deg
 
 
+def _angles(slope: np.ndarray) -> np.ndarray:
+    """Angle of a surface from the closing axis: 90 = flat face, 0 = wall along the closing axis."""
+    return np.degrees(np.arctan2(1.0, np.abs(slope)))
+
+
 def jaw_responses(
     xs: np.ndarray, p: np.ndarray, xk: np.ndarray, yk: np.ndarray, shifts: np.ndarray, limit_deg: float
 ) -> np.ndarray:
-    """Per shift (in grid cells): 0 = seat, 1 = centre, 2 = jam."""
+    """Per shift (in grid cells): 0 = seat, 1 = centre, 2 = jam.
+
+    The first-contact set is every grid point within :data:`TIE_TOL` of the smallest gap. Each
+    contact point slides when its contact surface is within ``limit_deg`` of the closing axis:
+    inside a pad segment that is the segment; at a concave pad corner (a V's root) the flatter
+    of its two segments; at a convex pad edge the part's own surface there (the edge meets the
+    part's facet), falling back to the flatter segment where the part has no clear slope.
+    """
+    xs = np.asarray(xs, dtype=np.float64)
+    xk = np.asarray(xk, dtype=np.float64)
+    yk = np.asarray(yk, dtype=np.float64)
     fk = np.interp(xs, xk, yk)
-    slope = np.gradient(fk, xs)
-    alpha = np.degrees(np.arctan2(1.0, np.abs(slope)))  # 90 = flat face, 0 = wall along the closing axis
     n = len(xs)
+    nseg = len(xk) - 1
+    seg_alpha = _angles(np.diff(yk) / np.maximum(np.diff(xk), 1e-15))
+    seg = np.clip(np.searchsorted(xk, xs, side="right") - 1, 0, nseg - 1)
+    alpha = seg_alpha[seg]
+    convex = np.zeros(n, dtype=bool)
+    for j in range(1, nseg):  # interior breakpoints that fall on the grid
+        i = int(np.argmin(np.abs(xs - xk[j])))
+        if abs(xs[i] - xk[j]) > 1e-9:
+            continue
+        left, right = (yk[j] - yk[j - 1]) / (xk[j] - xk[j - 1]), (yk[j + 1] - yk[j]) / (xk[j + 1] - xk[j])
+        alpha[i] = max(seg_alpha[j - 1], seg_alpha[j])
+        convex[i] = right > left + 1e-9  # the pad material bulges toward the part here
     fin = np.isfinite(p)
     g0 = float(np.min(np.where(fin, fk - p, np.inf)))
     idx = np.arange(n)[None, :] - np.asarray(shifts, dtype=np.int64)[:, None]
@@ -60,7 +85,18 @@ def jaw_responses(
     gmin = ge.min(axis=1)
     seat = gmin >= g0 - SEAT_TOL
     tied = ge <= gmin[:, None] + TIE_TOL
-    amax = np.max(np.where(tied, alpha[None, :], -np.inf), axis=1)
+    eff = np.broadcast_to(alpha, ps.shape).copy()
+    if convex.any():
+        dx = float(xs[1] - xs[0])
+        prev, nxt = np.roll(ps, 1, axis=1), np.roll(ps, -1, axis=1)
+        prev[:, 0], nxt[:, -1] = -np.inf, -np.inf
+        ok = np.isfinite(prev) & np.isfinite(nxt) & np.isfinite(ps)
+        slope = np.zeros(ps.shape)
+        slope[ok] = (nxt[ok] - prev[ok]) / (2.0 * dx)
+        part_alpha = _angles(slope)
+        use = ok & convex[None, :]
+        eff = np.where(use, part_alpha, eff)
+    amax = np.max(np.where(tied, eff, -np.inf), axis=1)
     return np.where(seat, 0, np.where(amax <= limit_deg, 1, 2))
 
 
