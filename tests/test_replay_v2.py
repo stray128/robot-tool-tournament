@@ -229,3 +229,159 @@ def test_visual_and_provenance_helpers(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_upgrade_header_needs_known_bodies(episode: Any) -> None:
     with pytest.raises(ValueError, match="unknown bodies"):
         rp.upgrade_header(episode.replay.header, visuals={"wrist": []}, assets={}, meta={}, provenance={})
+
+
+# --------------------------------------------------------------------------- freeform (v2) episodes
+
+
+def _freeform_pair(part_id: str = "block_30x40x60") -> Any:
+    """A FingerPair of two distinct two-piece jaws (left faces -y, right faces +y)."""
+    import hashlib
+
+    import trimesh
+
+    from rtt.design.freeform import CaptureReport, FingerPair, JawGeometry
+
+    def jaw(sign: float, pad_depth: float) -> JawGeometry:
+        root = trimesh.creation.box(extents=(0.030, 0.012, 0.012))
+        root.apply_translation((0.0, sign * 0.0064, -0.006))
+        pad = trimesh.creation.box(extents=(0.020, pad_depth, 0.048))
+        pad.apply_translation((0.0, sign * (0.0004 + pad_depth / 2.0), -0.036))
+        return JawGeometry(
+            pieces=(np.asarray(root.vertices), np.asarray(pad.vertices)),
+            mass=0.01,
+            com=np.zeros(3),
+            inertia6=np.array([1e-6, 1e-6, 1e-6, 0.0, 0.0, 0.0]),
+            print_mesh_sha=hashlib.sha256(f"{sign}{pad_depth}".encode()).hexdigest(),
+        )
+
+    return FingerPair(
+        left=jaw(1.0, 0.006),
+        right=jaw(-1.0, 0.008),
+        tip_height=0.01,
+        finger_length=0.06,
+        q_seat=0.02,
+        design_id="a" * 64,
+        part_id=part_id,
+        geometry_hash="b" * 64,
+        capture=CaptureReport(no_jam_mm=1.0, centring_mm=0.5, mu=0.3),
+        build_s=0.1,
+    )
+
+
+def _box_part() -> Any:
+    from scipy.spatial import ConvexHull
+
+    from rtt.parts.types import Material, PartSpec
+
+    s = np.array([0.03, 0.04, 0.06])
+    corners = np.array([[x, y, z] for x in (-1, 1) for y in (-1, 1) for z in (-1, 1)], dtype=float) * s / 2
+    vol = float(np.prod(s))
+    return PartSpec(
+        name="block_30x40x60",
+        family="block",
+        pieces=(corners,),
+        faces=(ConvexHull(corners).simplices,),
+        volume=vol,
+        com=(0.0, 0.0, 0.0),
+        unit_inertia=(vol * 0.0052 / 12, vol * 0.0045 / 12, vol * 0.0025 / 12, 0.0, 0.0, 0.0),
+        material=Material("steel", 7850.0, (0.62, 0.63, 0.65), metallic=0.9, roughness=0.3),
+        decomposition="exact",
+    )
+
+
+def test_freeform_lift_draws_each_jaw_and_the_part_from_their_pieces(episode: Any, tmp_path: Path) -> None:
+    from rtt.pipeline.replays import lift_freeform_to_v2
+    from rtt.render.glb import read_glb
+
+    pair, part = _freeform_pair(), _box_part()
+    v1 = copy.deepcopy(episode.replay)
+    v1.header["meta"].update(design_space="freeform-v2", part_id=part.name)
+    n = v1.n_frames
+    readouts = {"offset_mm": np.linspace(2.0, 0.05, n), "seat_short_mm": np.zeros(n), "hold_s": np.zeros(n)}
+    store = AssetStore(tmp_path / "assets")
+    v2 = lift_freeform_to_v2(
+        v1, store, pair, part=part, overlays=readouts, run_id="pilot", code_version="10e9384"
+    )
+    assert np.array_equal(v2.frames, episode.replay.frames)
+    meta = v2.header["meta"]
+    assert meta["design_space"] == "freeform-v2" and meta["design_id"] == "a" * 64
+    assert meta["part_id"] == part.name and meta["geometry_hash"] == "b" * 64 and meta["geometry_id"] is None
+    bodies = {b["name"]: b for b in v2.header["bodies"]}
+    jaws = {}
+    for side in ("left", "right"):
+        roles = {store.entry(v["asset"])["role"]: v["asset"] for v in bodies[f"finger_{side}"]["visuals"]}
+        assert set(roles) == {"carriage", f"finger_{side}"}
+        jaws[side] = roles[f"finger_{side}"]
+        mesh = read_glb(store.raw_bytes(jaws[side])).meshes[0]
+        lo, hi = mesh.vertices.min(axis=0), mesh.vertices.max(axis=0)
+        pieces = np.vstack(getattr(pair, side).pieces)
+        assert np.allclose(lo, pieces.min(axis=0), atol=2e-5) and np.allclose(
+            hi, pieces.max(axis=0), atol=2e-5
+        )
+    assert jaws["left"] != jaws["right"]
+    obj = store.entry(bodies["object"]["visuals"][0]["asset"])
+    assert obj["license"] == "Apache-2.0" and obj["label"] == part.name
+    path = tmp_path / "ep"
+    rp.write_replay(v2, path)
+    header = json.loads(path.with_suffix(".json").read_text())
+    assert VALIDATOR.errors(header) == []
+    assert header["overlays"]["channels"] == ["offset_mm", "seat_short_mm", "hold_s"]
+    back = rp.read_replay(path)
+    assert back.overlays.shape == (n, 3) and abs(float(back.overlays[0, 0]) - 2.0) < 1e-3
+    with pytest.raises(ValueError, match="replay frames"):
+        lift_freeform_to_v2(
+            v1, store, pair, overlays={"hold_s": np.zeros(n + 1)}, run_id="r", code_version="1234567"
+        )
+
+
+def test_freeform_lift_draws_a_stock_pair_with_the_blade_cad(episode: Any, tmp_path: Path) -> None:
+    import dataclasses
+
+    from rtt.pipeline.replays import lift_freeform_to_v2
+    from rtt.render.gripper import add_gripper_assets, stock_jaws
+
+    left, right = stock_jaws()
+    pair = dataclasses.replace(_freeform_pair(), left=left, right=right)
+    store = AssetStore(tmp_path / "assets")
+    v2 = lift_freeform_to_v2(copy.deepcopy(episode.replay), store, pair, run_id="r", code_version="1234567")
+    grip = add_gripper_assets(store)
+    bodies = {b["name"]: b for b in v2.header["bodies"]}
+    for side in ("left", "right"):
+        assert grip.blade(side) in {v["asset"] for v in bodies[f"finger_{side}"]["visuals"]}
+    assert v2.header["meta"]["finger_visual"].startswith("stock blade CAD")
+
+
+def test_scan_part_assets_carry_the_scan_credit(tmp_path: Path) -> None:
+    import dataclasses
+
+    from rtt.pipeline.replays import part_asset, scan_asset
+    from rtt.render.glb import GSO_ATTRIBUTION, read_glb
+
+    store = AssetStore(tmp_path)
+    scan_part = dataclasses.replace(_box_part(), name="scan_mug", family="gso")
+    aid = part_asset(store, scan_part)
+    entry = store.entry(aid)
+    assert entry["license"] == "CC-BY-4.0" and entry["attribution"] == GSO_ATTRIBUTION and entry["changes"]
+    assert entry["brand_visible"] is False
+
+    class Visual:  # the fields of rtt.sim.gso_visual.ScanVisual that scan_asset reads
+        name = "scan_mug"
+        vertices = np.asarray(scan_part.pieces[0])
+        faces = np.asarray(scan_part.faces[0])
+        uv = np.tile([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]], (2, 1))
+        texture = tmp_path / "tex.png"
+
+        def uv_top_left(self) -> np.ndarray:
+            return np.stack([self.uv[:, 0], 1.0 - self.uv[:, 1]], axis=1)
+
+    from PIL import Image
+
+    Image.new("RGB", (8, 8), (200, 40, 40)).save(Visual.texture)
+    fields = {"license": "CC-BY-4.0", "changes": ["re-posed", "re-encoded as GLB"], "brand_visible": False}
+    tex = scan_asset(store, Visual(), fields, textured=True)
+    doc = read_glb(store.raw_bytes(tex))
+    assert doc.copyright == GSO_ATTRIBUTION and doc.meshes[0].texture is not None
+    assert np.allclose(doc.meshes[0].uv, Visual().uv_top_left(), atol=1e-6)
+    clay = scan_asset(store, Visual(), fields, textured=False)
+    assert read_glb(store.raw_bytes(clay)).meshes[0].texture is None and clay != tex

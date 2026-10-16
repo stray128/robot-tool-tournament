@@ -54,8 +54,10 @@ __all__ = [
     "check_entry",
     "glb_bytes",
     "mesh_from_geoms",
+    "mesh_from_pieces",
     "mesh_from_trimesh",
     "read_glb",
+    "scan_mesh",
 ]
 
 GENERATOR: Final = "rtt.render.glb"
@@ -198,6 +200,48 @@ def mesh_from_geoms(geoms: Sequence[Mapping[str, Any]], segments: int = 48) -> A
         np.asarray(mesh.vert_properties, dtype=np.float64)[:, :3],
         np.asarray(mesh.tri_verts, dtype=np.int64),
         process=False,
+    )
+
+
+def mesh_from_pieces(pieces: Sequence[np.ndarray]) -> Any:
+    """One watertight trimesh: the union of convex vertex sets ``(n, 3)`` in their own frame
+    (a freeform jaw's or an exact part's collision pieces), for its GLB asset."""
+    identity = {"pos": [0.0, 0.0, 0.0], "quat_xyzw": [0.0, 0.0, 0.0, 1.0]}
+    return mesh_from_geoms(
+        [
+            {"type": "mesh", "vertices": np.asarray(p, dtype=np.float64).reshape(-1).tolist(), **identity}
+            for p in pieces
+        ]
+    )
+
+
+def scan_mesh(visual: Any, look: Look, *, textured: bool, name: str = "scan") -> GlbMesh:
+    """A :class:`GlbMesh` of a scanned object's visual in its object frame.
+
+    ``visual`` is an ``rtt.sim.gso_visual.ScanVisual`` (``vertices``, ``faces``, OBJ-convention
+    ``uv``, ``uv_top_left()`` and a ``texture`` image path). Textured: the uv layout is kept
+    (glTF origin top-left) and the image is embedded as PNG. Otherwise: the clay mesh,
+    crease-shaded like the CAD (the gallery and unscreened scans use this)."""
+    import io
+
+    import trimesh
+
+    verts, faces = np.asarray(visual.vertices), np.asarray(visual.faces)
+    if not textured or getattr(visual, "uv", None) is None or getattr(visual, "texture", None) is None:
+        return mesh_from_trimesh(trimesh.Trimesh(verts, faces, process=False), look, name=name)
+    from PIL import Image
+
+    with Image.open(visual.texture) as im:
+        png = io.BytesIO()
+        im.convert("RGB").save(png, format="PNG", optimize=True)
+    return GlbMesh(
+        vertices=verts,
+        faces=faces,
+        normals=np.asarray(trimesh.Trimesh(verts, faces, process=False).vertex_normals),
+        uv=visual.uv_top_left(),
+        texture=png.getvalue(),
+        look=Look(look.name, (1.0, 1.0, 1.0), look.alpha, look.metallic, look.roughness),  # texture = colour
+        name=name,
     )
 
 

@@ -74,6 +74,7 @@ __all__ = [
     "split_at_root",
     "stl_bytes_mm",
     "stock_blade_report",
+    "stock_blade_shas",
     "stock_jaws",
     "verify_assets",
 ]
@@ -520,6 +521,20 @@ def stock_jaws(hulls_path: Path = HULLS_PATH, root: Path = ASSET_DIR) -> tuple[J
             )
         )
     return jaws[0], jaws[1]
+
+
+def stock_blade_shas(root: Path = ASSET_DIR) -> dict[str, str]:
+    """``{"left": sha, "right": sha}``: the ``print_mesh_sha`` of each stock blade, so a jaw pair
+    built from the stock entrant can be recognised (and drawn with the blade CAD)."""
+    return dict(_stock_blade_shas_cached(str(Path(root).resolve())))
+
+
+@functools.lru_cache(maxsize=4)
+def _stock_blade_shas_cached(root: str) -> tuple[tuple[str, str], ...]:
+    grip = load_gripper(Path(root))
+    return tuple(
+        (side, hashlib.sha256(stl_bytes_mm(grip.blade(side))).hexdigest()) for side in ("left", "right")
+    )
 
 
 @dataclass(frozen=True)
