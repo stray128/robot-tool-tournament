@@ -177,7 +177,7 @@ def test_training_parts_have_the_specified_dimensions_and_roles(parts: dict[str,
         return [round(1000 * s, 3) for s in parts[name].size]
 
     assert size_mm("pipe_tee") == [60.0, 44.25, 28.5]  # run 60, branch end to run back, hub OD
-    assert size_mm("block") == [20.0, 40.0, 60.0]  # 40 mm across the jaws, no chamfer
+    assert size_mm("block") == [30.0, 40.0, 60.0]  # 40 mm across the jaws, no chamfer
     assert size_mm("hex_standoff")[1:] == [17.0, 45.0]  # 17 across flats, on the closing axis
     assert size_mm("hex_standoff")[0] == pytest.approx(17.0 / math.cos(math.pi / 6), abs=1e-3)
     assert size_mm("flanged_bushing") == [36.0, 36.0, 35.0]  # 20 x 30 body, 36 x 5 flange on top
@@ -185,7 +185,7 @@ def test_training_parts_have_the_specified_dimensions_and_roles(parts: dict[str,
     assert size_mm("steel_slug") == [40.0, 40.0, 50.0]
     mass_g = {n: 1000 * p.mass for n, p in parts.items()}
     assert mass_g["steel_slug"] == pytest.approx(490, rel=0.015)
-    assert mass_g["block"] == pytest.approx(129.6, abs=0.1)
+    assert mass_g["block"] == pytest.approx(194.4, abs=0.1)
     assert all(m < 917 for m in mass_g.values())  # under the grip cap
     assert parts["hex_standoff"].yaw_symmetry == 6
     assert parts["block"].yaw_symmetry == 2
@@ -279,7 +279,7 @@ def test_hashes_are_identical_across_processes(parts: dict[str, PartSpec]) -> No
 #: values must come out on any IEEE-754 machine.
 EXPECTED_GEOMETRY_SHA256 = {
     "pipe_tee": "98740094d82da2f86be41147051213c143fc57b37f34729654ab186a8596c7a3",
-    "block": "5e6763bdde43103822cae08f1dc88d65679038a99a30a341d2c13781217bdb41",
+    "block": "e8ea8c7bb6df0bc934c8e77fda68923fa6fb1f7d851b69e426d854b00a314a8c",
     "hex_standoff": "c0692629573c666b8d5754016fb7d6d473aa72c44e6080819abce607054ec380",
     "flanged_bushing": "1a1523da52fbefe9b43bed3d1a7407ab8c16dfa884d4c71ede23cacbf07c0042",
     "l_bracket": "04568f49bb463d38b8d224e3cff4295ab5bc6be123ae7f11b90c43564cf0668b",
@@ -295,7 +295,7 @@ def test_library_digest_covers_dimensions_and_materials(tmp_path) -> None:
     base = lib.library_digest()
     raw = (lib.DEFAULT_PARTS_FILE).read_text()
     changed = tmp_path / "parts.yaml"
-    changed.write_text(raw.replace("x: 20.0, y: 40.0, z: 60.0", "x: 20.0, y: 40.0, z: 61.0"))
+    changed.write_text(raw.replace("x: 30.0, y: 40.0, z: 60.0", "x: 30.0, y: 40.0, z: 61.0"))
     assert lib.library_digest(changed) != base
     changed.write_text(raw.replace("material: brass", "material: zinc_plated_steel"))
     assert lib.library_digest(changed) != base

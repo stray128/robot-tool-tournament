@@ -13,7 +13,7 @@
 # jaws grip it (rtt.parts.library.Shape.origin_xy).
 #
 # Masses at these densities (rtt.parts.materials, handbook values [assumed]):
-# pipe_tee 39.9 g, block 129.6 g, hex_standoff 82.9 g, flanged_bushing 90.9 g, l_bracket 71.6 g,
+# pipe_tee 39.9 g, block 194.4 g, hex_standoff 82.9 g, flanged_bushing 90.9 g, l_bracket 71.6 g,
 # steel_slug 494.8 g (exact, from the pieces). The heaviest is below the 0.917 kg grip cap of heldout_real_v1.
 name: parts_v2
 
@@ -27,8 +27,8 @@ parts:
   - name: block
     family: block
     material: anodised_aluminium
-    description: 20 x 40 x 60 mm block, sharp edges (no lead-in), 40 mm across the jaws
-    params: {x: 20.0, y: 40.0, z: 60.0}   # x 30 -> 20 mm at GV3 iteration 2 (docs/DEVIATIONS.md)
+    description: 30 x 40 x 60 mm block, sharp edges (no lead-in), 40 mm across the jaws
+    params: {x: 30.0, y: 40.0, z: 60.0}
   - name: hex_standoff
     family: hex_standoff
     material: zinc_plated_steel
