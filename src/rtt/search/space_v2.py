@@ -553,8 +553,21 @@ class FreeformSpaceV2:
         return self.is_recipe(obj) or _is_baseline(obj)
 
     def params(self, design: Any) -> dict[str, Any]:
-        """The 9 scored parameters of a recipe (``pad``, ``tip`` and the 7 numbers)."""
-        return {name: getattr(design, name) for name in SCORED_PARAMS}
+        """The 9 scored parameters of a recipe in canonical form (``pad``, ``tip`` and the 7 numbers).
+
+        A recipe the space built is canonical already. Track G's recipes may leave inactive
+        parameters unset (``None``) or unquantised (for example the entrants read from
+        ``configs/entrants_v2.yaml``); they are canonicalised here, so ids, the metric and the
+        prompts always see the same values.
+        """
+        if _is_baseline(design):
+            point = _baseline_point(design)
+            if point is None:
+                raise ValueError(f"baseline {design.name!r} has no recipe parameters")
+            design = point
+        raw = {name: getattr(design, name) for name in SCORED_PARAMS}
+        canon, _, _ = canonical_params({k: v for k, v in raw.items() if v is not None})
+        return canon if canon is not None else raw
 
     def point(self, design: Any) -> Any | None:
         """The recipe that places ``design`` in the metric (itself, a baseline's point, or None)."""
@@ -878,10 +891,11 @@ class FreeformSpaceV2:
         point = self.point(design)
         if point is None:
             return None
+        values = self.params(point)
         out = []
         for name in NUMERIC_PARAMS:
             lo, hi = NUMERIC_BOUNDS[name]
-            out.append((float(getattr(point, name)) - lo) / (hi - lo))
+            out.append((float(values[name]) - lo) / (hi - lo))
         return tuple(out)
 
     def points(self, design: Any) -> dict[str, int] | None:
@@ -895,11 +909,12 @@ class FreeformSpaceV2:
         pa, pb = self.point(a), self.point(b)
         if pa is None or pb is None:
             return math.inf
+        va, vb = self.params(pa), self.params(pb)
         total = 0.0
         for name in NUMERIC_PARAMS:
             lo, hi = NUMERIC_BOUNDS[name]
-            total += min(1.0, abs(float(getattr(pa, name)) - float(getattr(pb, name))) / (hi - lo))
-        total += float(pa.pad != pb.pad) + float(pa.tip != pb.tip)
+            total += min(1.0, abs(float(va[name]) - float(vb[name])) / (hi - lo))
+        total += float(va["pad"] != vb["pad"]) + float(va["tip"] != vb["tip"])
         return total / self.n_terms
 
     def cell(self, design: Any) -> tuple[str, str] | None:

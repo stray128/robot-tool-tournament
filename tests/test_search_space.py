@@ -308,6 +308,11 @@ def test_track_g_entrants_drive_round0_ids_dumps_and_metric() -> None:
     assert len({V2S.design_id(e) for e in round0}) == 4
     copy = V2S.recipe(**V2S.params(flat.recipe))
     assert V2S.design_id(copy) == V2S.design_id(flat)  # a proposal that repeats flat is a duplicate
+    # G's entrant recipes leave inactive numbers unset; the metric sees their fixed values.
+    assert flat.recipe.pad_depth_mm is None and V2S.params(flat)["pad_depth_mm"] == 0.0
+    assert V2S.distance(copy, flat) == 0.0 and V2S.points(flat) == V2S.points(copy)
+    assert V2S.distance(configurator, swept) == 0.0 and 0.0 < V2S.distance(flat, configurator) < math.inf
+    assert V2S.params_json(flat) == V2S.params_json(copy)
 
 
 @needs_g
