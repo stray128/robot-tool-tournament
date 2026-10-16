@@ -332,3 +332,20 @@ def test_track_g_validators_map_to_stages_and_cache_geometry() -> None:
             assert gid is not None and ctx.geometry[V2S.design_id(design)] == gid
             assert len([k for k in ctx.pairs if k[0] == V2S.design_id(design)]) == len(ctx.parts)
     assert None in stages  # at least one random recipe builds on all six parts
+
+
+def test_a_generator_crash_rejects_the_design_instead_of_ending_the_run(monkeypatch) -> None:
+    """A validator that raises something other than a rejection is a build failure, logged as such."""
+    from rtt.search import space_v2
+    from rtt.search.space_v2 import V2Context, _TrackG
+
+    def crash(design, parts, task):  # type: ignore[no-untyped-def]
+        raise RuntimeError("pad simplification did not converge")
+
+    fake_g = _TrackG(recipe_cls=FingerRecipeStub, validate=crash)
+    monkeypatch.setattr(space_v2, "track_g", lambda: fake_g)
+    ctx = V2Context(parts=("part",), task="task", part_ids=("p",))
+    recipe = FingerRecipeStub(**V2S.params(V2S.sample_sobol(1, None).sample(1)[0]))
+    check = V2S.validate(recipe, ctx)
+    assert not check.ok and check.stage == "build" and check.metrics == {"generator_error": 1.0}
+    assert check.errors[0].startswith("generator_error:") and "did not converge" in check.errors[0]

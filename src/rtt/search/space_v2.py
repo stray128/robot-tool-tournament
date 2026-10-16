@@ -795,8 +795,14 @@ class FreeformSpaceV2:
             return SpaceCheck(True, design, (), notes)
         if context.task is None:
             raise ValueError("the v2 geometry validators need the task (V2Context.task)")
-        report = validate(target, context.parts, context.task)
         did = self.design_id(design)
+        try:
+            report = validate(target, context.parts, context.task)
+        except Exception as exc:  # noqa: BLE001 - a generator bug must not end a run; it is logged as a build failure
+            message = f"generator_error: the generator failed on this recipe ({type(exc).__name__}: {exc})"
+            return SpaceCheck(
+                False, None, (message[:400],), notes, stage="build", metrics={"generator_error": 1.0}
+            )
         if getattr(report, "geometry_id", None):
             context.geometry[did] = str(report.geometry_id)
         for pair in getattr(report, "pairs", ()) or ():
