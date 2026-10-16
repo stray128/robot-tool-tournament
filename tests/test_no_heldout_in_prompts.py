@@ -83,3 +83,107 @@ def test_simulator_held_out_conditions_never_appear(recorded) -> None:
     for cond in suite:
         for text in texts:
             assert cond.condition_id not in text
+
+
+# --------------------------------------------------------------------------- freeform-v2: parts, families, dimensions
+
+UNSEEN_FAMILIES = re.compile(r"\belbows?\b|\bspur\b|\bgears?\b", re.IGNORECASE)
+
+
+@pytest.fixture(scope="module")
+def recorded_v2(tmp_path_factory: pytest.TempPathFactory) -> dict[str, object]:
+    from rtt.search.fakes_v2 import FakeEvaluatorV2, ScriptedProposerV2, stub_entrants
+
+    root = tmp_path_factory.mktemp("noheldout_v2")
+    HeldoutVault.create(root / "secrets" / "heldout_seed.txt", SEED)
+    payloads: list[dict] = []
+    for arm in ("nemotron", "zeroshot"):
+        model = ScriptedProposerV2(5, invalid_rate=0.3, similar_rate=0.3, garbage_rate=0.1)
+        client = make_proposer_client(root / arm / "cache", transport=model, limiter=TokenBucket(1e12))
+        run_search(
+            arm,
+            2,
+            40,
+            [1, 2],
+            FakeEvaluatorV2(0),
+            root / arm,
+            client,
+            protected_paths=[root / "secrets"],
+            entrants=stub_entrants(),
+        )
+        payloads.extend(model.payloads)
+    return {"root": root, "payloads": payloads}
+
+
+def test_v2_prompts_carry_no_seed_held_out_words_or_unseen_families(recorded_v2) -> None:
+    texts = _texts(recorded_v2["payloads"])
+    assert len(texts) > 20
+    commitment = seed_sha256(SEED)
+    for text in texts:
+        assert SEED[:16] not in text and commitment[:16] not in text
+        assert not HELDOUT_WORDS.search(text), HELDOUT_WORDS.search(text)
+        assert not UNSEEN_FAMILIES.search(text), UNSEEN_FAMILIES.search(text)
+    for path in recorded_v2["root"].glob("*/cache/??/*.json"):
+        text = path.read_text(encoding="utf-8")
+        assert not HELDOUT_WORDS.search(text) and not UNSEEN_FAMILIES.search(text)
+
+
+def test_v2_prompts_name_only_training_parts_and_their_dimensions(recorded_v2) -> None:
+    from rtt.search.fakes_v2 import DEFAULT_FAKE_PARTS_V2
+
+    training = {p.part_id for p in DEFAULT_FAKE_PARTS_V2}
+    sizes = {" / ".join(f"{v:g}" for v in p.size_mm) for p in DEFAULT_FAKE_PARTS_V2}
+    table_row = re.compile(r"^\| ([a-z_]+) \| [^|]* \| ([0-9. /]+) \| ", re.MULTILINE)
+    named: set[str] = set()
+    for payload in recorded_v2["payloads"]:
+        for message in payload["messages"]:
+            text = message["content"]
+            if "# Training parts" not in text:
+                continue
+            table = text.split("# Training parts")[1].split("# Placements")[0]
+            for part, size in table_row.findall(table):
+                named.add(part)
+                assert size.strip() in sizes, size
+            for label in re.findall(r"\b([a-z_]+)_c[0-9]\b", text):  # condition ids: <part>_<placement>
+                assert label in training, label
+    assert named == training
+
+
+def test_v2_held_out_parts_from_track_o_never_appear(recorded_v2) -> None:
+    heldout = pytest.importorskip("rtt.parts.heldout")
+    make = getattr(heldout, "heldout_parts", None) or getattr(heldout, "generate", None)
+    if make is None:
+        pytest.skip("rtt.parts.heldout has no heldout_parts(seed) generator yet")
+    try:
+        parts = list(make(SEED))
+    except (TypeError, ValueError) as exc:
+        pytest.skip(f"held-out generator API differs: {exc}")
+    texts = _texts(recorded_v2["payloads"])
+    for part in parts:
+        size = " / ".join(f"{1000.0 * v:.1f}".rstrip("0").rstrip(".") for v in part.size)
+        for text in texts:
+            assert str(part.part_id) not in text and size not in text
+
+
+def test_v2_guard_refuses_a_misconfigured_training_suite(tmp_path) -> None:
+    """If an unseen held-out family ever reached the training parts, no prompt would be sent."""
+    from dataclasses import replace
+
+    from rtt.search.fakes_v2 import DEFAULT_FAKE_PARTS_V2, FakeEvaluatorV2, ScriptedProposerV2, stub_entrants
+    from rtt.search.nemotron import PromptLeakError
+
+    leaked = (*DEFAULT_FAKE_PARTS_V2[:5], replace(DEFAULT_FAKE_PARTS_V2[5], description="90 deg pipe elbow"))
+    model = ScriptedProposerV2(1)
+    client = make_proposer_client(None, transport=model, limiter=TokenBucket(1e12))
+    with pytest.raises(PromptLeakError):
+        run_search(
+            "nemotron",
+            1,
+            16,
+            [1],
+            FakeEvaluatorV2(0, parts=leaked),
+            tmp_path / "x",
+            client,
+            entrants=stub_entrants(),
+        )
+    assert model.calls == 0

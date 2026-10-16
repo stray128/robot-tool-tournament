@@ -111,3 +111,87 @@ def test_round0_is_byte_identical_across_arms(outcomes) -> None:
     first = [e.design.design_id() for e in outcomes["random"].runs[0].ctx.history if e.round == 0]
     second = [e.design.design_id() for e in outcomes["random"].runs[1].ctx.history if e.round == 0]
     assert first[:n] == second[:n] and first[n:] != second[n:]  # entrants shared, Sobol fill per seed
+
+
+# --------------------------------------------------------------------------- freeform-v2 (GV5)
+
+
+@pytest.fixture(scope="module")
+def outcomes_v2(tmp_path_factory: pytest.TempPathFactory) -> dict[str, SearchOutcome]:
+    from rtt.search.fakes_v2 import FakeEvaluatorV2, ScriptedProposerV2, stub_entrants
+
+    root = tmp_path_factory.mktemp("budget_v2")
+    noisy = ScriptedProposerV2(7, invalid_rate=0.4, similar_rate=0.3, garbage_rate=0.2)
+    common = {"entrants": stub_entrants()}
+    return {
+        "random": run_search("random", 2, BUDGET, SEEDS, FakeEvaluatorV2(0), root / "random", **common),
+        "nemotron": run_search(
+            "nemotron", 2, BUDGET, SEEDS, FakeEvaluatorV2(0), root / "nemotron", client(noisy), **common
+        ),
+        "zeroshot": run_search(
+            "zeroshot",
+            2,
+            BUDGET,
+            SEEDS,
+            FakeEvaluatorV2(0),
+            root / "zeroshot",
+            client(ScriptedProposerV2(8)),
+            **common,
+        ),
+        "hostile": run_search(
+            "nemotron", 2, BUDGET, SEEDS, FakeEvaluatorV2(0), root / "hostile", client(Hostile()), **common
+        ),
+    }
+
+
+@pytest.mark.parametrize("arm", ["random", "nemotron", "zeroshot", "hostile"])
+def test_v2_every_run_simulates_exactly_the_budget_of_valid_distinct_designs(outcomes_v2, arm: str) -> None:
+    from rtt.search.space import V2, get_space
+
+    space = get_space(V2)
+    out = outcomes_v2[arm]
+    assert out.manifest["design_space"] == V2
+    for run in out.runs:
+        ctx = run.ctx
+        assert ctx.space is space and len(ctx.history) == BUDGET
+        assert ctx.budget.charged == [8, 8, 8, 8, 8] and ctx.budget.complete
+        assert all(space.validate(e.design, ctx.gripper_task).ok for e in ctx.history)
+        assert len({space.design_id(e.design) for e in ctx.history}) == BUDGET  # dedup: never a repeat
+        geometry = [space.geometry_id(e.design, ctx.gripper_task) for e in ctx.history]
+        assert None not in geometry and len(set(geometry)) == BUDGET  # never the same jaws twice
+        assert ctx.budget.llm_calls <= 16
+        assert len(read_jsonl(out.out_dir / "runs" / ctx.run_id / "history.jsonl")) == BUDGET
+    assert out.manifest["sim"]["designs_charged"] == BUDGET * len(SEEDS)
+
+
+def test_v2_invalid_model_output_costs_no_budget(outcomes_v2) -> None:
+    from rtt.search.space import V2, get_space
+
+    space = get_space(V2)
+    for arm in ("nemotron", "hostile"):
+        for run in outcomes_v2[arm].runs:
+            ctx = run.ctx
+            assert ctx.rejections and len(ctx.history) == BUDGET
+            for rejection in ctx.rejections:
+                if rejection.reason == "invalid" and rejection.params is not None:
+                    assert not space.validate(dict(rejection.params), ctx.gripper_task).ok
+            assert ctx.budget.fallbacks == sum(
+                1 for e in ctx.history if e.proposal.origin == "fallback_random"
+            )
+    reasons = {r.reason for run in outcomes_v2["nemotron"].runs for r in run.ctx.rejections}
+    assert {"invalid", "too_similar", "duplicate_design"} <= reasons
+    hostile = outcomes_v2["hostile"].runs[0].ctx
+    assert {e.proposal.origin for e in hostile.history if e.round > 0} == {"fallback_random"}
+
+
+def test_v2_round0_is_byte_identical_across_arms(outcomes_v2) -> None:
+    for i, seed in enumerate(SEEDS):
+        blobs = set()
+        for out in outcomes_v2.values():
+            assert out.runs[i].ctx.run_seed == seed
+            lines = (out.out_dir / "runs" / out.runs[i].ctx.run_id / "history.jsonl").read_text().splitlines()
+            assert all('"round": 0' in line for line in lines[:8])
+            blobs.add("\n".join(lines[:8]))
+        assert len(blobs) == 1
+    first = [e.proposal.origin for e in outcomes_v2["random"].runs[0].ctx.history if e.round == 0]
+    assert first == ["entrant"] * 4 + ["sobol"] * 4
