@@ -193,3 +193,60 @@ def test_print_pack_v2_refuses_mismatched_or_open_meshes(pair: Any, tmp_path: Pa
         make_print_pack_v2(fp_bad, bad, r_stl, tmp_path, recipe={})
     with pytest.raises(ValueError, match="pack name"):
         make_print_pack_v2(fp, l_stl, r_stl, tmp_path, recipe={}, name="../escape")
+
+
+def test_print_pack_v2_refuses_the_stock_blade(tmp_path: Path) -> None:
+    """The stock blade is the gripper's own CC BY 4.0 part: never relabelled as a CC0-1.0 jaw."""
+    from rtt.part.mount import ClampInterface
+    from rtt.render.gripper import load_gripper, stl_bytes_mm, stock_jaws
+
+    left, right = stock_jaws()
+    grip = load_gripper()
+    fp = FingerPair(
+        left=left,
+        right=right,
+        tip_height=0.01,
+        finger_length=0.0625,
+        q_seat=0.02,
+        design_id="a" * 64,
+        part_id="block",
+        geometry_hash="b" * 64,
+        capture=CaptureReport(no_jam_mm=1.0, centring_mm=0.5, mu=0.3),
+        build_s=0.0,
+    )
+    blades = stl_bytes_mm(grip.blade("left")), stl_bytes_mm(grip.blade("right"))
+    wide = ClampInterface(block_width_mm=50.0)  # wide enough that only the licence rule stops it
+    with pytest.raises(ValueError, match="CC BY 4.0"):
+        make_print_pack_v2(fp, *blades, tmp_path, recipe={}, clamp=wide)
+    assert not any(tmp_path.iterdir())
+
+
+def test_print_pack_v2_refuses_a_jaw_that_misses_its_carriage(pair: Any, tmp_path: Path) -> None:
+    """A jaw that does not reach the root plane would print as two loose solids."""
+    fp, _, _ = pair
+    jaws, stls = {}, {}
+    for side, sign in (("left", 1.0), ("right", -1.0)):
+        solid = trimesh.creation.box(extents=(0.030, 0.012, 0.010))
+        solid.apply_translation((0.0, sign * 0.0064, -0.008))  # top face 3 mm below the root plane
+        mm = solid.copy()
+        mm.apply_scale(1000.0)
+        stls[side] = mm.export(file_type="stl")
+        solid.density = 1240.0
+        i = solid.moment_inertia
+        jaws[side] = JawGeometry(
+            pieces=(np.asarray(solid.vertices),),
+            mass=float(solid.mass),
+            com=np.asarray(solid.center_mass),
+            inertia6=np.array([i[0, 0], i[1, 1], i[2, 2], 0.0, 0.0, 0.0]),
+            print_mesh_sha=hashlib.sha256(stls[side]).hexdigest(),
+        )
+    detached = FingerPair(
+        **{
+            **{f: getattr(fp, f) for f in fp.__dataclass_fields__},
+            "left": jaws["left"],
+            "right": jaws["right"],
+        }
+    )
+    with pytest.raises(ValueError, match="carriage block"):
+        make_print_pack_v2(detached, stls["left"], stls["right"], tmp_path, recipe={})
+    assert not any(tmp_path.iterdir())  # nothing half-written

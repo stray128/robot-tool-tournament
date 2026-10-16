@@ -465,16 +465,25 @@ def make_print_pack_v2(
 
     ``left_stl`` and ``right_stl`` are the generator's binary STLs (millimetres, jaw frame);
     their sha256 must equal the pair's ``print_mesh_sha``, so the pack ships exactly the
-    solids whose mass the simulator used.
+    solids whose mass the simulator used. Each jaw, and each jaw fused with its carriage
+    block, must be one closed solid. The stock entrant is refused: its blade is the
+    open-source gripper's own part (CC BY 4.0), not a generated CC0-1.0 jaw.
     """
     from rtt.design.freeform.types import FingerPair
     from rtt.render import glb
     from rtt.render import materials as mat
-    from rtt.render.gripper import load_lock
+    from rtt.render.gripper import load_lock, stock_blade_shas
 
     if not isinstance(pair, FingerPair):
         raise TypeError("pair must be a rtt.design.freeform.FingerPair")
-    meshes = {}
+    stock = set(stock_blade_shas().values())
+    if pair.left.print_mesh_sha in stock or pair.right.print_mesh_sha in stock:
+        raise ValueError(
+            "the stock blade is the open-source gripper's own part (CC BY 4.0), not a generated "
+            "jaw; this pack's files are CC0-1.0, so it is not packed here"
+        )
+    iface = clamp or ClampInterface()
+    meshes, mounts = {}, {}
     for side, data, jaw in (("left", left_stl, pair.left), ("right", right_stl, pair.right)):
         if hashlib.sha256(data).hexdigest() != jaw.print_mesh_sha:
             raise ValueError(f"{side}.stl does not match the pair's print_mesh_sha")
@@ -482,8 +491,16 @@ def make_print_pack_v2(
         mesh.merge_vertices()
         if not (mesh.is_watertight and mesh.is_volume):
             raise ValueError(f"{side}.stl is not a closed, consistently oriented solid")
-        meshes[side] = mesh
-    iface = clamp or ClampInterface()
+        if mesh.body_count != 1:
+            raise ValueError(f"{side}.stl has {mesh.body_count} separate solids; a jaw prints as one")
+        mount = _mount(mesh, side, iface)
+        if not mount.is_watertight:
+            raise ValueError(f"the {side} mount jaw is not watertight")
+        if mount.body_count != 1:
+            raise ValueError(
+                f"the {side} jaw does not reach its carriage block (the mount is {mount.body_count} solids)"
+            )
+        meshes[side], mounts[side] = mesh, mount
     base = Path(out_dir)
     folder = name or f"print_pack_{pair.design_id[:12]}_{pair.part_id}"
     if not _SAFE_FOLDER.fullmatch(folder):
@@ -500,10 +517,7 @@ def make_print_pack_v2(
     for side, mesh in meshes.items():
         upright = _print_upright(mesh)
         (pack / f"{side}.stl").write_bytes(upright.export(file_type="stl"))
-        mount = _mount(mesh, side, iface)
-        if not mount.is_watertight:
-            raise ValueError(f"the {side} mount jaw is not watertight")
-        (pack / f"mount_{side}.stl").write_bytes(mount.export(file_type="stl"))
+        (pack / f"mount_{side}.stl").write_bytes(mounts[side].export(file_type="stl"))
         jaw_m = mesh.copy()
         jaw_m.apply_scale(1e-3)
         (pack / f"{side}.glb").write_bytes(
