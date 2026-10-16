@@ -39,7 +39,10 @@ Command line (``python -m rtt.analysis.tau``):
 * ``derive --random DIR... --calibration FILE [--power] --out DIR``: the pilot step
   (tau, and with ``--power`` the R rule of :mod:`rtt.analysis.power`).
 * ``analyze --random DIR... --nemotron DIR... --tau X --out DIR``: the confirmatory S1
-  analysis with tau read from PREREG.
+  analysis with tau read from PREREG. It refuses runs that are not the confirmatory design
+  (:func:`check_confirmatory`): arm labels other than ``random`` and ``nemotron``, a seed
+  used twice in an arm, arms with different seeds, or seeds other than the first R of
+  ``configs/seeds_main.yaml``.
 * ``rule``: print the rule constants and the digest recorded in PREREG.
 """
 
@@ -65,6 +68,8 @@ __all__ = [
     "N_ROUND0_ENTRANTS",
     "TauResultV2",
     "TauRuleV2",
+    "check_calibration_task",
+    "check_confirmatory",
     "check_on_grid",
     "check_same_task",
     "derive_tau_v2",
@@ -137,6 +142,55 @@ def check_same_task(directories: Sequence[str | Path], runs: Sequence[RunRecord]
             raise ValueError(
                 f"{r.run_id}: budget {r.budget}, round 0 {r.round0_size}; v2 runs use {rule.budget}/{rule.round0_size}"
             )
+
+
+def check_calibration_task(calibration: str | Path, directories: Sequence[str | Path]) -> None:
+    """Refuse a calibration sample scored on another task or suite than the pilots.
+
+    ``calibration_v2.json`` records ``task_digest`` and ``suite_digest`` (the evaluator
+    digests, as in a search manifest's ``evaluator``). Where both sides carry a digest they
+    must agree, so a screening sample scored before a GV3 iteration is never pooled with
+    pilots run on the frozen task.
+    """
+    data = json.loads(Path(calibration).read_text(encoding="utf-8"))
+    cal = (data.get("task_digest"), data.get("suite_digest"))
+    for d in directories:
+        for name, mine, theirs in zip(("task", "suite"), cal, evaluator_hashes(d), strict=True):
+            if mine is not None and theirs is not None and mine != theirs:
+                raise ValueError(
+                    f"{calibration}: {name} digest {mine!r}, but {d} was scored on {theirs!r}; "
+                    "the calibration sample and the pilots must use the same frozen task and suite"
+                )
+
+
+def check_confirmatory(
+    random_runs: Sequence[RunRecord], nemotron_runs: Sequence[RunRecord], confirmatory_seeds: Sequence[int]
+) -> list[int]:
+    """Refuse anything but the pre-registered design for the confirmatory S1 test.
+
+    Arm A runs must be labelled ``random`` and arm C runs ``nemotron`` (a swap would flip
+    the one-sided test); no seed may appear twice in an arm (a directory passed twice);
+    both arms must use the same seeds (round 0 is paired run by run); and those seeds must
+    be exactly the first R confirmatory seeds. Returns the seeds, in order.
+    """
+    for arm, runs in (("random", random_runs), ("nemotron", nemotron_runs)):
+        if not runs:
+            raise ValueError(f"no {arm} runs")
+        if wrong := sorted({r.arm for r in runs} - {arm}):
+            raise ValueError(f"the {arm} arm holds runs labelled {wrong}")
+        seeds = [r.run_seed for r in runs]
+        if len(set(seeds)) != len(seeds):
+            raise ValueError(f"the {arm} arm uses a seed more than once: {sorted(seeds)}")
+    seeds_a = sorted(r.run_seed for r in random_runs)
+    seeds_c = sorted(r.run_seed for r in nemotron_runs)
+    if seeds_a != seeds_c:
+        raise ValueError(f"the arms use different seeds: random {seeds_a}, nemotron {seeds_c}")
+    expected = [int(s) for s in confirmatory_seeds[: len(seeds_a)]]
+    if len(expected) < len(seeds_a) or seeds_a != sorted(expected):
+        raise ValueError(
+            f"run seeds {seeds_a} are not the first {len(seeds_a)} confirmatory seeds {expected}"
+        )
+    return expected
 
 
 def _declared_design_space(manifest: dict[str, Any]) -> str | None:
@@ -397,6 +451,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     a.add_argument("--random", nargs="+", type=Path, required=True)
     a.add_argument("--nemotron", nargs="+", type=Path, required=True)
     a.add_argument("--tau", type=float, required=True, help="tau as frozen in docs/PREREG.md")
+    a.add_argument(
+        "--seeds-main",
+        type=Path,
+        default=REPO_ROOT / "configs" / "seeds_main.yaml",
+        help="confirmatory seeds; the runs must use exactly the first R of them, in both arms",
+    )
     a.add_argument("--out", type=Path, default=None)
     sub.add_parser("rule", help="print the rule constants and digest")
     args = ap.parse_args(argv)
@@ -410,6 +470,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     random_runs = [r for p in args.random for r in load_runs_v2(p)]
     if args.cmd == "derive":
         check_same_task(args.random, random_runs)
+        check_calibration_task(args.calibration, args.random)
         sobol, entrants = load_calibration_v2(args.calibration)
         res = derive_tau_v2(
             random_runs, sobol, entrants, forbidden_seeds=_confirmatory_seeds(args.seeds_main)
@@ -428,6 +489,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         check_on_grid([args.tau], what="--tau")
         nemo_runs = [r for p in args.nemotron for r in load_runs_v2(p)]
         check_same_task([*args.random, *args.nemotron], [*random_runs, *nemo_runs])
+        report["seeds"] = check_confirmatory(random_runs, nemo_runs, _confirmatory_seeds(args.seeds_main))
         budget = random_runs[0].budget
         rows_a = run_rows(random_runs, args.tau)
         rows_c = run_rows(nemo_runs, args.tau)

@@ -362,11 +362,15 @@ python -m rtt.analysis.power gv6 --q <q> --runs <R>
 python -m rtt.analysis.tau analyze --random <A dirs> --nemotron <C dirs> --tau <frozen tau> --out <dir>
 ```
 
-The first command sets tau and R by rule from the pilot. The last produces the primary
-test, the effect interval, the reach curves, both sensitivity analyses (permutation
-log-rank; T counted from design 1) and the lift-only pass, from the fetched job outputs.
-The held-out endpoints are tested with `permutation_test_means` and adjusted with `holm`.
-Every figure is rebuilt from the released Parquet tables.
+The first command sets tau and R by rule from the pilot; it refuses a calibration sample
+scored on another task or suite than the pilots. The last produces the primary test, the
+effect interval, the reach curves, both sensitivity analyses (permutation log-rank; T
+counted from design 1) and the lift-only pass, from the fetched job outputs. It refuses
+anything but the registered design: arm A runs labelled `random` and arm C runs
+`nemotron`, each seed once per arm, the same seeds in both arms, and exactly the first R
+seeds of `configs/seeds_main.yaml`. The held-out endpoints are tested with
+`permutation_test_means` and adjusted with `holm`. Every figure is rebuilt from the
+released Parquet tables.
 
 ## A11. Deviations policy
 

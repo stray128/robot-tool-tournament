@@ -261,6 +261,34 @@ def test_analyze_cli_recovers_a_planted_effect_end_to_end(tmp_path: Path) -> Non
     assert report["design_space"] == "freeform-v2" and report["version"] == 2
 
 
+def test_analyze_refuses_runs_outside_the_confirmatory_design(tmp_path: Path) -> None:
+    rng = np.random.default_rng(5)
+
+    def search(arm: str, ts: list[int]) -> Path:
+        return _fake_search(
+            tmp_path,
+            arm,
+            {f"{arm[0]}{i}": _scores_with_t(t, rng) for i, t in enumerate(ts)},
+            design_space="freeform-v2",
+        )
+
+    a = search("random", [41, 30, 41])
+    c = search("nemotron", [12, 15, 9])
+    seeds = tmp_path / "seeds_main.yaml"
+    seeds.write_text("seeds: [1001, 1002, 1003, 1004]\n")
+    base = ["analyze", "--tau", str(36 * G), "--seeds-main", str(seeds)]
+    assert tau.main([*base, "--random", str(a), "--nemotron", str(c)]) == 0
+    with pytest.raises(ValueError, match="labelled"):  # arms swapped
+        tau.main([*base, "--random", str(c), "--nemotron", str(a)])
+    with pytest.raises(ValueError, match="more than once"):  # a directory passed twice
+        tau.main([*base, "--random", str(a), str(a), "--nemotron", str(c), str(c)])
+    with pytest.raises(ValueError, match="different seeds"):
+        tau.main([*base, "--random", str(a), "--nemotron", str(search("nemotron", [12, 15]))])
+    seeds.write_text("seeds: [2001, 2002, 2003]\n")  # runs on seeds 1001-1003 are not confirmatory
+    with pytest.raises(ValueError, match="confirmatory seeds"):
+        tau.main([*base, "--random", str(a), "--nemotron", str(c)])
+
+
 def test_derive_cli_uses_the_rule_and_vets_seeds(tmp_path: Path) -> None:
     rng = np.random.default_rng(3)
     runs = {f"p{i}": _scores_with_t(t, rng) for i, t in enumerate([20, 41, 33])}
@@ -287,6 +315,14 @@ def test_derive_cli_uses_the_rule_and_vets_seeds(tmp_path: Path) -> None:
     seeds.write_text("seeds: [1001, 1002]\n")
     with pytest.raises(ValueError, match="confirmatory"):
         tau.main(argv)
+    seeds.write_text("seeds: [5001, 5002]\n")
+    # a screening sample scored on another suite (before a GV3 iteration) is never pooled
+    data = json.loads(cal.read_text())
+    cal.write_text(json.dumps({**data, "task_digest": "task-a", "suite_digest": "suite-old"}))
+    with pytest.raises(ValueError, match="same frozen task and suite"):
+        tau.main(argv)
+    cal.write_text(json.dumps({**data, "task_digest": "task-a", "suite_digest": "suite-a"}))
+    assert tau.main(argv) == 0
 
 
 def test_load_calibration_v2_checks_schema(tmp_path: Path) -> None:
