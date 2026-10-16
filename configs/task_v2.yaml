@@ -17,7 +17,11 @@
 # - checks.bad_qacc: MuJoCo's bad-acceleration warning (a silent NaN reset) makes the
 #   episode physics_invalid.
 # Physics, gripper, score and robustness values are task_v1's, unchanged.
-# - native_ccd stays false: see the decision record in docs (GV2, rtt.sim.bench_v2).
+# - native_ccd stays false, by the rule of spec section 6 as measured in GV2 on 2026-10-16
+#   (rtt.sim.gates_v2; numbers in docs/BENCH_V2.md): the lip-edge regression is reproduced on
+#   v1 primitives and gone on v2 mesh geometry, but outcome parity on/off is 98.5 % on the v1
+#   parity set and 84-93 % on 180-216 v2 episodes, below the rule's 99 %. The v2 disagreements
+#   are mostly libccd (false) failing where native and 1 ms agree. A switch needs a ruling.
 name: task_v2
 
 physics:
@@ -34,7 +38,7 @@ physics:
   limit_solref: [0.004, 1.0]
   iterations: 100
   ls_iterations: 50
-  native_ccd: false             # libccd MPR for convex pairs; native GJK/EPA + multi-CCD gave wrong edge normals
+  native_ccd: false             # libccd MPR; see the header and docs/BENCH_V2.md before changing it
   multi_ccd: true               # several contact points per convex pair (a cylinder stands on 4-5, not 1)
   object_density: 1200.0        # kg/m^3 (G3): solid plastic parts; a suite size may set its own material
   table_top_z: 0.0
