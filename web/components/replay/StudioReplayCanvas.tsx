@@ -12,7 +12,17 @@ import type { ReplayGeom, ReplayVisual } from "@/lib/types";
 import type { PlaybackStore, ViewName } from "./playback";
 import { PoseDriver } from "./PoseDriver";
 import { Datum, useMeshGeometry, VIEW_DIRECTIONS, Z_UP_TO_Y_UP } from "./ReplayCanvas";
-import { fitPerspective, geomMaterial, placeFog, STUDIO, StudioFloor, StudioLights, StudioSetup, studioPalette, type StudioPalette } from "./studio";
+import {
+  fitPerspective,
+  geomMaterial,
+  placeFog,
+  STUDIO,
+  StudioFloor,
+  StudioLights,
+  StudioSetup,
+  studioPalette,
+  type StudioPalette,
+} from "./studio";
 import type { SceneColors } from "./useThemeColors";
 
 /** What the studio view draws on top of the plain scene. */
@@ -49,7 +59,13 @@ function materialsOf(mesh: THREE.Mesh): MeshMaterial[] {
  */
 function addSectionCaps(root: THREE.Object3D, color: string): THREE.Material {
   // Pulled slightly towards the camera so a cap never z-fights with a coplanar surface.
-  const cap = new THREE.MeshBasicMaterial({ color, side: THREE.BackSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
+  const cap = new THREE.MeshBasicMaterial({
+    color,
+    side: THREE.BackSide,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1,
+  });
   for (const mesh of meshesOf(root)) {
     const c = new THREE.Mesh(mesh.geometry, cap);
     c.userData.sectionCap = true;
@@ -66,7 +82,6 @@ function useStyle(root: THREE.Object3D | null, opts: { xray: boolean; clay: bool
   useEffect(() => {
     if (!root) return;
     for (const mesh of meshesOf(root)) {
-      mesh.castShadow = true;
       mesh.receiveShadow = true;
       for (const m of materialsOf(mesh)) {
         if (m.userData.original === undefined) m.userData.original = { color: m.color?.clone(), map: m.map ?? null };
@@ -330,6 +345,12 @@ export default function StudioReplayCanvas({
       <StudioCamera bounds={bounds} direction={direction} pad={pad} orbit={orbit} />
       <Cutaway cut={options.cut} />
       <group rotation={Z_UP_TO_Y_UP}>
+        {/* The studio floor stands in for the table and the floor plane; other static geoms are drawn. */}
+        {header.static
+          .filter((g) => g.type !== "plane" && g.name !== "table")
+          .map((g) => (
+            <StudioGeom key={`static-${g.name}`} geom={g} bodyName="static" palette={palette} colors={colors} xray={false} cut={cut} />
+          ))}
         {header.bodies.map((body, i) => {
           const isObject = body.name === "object";
           const visuals = v2 ? v2.bodies[i]!.visuals : [];
@@ -373,7 +394,9 @@ export default function StudioReplayCanvas({
                     ))
                 : null}
               {options.collision
-                ? body.geoms.filter((g) => !isParkedGeom(g)).map((g) => <CollisionOutline key={`c-${g.name}`} geom={g} color={palette.overlay} />)
+                ? body.geoms
+                    .filter((g) => !isParkedGeom(g))
+                    .map((g) => <CollisionOutline key={`c-${g.name}`} geom={g} color={palette.overlay} />)
                 : null}
             </group>
           );

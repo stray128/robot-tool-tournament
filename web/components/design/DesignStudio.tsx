@@ -47,7 +47,12 @@ function prefersReducedMotion(): boolean {
 }
 
 /** Height range (MuJoCo z) at frame `f` of the named bodies, or null when none of them is drawn. */
-function heightRange(replay: Replay, assets: Map<string, LoadedAsset> | null, f: number, names: (n: string) => boolean): [number, number] | null {
+function heightRange(
+  replay: Replay,
+  assets: Map<string, LoadedAsset> | null,
+  f: number,
+  names: (n: string) => boolean,
+): [number, number] | null {
   let lo = Infinity;
   let hi = -Infinity;
   const pos = [0, 0, 0];

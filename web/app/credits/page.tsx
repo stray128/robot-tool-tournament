@@ -63,22 +63,72 @@ function Ext({ href, children }: { href: string; children: ReactNode }) {
 }
 
 const SOFTWARE: { name: string; href: string; licence: string; use: string }[] = [
-  { name: "MuJoCo (Google DeepMind)", href: "https://github.com/google-deepmind/mujoco", licence: "Apache-2.0", use: "Physics engine for every simulated grasp" },
-  { name: "three.js", href: "https://github.com/mrdoob/three.js", licence: "MIT", use: "3D views; its RoomEnvironment lights the studio look, with no downloaded HDRI" },
+  {
+    name: "MuJoCo (Google DeepMind)",
+    href: "https://github.com/google-deepmind/mujoco",
+    licence: "Apache-2.0",
+    use: "Physics engine for every simulated grasp",
+  },
+  {
+    name: "three.js",
+    href: "https://github.com/mrdoob/three.js",
+    licence: "MIT",
+    use: "3D views; its RoomEnvironment lights the studio look, with no downloaded HDRI",
+  },
   {
     name: "meshoptimizer (Arseny Kapoulkine)",
     href: "https://github.com/zeux/meshoptimizer",
     licence: "MIT",
     use: "Mesh compression of the served models, decoded by the decoder bundled with three.js",
   },
-  { name: "glTF Transform (Don McCurdy)", href: "https://github.com/donmccurdy/glTF-Transform", licence: "MIT", use: "Build-time GLB compression" },
-  { name: "React Three Fiber and drei (Poimandres)", href: "https://github.com/pmndrs/react-three-fiber", licence: "MIT", use: "React bindings for the 3D views" },
-  { name: "Next.js and React", href: "https://github.com/vercel/next.js", licence: "MIT", use: "Static site" },
-  { name: "zustand", href: "https://github.com/pmndrs/zustand", licence: "MIT", use: "Shared replay clock" },
-  { name: "Tailwind CSS", href: "https://github.com/tailwindlabs/tailwindcss", licence: "MIT", use: "Styles" },
-  { name: "CoACD", href: "https://github.com/SarahWeiii/CoACD", licence: "MIT", use: "Convex decomposition of scanned objects" },
-  { name: "trimesh", href: "https://github.com/mikedh/trimesh", licence: "MIT", use: "Mesh processing" },
-  { name: "manifold3d", href: "https://github.com/elalish/manifold", licence: "Apache-2.0", use: "Solid modelling of printable fingers" },
+  {
+    name: "glTF Transform (Don McCurdy)",
+    href: "https://github.com/donmccurdy/glTF-Transform",
+    licence: "MIT",
+    use: "Build-time GLB compression",
+  },
+  {
+    name: "React Three Fiber and drei (Poimandres)",
+    href: "https://github.com/pmndrs/react-three-fiber",
+    licence: "MIT",
+    use: "React bindings for the 3D views",
+  },
+  {
+    name: "Next.js and React",
+    href: "https://github.com/vercel/next.js",
+    licence: "MIT",
+    use: "Static site",
+  },
+  {
+    name: "zustand",
+    href: "https://github.com/pmndrs/zustand",
+    licence: "MIT",
+    use: "Shared replay clock",
+  },
+  {
+    name: "Tailwind CSS",
+    href: "https://github.com/tailwindlabs/tailwindcss",
+    licence: "MIT",
+    use: "Styles",
+  },
+  {
+    name: "CoACD",
+    href: "https://github.com/SarahWeiii/CoACD",
+    licence: "MIT",
+    use: "Convex decomposition of scanned objects",
+  },
+  {
+    name: "trimesh",
+    href: "https://github.com/mikedh/trimesh",
+    licence: "MIT",
+    use: "Mesh processing",
+  },
+  {
+    name: "manifold3d",
+    href: "https://github.com/elalish/manifold",
+    licence: "Apache-2.0",
+    use: "Solid modelling of printable fingers",
+  },
 ];
 
 export default function CreditsPage() {

@@ -27,14 +27,26 @@ export interface TransportFeatures {
   collision: boolean;
 }
 
-function Toggle({ label, pressed, onChange, disabled }: { label: string; pressed: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
+function Toggle({
+  label,
+  pressed,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  pressed: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+}) {
   return (
     <button
       type="button"
       aria-pressed={pressed}
       disabled={disabled}
       onClick={() => onChange(!pressed)}
-      className={`num border border-rule px-2 py-1 text-xs disabled:opacity-50 ${pressed ? "bg-ink text-paper" : "text-ink-2 hover:text-ink"}`}
+      className={`num border border-rule px-2 py-1 text-xs disabled:opacity-50 ${
+        pressed ? "bg-ink text-paper" : "text-ink-2 hover:text-ink"
+      }`}
     >
       {label}
     </button>

@@ -187,7 +187,8 @@ for (const vp of [
     if (xray === plain && coll === plain) problems.push("x-ray and collision did not change the image");
     report[`${vp.name}_v2_payload_bytes`] = counted.bytes;
     report[`${vp.name}_v2_files`] = counted.files.length;
-    record(`${vp.name} v2 lane in a v1 bout`, [...errors, ...problems], `payload=${counted.bytes}B files=${counted.files.length} png=${plain}/${xray}/${coll}/${angled}`);
+    const detail = `payload=${counted.bytes}B files=${counted.files.length} png=${plain}/${xray}/${coll}/${angled}`;
+    record(`${vp.name} v2 lane in a v1 bout`, [...errors, ...problems], detail);
     await page.close();
   }
 

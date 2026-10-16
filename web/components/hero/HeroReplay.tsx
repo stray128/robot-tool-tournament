@@ -95,14 +95,25 @@ export default function HeroReplay({ stem, phases, title, view = "iso" }: HeroRe
   const offset = ready?.replay.overlayAt("offset_mm", f) ?? null;
   const closeStart = phases.find((p) => p.name === "close")?.start_s ?? 0;
   const offsetFrom = ready && offset !== null ? ready.replay.overlayAt("offset_mm", ready.replay.frameAt(closeStart)) : null;
-  const payload = ready && isV2(ready.replay.header) && ready.replay.bytes ? replayPayload(ready.replay.header, ready.replay.bytes.header).total : null;
+  const payload =
+    ready && isV2(ready.replay.header) && ready.replay.bytes
+      ? replayPayload(ready.replay.header, ready.replay.bytes.header).total
+      : null;
   const thirdParty = ready && isV2(ready.replay.header) && Object.values(ready.replay.header.assets).some(isThirdParty);
 
   return (
     <figure ref={root} className="flex flex-col" data-hero data-payload-bytes={payload ?? undefined}>
       <div className="relative aspect-video overflow-hidden bg-paper-2/60">
         {ready && bounds ? (
-          <StudioReplayCanvas replay={ready.replay} assets={ready.assets} store={store} bounds={bounds} view={view} colors={colors} options={options} />
+          <StudioReplayCanvas
+            replay={ready.replay}
+            assets={ready.assets}
+            store={store}
+            bounds={bounds}
+            view={view}
+            colors={colors}
+            options={options}
+          />
         ) : null}
         {title ? (
           <p className="pointer-events-none absolute left-3 top-3 max-w-[70%] bg-paper/85 px-2 py-1 text-sm text-ink">{title}</p>

@@ -117,7 +117,11 @@ function LaneOverlay({
           </div>
         </div>
         {isV2(replay.header) ? (
-          <p className="num truncate bg-paper/85 px-1.5 py-0.5 text-[0.625rem] text-ink-3" title={replayCaption(replay.header)} data-caption>
+          <p
+            className="num truncate bg-paper/85 px-1.5 py-0.5 text-[0.625rem] text-ink-3"
+            title={replayCaption(replay.header)}
+            data-caption
+          >
             {replayCaption(replay.header)}
           </p>
         ) : null}
