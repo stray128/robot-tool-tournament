@@ -230,7 +230,7 @@ def build_stock_pair(baseline: Baseline, part: Any, task: Any) -> Any:
     from rtt.design.freeform.outline import PartGeometry
     from rtt.design.freeform.predict import capture_report
     from rtt.design.freeform.types import PLA_DENSITY, FingerPair, JawGeometry
-    from rtt.design.freeform.validate import InvalidDesign
+    from rtt.design.freeform.validate import InvalidDesign, check_q_seat
 
     t0 = time.perf_counter()
     hulls = _stock_hulls(baseline)
@@ -277,6 +277,9 @@ def build_stock_pair(baseline: Baseline, part: Any, task: Any) -> Any:
             "the part is pushed until both touch"
         )
     q_seat = float(np.round(ohg - y0, 7))
+    # the seat-closure rule every recipe meets (validator stage 2): a part the stock jaws would
+    # seat on outside the usable stroke is an invalid build for the stock entrant as well
+    check_q_seat(q_seat, part_id)
     plan = SimpleNamespace(
         left=_StockJaw(xs, sides[0][0], xs, np.where(np.isfinite(sides[0][1]), sides[0][1], 1.0) + y0),
         right=_StockJaw(xs, sides[1][0], xs, np.where(np.isfinite(sides[1][1]), sides[1][1], 1.0) + y0),

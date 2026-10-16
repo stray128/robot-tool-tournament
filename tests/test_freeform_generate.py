@@ -376,6 +376,16 @@ def test_entrants_build_and_carry_their_rules() -> None:
         assert stock.q_seat > 0 and stock.left.n_pieces == stock.right.n_pieces
 
 
+def test_stock_entrant_meets_the_seat_closure_rule() -> None:
+    """The stock path applies the same q_seat range as every recipe (validator stage 2)."""
+    from freeform_parts import thin_fin
+
+    stock = {b.name: b for b in load_entrants_v2()}["stock"]
+    with pytest.raises(InvalidDesign) as info:  # 3 mm across the jaws: the blades seat at ~41 mm
+        build_entrant(stock, thin_fin(), TASK)
+    assert info.value.code == "q_seat_range" and "thin_fin" in str(info.value)
+
+
 def test_invalid_build_raises_with_a_code() -> None:
     deep = FingerRecipe(
         pad="conform",
