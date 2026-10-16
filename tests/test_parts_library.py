@@ -382,3 +382,24 @@ def test_random_dimensions_build_exactly_or_fail_with_a_message(data: st.DataObj
     assert part.volume > 0 and math.isfinite(part.mass)
     lo, hi = np.concatenate(part.pieces).min(axis=0), np.concatenate(part.pieces).max(axis=0)
     assert np.allclose(lo, -hi, atol=2e-7)
+
+
+def test_mirror_y_is_exact_and_flips_the_jaw_sides(parts: dict[str, PartSpec]) -> None:
+    from rtt.parts.features import check_features
+
+    tee = parts["pipe_tee"]
+    m = lib.mirror_y(tee)
+    assert m.name == "pipe_tee.mirror_y"
+    assert {f.name: f.facing() for f in m.features}["branch_socket"] == "right"
+    assert m.com == pytest.approx((tee.com[0], -tee.com[1], tee.com[2]))
+    for verts, faces in zip(m.pieces, m.faces, strict=True):
+        mesh = trimesh.Trimesh(verts, faces, process=False)
+        assert mesh.volume > 0  # winding reversed with the mirror: faces stay outward
+    union = lib.visual_mesh(m)
+    assert union.volume == pytest.approx(tee.volume, rel=2e-6)
+    assert union.center_mass == pytest.approx(m.com, abs=2e-7)
+    assert check_features(m) == []
+    assert lib.mirror_y(m).geometry_sha256 == tee.geometry_sha256
+    bracket = parts["l_bracket"]
+    assert lib.mirror_y(bracket).geometry_sha256 != bracket.geometry_sha256  # asymmetric in y
+    assert lib.mirror_y(parts["block"]).size == parts["block"].size

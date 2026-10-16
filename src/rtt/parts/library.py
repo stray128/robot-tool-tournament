@@ -797,6 +797,49 @@ def piece_from_mesh(verts: np.ndarray, tris: np.ndarray) -> pc.Piece:
     return pc._piece_from_polys(np.asarray(verts, dtype=np.float64), polys)
 
 
+def mirror_y(part: PartSpec, name: str | None = None) -> PartSpec:
+    """The part mirrored in y (the closing axis), for building the right jaw as a left one.
+
+    Vertices ``y -> -y`` with face winding reversed (faces stay outward), centre of mass and
+    the ``Ixy``/``Iyz`` products negated, features mirrored (a socket facing the left jaw
+    faces the right one). Exact: mirroring twice gives back the original geometry hash.
+    The name defaults to ``<name>.mirror_y``.
+    """
+    flip = np.array([1.0, -1.0, 1.0])
+    pieces = tuple(pc.quantize(v * flip) for v in part.pieces)
+    faces = tuple(np.ascontiguousarray(f[:, [0, 2, 1]]) for f in part.faces)
+    ixx, iyy, izz, ixy, ixz, iyz = part.unit_inertia
+    features = tuple(
+        Feature(
+            f.kind,
+            f.name,
+            (f.origin[0], -f.origin[1] + 0.0, f.origin[2]),
+            (f.axis[0], -f.axis[1] + 0.0, f.axis[2]),
+            f.radius,
+            f.depth,
+        )
+        for f in part.features
+    )
+    return PartSpec(
+        name=name or f"{part.name}.mirror_y",
+        family=part.family,
+        pieces=pieces,
+        faces=faces,
+        volume=part.volume,
+        com=(part.com[0], -part.com[1] + 0.0, part.com[2]),
+        unit_inertia=(ixx, iyy, izz, -ixy + 0.0, ixz, -iyz + 0.0),
+        material=part.material,
+        yaw_symmetry=part.yaw_symmetry,
+        register_axes=part.register_axes,
+        features=features,
+        visual_asset=None,
+        source_sha256=part.source_sha256,
+        pose_index=part.pose_index,
+        pose_probability=part.pose_probability,
+        decomposition=part.decomposition,
+    )
+
+
 def visual_mesh(part: PartSpec) -> Any:
     """The part's watertight visual mesh: the exact union of its collision pieces
     (``trimesh.Trimesh``, metres, object frame). Smooth shading is the renderer's job."""
