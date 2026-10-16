@@ -175,7 +175,9 @@ for (const vp of [
     if (header.overlays?.channels.includes("offset_mm") && !m.text.includes("Offset")) problems.push("no offset readout");
     if (counted.bytes > HERO_BUDGET) problems.push(`v2 lane payload ${counted.bytes} B > ${HERO_BUDGET}`);
     if (!counted.files.some((f) => f.endsWith(".glb"))) problems.push("no GLB was requested");
-    const lane = page.locator("figure").first();
+    // The swapped lane, wherever it sits in the bout.
+    const lane = page.locator(`figure[data-lane="${values.lane}"]`).first();
+    if ((await lane.count()) === 0) problems.push(`no lane figure for ${values.lane}`);
     const plain = await shot(page, lane, `${vp.name}-v2-studio`);
     await press(page, "X-ray");
     const xray = await shot(page, lane, `${vp.name}-v2-xray`);

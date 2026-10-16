@@ -161,7 +161,7 @@ function LaneView({
       : "failed";
 
   return (
-    <figure className="flex min-w-0 flex-col">
+    <figure className="flex min-w-0 flex-col" data-lane={lane.replay}>
       <div className="crop-marks relative aspect-square bg-paper-2/60 sm:aspect-[4/5]">
         {state.status === "ready" && bounds && studio ? (
           <StudioReplayCanvas
