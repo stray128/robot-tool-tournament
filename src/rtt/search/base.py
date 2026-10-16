@@ -265,6 +265,15 @@ class V2Info:
     min_wall_mm: float = 1.2
     min_feature_mm: float = 1.6
     max_body_slope_deg: float = 45.0
+    min_pad_gap_mm: float = 1.0
+    """At the seat, the two pads stay at least this far apart."""
+    q_seat_range_mm: tuple[float, float] = (2.0, 40.0)
+    max_length_mm: float = 110.0
+    palm_clearance_mm: float = 10.0
+    min_table_clearance_mm: float = 2.0
+    min_tip_height_mm: float = 3.0
+    friction_margin_deg: float = 5.0
+    """Margin of the friction rule in the engineering notes (guidance, never a validator)."""
 
     def part(self, part_id: str) -> PartInfo:
         for p in self.parts:
@@ -296,7 +305,8 @@ class EvaluatorInfo:
     executor: str
     conditions: tuple[ConditionInfo, ...]
     controller_settings: tuple[float, ...]
-    """Grasp-height fraction of each controller setting ``k``: where the fingertips stop
+    """v2: empty (the grip height is a recipe parameter). v1: grasp-height fraction of each
+    controller setting ``k``: where the fingertips stop
     within the band they can reach, from the lowest tip height that keeps the palm
     ``palm_clearance_m`` above the object's top up to the top (``k x`` the object
     height for fingers that reach that far)."""
@@ -332,6 +342,8 @@ class EvaluatorInfo:
 
     @property
     def episodes_per_design(self) -> int:
+        if self.v2 is not None:  # one grasp per condition and seed: the grip height is a recipe parameter
+            return len(self.conditions) * self.seeds_per_condition
         return len(self.conditions) * len(self.controller_settings) * self.seeds_per_condition
 
     def condition(self, condition_id: str) -> ConditionInfo:

@@ -774,9 +774,11 @@ class FreeformSpaceV2:
 
         if _is_baseline(design):
             point = _baseline_point(design)
+            if point is not None and getattr(design, "kind", None) == RECIPE_KIND:
+                return self.params_json(point)  # a named recipe entrant is that recipe
             data: dict[str, Any] = {"baseline": str(design.name)}
             if point is not None:
-                data["nearest_recipe"] = json.loads(self.params_json(point))
+                data["as_recipe"] = json.loads(self.params_json(point))
             return json.dumps(data, separators=(", ", ": "))
         params = self.params(design)
         out: dict[str, Any] = {"pad": params["pad"], "tip": params["tip"]}
