@@ -22,7 +22,9 @@ tip_size_mm         0 - 8                       blunt (0)
 ==================  ==========================  =======================================
 
 Strategy rules: a ``v_funnel`` needs ``wall_draft_deg`` in [15, 70] and ``pad_depth_mm >= 3``;
-a ``conform`` pad needs ``pad_depth_mm >= 1``; a ``hook`` needs ``tip_size_mm >= 2``.
+a ``conform`` pad needs ``pad_depth_mm >= 1``; a ``hook`` needs ``tip_size_mm >= 2``. Two fit
+rules follow track G's schema: a hook needs ``pad_height_mm >= min(tip_size_mm, 4) +
+tip_size_mm``, and a chamfer needs ``tip_size_mm <= pad_height_mm - 0.5``.
 
 **Canonicalisation** (identical for every arm, before hashing, building or measuring
 distance): inactive parameters are reset to their fixed values (logged), then values are
@@ -142,6 +144,10 @@ V_FUNNEL_DRAFT: Final = (15.0, 70.0)
 V_FUNNEL_MIN_DEPTH: Final = 3.0
 CONFORM_MIN_DEPTH: Final = 1.0
 HOOK_MIN_TIP: Final = 2.0
+#: Fit rules of track G's schema: a hook (height min(tip_size, 4) mm plus its protrusion under a
+#: 45 deg top) fits inside the pad, and a chamfer leaves at least 0.5 mm of the pad face.
+HOOK_MAX_HEIGHT: Final = 4.0
+CHAMFER_LAND: Final = 0.5
 #: Short names of the numeric parameters in points tables.
 POINT_COLUMNS: Final[dict[str, str]] = {
     "grip_height_frac": "grip",
@@ -218,6 +224,19 @@ def strategy_errors(params: Mapping[str, Any]) -> list[str]:
         errors.append(f"a conform pad needs pad_depth_mm >= {CONFORM_MIN_DEPTH:g} (got {depth:g})")
     if tip == "hook" and isinstance(size, float | int) and size < HOOK_MIN_TIP:
         errors.append(f"a hook tip needs tip_size_mm >= {HOOK_MIN_TIP:g} (got {size:g})")
+    pad_h = params.get("pad_height_mm")
+    if tip == "hook" and isinstance(size, float | int) and isinstance(pad_h, float | int) and not errors:
+        need = min(size, HOOK_MAX_HEIGHT) + size
+        if pad_h < need - 1e-9:
+            errors.append(
+                f"a hook with tip_size_mm {size:g} needs pad_height_mm >= {need:g} (hook height "
+                f"{min(size, HOOK_MAX_HEIGHT):g} + protrusion {size:g} under its 45 deg top), got {pad_h:g}"
+            )
+    chamfer = tip == "chamfer" and isinstance(size, float | int) and isinstance(pad_h, float | int)
+    if chamfer and size > pad_h - CHAMFER_LAND + 1e-9:
+        errors.append(
+            f"a chamfer needs tip_size_mm <= pad_height_mm - {CHAMFER_LAND:g} (got {size:g} on a {pad_h:g} mm pad)"
+        )
     return errors
 
 

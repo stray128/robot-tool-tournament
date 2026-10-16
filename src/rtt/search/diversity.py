@@ -78,9 +78,10 @@ __all__ = [
 
 MIN_DISTANCE: Final = 0.08
 #: v2 diversity bar t from :func:`threshold_rule` (1 % of 10k random valid Sobol pairs fall within
-#: t; 73 points). [derived] with the schema validators only: recompute when track G's geometry
-#: validators land and before PREREG (``tests/test_search_dedup.py`` pins the rule's output).
-MIN_DISTANCE_V2: Final = 0.081
+#: t; 72 points). [derived] with the schema rules only (the stub and track G's schema agree):
+#: recompute with the full section-13 validators on the training parts before PREREG
+#: (``tests/test_search_dedup.py`` pins the rule's output).
+MIN_DISTANCE_V2: Final = 0.080
 #: v2 explore bar: the median distance between random valid recipes in the same cell (153 points).
 EXPLORE_MIN_DISTANCE_V2: Final = 0.17
 #: Within-cell distance an ``explore`` design needs when its cell is already tried.

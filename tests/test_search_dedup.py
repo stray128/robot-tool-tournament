@@ -114,6 +114,14 @@ def test_design_id_is_a_pinned_sha256_of_the_generator_and_the_canonical_recipe(
         ),
         ({"pad": "flat", "tip": "hook", "tip_size_mm": 1.5, **BASE}, "tip_size_mm >= 2"),
         (
+            {"pad": "flat", "tip": "hook", "tip_size_mm": 8.0, **BASE, "pad_height_mm": 11.0},
+            "needs pad_height_mm >= 12",
+        ),
+        (
+            {"pad": "flat", "tip": "chamfer", "tip_size_mm": 8.0, **BASE, "pad_height_mm": 8.0},
+            "tip_size_mm <= pad_height_mm - 0.5",
+        ),
+        (
             {"pad": "flat", "tip": "blunt", "grip_height_frac": 0.5, "pad_height_mm": 20.0},
             "needs finger_width_mm",
         ),
@@ -155,13 +163,10 @@ def test_screen_order_duplicate_design_then_geometry_then_distance() -> None:
 
 def test_threshold_rule_reproduces_the_pinned_bars() -> None:
     rule = threshold_rule(SPACE, None)
-    if track_g().recipe_cls is None:
-        assert (rule.min_distance, rule.explore_min_distance) == (MIN_DISTANCE_V2, EXPLORE_MIN_DISTANCE_V2)
-    else:
-        # Track G's schema adds fit rules, which shift the schema-only rule slightly. The bars are
-        # re-derived with the full section-13 validators on the training parts before PREREG.
-        assert abs(rule.min_distance - MIN_DISTANCE_V2) <= 0.003
-        assert abs(rule.explore_min_distance - EXPLORE_MIN_DISTANCE_V2) <= 0.02
+    # The stub mirrors track G's schema rules, so the schema-only rule gives the same bars with or
+    # without G. They are re-derived with the full section-13 validators on the training parts
+    # before PREREG.
+    assert (rule.min_distance, rule.explore_min_distance) == (MIN_DISTANCE_V2, EXPLORE_MIN_DISTANCE_V2)
     assert rule.n_pairs == 10_000 and rule.quantile == 0.01
     # The rule's own property: at most 1 % of the random valid pairs fall within t.
     designs = SPACE.sample_sobol(rule.seed, None).sample(rule.pool)

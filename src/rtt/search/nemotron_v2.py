@@ -219,8 +219,9 @@ def render_rules_v2(v2: V2Info) -> str:
         [
             (
                 "- Strategies: a v_funnel needs wall_draft_deg between 15 and 70 and pad_depth_mm >= 3; a conform "
-                "pad needs pad_depth_mm >= 1; a hook needs tip_size_mm >= 2. Inactive numbers are ignored (see the "
-                "parameter table)."
+                "pad needs pad_depth_mm >= 1; a hook needs tip_size_mm >= 2 and must fit in the pad (pad_height_mm "
+                ">= min(tip_size_mm, 4) + tip_size_mm); a chamfer needs tip_size_mm <= pad_height_mm - 0.5. "
+                "Inactive numbers are ignored (see the parameter table)."
             ),
             (
                 "- On every training part: the pad band must cover part of the part's outline; fully open, each jaw "
