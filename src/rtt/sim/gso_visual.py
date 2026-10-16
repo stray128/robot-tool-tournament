@@ -274,15 +274,25 @@ class ShotObject:
 
 
 def check_shot(objects: Iterable[ShotObject], screen: VisualScreen | None = None) -> list[str]:
-    """Every brand-screen violation in a shot (empty when the shot is clean)."""
+    """Every brand-screen violation in a shot (empty when the shot is clean).
+
+    An allow-list, as the brand rule reads: an object passes when it is drawn untextured
+    (clay), or is a procedural industrial part (its family is one of
+    :data:`rtt.parts.library.FAMILIES`), or the screen cleared it by name in its pose.
+    Anything else drawn textured is a violation, whatever its family label, so a scan that
+    reaches a shot under a family other than ``"gso"`` cannot slip through.
+    """
+    from rtt.parts.library import FAMILIES
+
     screen = screen or load_visual_screen()
     out = []
     for o in objects:
-        if o.family != "gso" or not o.textured:
+        if not o.textured or o.family in FAMILIES:
             continue
         if screen.brand_visible(o.name, o.pose_index):
+            kind = "scan" if o.family == "gso" else f"object of family {o.family!r}"
             out.append(
-                f"{o.name}: textured scan not cleared by the brand screen"
+                f"{o.name}: textured {kind} not cleared by the brand screen"
                 + (f" in pose {o.pose_index}" if o.pose_index is not None else "")
                 + "; render it clay or pick a cleared object"
             )

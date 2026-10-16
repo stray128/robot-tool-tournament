@@ -349,6 +349,22 @@ def test_brand_screen_rules() -> None:
     assert len(bad) == 1 and "not cleared" in bad[0]
 
 
+def test_brand_screen_is_an_allow_list() -> None:
+    """Only clay renders, procedural families and cleared names pass: a textured scan under
+    any other family label is refused, and the procedural parts pass under their family."""
+    screen = gv.visual_screen_from_dict({"objects": {"Plain_Grey_Thing": {"brand_visible": False}}})
+    for family in ("scan", "real", "upload", ""):
+        bad = gv.check_shot([gv.ShotObject("Loud_Label_Thing", family, True, 0)], screen)
+        assert len(bad) == 1 and "not cleared" in bad[0], family
+        assert gv.check_shot([gv.ShotObject("Loud_Label_Thing", family, False, 0)], screen) == []
+        assert gv.check_shot([gv.ShotObject("Plain_Grey_Thing", family, True, 0)], screen) == []
+    from rtt.parts.library import FAMILIES, training_parts
+
+    procedural = [gv.ShotObject(p.name, p.family, True) for p in training_parts()]
+    assert {o.family for o in procedural} <= set(FAMILIES)
+    assert gv.check_shot(procedural, screen) == []
+
+
 def test_scan_asset_fields_follow_the_brand_screen() -> None:
     src = gso.load_gso_config(gso.DEFAULT_CONFIG_V2).source
     screen = gv.visual_screen_from_dict(
