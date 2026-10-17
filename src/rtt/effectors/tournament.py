@@ -216,6 +216,7 @@ class DesignFeedback:
     held_rate: float
     registered_rate: float
     failure_modes: Mapping[str, int]
+    n_episodes: int = 0  # screen episodes behind the rates (0: unknown)
 
 
 @dataclass(frozen=True)
@@ -259,6 +260,7 @@ class _MorphologyAdapter:
                 held_rate=h.held_rate,
                 registered_rate=h.registered_rate,
                 failure_modes=dict(h.failure_modes),
+                n_episodes=h.n_episodes,
             )
             for h in history
         ]
@@ -271,7 +273,7 @@ class _MorphologyAdapter:
         )
         return DesignBatch(
             tuple(recipes),
-            tuple(dict(r) if isinstance(r, Mapping) else {"reason": str(r)} for r in rejections),
+            tuple(_rejection(r) for r in rejections),
             calls=len(entries),
             cost_usd=cost,
             analysis=str(getattr(batch, "analysis", "") or ""),
@@ -279,6 +281,14 @@ class _MorphologyAdapter:
 
     def spec_for(self, recipe: MorphologyRecipe) -> EffectorSpec:
         return self.module.spec_for(recipe)
+
+
+def _rejection(r: Any) -> dict[str, Any]:
+    """A rejection as JSON data: B3's ``Rejection`` (``to_dict``), a mapping, or its text."""
+    if isinstance(r, Mapping):
+        return dict(r)
+    to_dict = getattr(r, "to_dict", None)
+    return dict(to_dict()) if callable(to_dict) else {"reason": str(r)}
 
 
 def _first_attr(obj: Any, names: Sequence[str], default: Any) -> Any:
@@ -998,7 +1008,9 @@ def _run_screen(
 def _feedback(cand: Candidate) -> DesignFeedback:
     assert cand.spec.recipe is not None
     rates = cand.screen_rates()
-    return DesignFeedback(cand.spec.recipe, rates["held"], rates["registered"], rates["failure_modes"])
+    return DesignFeedback(
+        cand.spec.recipe, rates["held"], rates["registered"], rates["failure_modes"], n_episodes=rates["n"]
+    )
 
 
 def run_tournament(
