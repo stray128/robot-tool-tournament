@@ -707,7 +707,12 @@ def test_recorded_smoke_run_stayed_under_its_cap_and_carries_the_label() -> None
 
 
 def test_recorded_smoke_run_replays_exactly_with_zero_calls(task: Any) -> None:
-    """Both design rounds re-run from the recorded cache: same recipes, no API key, no calls."""
+    """Both design rounds re-run from the recorded cache: same recipes, no API key, no calls.
+
+    The run offered the designed family's own generators only (the suction and soft-arm
+    families were not built yet), so the replay asks for exactly those: once other families
+    register their spaces, the default prompt offers them too and is a different request.
+    """
     m = _manifest()
     parts = [get_part(name) for name in m["parts"]]
     client = make_designer_client(RECORDED / "cache", cache_mode="replay")
@@ -715,7 +720,13 @@ def test_recorded_smoke_run_replays_exactly_with_zero_calls(task: Any) -> None:
     history: list[DesignOutcome] = []
     for rnd, recorded in enumerate(m["batches"], start=1):
         batch = propose_recipes(
-            parts, history, recorded["n_requested"], client=client, task=task, tag=f"smoke/round{rnd}"
+            parts,
+            history,
+            recorded["n_requested"],
+            client=client,
+            task=task,
+            tag=f"smoke/round{rnd}",
+            kinds=DESIGNED_KINDS,
         )
         assert [r.recipe_id for r in batch.recipes] == [r["recipe_id"] for r in recorded["recipes"]]
         assert all(c.cached for c in batch.calls) and batch.cost_usd == 0.0
