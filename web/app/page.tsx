@@ -10,17 +10,22 @@ import { siteStats } from "@/lib/stats";
 const STEPS = [
   {
     title: "Drop your part",
-    body: "Upload an STL of the object you need to pick. The agent measures it, splits it into convex pieces and finds every way it can rest on a table.",
+    body: "Upload an STL of the part you need to pick. The agent measures it, splits it into convex pieces and finds every way it can rest on a table.",
     detail: "STL in, resting poses out",
   },
   {
-    title: "Nemotron designs fingers",
-    body: "NVIDIA Nemotron 3 Super, served by Nebius Token Factory, proposes finger shapes as ten physical parameters, then reads each round's measured failures before proposing the next.",
-    detail: "10 parameters, one hypothesis each",
+    title: "Fingers shaped to your part",
+    body: "NVIDIA Nemotron 3 Super, served by Nebius Token Factory, proposes fingers shaped to your part, then reads each round's measured failures before it proposes the next.",
+    detail: "Part-shaped fingers",
   },
   {
-    title: "Nebius proves them, you print them",
-    body: "Nebius jobs run every candidate through MuJoCo grasp trials; the best one is then stress-tested for a robustness certificate. You download left and right finger STLs, a mount plate and the certificate.",
+    title: "Every effector, same trials",
+    body: "Multi-finger hands, industrial grippers, a soft arm, a suction cup and effectors Nemotron designs all face the same placements and seeds in simulation. The best one that qualifies is recommended.",
+    detail: "Hands, grippers, soft arm, suction",
+  },
+  {
+    title: "Certify it, then print it",
+    body: "The pick is stress-tested under placement error for a robustness certificate. For fingers you download a print pack: the finger STLs, printable jaws and the certificate.",
     detail: "Placement error, shake, push",
   },
 ] as const;
@@ -60,7 +65,7 @@ export default function HomePage() {
         <h2 id="flow-title" className="sr-only">
           How it works
         </h2>
-        <ol className="grid gap-px border border-rule bg-rule md:grid-cols-3">
+        <ol className="grid gap-px border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-4">
           {STEPS.map((step, i) => (
             <li key={step.title} className="relative flex flex-col bg-paper p-5">
               <span className="num text-sm text-accent" aria-hidden="true">
