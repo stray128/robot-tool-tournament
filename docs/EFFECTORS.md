@@ -136,7 +136,9 @@ the frozen code, then calls `impl.build(ctx)`:
     the effector to the part or the world, a tendon that wraps a non-effector site, joint or
     geom, a contact exclude with the table or the part, an explicit contact pair;
   * out-rank or stick to the part by geometry: effector geoms with `priority >= 1`, geom
-    `adhesion`, or a surface velocity (suction uses an adhesion *actuator* gated by its seal);
+    `adhesion`, a contact `margin > 0` (MuJoCo uses the larger margin of the two geoms whatever
+    their priority, so contacts, and an adhesion actuator's pull, would act across a gap), or a
+    surface velocity (suction uses an adhesion *actuator* gated by its seal);
   * apply forces directly: a primitive that writes `xfrc_applied` or `qfrc_applied` stops
     the episode (the runner owns the only external force, the certificate's push).
 * **Gravity:** the scene sets `gravcomp = 1` on every effector body (the arm carries the
@@ -728,6 +730,11 @@ tool 1.5 h, web 3 h).
   why, which test proves it) and hands it to the contract owner, who changes the contract on
   `effectors-contracts`, updates the pinned hashes in `test_contract_files_are_frozen`, and
   every track rebases. No track edits a contract file itself.
+* **Contract changes after integration** (the integration branch owns the contract now):
+  1. `margin` (requested by B2): `_check_compiled` refuses effector geoms with a contact
+     margin above 0; `test_scene_refuses_a_family_that_breaks_the_contract["margin"]` proves
+     it. No B1 to B3 preset or random recipe used a margin, so no family changed. The
+     contract version stays `rtt-effectors/1` (the record shapes are unchanged).
 * **Merge gate:** on the integration branch, the full suite, ruff, the leak check and the
   six-part tournament all pass.
 

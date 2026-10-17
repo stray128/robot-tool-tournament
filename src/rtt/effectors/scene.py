@@ -269,8 +269,11 @@ def _check_compiled(model: mujoco.MjModel, ids: EffectorSceneIds) -> list[str]:
     Effector actuators, equality constraints and tendons may only reference effector bodies
     (no actuator on the wrist, no weld to the part or the world, no tendon anchored in the
     world); effector geoms may not out-rank the part's contact parameters (``priority``), stick
-    by themselves (geom ``adhesion``; suction uses an adhesion *actuator*) or move their
-    surface (``surfacevel``); contact excludes may only pair effector bodies and the wrist.
+    by themselves (geom ``adhesion``; suction uses an adhesion *actuator*), reach across a gap
+    (``margin > 0``: MuJoCo takes the larger margin of the two geoms whatever their priority, so
+    an effector margin would make contacts, and an adhesion actuator's pull, act before the
+    surfaces touch) or move their surface (``surfacevel``); contact excludes may only pair
+    effector bodies and the wrist.
     """
     eff = {int(b) for b in ids.effector_bodies}
     tendons = {
@@ -336,6 +339,8 @@ def _check_compiled(model: mujoco.MjModel, ids: EffectorSceneIds) -> list[str]:
         problems.append("effector geoms may not have priority >= 1 (the part's contact parameters govern)")
     if np.any(model.geom_adhesion[geoms] != 0):
         problems.append("effector geoms may not use geom adhesion (suction uses an adhesion actuator)")
+    if np.any(model.geom_margin[geoms] > 0):
+        problems.append("effector geoms may not have a contact margin > 0 (contacts would act across a gap)")
     if np.any(model.geom_surfacevel[geoms] != 0):
         problems.append("effector geoms may not have a surface velocity")
     if model.npair:

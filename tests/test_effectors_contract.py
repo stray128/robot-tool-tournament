@@ -385,6 +385,8 @@ class _Broken(ToyTwoPad):
             ctx.spec.geom("eff_left_pad").priority = 2
         elif self.how == "sticky":
             ctx.spec.geom("eff_left_pad").adhesion = 5.0
+        elif self.how == "margin":
+            ctx.spec.geom("eff_left_pad").margin = 0.002
         elif self.how == "option":
             ctx.spec.option.impratio = 100.0
         elif self.how == "default":
@@ -402,6 +404,7 @@ class _Broken(ToyTwoPad):
         ("weld", "ties the effector to the scene"),
         ("priority", "priority"),
         ("sticky", "geom adhesion"),
+        ("margin", "contact margin"),
         ("option", "option settings"),
         ("default", "default geom settings"),
     ],
@@ -593,7 +596,7 @@ CONTRACT_FILES: dict[str, str] = {
     "__init__.py": "5136c825b4542174e4d2ef3de9e27f62e09426005142bb914c04136e931bf226",
     "types.py": "5c5099336f082506e1ce07e44bb965e22eebf79d5f31cd9687965e0601d191ba",
     "registry.py": "9415e10df8a443a1a4ad55f360764103ec745073e3563cdad025c6940782d58f",
-    "scene.py": "113a2931068f8456617f7e59adcf407877670eebdc30ac297cc502be0ccb014f",
+    "scene.py": "d6a35fb47d220ea740b23ad79066dee46a23b5f0ee518b51acee9773e36b49f9",
     "runner.py": "420b01ab7a556384fa1f68cbb049d666d8535b1532c2fdeec2f2e422f1c73639",
     "certificate.py": "62f209a8d603e7fabdc9fda7b8b4ccabd21f88f7e9eb027ec0b6e74fcf64ad9c",
     "primitives.py": "3c90c0259ab9749242665b4f78356eb3b0a4e137a583e11ca86727c6c594bc03",
