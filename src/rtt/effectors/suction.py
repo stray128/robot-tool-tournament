@@ -91,9 +91,10 @@ PRESS_FRACTION: Final = 0.5
 PRESET_DIAMETERS_MM: Final = (10.0, 16.0, 25.0)
 
 FIDELITY_CAVEAT: Final = (
-    "Suction cup (approximation): a compliant lip of rigid segments on a bellows spring; the seal "
-    "is a geometric test (every lip segment touching the face, part material under the cup) "
-    "gating a MuJoCo adhesion actuator capped at vacuum x lip area (at most 60 kPa). Not "
+    "Suction cup (approximation): a compliant lip of rigid segments on a bellows spring with a "
+    "limited tilt; the seal is a geometric test (every lip segment touching the face, part "
+    "material under 13 rays inside the lip) gating a MuJoCo adhesion actuator capped at vacuum "
+    "x lip area (at most 60 kPa). The lip must touch the face: no pull across a gap. Not "
     "modelled: air flow, leak rate, porosity, vacuum build-up time (the vacuum follows the "
     "shared close ramp and is cut the control tick the seal is lost), lip material hysteresis, "
     "peel dynamics beyond the contact distribution. The lip's friction is the part's. Treat "

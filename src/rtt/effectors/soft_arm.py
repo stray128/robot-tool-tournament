@@ -100,7 +100,8 @@ FIDELITY_CAVEAT: Final = (
     "Soft arm (approximation, octopus-inspired): a chain of rigid tapered capsule segments on "
     "spring-damper hinges, curled by a cable (a spatial tendon through sites) with a tension "
     "limit of at most 50 N. It bends in one plane (horizontal) and is rigid out of it; its "
-    "segments do not collide with each other; a rigid post carries its root beside the part. "
+    "segments do not collide with each other; a rigid post carries its root beside the part and "
+    "the arm pulls the part against it, so the post takes part of the grip. "
     "Not modelled: continuum mechanics, material non-linearity, suckers, hydrostatic "
     "stiffening. Segment count sets how smooth the wrap is."
 )
@@ -597,7 +598,7 @@ def straighten_test(
     from rtt.parts.library import get_part
     from rtt.sim.task import default_task_v2
 
-    impl = SoftArmFamily() if not isinstance(_REGISTERED, SoftArmFamily) else _REGISTERED
+    impl = _REGISTERED
     task = task or default_task_v2()
     part = part or get_part("block")
     scene = build_effector_scene(impl, spec, part, task)
