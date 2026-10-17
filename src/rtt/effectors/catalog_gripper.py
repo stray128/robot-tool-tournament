@@ -26,6 +26,7 @@ from rtt.effectors.catalog.adaptive import (
 )
 from rtt.effectors.catalog.family import build_vendored, contact_criterion, synergy_primitive, vendored_spec
 from rtt.effectors.catalog.models import CATALOG_MODELS, catalog_model
+from rtt.effectors.catalog.models import card_note as catalog_card_note
 from rtt.effectors.primitives import ContactCriterion, SynergyPrimitive
 from rtt.effectors.registry import EffectorFamilyImpl, register_family
 from rtt.effectors.types import BuildContext, EffectorBuild, EffectorFamily, EffectorSpec
@@ -34,11 +35,12 @@ __all__ = ["CatalogGripperFamily", "gripper_presets"]
 
 
 def gripper_presets() -> tuple[EffectorSpec, ...]:
-    """Every vendored gripper x synergy (table order), then the adaptive grippers x primitives."""
+    """Every vendored gripper in the presets x synergy (table order), then the adaptive grippers
+    x primitives. A model with ``in_presets = False`` stays buildable but is not an entrant."""
     vendored = tuple(
         vendored_spec(EffectorFamily.CATALOG_GRIPPER, cm, syn)
         for cm in CATALOG_MODELS.values()
-        if cm.kind == "gripper"
+        if cm.kind == "gripper" and cm.in_presets
         for syn in cm.synergies
     )
     return vendored + adaptive_specs()
@@ -52,6 +54,10 @@ class CatalogGripperFamily(EffectorFamilyImpl):
 
     def presets(self) -> tuple[EffectorSpec, ...]:
         return gripper_presets()
+
+    def card_note(self, model: str) -> str | None:
+        """The note every page prints beside this model (a low published grip, for example)."""
+        return catalog_card_note(model)
 
     def _model(self, spec: EffectorSpec):  # type: ignore[no-untyped-def]
         cm = catalog_model(spec.model)

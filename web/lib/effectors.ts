@@ -121,6 +121,8 @@ export interface EffectorBrief {
   group: Group;
   fidelity: Fidelity;
   hypothesis: string | null;
+  /** A note every card, row and lane naming this effector prints (e.g. low grip at published settings). */
+  note: string | null;
 }
 
 export interface CertTest {
@@ -190,6 +192,7 @@ export interface RankingRow {
   n_actuators: number | null;
   mass_kg: number | null;
   actuation: Record<string, number>;
+  note: string | null;
 }
 
 export interface NoWinner {
@@ -214,7 +217,7 @@ export interface FamilyCard {
   candidates: number;
   screened: number;
   invalid: number;
-  best: { effector_id: string; display_name: string; screen: ScreenRates | null; certified: boolean } | null;
+  best: { effector_id: string; display_name: string; screen: ScreenRates | null; certified: boolean; note: string | null } | null;
   caveat: string;
   label: string;
 }
@@ -245,6 +248,7 @@ export interface CandidateRow {
   effector_id: string;
   display_name: string;
   family: Family;
+  model: string;
   group: Group;
   fidelity: Fidelity;
   status: string;
@@ -254,6 +258,7 @@ export interface CandidateRow {
   finalist: boolean;
   certified: boolean;
   screen: (ScreenRates & { failure_modes: Record<string, number> }) | null;
+  note: string | null;
 }
 
 export interface LaneOutcome {
@@ -396,6 +401,11 @@ function tolerance(n: Node): Tolerance {
   return { x: optNum(n.get("x")), y: optNum(n.get("y")) };
 }
 
+/** The optional card note (absent in data exported before notes existed). */
+function optNote(n: Node): string | null {
+  return n.has("note") ? optStr(n.get("note")) : null;
+}
+
 function readBrief(n: Node): EffectorBrief {
   return {
     effector_id: sha(n.get("effector_id")),
@@ -407,6 +417,7 @@ function readBrief(n: Node): EffectorBrief {
     group: n.get("group").oneOf(GROUPS),
     fidelity: n.get("fidelity").oneOf(FIDELITIES),
     hypothesis: n.has("hypothesis") ? optStr(n.get("hypothesis")) : null,
+    note: optNote(n),
   };
 }
 
@@ -481,6 +492,7 @@ function readRow(n: Node): RankingRow {
     n_actuators: n.get("n_actuators").nullable((x) => x.int()),
     mass_kg: optNum(n.get("mass_kg")),
     actuation: numMap(n.get("actuation")),
+    note: optNote(n),
   };
 }
 
@@ -604,6 +616,7 @@ export function parseEffectorPage(raw: unknown, file = "effectors/part.json"): E
           display_name: b.get("display_name").nonEmpty(),
           screen: b.get("screen").nullable(readScreen),
           certified: b.get("certified").bool(),
+          note: optNote(b),
         })),
         caveat: f.get("caveat").nonEmpty(),
         label: f.get("label").literal(PRODUCT_MODE_LABEL),
@@ -644,6 +657,7 @@ export function parseEffectorPage(raw: unknown, file = "effectors/part.json"): E
         effector_id: sha(c.get("effector_id")),
         display_name: c.get("display_name").nonEmpty(),
         family: c.get("family").oneOf(FAMILIES),
+        model: slug(c.get("model")),
         group: c.get("group").oneOf(GROUPS),
         fidelity: c.get("fidelity").oneOf(FIDELITIES),
         status: c.get("status").nonEmpty(),
@@ -655,6 +669,7 @@ export function parseEffectorPage(raw: unknown, file = "effectors/part.json"): E
         screen: c.has("screen")
           ? c.get("screen").nullable((s) => ({ ...readScreen(s), failure_modes: numMap(s.get("failure_modes")) }))
           : null,
+        note: optNote(c),
       })),
     certificates: Object.fromEntries(
       root

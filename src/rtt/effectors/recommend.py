@@ -28,6 +28,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Final
 
+from rtt.effectors.registry import get_family
 from rtt.effectors.types import CONTRACT_VERSION, PRODUCT_MODE_LABEL, Requirement
 
 if TYPE_CHECKING:
@@ -37,6 +38,7 @@ __all__ = [
     "APPROXIMATION_CAVEAT",
     "SIMPLICITY_MARGIN",
     "Entry",
+    "card_note",
     "eligibility",
     "rank_entries",
     "recommend",
@@ -49,6 +51,18 @@ APPROXIMATION_CAVEAT: Final = "approximation: verify on hardware"
 _EPS: Final = 1e-9
 _FIDELITY_RANK: Final = {"core": 0, "rigid": 1, "approximation": 2}
 _RIGID: Final = frozenset({"core", "rigid"})
+
+
+def card_note(family: str, model: str) -> str | None:
+    """The note every card, ranking row and lane must print beside this effector, if its family
+    declares one (``card_note(model)``, e.g. a catalog gripper's low grip at its published
+    settings); ``None`` otherwise."""
+    try:
+        impl = get_family(family)
+    except (LookupError, ValueError):
+        return None
+    fn = getattr(impl, "card_note", None)
+    return fn(model) if callable(fn) else None
 
 
 @dataclass(frozen=True)
@@ -237,6 +251,7 @@ def _row(entry: Entry, req: Requirement, eligible: bool, reason: str | None) -> 
         "mass_kg": round(entry.mass, 4) if math.isfinite(entry.mass) else None,
         "actuation": dict(cand.actuation),
         "reference": cand.reference_source,
+        "note": card_note(s.family.value, s.model),
     }
 
 
@@ -259,6 +274,7 @@ def _card(entry: Entry, req: Requirement, why: str | None) -> dict[str, Any]:
         "score": round(entry.score(req), 4),
         "tolerance_mm": entry.tolerances(req),
         "caveat": APPROXIMATION_CAVEAT if cand.fidelity == "approximation" else None,
+        "note": card_note(cand.spec.family.value, cand.spec.model),
     }
     return out
 

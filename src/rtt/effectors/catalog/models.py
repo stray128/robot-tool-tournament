@@ -26,6 +26,12 @@ c0. The controls are stored below as plain numbers (radians, or metres of tendon
 
 Control values are clipped to each actuator's own ``ctrlrange``. Gains, force ranges and joint
 limits are the upstream model's, unmodified.
+
+Founder decisions (2026-10-17, integration): the dexterous hands stay in as honest entrants at
+their upstream gains; the rigid-pad gripper B (1.4 N at its published settings) leaves the
+presets (``in_presets = False``) so the catalog group fits the tournament's 12 candidates
+without sampling, but stays vendored, buildable and credited; the rigid-pad gripper A keeps its
+upstream gains and carries a ``card_note`` that every page showing it prints.
 """
 
 from __future__ import annotations
@@ -35,7 +41,7 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Final, Literal
 
-__all__ = ["CATALOG_MODELS", "CatalogModel", "Synergy", "catalog_model"]
+__all__ = ["CATALOG_MODELS", "LOW_GRIP_NOTE", "CatalogModel", "Synergy", "card_note", "catalog_model"]
 
 
 @dataclass(frozen=True)
@@ -69,6 +75,8 @@ class CatalogModel:
     min_bodies: int = 2  # effector bodies on the part for engagement (ContactCriterion)
     finger_sides: tuple[tuple[str, ...], tuple[str, ...]] | None = None  # grippers: +y and -y finger bodies
     notes: tuple[str, ...] = field(default=())
+    card_note: str = ""  # shown on every card, ranking row and lane that names the model
+    in_presets: bool = True  # False: vendored and buildable, but not a tournament entrant
 
     def synergy(self, name: str) -> Synergy:
         for s in self.synergies:
@@ -445,6 +453,12 @@ _GRIPPER_FINRAY = CatalogModel(
     finger_sides=(("right_finger_holder",), ("left_finger_holder",)),
 )
 
+#: The rigid-pad gripper A's card note: its published actuator limit is low, and is kept.
+LOW_GRIP_NOTE: Final = (
+    "Low grip at published settings: the upstream model limits the gripper actuator to 4.1 N, "
+    "left unmodified (hardware may differ)"
+)
+
 # Rigid-pad grippers: the last arm link and both fingers; the arm's wrist roll joint is dropped.
 _GRIPPER_RIGID_A = CatalogModel(
     key="gripper-2f-rigid-a",
@@ -464,6 +478,7 @@ _GRIPPER_RIGID_A = CatalogModel(
         ),
     ),
     finger_sides=(("link_right_finger", "rf_rot", "rf_down"), ("link_left_finger", "lf_rot", "lf_down")),
+    card_note=LOW_GRIP_NOTE,
 )
 _GRIPPER_RIGID_B = CatalogModel(
     key="gripper-2f-rigid-b",
@@ -483,6 +498,7 @@ _GRIPPER_RIGID_B = CatalogModel(
         ),
     ),
     finger_sides=(("link7",), ("link8",)),
+    in_presets=False,  # founder decision 2026-10-17: the catalog group fits 12 candidates
 )
 
 CATALOG_MODELS: Final[Mapping[str, CatalogModel]] = MappingProxyType(
@@ -491,6 +507,12 @@ CATALOG_MODELS: Final[Mapping[str, CatalogModel]] = MappingProxyType(
         for m in (_HAND_4F, _HAND_5F_18, _HAND_5F_22, _GRIPPER_FINRAY, _GRIPPER_RIGID_A, _GRIPPER_RIGID_B)
     }
 )
+
+
+def card_note(key: str) -> str | None:
+    """The note a page must print beside the model ``key`` (``None``: none, or not a vendored model)."""
+    cm = CATALOG_MODELS.get(key)
+    return (cm.card_note or None) if cm is not None else None
 
 
 def catalog_model(key: str) -> CatalogModel:

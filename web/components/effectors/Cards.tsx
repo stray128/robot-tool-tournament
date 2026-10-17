@@ -56,6 +56,11 @@ export function RecommendationCard({
           {card.caveat}
         </p>
       ) : null}
+      {card.effector.note ? (
+        <p className="mt-3 border-l-2 border-pending pl-2 text-sm text-pending" data-note>
+          {card.effector.note}
+        </p>
+      ) : null}
       {basis && basis !== "eligible" ? <p className="mt-2 text-sm text-ink-3">Named as {basis}.</p> : null}
       {card.why ? <p className="mt-3 text-ink-2">{card.why}</p> : null}
       <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-sm">
@@ -99,6 +104,11 @@ export function FamilyCard({ f }: { f: FamilyCardData }) {
                 <span className="num text-ink-3">
                   {" "}
                   · screen {pct(f.best.screen.registered)} registered, {pct(f.best.screen.held)} held
+                </span>
+              ) : null}
+              {f.best.note ? (
+                <span className="mt-1 block text-xs text-pending" data-note>
+                  {f.best.note}
                 </span>
               ) : null}
             </>

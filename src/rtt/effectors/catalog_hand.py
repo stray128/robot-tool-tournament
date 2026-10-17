@@ -15,6 +15,7 @@ from typing import ClassVar, Literal
 
 from rtt.effectors.catalog.family import build_vendored, contact_criterion, synergy_primitive, vendored_spec
 from rtt.effectors.catalog.models import CATALOG_MODELS, catalog_model
+from rtt.effectors.catalog.models import card_note as catalog_card_note
 from rtt.effectors.primitives import ContactCriterion, SynergyPrimitive
 from rtt.effectors.registry import EffectorFamilyImpl, register_family
 from rtt.effectors.types import BuildContext, EffectorBuild, EffectorFamily, EffectorSpec
@@ -23,11 +24,11 @@ __all__ = ["CatalogHandFamily", "hand_presets"]
 
 
 def hand_presets() -> tuple[EffectorSpec, ...]:
-    """Every hand x synergy, in table order."""
+    """Every hand in the presets x synergy, in table order."""
     return tuple(
         vendored_spec(EffectorFamily.CATALOG_HAND, cm, syn)
         for cm in CATALOG_MODELS.values()
-        if cm.kind == "hand"
+        if cm.kind == "hand" and cm.in_presets
         for syn in cm.synergies
     )
 
@@ -40,6 +41,10 @@ class CatalogHandFamily(EffectorFamilyImpl):
 
     def presets(self) -> tuple[EffectorSpec, ...]:
         return hand_presets()
+
+    def card_note(self, model: str) -> str | None:
+        """The note every page prints beside this model (none of the hands has one)."""
+        return catalog_card_note(model)
 
     def _model(self, spec: EffectorSpec):  # type: ignore[no-untyped-def]
         cm = catalog_model(spec.model)

@@ -226,6 +226,7 @@ def build_vendored(ctx: BuildContext, cm: CatalogModel, syn: Synergy) -> Effecto
         "mounted palm-down on an adapter plate under the shared wrist; upstream wrist or "
         "positioning joints removed: " + (", ".join(cm.drop_joints) or "none"),
         "upstream actuator gains and force ranges unmodified; massless visual geoms not loaded",
+        *((cm.card_note,) if cm.card_note else ()),
         *cm.notes,
     ]
     if vm.mesh_files:

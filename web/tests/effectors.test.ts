@@ -107,6 +107,31 @@ describe.skipIf(!published)("published effector data", () => {
     }
   });
 
+  it("prints the low-grip note wherever the rigid-pad gripper A appears, and parses older data without notes", () => {
+    const LOW_GRIP = /^Low grip at published settings/;
+    let seen = 0;
+    for (const id of getEffectorPartIds()) {
+      const page = getEffectorPage(id)!;
+      const rigidA = new Set(page.candidates.filter((c) => c.model === "gripper-2f-rigid-a").map((c) => c.effector_id));
+      const rows = [...page.by_requirement.held.ranking, ...page.by_requirement.registered.ranking];
+      for (const r of rows) {
+        if (rigidA.has(r.effector_id)) {
+          expect(r.note).toMatch(LOW_GRIP);
+          seen += 1;
+        } else expect(r.note).toBeNull();
+      }
+      for (const f of page.families) if (f.best && rigidA.has(f.best.effector_id)) expect(f.best.note).toMatch(LOW_GRIP);
+      for (const lane of page.lanes) expect(lane.effector.note === null || rigidA.has(lane.effector.effector_id)).toBe(true);
+    }
+    expect(seen).toBeGreaterThan(0);
+    const { raw } = firstPage();
+    const old = structuredClone(raw) as Record<string, any>;
+    for (const row of old.recommendation.ranking) delete row.note;
+    delete old.recommendation.winner?.effector?.note;
+    const parsed = parseEffectorPage(old, "old.json");
+    expect(parsed.recommendation.ranking.every((r) => r.note === null)).toBe(true);
+  });
+
   it("names no brand in any published effector file", () => {
     const re = brandPattern();
     const roots = [path.join(DATA, "effectors"), ...readdirSync(path.join(DATA, "replays")).filter((d) => d.startsWith("effectors-")).map((d) => path.join(DATA, "replays", d))];

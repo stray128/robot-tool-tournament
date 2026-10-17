@@ -93,6 +93,11 @@ function RankingTable({ block, requirement }: { block: RequirementBlock; require
                 <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-ink-3">
                   {FAMILY_TITLES[r.family]} <FidelityBadge fidelity={r.fidelity} />
                 </span>
+                {r.note ? (
+                  <span className="mt-0.5 block max-w-[40ch] text-xs text-pending" data-note>
+                    {r.note}
+                  </span>
+                ) : null}
               </th>
               <td className="py-2 pr-3 text-ink-2">{GROUP_TITLES[r.group]}</td>
               <td className="num py-2 pr-3 text-right">{score(r.score)}</td>

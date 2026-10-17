@@ -156,6 +156,11 @@ function LaneView({ lane, state, bounds, task }: { lane: EffectorLane; state: La
         <span className="text-ink-3">
           {REQUIREMENT_LABELS.held}: {o.held ? "yes" : "no"} · {REQUIREMENT_LABELS.registered}: {o.registered ? "yes" : "no"}
         </span>
+        {lane.effector.note ? (
+          <span className="basis-full text-xs text-pending" data-note>
+            {lane.effector.note}
+          </span>
+        ) : null}
       </figcaption>
     </figure>
   );

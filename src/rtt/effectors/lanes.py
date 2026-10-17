@@ -36,6 +36,7 @@ from typing import TYPE_CHECKING, Any, Final
 
 import numpy as np
 
+from rtt.effectors.recommend import card_note
 from rtt.effectors.tournament import GROUP_ORDER, LANE_CONDITION, spec_from_dict
 from rtt.effectors.types import (
     CONTRACT_VERSION,
@@ -389,6 +390,7 @@ def _effector_brief(spec: Mapping[str, Any]) -> dict[str, Any]:
         "group": spec["group"],
         "fidelity": spec["fidelity"],
         "hypothesis": (spec.get("recipe") or {}).get("hypothesis") or None,
+        "note": card_note(spec["family"], spec["model"]),
     }
 
 
@@ -430,7 +432,13 @@ def _ranking(rows: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
         "mass_kg",
         "actuation",
     )
-    return [{k: row.get(k) for k in keep} for row in rows]
+    return [{**{k: row.get(k) for k in keep}, "note": _note_of(row)} for row in rows]
+
+
+def _note_of(row: Mapping[str, Any]) -> str | None:
+    """A row's card note: recomputed from its family and model, so older runs get it too."""
+    model = row.get("model")
+    return card_note(row["family"], model) if model else row.get("note")
 
 
 def _requirement_block(block: Mapping[str, Any]) -> dict[str, Any]:
@@ -498,6 +506,7 @@ def _families(tournament: Mapping[str, Any], recommendation: Mapping[str, Any]) 
                     "display_name": best["display_name"],
                     "screen": best.get("screen"),
                     "certified": best["certified"],
+                    "note": card_note(best["family"], best["model"]),
                 },
                 "caveat": FAMILY_CAVEATS[fam.value],
                 "label": PRODUCT_MODE_LABEL,
@@ -529,7 +538,10 @@ def _candidate_rows(tournament: Mapping[str, Any]) -> list[dict[str, Any]]:
         "certified",
         "screen",
     )
-    return [{k: c.get(k) for k in keep} for c in tournament["candidates"]]
+    return [
+        {**{k: c.get(k) for k in keep}, "note": card_note(c["family"], c["model"])}
+        for c in tournament["candidates"]
+    ]
 
 
 def _task_doc(task: Any) -> dict[str, Any]:

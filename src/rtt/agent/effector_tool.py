@@ -213,6 +213,7 @@ def _brief(card: Mapping[str, Any] | None) -> dict[str, Any] | None:
         "actuation": card.get("actuation"),
         "why": card.get("why"),
         "caveat": card.get("caveat"),
+        "note": card.get("note"),
     }
 
 
@@ -256,6 +257,7 @@ def compact_result(job_id: str, part_id: str, doc: Mapping[str, Any], pass_score
                 "certificate_score_pct": _pct(r.get("score")),
                 "screen_success_pct": _pct(r.get("screen_rate")),
                 "why_not": r.get("reason"),
+                **({"note": r["note"]} if r.get("note") else {}),
             }
             for r in rec["ranking"][:_RANKING_ROWS]
         ],
