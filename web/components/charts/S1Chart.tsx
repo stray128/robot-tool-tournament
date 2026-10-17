@@ -13,12 +13,14 @@ function xTicks(budget: number): number[] {
 /**
  * S1 curves: best training success so far after each simulated design. Thin step
  * lines are runs, the heavy line each arm's median; the dashed line is the threshold
- * and the hatched band the designs every arm shares before the arms diverge.
+ * and the hatched band the designs the arms share before they diverge (round 0, which
+ * S1 does not count when the file says so).
  */
-export function S1Chart({ s1 }: { s1: ResultsIndex["s1"] }) {
+export function S1Chart({ s1, thresholdLabel }: { s1: ResultsIndex["s1"]; thresholdLabel?: string }) {
   const span = Math.max(s1.budget - 1, 1);
   const x = (design: number) => ((design - 1) / span) * 100;
-  const shared = s1.shared_prefix;
+  const shared = Math.max(s1.shared_prefix, s1.count_from - 1);
+  const thresholdText = thresholdLabel ?? (s1.threshold !== null ? formatPercent(s1.threshold) : "");
   const described = s1.arms
     .map((arm) => {
       const med = medianCurve(arm.runs);
@@ -29,7 +31,7 @@ export function S1Chart({ s1 }: { s1: ResultsIndex["s1"] }) {
     <figure>
       <p className="sr-only">
         Median best training success so far. {described}.
-        {s1.threshold !== null ? ` Threshold ${formatPercent(s1.threshold)}.` : ""}
+        {s1.threshold !== null ? ` Threshold ${thresholdText}.` : ""}
       </p>
       <div className="grid grid-cols-[2.75rem_minmax(0,1fr)]">
         <div className="relative h-64">
@@ -48,7 +50,9 @@ export function S1Chart({ s1 }: { s1: ResultsIndex["s1"] }) {
                 backgroundImage: "repeating-linear-gradient(135deg, var(--grid) 0 4px, transparent 4px 8px)",
               }}
             >
-              <span className="absolute bottom-1 left-1 bg-paper/80 px-0.5 text-[0.6875rem] leading-tight text-ink-3">Shared seeds</span>
+              <span className="absolute bottom-1 left-1 bg-paper/80 px-0.5 text-[0.6875rem] leading-tight text-ink-3">
+                {s1.count_from > 1 ? "Round 0, not counted" : "Shared seeds"}
+              </span>
             </div>
           ) : null}
           {Y_TICKS.slice(1).map((t) => (
@@ -57,7 +61,7 @@ export function S1Chart({ s1 }: { s1: ResultsIndex["s1"] }) {
           {s1.threshold !== null ? (
             <div className="absolute inset-x-0 border-t-2 border-dashed border-pending" style={{ top: `${(1 - s1.threshold) * 100}%` }}>
               <span className="num absolute right-1 -top-5 bg-paper/90 px-1 text-[0.6875rem] text-pending">
-                threshold {formatPercent(s1.threshold)}
+                threshold {thresholdText}
               </span>
             </div>
           ) : null}
@@ -66,7 +70,13 @@ export function S1Chart({ s1 }: { s1: ResultsIndex["s1"] }) {
               <g key={arm.id} stroke={ARM_COLORS[i % ARM_COLORS.length]} fill="none">
                 {arm.runs.length > 1
                   ? arm.runs.map((run) => (
-                      <polyline key={run.run} points={stepPoints(run.best, s1.budget)} strokeWidth={1} opacity={0.3} vectorEffect="non-scaling-stroke" />
+                      <polyline
+                        key={run.run}
+                        points={stepPoints(run.best, s1.budget)}
+                        strokeWidth={1}
+                        opacity={arm.runs.length > 10 ? 0.18 : 0.3}
+                        vectorEffect="non-scaling-stroke"
+                      />
                     ))
                   : null}
                 <polyline
@@ -125,7 +135,7 @@ export function S1DotPlot({ summaries, budget }: { summaries: ArmS1Summary[]; bu
             <div className="flex flex-col justify-center border-b border-rule py-3 text-sm">
               <span className="text-ink">{s.label}</span>
               <span className="num text-xs text-ink-3">
-                {s.reached} of {s.runs} reached · median {s.median_designs === null ? `> ${budget}` : s.median_designs}
+                {s.reached} of {s.runs} reached · median {s.median_designs === null ? "not reached" : s.median_designs}
               </span>
             </div>
             <div className="relative h-14 border-b border-rule">
@@ -165,13 +175,13 @@ export function S1DotPlot({ summaries, budget }: { summaries: ArmS1Summary[]; bu
           </div>
         ))}
         <div />
-        <div className="relative h-6">
+        <div className="relative h-10 sm:h-6">
           {ticks.map((t) => (
             <span key={t} className="num absolute top-1 -translate-x-1/2 text-[0.6875rem] text-ink-3" style={{ left: left(t) }}>
               {t}
             </span>
           ))}
-          <span className="absolute right-0 top-1 text-[0.6875rem] text-ink-3">not reached</span>
+          <span className="absolute right-0 top-5 text-[0.6875rem] text-ink-3 sm:top-1">not reached</span>
         </div>
       </div>
       <figcaption className="mt-1 text-xs text-ink-3">

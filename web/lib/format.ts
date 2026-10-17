@@ -19,6 +19,38 @@ export function formatDuration(seconds: number): string {
   return `${m} min ${String(s).padStart(2, "0")} s`;
 }
 
+/** Whole minutes, as docs/RESULTS.md gives job times: 1671 s -> "28 min". */
+export function formatMinutes(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return "n/a";
+  return `${Math.round(seconds / 60)} min`;
+}
+
+/**
+ * A p value as docs/RESULTS.md writes it: two significant figures with trailing zeros
+ * dropped, in exponent form below 1e-4 ("0.0011", "0.012", "0.001", "5.5e-05",
+ * "7e-05"); 1 reads "1.0". The two figures are rounded half up from the value at three
+ * figures, as RESULTS.md does, so a Holm-adjusted 0.000164999 reads "0.00017".
+ */
+export function formatP(p: number): string {
+  if (!Number.isFinite(p) || p < 0) return "n/a";
+  if (p === 0) return "0";
+  let e = Math.floor(Math.log10(p));
+  let m3 = Math.round(p / 10 ** (e - 2));
+  if (m3 >= 1000) {
+    e += 1;
+    m3 = Math.round(p / 10 ** (e - 2));
+  }
+  let m2 = Math.round(m3 / 10);
+  if (m2 >= 100) {
+    e += 1;
+    m2 = 10;
+  }
+  if (e >= 0) return "1.0";
+  const figures = m2 % 10 === 0 ? String(m2 / 10) : String(m2);
+  if (e < -4) return `${figures.length > 1 ? `${figures[0]}.${figures.slice(1)}` : figures}e-${String(-e).padStart(2, "0")}`;
+  return `0.${"0".repeat(-e - 1)}${figures}`;
+}
+
 /** Playback clock as "s.ss" with a fixed width, e.g. "04.27". */
 export function formatClock(t: number): string {
   const clamped = Math.max(0, t);

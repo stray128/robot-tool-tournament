@@ -27,7 +27,12 @@ import type {
   ReplayHeader,
   ResultSource,
   ResultsIndex,
+  S1Analysis,
   S1Arm,
+  S1Run,
+  S1Test,
+  SecondaryBlock,
+  SecondaryTest,
   TaskSummary,
   Vec3,
 } from "./types";
@@ -459,18 +464,112 @@ function readBest(n: Node, budget: number): number[] {
   return best;
 }
 
-function readS1Arm(n: Node, budget: number, version: 1 | 2): S1Arm {
+/**
+ * S1's T of one run: between `countFrom` and the run length plus one, and consistent
+ * with the curve (a run that reached the threshold at design T has a best-so-far at or
+ * above it there).
+ */
+function readT(n: Node, best: number[], countFrom: number, threshold: number | null): number {
+  const t = n.int();
+  if (t < countFrom || t > best.length + 1) n.fail(`expected ${countFrom}..${best.length + 1}, got ${t}`);
+  if (threshold === null) n.fail("a run has T but the threshold is not set");
+  if (t <= best.length && best[t - 1]! < threshold - 1e-9) n.fail(`best-so-far at design ${t} is below the threshold`);
+  return t;
+}
+
+function readS1Arm(n: Node, budget: number, version: 1 | 2, countFrom = 1, threshold: number | null = null): S1Arm {
   return {
     id: slug(n.get("id")),
     label: n.get("label").nonEmpty(),
     runs: n
       .get("runs")
       .items()
-      .map((r) => ({
-        run: r.get("run").nonEmpty(),
-        best: readBest(r.get("best"), budget),
-        job_id: version === 2 && r.has("job_id") ? r.get("job_id").nullable((x) => x.nonEmpty()) : null,
-      })),
+      .map((r) => {
+        const best = readBest(r.get("best"), budget);
+        const run: S1Run = {
+          run: r.get("run").nonEmpty(),
+          best,
+          job_id: version === 2 && r.has("job_id") ? r.get("job_id").nullable((x) => x.nonEmpty()) : null,
+        };
+        if (version === 2 && r.has("t")) run.t = readT(r.get("t"), best, countFrom, threshold);
+        return run;
+      }),
+  };
+}
+
+function readS1Test(n: Node): S1Test {
+  return { statistic: n.get("statistic").num(), p_value: n.get("p_value").unit(), method: n.get("method").nonEmpty() };
+}
+
+function readS1Analysis(n: Node): S1Analysis {
+  const effect = n.get("effect");
+  const ci = { low: effect.get("ci_low").num(), high: effect.get("ci_high").num() };
+  if (ci.low > ci.high) effect.fail("ci_low is above ci_high");
+  const lift = n.get("lift_only");
+  return {
+    source: n.get("source").nonEmpty(),
+    tau_source: n.get("tau_source").str(),
+    primary: readS1Test(n.get("primary")),
+    effect: { diff: effect.get("diff").num(), ci_low: ci.low, ci_high: ci.high, level: effect.get("level").unit() },
+    logrank: readS1Test(n.get("logrank")),
+    lift_only: lift.nullable((x) => ({
+      status: x.get("status").nonEmpty(),
+      diff: x.get("diff").num(),
+      p_value: x.get("p_value").unit(),
+      method: x.get("method").nonEmpty(),
+    })),
+  };
+}
+
+function readSecondaryTest(n: Node): SecondaryTest {
+  const unit = n.get("unit").oneOf(["rate", "score"] as const);
+  return {
+    id: n.get("id").nonEmpty(),
+    label: n.get("label").nonEmpty(),
+    unit,
+    mean_a: n.get("mean_a").unit(),
+    mean_c: n.get("mean_c").unit(),
+    diff: n.get("diff").num(),
+    p_value: n.get("p_value").unit(),
+    p_holm: n.get("p_holm").nullable((x) => x.unit()),
+    rejected: n.get("rejected").nullable((x) => x.bool()),
+    method: n.get("method").nonEmpty(),
+    n_a: n.get("n_a").int(),
+    n_c: n.get("n_c").int(),
+  };
+}
+
+function readSecondary(n: Node): SecondaryBlock {
+  const tests = uniqueIds(n, n.get("tests").items().map(readSecondaryTest), "test");
+  const family = n.get("family").strs();
+  for (const id of family) if (!tests.some((t) => t.id === id)) n.get("family").fail(`no test ${id}`);
+  const job = n.get("job");
+  return {
+    source: n.get("source").nonEmpty(),
+    alpha: n.get("alpha").unit(),
+    family,
+    tests,
+    width_bands: n.get("width_bands").nullable((w) => ({
+      note: w.get("note").str(),
+      edge_mm: w.get("edge_mm").nonNeg(),
+      bands: w
+        .get("bands")
+        .items()
+        .map((b) => ({
+          id: b.get("id").nonEmpty(),
+          label: b.get("label").nonEmpty(),
+          objects: b.get("objects").int(),
+          mean_a: b.get("mean_a").unit(),
+          mean_c: b.get("mean_c").unit(),
+          p_value: b.get("p_value").unit(),
+        })),
+    })),
+    job: job.nullable((j) => ({
+      job_id: j.get("job_id").nonEmpty(),
+      platform: j.get("platform").nullable((x) => x.str()),
+      region: j.get("region").nullable((x) => x.str()),
+      run_s: j.get("run_s").nullable((x) => x.nonNeg()),
+    })),
   };
 }
 
@@ -492,13 +591,17 @@ function readSource(n: Node): ResultSource {
     cost_usd: n.get("cost_usd").nullable((x) => x.nonNeg()),
     llm_calls: n.has("llm_calls") ? n.get("llm_calls").nullable((x) => x.nonNeg()) : null,
     llm_usd: n.has("llm_usd") ? n.get("llm_usd").nullable((x) => x.nonNeg()) : null,
+    run_s: n.has("run_s") ? n.get("run_s").nullable((x) => x.nonNeg()) : null,
+    image_digest: n.has("image_digest") ? n.get("image_digest").nullable((x) => x.nonEmpty()) : null,
   };
 }
 
 /**
  * Validate results.json. Version 2 is current (S1 primary, H1 secondary); a version 1
  * file (`forest` + `curves`, from before the endpoint change) is upgraded: its curves
- * become S1 with no threshold and its forest becomes H1.
+ * become S1 with no threshold and its forest becomes H1. A final file may carry the
+ * confirmatory S1 comparison (`s1.analysis`) and, in place of `h1`, the pre-registered
+ * secondary endpoints (`secondary`).
  */
 export function parseResults(raw: unknown, file = "results.json"): ResultsIndex {
   const root = new Node(file, "$", raw);
@@ -521,6 +624,7 @@ export function parseResults(raw: unknown, file = "results.json"): ResultsIndex 
         threshold_note: "No threshold in this version 1 file",
         budget,
         shared_prefix: 0,
+        count_from: 1,
         arms: uniqueIds(curves, curves.get("arms").items().map((a) => readS1Arm(a, budget, 1)), "arm"),
       },
       h1: {
@@ -538,31 +642,52 @@ export function parseResults(raw: unknown, file = "results.json"): ResultsIndex 
   if (budget < 1) s1.get("budget").fail("budget must be at least 1");
   const shared = s1.get("shared_prefix").int();
   if (shared < 0 || shared > budget) s1.get("shared_prefix").fail(`expected 0..${budget}, got ${shared}`);
-  const h1 = root.get("h1");
-  const h1Status = h1.get("status").oneOf(["not_run", "available"] as const);
-  const h1Arms = uniqueIds(h1, h1.get("arms").items().map(readArm), "arm");
-  if (h1Status === "not_run" && h1Arms.length > 0) h1.get("arms").fail("arms must be empty while status is not_run");
-  return {
+  const countFrom = s1.has("count_from") ? s1.get("count_from").int() : 1;
+  if (countFrom < 1 || countFrom > budget) s1.get("count_from").fail(`expected 1..${budget}, got ${countFrom}`);
+  const threshold = s1.get("threshold").nullable((x) => x.unit());
+  const secondary = root.has("secondary") ? readSecondary(root.get("secondary")) : null;
+  if (secondary && status !== "final") root.get("secondary").fail("secondary endpoints belong in a final file");
+  let h1: ResultsIndex["h1"] = null;
+  if (root.has("h1") || !secondary) {
+    const h = root.get("h1");
+    const h1Status = h.get("status").oneOf(["not_run", "available"] as const);
+    const h1Arms = uniqueIds(h, h.get("arms").items().map(readArm), "arm");
+    if (h1Status === "not_run" && h1Arms.length > 0) h.get("arms").fail("arms must be empty while status is not_run");
+    h1 = { endpoint: h.get("endpoint").nonEmpty(), status: h1Status, arms: h1Arms, references: readReferences(h.get("references")) };
+  }
+  const doc: ResultsIndex = {
     schema: "rtt-web-results",
     version: 2,
     status,
     note,
     s1: {
       endpoint: s1.get("endpoint").nonEmpty(),
-      threshold: s1.get("threshold").nullable((x) => x.unit()),
+      threshold,
       threshold_note: s1.get("threshold_note").str(),
       budget,
       shared_prefix: shared,
-      arms: uniqueIds(s1, s1.get("arms").items().map((a) => readS1Arm(a, budget, 2)), "arm"),
+      count_from: countFrom,
+      arms: uniqueIds(s1, s1.get("arms").items().map((a) => readS1Arm(a, budget, 2, countFrom, threshold)), "arm"),
     },
-    h1: {
-      endpoint: h1.get("endpoint").nonEmpty(),
-      status: h1Status,
-      arms: h1Arms,
-      references: readReferences(h1.get("references")),
-    },
+    h1,
     sources: root.has("sources") ? root.get("sources").items().map(readSource) : [],
   };
+  if (s1.has("trials")) {
+    const trials = s1.get("trials").int();
+    if (trials < 1) s1.get("trials").fail("expected at least 1");
+    doc.s1.trials = trials;
+  }
+  if (s1.has("analysis")) {
+    if (status !== "final") s1.get("analysis").fail("the confirmatory analysis belongs in a final file");
+    if (doc.s1.arms.some((a) => a.runs.some((r) => r.t === undefined))) s1.get("analysis").fail("every run needs its T");
+    doc.s1.analysis = readS1Analysis(s1.get("analysis"));
+  }
+  if (secondary) doc.secondary = secondary;
+  if (root.has("protocol")) {
+    const p = root.get("protocol");
+    doc.protocol = { tag: p.get("tag").nonEmpty(), results_doc: dataPath(p.get("results_doc")), protocol_doc: dataPath(p.get("protocol_doc")) };
+  }
+  return doc;
 }
 
 // ---------------------------------------------------------------- replay headers

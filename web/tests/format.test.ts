@@ -6,13 +6,38 @@ import {
   formatClock,
   formatDuration,
   formatLift,
+  formatMinutes,
   formatOffset,
+  formatP,
   formatPercent,
   formatUsd,
   formatUtc,
 } from "@/lib/format";
 
 describe("formatting", () => {
+  it("p values as docs/RESULTS.md writes them", () => {
+    // values from the confirmatory analysis outputs, strings as in RESULTS.md
+    expect(formatP(0.0011198008689374398)).toBe("0.0011");
+    expect(formatP(0.0010999450027498626)).toBe("0.0011");
+    expect(formatP(6.999965000175e-5)).toBe("7e-05");
+    expect(formatP(5.4999725001374995e-5)).toBe("5.5e-05");
+    expect(formatP(0.00076999615001925)).toBe("0.00077");
+    expect(formatP(0.000164999175004125)).toBe("0.00017");
+    expect(formatP(0.012099939500302498)).toBe("0.012");
+    expect(formatP(0.0010099949500252498)).toBe("0.001");
+    expect(formatP(1)).toBe("1.0");
+    expect(formatP(0.5)).toBe("0.5");
+    expect(formatP(0.18175909)).toBe("0.18");
+    expect(formatP(0.99996)).toBe("1.0");
+    expect(formatP(Number.NaN)).toBe("n/a");
+  });
+
+  it("job times in whole minutes", () => {
+    expect(formatMinutes(1671.307803)).toBe("28 min");
+    expect(formatMinutes(5038.469007)).toBe("84 min");
+    expect(formatMinutes(-1)).toBe("n/a");
+  });
+
   it("session offsets and byte sizes", () => {
     expect(formatOffset(6.4)).toBe("0:06");
     expect(formatOffset(342.2)).toBe("5:42");

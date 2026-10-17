@@ -7,7 +7,17 @@ import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { apiBase, errorMessage, PASSCODE_HEADER, startSession, streamEvents, uploadPart } from "@/lib/api";
 import { describeDisturbance, disturbanceRows, parseCertificateDoc, placementCurve, summarizeCertificate } from "@/lib/certificate";
 import { getCertificates } from "@/lib/data";
-import { bestSoFar, designsToThreshold, medianCurve, s1Outcome, stepPoints, summarizeArm } from "@/lib/results";
+import { formatP, formatPercent } from "@/lib/format";
+import {
+  bestSoFar,
+  designsToThreshold,
+  medianCurve,
+  s1Outcome,
+  secondaryDiff,
+  secondaryValue,
+  stepPoints,
+  summarizeArm,
+} from "@/lib/results";
 import { createSseParser, type SseMessage } from "@/lib/sse";
 import { binaryTriangleCount, checkStlBuffer, checkStlFile, encodeBinaryStl, fitAgainstOpening, guessUnit, measurePositions, toMillimetres } from "@/lib/stl";
 import { parseResults } from "@/lib/validate";
@@ -123,6 +133,16 @@ describe("s1", () => {
     expect(s1Outcome({ run: "r", best: [0.5, 0.5], job_id: null }, 0.8, 40)).toMatchObject({ designs: 2, reached: false });
   });
 
+  it("uses a recorded T, so round 0 does not count", () => {
+    // round 0 (designs 1-2) already reached 0.8, but T counts from design 3
+    const run = { run: "r", best: [0.9, 0.9, 0.9, 0.9], job_id: null, t: 5 };
+    expect(s1Outcome(run, 0.8, 4)).toMatchObject({ designs: 4, reached: false, t: 5 });
+    expect(s1Outcome({ ...run, t: 3 }, 0.8, 4)).toMatchObject({ designs: 3, reached: true, t: 3 });
+    const arm = summarizeArm({ id: "a", label: "A", runs: [{ ...run, t: 3 }, run, { ...run, t: 4 }] }, 0.8, 4);
+    expect(arm).toMatchObject({ reached: 2, median_designs: 4 });
+    expect(arm.mean_designs).toBe(4);
+  });
+
   it("reports a censored median as not reached instead of imputing it", () => {
     const run = (best: number[]) => ({ run: "r", best, job_id: null });
     const reached = summarizeArm({ id: "a", label: "A", runs: [run([0.9]), run([0.1, 0.9]), run([0.1, 0.1])] }, 0.8, 2);
@@ -146,6 +166,33 @@ describe("results.json", () => {
     expect(r.version).toBe(2);
     expect(["synthetic", "pilot", "final"]).toContain(r.status);
     expect(r.s1.arms.length).toBeGreaterThan(0);
+  });
+
+  it("a final file shows exactly the numbers of docs/RESULTS.md", () => {
+    const r = parseResults(v2());
+    if (r.status !== "final") return;
+    const doc = readFileSync(path.join(__dirname, "..", "..", "docs", "RESULTS.md"), "utf8");
+    const shown: string[] = [];
+    const { s1 } = r;
+    const [a, c] = s1.arms.map((arm) => summarizeArm(arm, s1.threshold!, s1.budget));
+    expect(s1.count_from).toBe(9);
+    expect(`${Math.round(s1.threshold! * s1.trials!)}/${s1.trials}`).toBe("37/48");
+    shown.push(`${a!.reached} of ${a!.runs}`, `${c!.reached} of ${c!.runs}`);
+    expect([a!.reached, c!.reached]).toEqual([11, 23]);
+    expect(a!.median_designs).toBeNull();
+    shown.push(`not reached (above ${s1.budget})`, String(c!.median_designs));
+    shown.push(`counted as ${s1.budget + 1}) | ${a!.mean_designs!.toFixed(1)} | ${c!.mean_designs!.toFixed(1)} |`);
+    const an = s1.analysis!;
+    shown.push(`${an.effect.diff.toFixed(2)} designs`, `interval ${an.effect.ci_low.toFixed(2)} to ${an.effect.ci_high.toFixed(2)}`);
+    shown.push(`p = ${formatP(an.primary.p_value)}`, `log-rank: p = ${formatP(an.logrank.p_value)}`);
+    shown.push(`(p = ${formatP(an.lift_only!.p_value)})`);
+    for (const t of r.secondary!.tests) {
+      shown.push(`| ${secondaryValue(t, t.mean_a)} | ${secondaryValue(t, t.mean_c)} | ${secondaryDiff(t)} | ${formatP(t.p_value)} | ${formatP(t.p_holm!)} |`);
+    }
+    for (const b of r.secondary!.width_bands!.bands) {
+      shown.push(`(${b.objects} objects) ${formatPercent(b.mean_a, 1)} vs ${formatPercent(b.mean_c, 1)} (p = ${formatP(b.p_value)})`);
+    }
+    for (const s of shown) expect(doc, s).toContain(s);
   });
 
   it("rejects a decreasing best-so-far curve and an out-of-range shared prefix", () => {
@@ -172,7 +219,7 @@ describe("results.json", () => {
     const r = parseResults(v1);
     expect(r.s1).toMatchObject({ threshold: null, budget: 3, shared_prefix: 0 });
     expect(r.s1.arms[0]!.runs[0]).toEqual({ run: "r1", best: [0.1, 0.2], job_id: null });
-    expect(r.h1.status).toBe("available");
+    expect(r.h1?.status).toBe("available");
   });
 });
 

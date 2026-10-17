@@ -19,7 +19,15 @@ import {
 } from "../scripts/import-demo.mjs";
 import { withProvenance } from "../scripts/import-certificate.mjs";
 import { findPrivateIds } from "../scripts/import-session.mjs";
-import { bestSoFar, buildResults, readHistory, scanRunDir, sharedPrefix } from "../scripts/import-results.mjs";
+import {
+  bestSoFar,
+  buildResults,
+  designsToTarget,
+  pairedSharedPrefix,
+  readHistory,
+  scanRunDir,
+  sharedPrefix,
+} from "../scripts/import-results.mjs";
 import { syntheticResults } from "../scripts/make-synthetic-results.mjs";
 import { resolveFile } from "../scripts/serve.mjs";
 import { parseResults } from "@/lib/validate";
@@ -184,14 +192,94 @@ describe("import-results", () => {
       const parsed = parseResults(doc);
       expect(parsed.s1.arms.map((a) => a.id)).toEqual(["a-random", "c-nemotron"]);
       expect(parsed.s1.shared_prefix).toBe(2);
-      expect(parsed.s1.arms[1]!.runs[0]).toEqual({ run: "nemotron-r00", best: [0.5, 0.6, 0.9, 0.9], job_id: "aijob-n" });
-      expect(parsed.h1.status).toBe("not_run");
+      expect(parsed.s1.arms[1]!.runs[0]).toEqual({ run: "nemotron-r00", best: [0.5, 0.6, 0.9, 0.9], job_id: "aijob-n", t: 3 });
+      expect(parsed.s1.count_from).toBe(1);
+      expect(parsed.h1?.status).toBe("not_run");
       const nebius = parsed.sources.find((s) => s.kind === "nebius")!;
       expect(nebius).toMatchObject({ job_id: "aijob-n", platform: "cpu-d3", region: "uk-south2", wall_s: 100.1235, cost_usd: 0.05 });
       // model calls are billed separately from the job and reported next to it
       expect(nebius).toMatchObject({ llm_calls: 2, llm_usd: 0.0043 });
       expect(parsed.sources.find((x) => x.arm === "a-random")).toMatchObject({ llm_calls: 0, llm_usd: 0 });
       expect(JSON.stringify(doc)).not.toContain("secret");
+    } finally {
+      for (const d of dirs) rmSync(d, { recursive: true, force: true });
+    }
+  });
+
+  it("counts S1 from one past round 0 and pairs runs by slot", () => {
+    expect(designsToTarget([0.9, 0.1, 0.5, 0.8], 0.8, 3)).toBe(4);
+    expect(designsToTarget([0.9, 0.1, 0.5, 0.7], 0.8, 3)).toBe(5);
+    expect(designsToTarget([0.9, 0.1], 0.8)).toBe(1);
+    const h = (ids: string[]) => ids.map((design_id) => ({ design_id }));
+    const runs = [
+      { name: "random-r00", history: h(["e", "s1", "x"]) },
+      { name: "random-r01", history: h(["e", "s2", "y"]) },
+      { name: "nemotron-r00", history: h(["e", "s1", "z"]) },
+      { name: "nemotron-r01", history: h(["e", "s2", "w"]) },
+    ];
+    // every run shares only the entrant; runs of the same slot share the seed design too
+    expect(sharedPrefix(runs.map((r) => r.history))).toBe(1);
+    expect(pairedSharedPrefix(runs)).toBe(2);
+  });
+
+  it("builds a final file with the confirmatory analysis and refuses one that disagrees", () => {
+    const dir = (arm: string, runs: number[][]) => {
+      const d = mkdtempSync(path.join(os.tmpdir(), "rtt-final-"));
+      writeFileSync(path.join(d, "manifest.json"), JSON.stringify({ kind: "search", arm, budget: 4, round_sizes: [2, 2] }));
+      runs.forEach((scores, i) => {
+        const runDir = path.join(d, "runs", `${arm}-r0${i}`);
+        mkdirSync(runDir, { recursive: true });
+        const ids = scores.map((_, j) => (j < 2 ? `seed${i}-${j}` : `${arm}${i}-${j}`));
+        writeFileSync(path.join(runDir, "history.jsonl"), history(scores, ids));
+      });
+      return d;
+    };
+    const dirs = [dir("random", [[0.9, 0.1, 0.2, 0.3], [0.1, 0.1, 0.8, 0.2]]), dir("nemotron", [[0.9, 0.1, 0.85, 0.3], [0.1, 0.1, 0.9, 0.2]])];
+    const test = (statistic: number, p: number) => ({ statistic, p_value: p, method: "exact permutation" });
+    const analysis = (tA: number[]) => ({
+      format: "rtt-s1-analysis",
+      tau: 0.8,
+      tau_source: "PREREG",
+      budget: 4,
+      runs: {
+        A: tA.map((t, i) => ({ run_id: `random-r0${i}`, t_arm: t })),
+        C: [3, 3].map((t, i) => ({ run_id: `nemotron-r0${i}`, t_arm: t })),
+      },
+      comparison: {
+        primary: test((tA[0]! + tA[1]!) / 2 - 3, 0.25),
+        effect: { diff: (tA[0]! + tA[1]!) / 2 - 3, ci_low: 0, ci_high: 2, level: 0.95 },
+        sensitivity: { logrank: test(1, 0.3) },
+      },
+      lift_only: { status: "exploratory", comparison: { primary: test(0, 1), effect: { diff: 0 } } },
+    });
+    const secondary = {
+      schema: "rtt.secondary_v2/1",
+      confirmatory: true,
+      alpha: 0.05,
+      family: ["H1"],
+      tests: { H1: { mean_a: 0.5, mean_c: 0.6, diff_c_minus_a: 0.1, p: 0.01, p_holm: 0.01, rejected: true, method: "perm", n_a: 2, n_c: 2 } },
+    };
+    try {
+      const opts = { status: "final" as const, threshold: 0.8, thresholdNote: "", note: "" };
+      const doc = buildResults(dirs.map(scanRunDir), {
+        ...opts,
+        s1Analysis: { doc: analysis([5, 3]), source: "runs/analysis/s1.json" },
+        secondary: { doc: secondary, source: "runs/analysis/secondary.json" },
+        protocol: { tag: "prereg-v1", results_doc: "docs/RESULTS.md", protocol_doc: "docs/PREREG.md" },
+      });
+      const parsed = parseResults(doc);
+      // round 0 reached 0.9 in r00, but T counts from design 3
+      expect(parsed.s1.count_from).toBe(3);
+      expect(parsed.s1.shared_prefix).toBe(2);
+      expect(parsed.s1.arms[0]!.runs.map((r) => r.t)).toEqual([5, 3]);
+      expect(parsed.s1.analysis?.effect.diff).toBe(1);
+      expect(parsed.secondary?.tests[0]).toMatchObject({ id: "H1", unit: "rate", p_holm: 0.01 });
+      expect(parsed.h1).toBeNull();
+      expect(parsed.protocol?.tag).toBe("prereg-v1");
+      // an analysis whose T differs from the histories is refused
+      expect(() => buildResults(dirs.map(scanRunDir), { ...opts, s1Analysis: { doc: analysis([4, 3]), source: "x" } })).toThrow(/T 4/);
+      // and a non-final file may not carry it
+      expect(() => parseResults({ ...doc, status: "pilot" })).toThrow(/final file/);
     } finally {
       for (const d of dirs) rmSync(d, { recursive: true, force: true });
     }

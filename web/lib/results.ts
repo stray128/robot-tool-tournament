@@ -2,10 +2,13 @@
  * S1, the primary endpoint: how many simulated designs a search needs before its
  * best-so-far training success reaches the pre-registered threshold. A run that never
  * reaches it within the budget B is right-censored at B (it needed "more than B").
+ * When the file records each run's T (counted from `s1.count_from`, so the shared
+ * round 0 does not count), T is used as it is; older files are read from the curve.
  * Pure functions, shared by the /results charts, the landing-page stats and the tests.
  */
 
-import type { S1Arm, S1Run } from "./types";
+import { formatPercent } from "./format";
+import type { S1Arm, S1Run, SecondaryTest } from "./types";
 
 /** Running maximum of per-design scores: the best-so-far curve. */
 export function bestSoFar(scores: number[]): number[] {
@@ -30,6 +33,8 @@ export interface S1Outcome {
   /** Designs needed, or the censoring point when not reached. */
   designs: number;
   reached: boolean;
+  /** S1's T as the analysis counts it: `designs` when reached, else one past the censoring point. */
+  t: number;
   /** Best training success at the end of the run. */
   final_best: number | null;
 }
@@ -39,12 +44,14 @@ export interface S1Outcome {
  * if it stopped early (it is then known only to need more than that many designs).
  */
 export function s1Outcome(run: S1Run, threshold: number, budget: number): S1Outcome {
-  const n = designsToThreshold(run.best, threshold);
+  const limit = Math.min(budget, run.best.length);
+  const n = run.t !== undefined ? (run.t <= limit ? run.t : null) : designsToThreshold(run.best, threshold);
   return {
     run: run.run,
     job_id: run.job_id,
-    designs: n ?? Math.min(budget, run.best.length),
+    designs: n ?? limit,
     reached: n !== null,
+    t: n ?? limit + 1,
     final_best: run.best.at(-1) ?? null,
   };
 }
@@ -66,6 +73,8 @@ export interface ArmS1Summary {
    * null when the median itself is censored (half or more of the runs never reached it).
    */
   median_designs: number | null;
+  /** Mean of T, a run that never reached the threshold counted as B + 1; null with no runs. */
+  mean_designs: number | null;
   /** Median best-so-far at the end of the budget. */
   median_final_best: number | null;
 }
@@ -92,6 +101,7 @@ export function summarizeArm(arm: S1Arm, threshold: number, budget: number): Arm
     reached: outcomes.filter((o) => o.reached).length,
     runs: outcomes.length,
     median_designs: med,
+    mean_designs: outcomes.length ? outcomes.reduce((s, o) => s + o.t, 0) / outcomes.length : null,
     median_final_best: finals.length ? median(finals) : null,
   };
 }
@@ -118,4 +128,15 @@ export function stepPoints(values: number[], budget: number): string {
     pts.push(`${x},${y}`);
   });
   return pts.join(" ");
+}
+
+/** A secondary endpoint's arm value as docs/RESULTS.md gives it: "60.5%" for a rate, "0.703" for a score. */
+export function secondaryValue(t: SecondaryTest, v: number): string {
+  return t.unit === "rate" ? formatPercent(v, 1) : v.toFixed(3);
+}
+
+/** C minus A, signed: "+12.0 points" for a rate, "+0.085" for a score. */
+export function secondaryDiff(t: SecondaryTest): string {
+  const sign = t.diff >= 0 ? "+" : "-";
+  return t.unit === "rate" ? `${sign}${Math.abs(t.diff * 100).toFixed(1)} points` : `${sign}${Math.abs(t.diff).toFixed(3)}`;
 }

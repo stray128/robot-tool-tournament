@@ -403,6 +403,13 @@ export interface S1Run {
   best: number[];
   /** Nebius job that ran it, when it ran on Nebius. */
   job_id: string | null;
+  /**
+   * S1's T, when the file records it: the 1-based index of the first design from
+   * `s1.count_from` on whose own score reaches the threshold; the run length plus one
+   * (B + 1 for a full run) when none does. Absent in older files, which are then read
+   * from `best` alone.
+   */
+  t?: number;
 }
 
 export interface S1Arm {
@@ -428,6 +435,64 @@ export interface ResultSource {
   llm_calls?: number | null;
   /** Their cost, billed separately from the job; null when not recorded. */
   llm_usd?: number | null;
+  /** The job's running time, without provisioning; null when not recorded. */
+  run_s?: number | null;
+  /** Container image the job ran. */
+  image_digest?: string | null;
+}
+
+/** One test of the pre-registered S1 comparison. */
+export interface S1Test {
+  statistic: number;
+  p_value: number;
+  method: string;
+}
+
+/** The confirmatory S1 comparison, imported from the pre-registered analysis (s1_v2.json). */
+export interface S1Analysis {
+  /** Repository path of the analysis output. */
+  source: string;
+  tau_source: string;
+  /** Difference in mean T, arm A minus arm C (one-sided). */
+  primary: S1Test;
+  effect: { diff: number; ci_low: number; ci_high: number; level: number };
+  /** Sensitivity analysis: permutation log-rank. */
+  logrank: S1Test;
+  /** Exploratory: the same comparison scored on lift alone. */
+  lift_only: { status: string; diff: number; p_value: number; method: string } | null;
+}
+
+/** One secondary endpoint, arm C against arm A. */
+export interface SecondaryTest {
+  id: string;
+  label: string;
+  /** `rate`: a success rate 0..1, shown in percent. `score`: shown as a decimal. */
+  unit: "rate" | "score";
+  mean_a: number;
+  mean_c: number;
+  /** C minus A. */
+  diff: number;
+  p_value: number;
+  p_holm: number | null;
+  rejected: boolean | null;
+  method: string;
+  n_a: number;
+  n_c: number;
+}
+
+/** Secondary endpoints (Holm family) and the planned H2 split, from secondary_v2.json. */
+export interface SecondaryBlock {
+  source: string;
+  alpha: number;
+  family: string[];
+  tests: SecondaryTest[];
+  width_bands: {
+    note: string;
+    edge_mm: number;
+    bands: { id: string; label: string; objects: number; mean_a: number; mean_c: number; p_value: number }[];
+  } | null;
+  /** The held-out job that scored each run's frozen pick. */
+  job: { job_id: string; platform: string | null; region: string | null; run_s: number | null } | null;
 }
 
 /**
@@ -441,6 +506,8 @@ export interface ResultsIndex {
   /** `synthetic`: layout data, not a result. `pilot`: excluded from confirmatory analysis. */
   status: "synthetic" | "pilot" | "final";
   note: string;
+  /** For a final file: the protocol tag and the repository documents behind it. */
+  protocol?: { tag: string; results_doc: string; protocol_doc: string };
   s1: {
     endpoint: string;
     /** Training-success threshold a run must reach; null while undecided. */
@@ -449,16 +516,25 @@ export interface ResultsIndex {
     threshold_note: string;
     /** Designs per run (B); a run that never reaches the threshold is censored here. */
     budget: number;
-    /** Leading designs every arm shares (entrants and seed designs), 0 if none. */
+    /** Leading designs paired runs share (entrants and seed designs), 0 if none. */
     shared_prefix: number;
+    /** First design S1 counts (1 when every design counts); earlier ones are round 0. */
+    count_from: number;
+    /** Training grasps behind each design's score, when the file records it. */
+    trials?: number;
+    /** The confirmatory comparison, for a final file. */
+    analysis?: S1Analysis;
     arms: S1Arm[];
   };
+  /** The forest-plot H1 block of earlier files; null when `secondary` replaces it. */
   h1: {
     endpoint: string;
     /** `not_run`: the held-out evaluation has not happened; arms are then empty. */
     status: "not_run" | "available";
     arms: ArmEstimate[];
     references: { label: string; value: number }[];
-  };
+  } | null;
+  /** Pre-registered secondary endpoints, for a final file. */
+  secondary?: SecondaryBlock;
   sources: ResultSource[];
 }
