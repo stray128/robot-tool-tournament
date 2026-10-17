@@ -229,3 +229,26 @@ def test_the_service_offers_recommend_effector_with_the_simulator_backend(
         assert fake.effectors is None  # the offline fake cannot run tournaments
     finally:
         fake.shutdown()
+
+
+def test_the_cli_designs_with_the_b3_designer_client(tmp_path: Path) -> None:
+    """``--design`` uses track B3's client: its sampling, the scrubbing cache, a capped ledger."""
+    import argparse
+
+    from rtt.effectors.__main__ import _designer
+    from rtt.effectors.morphology import DESIGNER_MODEL, DESIGNER_SAMPLING
+    from rtt.effectors.morphology.proposer import ScrubbingCache
+
+    args = argparse.Namespace(design=True, spend_usd=0.5)
+    designer = _designer(args, tmp_path)
+    client = designer.client  # type: ignore[attr-defined]
+    assert client.model == DESIGNER_MODEL
+    assert (client.temperature, client.top_p, client.max_tokens) == (
+        DESIGNER_SAMPLING["temperature"],
+        DESIGNER_SAMPLING["top_p"],
+        DESIGNER_SAMPLING["max_tokens"],
+    )
+    assert isinstance(client.cache, ScrubbingCache) and client.ledger.budget_usd == 0.5
+    with pytest.raises(SystemExit, match="spend-usd"):
+        _designer(argparse.Namespace(design=True, spend_usd=None), tmp_path)
+    assert _designer(argparse.Namespace(design=False, spend_usd=None), tmp_path) is None

@@ -43,16 +43,17 @@ def _designer(args: argparse.Namespace, out: Path) -> Any:
     if args.spend_usd is None or args.spend_usd <= 0:
         raise SystemExit("--design spends money on Token Factory: pass --spend-usd (for example 0.05)")
     from rtt.effectors.tournament import default_designer
-    from rtt.llm.cache import ResponseCache
-    from rtt.llm.client import LLMClient
-    from rtt.llm.ledger import Ledger
-    from rtt.llm.providers import NEMOTRON_SUPER
 
-    client = LLMClient(
-        NEMOTRON_SUPER,
-        max_tokens=8192,
-        cache=ResponseCache(out / "llm_cache"),
-        ledger=Ledger(out / "llm_ledger.jsonl", budget_usd=args.spend_usd),
+    try:
+        from rtt.effectors.morphology import make_designer_client
+    except ModuleNotFoundError:
+        raise SystemExit(
+            "--design needs the morphology designer (rtt.effectors.morphology, track B3)"
+        ) from None
+    # track B3's client: Nemotron 3 Super at the designer's sampling, the scrubbing cache (no
+    # reasoning text, brand-free model text) and a ledger capped at --spend-usd for this run
+    client = make_designer_client(
+        out / "llm_cache", ledger_path=out / "llm_ledger.jsonl", budget_usd=args.spend_usd
     )
     designer = default_designer(client)
     if designer is None:
