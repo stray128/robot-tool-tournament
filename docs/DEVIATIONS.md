@@ -347,3 +347,14 @@ Entries required under Part A: a run with more than 1 % physics_invalid episodes
 that waited for uk-south2 capacity under --no-fallback; any rerun after an infrastructure
 failure.
 -->
+
+### 2026-10-17: held-out image of record, logged before any held-out job
+
+- **Image:** `rtt-sim:02ad9f7ffb7f`, built with `make image` from `main` `02ad9f7` (the merge of `heldout-v2`, whose runner code is commit `84747e9`).
+- **Registry digest:** `sha256:b7d54d7514ed87121cf657907995b582d5e25c6a78a28d081f5aabda5b1dfb41`, pushed to both regions.
+- **Scope:** only the held-out jobs (the scan selection, the `--dev` infrastructure check, and H1/H2 scoring) use this image.
+- **Search image unchanged:** the confirmatory search jobs stay on `sha256:c6162fa01d41beaab64e1431bc10e07535ce7bd59045fcef7bf0e074857b4b89`.
+- **Order of held-out jobs:**
+  1. The scored scan selection runs as its own job, matching A5 literally, and its hull hashes are logged.
+  2. The `--dev` check runs with a throwaway secret.
+  3. The scored H1/H2 job runs, and is the only job given the held-out seed.
