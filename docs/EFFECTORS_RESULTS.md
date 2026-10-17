@@ -9,7 +9,8 @@ statistics. The rules are in `docs/EFFECTORS.md` (sections 4, 5 and 10).
 
 Run on 2026-10-17, branch `effectors-integ`, contract `rtt-effectors/1`, CPU MuJoCo 3.15.0,
 task digest `8168db801332`. The published outputs are those of the last re-run, at commit
-`8c1011c` with a clean tree. The site's pages under `/effectors/` show the same data.
+`790c47d` with a clean tree, after the random control was matched to the Nemotron designs
+(section 4). The site's pages under `/effectors/` show the same data.
 
 ## 1. What ran
 
@@ -23,21 +24,23 @@ on the same wrist, servos, phases, placements, seeds and scorer:
 | Soft arm | 3 | approximation | 12, 16 and 20 segment tentacles |
 | Suction | 3 | approximation | 10, 16 and 25 mm cups |
 | Designed (Nemotron) | 4 to 7 | rigid or approximation | Nemotron 3 Super proposals, 2 rounds of 4 requested; round 2 sees round 1's physics |
-| Random control | 8 | rigid or approximation | recipes drawn from the same spaces, with the same validators |
+| Random control | 4 to 7 (matched) | rigid or approximation | drawn after the Nemotron rounds: exactly as many designs as Nemotron's valid designs screened on the part, from the same spaces with the same validators |
 
 * Screen: 4 placements (centred, +2 mm, -3 mm, +1 mm and 6 deg) x 2 jitter seeds = 8 episodes
   per candidate. The non-jaw families first run a nominal reference episode.
 * Certificate: the top 2 of each group by screen success, on the frozen 18-test battery
   (nominal, placement errors to 3 mm on both axes, a 1 g shake on three axes, a 0.5 N s push
   on two axes).
-* Per part: 510 to 537 episodes, 3,141 in all (1,845 screen and reference, 1,296 certificate).
+* Per part: 474 to 528 episodes, 3,006 in all (1,710 screen and reference, 1,296 certificate).
 * Headline requirement: **registered** (held, and back in the reference pose within the
   frozen tolerances). **Held** (lifted and held) is computed too.
 
 Founder decisions applied before the run: the hands stay in at their upstream gains (no gain
 changes); the rigid-pad gripper B (1.4 N at its published settings) is not an entrant, so the
 catalog group is exactly 12 and is never sampled; the rigid-pad gripper A keeps its upstream
-4.1 N and every page that shows it prints "Low grip at published settings".
+4.1 N and every page that shows it prints "Low grip at published settings". Orchestrator
+decision: the random control screens exactly as many designs as Nemotron did on each part,
+from the same pool of spaces.
 
 ## 2. Recommendation per part
 
@@ -81,19 +84,28 @@ part. A family with no finalist shows its best screen result instead.
 | Pipe tee | 0.68 / 0.83 | not certified (0/8, 0/8) | 0.56 / 0.67 | 0.00 / 0.00 | 0.00 / 0.00 | 0.00 / 0.28 | 0.00 / 0.00 |
 | Steel slug | 1.00 / 1.00 | not certified (0/8, 0/8) | 0.58 / 0.83 | 0.65 / 0.68 | 0.14 / 0.44 | 1.00 / 1.00 | 0.14 / 0.44 |
 
-The random control's best entries are suction cups on block, steel slug and pipe tee, a hook
-gripper on flanged bushing, and nothing that held on hex standoff or L-bracket.
+The random control's best entries are suction cups on block and steel slug and a hook gripper
+on flanged bushing; nothing it drew holds in a certificate on hex standoff, L-bracket or pipe
+tee.
 
 ## 4. Nemotron designs and the random control
 
 | Part | Nemotron designs screened | Best Nemotron registered / held | Nominal held | Random designs screened | Best random registered / held | Nominal held |
 |---|---|---|---|---|---|---|
-| Block | 6 | 0.56 / 0.67 | yes | 8 | 0.14 / 0.44 | yes |
-| Flanged bushing | 4 | 0.78 / 0.97 | yes | 8 | 0.68 / 0.83 | yes |
-| Hex standoff | 7 | 0.85 / 1.00 | yes | 8 | 0.00 / 0.00 | no |
-| L-bracket | 5 | 0.56 / 0.67 | yes | 8 | 0.00 / 0.00 | no |
-| Pipe tee | 4 | 0.00 / 0.28 | no | 8 | 0.00 / 0.00 | no |
-| Steel slug | 7 | 1.00 / 1.00 | yes | 8 | 0.14 / 0.44 | yes |
+| Block | 6 | 0.56 / 0.67 | yes | 6 | 0.14 / 0.44 | yes |
+| Flanged bushing | 4 | 0.78 / 0.97 | yes | 4 | 0.68 / 0.83 | yes |
+| Hex standoff | 7 | 0.85 / 1.00 | yes | 7 | 0.00 / 0.00 | no |
+| L-bracket | 5 | 0.56 / 0.67 | yes | 5 | 0.00 / 0.00 | no |
+| Pipe tee | 4 | 0.00 / 0.28 | no | 4 | 0.00 / 0.00 | no |
+| Steel slug | 7 | 1.00 / 1.00 | yes | 7 | 0.14 / 0.44 | yes |
+| **All six** | **33** | | **5 of 6** | **33** | | **3 of 6** |
+
+The control is matched per part: after the two Nemotron rounds it draws, from the spaces
+Nemotron was offered (fingered hand, hook gripper, segmented tentacle, soft-arm tentacle,
+suction cup) and with the same validators, exactly as many designs as Nemotron's valid designs
+screened on that part, and screens them on the same conditions. 15 of the 48 designs Nemotron
+was asked for did not become candidates (refused by the validators, mostly the opening rule
+`too_narrow`, or by the duplicate and too-similar screens), so both arms screened 33.
 
 "Nominal held": a certified design of the group holds the part in the certificate's nominal
 test. B3's physics gate (the best Nemotron design held at nominal on at least 4 of the 6
@@ -105,15 +117,12 @@ part and higher on five. **We make no superiority claim.** The documented rule f
 only, the random control shown beside Nemotron. The comparison is also confounded:
 
 * One tournament per part, one seed, six parts.
-* The groups are not the same size: 15 of Nemotron's 48 requested designs did not become
-  candidates (refused by the validators, mostly the opening rule `too_narrow`, or by the
-  duplicate and too-similar screens), so it screened 33 designs to the control's 48.
-* The two arms drew from the shared spaces very differently. The random control drew 24
-  suction cups, 12 soft-arm tentacles, 7 hook grippers and 5 fingered hands (the validators
-  refuse more random fingered designs, and the suction and soft-arm spaces joined the shared
-  space when those families landed). Nemotron chose 14 fingered hands, 5 segmented tentacles,
-  3 hook grippers, 6 cups and 5 soft-arm tentacles. Much of the gap is "fingered designs grip
-  these parts better than cups", not "Nemotron's parameters beat random ones".
+* Same pool, different picks. The random control's 33 designs are 16 suction cups, 8 soft-arm
+  tentacles, 5 hook grippers and 4 fingered hands (a uniform choice of space, then the
+  validators, which refuse more random fingered designs). Nemotron's 33 are 14 fingered hands,
+  5 segmented tentacles, 3 hook grippers, 6 cups and 5 soft-arm tentacles. Much of the gap is
+  "fingered designs grip these parts better than cups", not "Nemotron's parameters beat random
+  ones".
 * Nemotron's prompt describes the part; the random draw is blind to it. That is the point of
   the designer, but it is not the comparison the pre-registered experiment makes.
 
@@ -153,35 +162,39 @@ needed.
   held for the 16 and 20 segment arms) and steel slug, registers poorly (the part ends off
   centre or tilted), and is pushed off the pipe tee as it closes.
 
-**Physics validity.** 0 simulator resets in 3,141 episodes. 42 episodes (1.3 %) were
+**Physics validity.** 0 simulator resets in 3,006 episodes. 40 episodes (1.3 %) were
 `physics_unreliable` (more than 1 mm effector-part penetration while held), spread over the
 jaw, hands, grippers, soft arm and designed morphologies; they count as failures. The fairness
 signature (wrist servos and force limits, solver, the part's contact parameters, phase
 timings, conditions and seeds, read from every compiled model) is identical across all
 candidates on every part.
 
-**Determinism.** The tournament was run five times. Run 1 (live Nemotron calls) and run 2
+**Determinism.** The tournament was run seven times. Run 1 (live Nemotron calls) and run 2
 (`--compare`, from the response cache) gave identical digests on all six parts. A wording fix
 to the recommendation text (a full tie was explained as "higher screen success" when the
 screens were equal) changed the digests of flanged bushing and steel slug only; their records
 and `traj_sha` values were unchanged. Runs 3 to 5 then reproduced each other on all six parts.
+Matching the random control changed every part's records (the control's candidates); run 6
+(from the response cache: Nemotron saw the same prompts and gave the same designs) and run 7
+(`--compare`) gave identical digests on all six parts. The winners did not change.
 
 | Part | Digest (published) |
 |---|---|
-| Block | `6e038abe37b6` |
-| Flanged bushing | `fb63184da51e` |
-| Hex standoff | `3258c6c652b8` |
-| L-bracket | `4f4fb34ba42e` |
-| Pipe tee | `55a852de6a39` |
-| Steel slug | `8b444988647c` |
+| Block | `48afb24f4d62` |
+| Flanged bushing | `e6d80f48f713` |
+| Hex standoff | `48ecac0525d1` |
+| L-bracket | `f5465eda8283` |
+| Pipe tee | `a678f7962846` |
+| Steel slug | `dac1abb49145` |
 
 ## 6. Costs
 
 * **Token Factory** (Nemotron 3 Super, `nvidia/nemotron-3-super-120b-a12b`, temperature 1.0,
   8,192 output tokens): 23 live calls in run 1 (12 proposals, 11 repairs), 188,427 prompt and
   25,864 completion tokens, **$0.0798** against the $0.50 allowed. Per part $0.011 to $0.015.
-  Runs 2 to 5 replayed the cache: 0 live calls, $0. Every call succeeded.
-* **Compute:** this laptop's CPU, 8 worker processes: 60 to 122 s per part, about 10 minutes
+  Runs 2 to 7 replayed the cache: 0 live calls, $0 (the matched re-run was allowed $0.15 more
+  and used none). Every call succeeded.
+* **Compute:** this laptop's CPU, 8 worker processes: 57 to 122 s per part, about 10 minutes
   for the six parts. No cloud compute.
 
 ## 7. Reproduce

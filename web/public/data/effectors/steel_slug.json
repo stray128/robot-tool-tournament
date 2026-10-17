@@ -528,8 +528,8 @@
         "note": null
       },
       {
-        "effector_id": "ff5c5b10faf89b649405f1edb55da11fcf862cc676241f67199e0a50cc32f51e",
-        "display_name": "Designed suction cup, 21 mm",
+        "effector_id": "52b49f22648e50d6a17d24731761d18cd145628133df83451c15b9224a46bb22",
+        "display_name": "Designed suction cup, 36 mm",
         "family": "suction",
         "group": "random",
         "fidelity": "approximation",
@@ -537,38 +537,10 @@
         "certified": true,
         "eligible": true,
         "reason": null,
-        "score": 0.0256,
+        "score": 0.1368,
         "tolerance_mm": {
           "x": 0.0,
           "y": 0.0
-        },
-        "screen_rate": 0.25,
-        "n_actuators": 1,
-        "mass_kg": 0.0625,
-        "actuation": {
-          "bellows_stiffness_n_per_mm": 2.268,
-          "bellows_stroke_mm": 6.0,
-          "holding_force_max_n": 12.122620652039616,
-          "lip_area_mm2": 346.36059005827474,
-          "max_tilt_deg": 8.0,
-          "vacuum_kpa": 35.0
-        },
-        "note": null
-      },
-      {
-        "effector_id": "52b49f22648e50d6a17d24731761d18cd145628133df83451c15b9224a46bb22",
-        "display_name": "Designed suction cup, 36 mm",
-        "family": "suction",
-        "group": "random",
-        "fidelity": "approximation",
-        "status": "screened",
-        "certified": false,
-        "eligible": false,
-        "reason": "not certified (not a finalist)",
-        "score": null,
-        "tolerance_mm": {
-          "x": null,
-          "y": null
         },
         "screen_rate": 0.25,
         "n_actuators": 1,
@@ -1661,34 +1633,6 @@
           "note": null
         },
         {
-          "effector_id": "ff5c5b10faf89b649405f1edb55da11fcf862cc676241f67199e0a50cc32f51e",
-          "display_name": "Designed suction cup, 21 mm",
-          "family": "suction",
-          "group": "random",
-          "fidelity": "approximation",
-          "status": "screened",
-          "certified": true,
-          "eligible": true,
-          "reason": null,
-          "score": 0.3333,
-          "tolerance_mm": {
-            "x": 3.0,
-            "y": 3.0
-          },
-          "screen_rate": 1.0,
-          "n_actuators": 1,
-          "mass_kg": 0.0625,
-          "actuation": {
-            "bellows_stiffness_n_per_mm": 2.268,
-            "bellows_stroke_mm": 6.0,
-            "holding_force_max_n": 12.122620652039616,
-            "lip_area_mm2": 346.36059005827474,
-            "max_tilt_deg": 8.0,
-            "vacuum_kpa": 35.0
-          },
-          "note": null
-        },
-        {
           "effector_id": "743fc0bc1efc93c288065cff91b147fd993ad974831e50b7617f7f15a0ab66fc",
           "display_name": "Soft arm, 16 segments, 160 mm",
           "family": "soft_arm",
@@ -1711,6 +1655,34 @@
             "cable_tension_n": 50.0,
             "root_joint_stiffness_nm_per_rad": 0.3,
             "segments": 16.0
+          },
+          "note": null
+        },
+        {
+          "effector_id": "52b49f22648e50d6a17d24731761d18cd145628133df83451c15b9224a46bb22",
+          "display_name": "Designed suction cup, 36 mm",
+          "family": "suction",
+          "group": "random",
+          "fidelity": "approximation",
+          "status": "screened",
+          "certified": true,
+          "eligible": true,
+          "reason": null,
+          "score": 0.265,
+          "tolerance_mm": {
+            "x": 1.0,
+            "y": 1.0
+          },
+          "screen_rate": 0.625,
+          "n_actuators": 1,
+          "mass_kg": 0.0972,
+          "actuation": {
+            "bellows_stiffness_n_per_mm": 1.414,
+            "bellows_stroke_mm": 6.0,
+            "holding_force_max_n": 54.93320191727815,
+            "lip_area_mm2": 1046.3467031862504,
+            "max_tilt_deg": 7.0,
+            "vacuum_kpa": 52.5
           },
           "note": null
         },
@@ -1865,34 +1837,6 @@
             "contact_lever_mm": 45.0,
             "grip_force_n_total": 30.0,
             "joint_torque_nm_max": 0.3375
-          },
-          "note": null
-        },
-        {
-          "effector_id": "52b49f22648e50d6a17d24731761d18cd145628133df83451c15b9224a46bb22",
-          "display_name": "Designed suction cup, 36 mm",
-          "family": "suction",
-          "group": "random",
-          "fidelity": "approximation",
-          "status": "screened",
-          "certified": false,
-          "eligible": false,
-          "reason": "not certified (not a finalist)",
-          "score": null,
-          "tolerance_mm": {
-            "x": null,
-            "y": null
-          },
-          "screen_rate": 0.625,
-          "n_actuators": 1,
-          "mass_kg": 0.0972,
-          "actuation": {
-            "bellows_stiffness_n_per_mm": 1.414,
-            "bellows_stroke_mm": 6.0,
-            "holding_force_max_n": 54.93320191727815,
-            "lip_area_mm2": 1046.3467031862504,
-            "max_tilt_deg": 7.0,
-            "vacuum_kpa": 52.5
           },
           "note": null
         },
@@ -2845,8 +2789,8 @@
           "note": null
         },
         {
-          "effector_id": "ff5c5b10faf89b649405f1edb55da11fcf862cc676241f67199e0a50cc32f51e",
-          "display_name": "Designed suction cup, 21 mm",
+          "effector_id": "52b49f22648e50d6a17d24731761d18cd145628133df83451c15b9224a46bb22",
+          "display_name": "Designed suction cup, 36 mm",
           "family": "suction",
           "group": "random",
           "fidelity": "approximation",
@@ -2854,38 +2798,10 @@
           "certified": true,
           "eligible": true,
           "reason": null,
-          "score": 0.0256,
+          "score": 0.1368,
           "tolerance_mm": {
             "x": 0.0,
             "y": 0.0
-          },
-          "screen_rate": 0.25,
-          "n_actuators": 1,
-          "mass_kg": 0.0625,
-          "actuation": {
-            "bellows_stiffness_n_per_mm": 2.268,
-            "bellows_stroke_mm": 6.0,
-            "holding_force_max_n": 12.122620652039616,
-            "lip_area_mm2": 346.36059005827474,
-            "max_tilt_deg": 8.0,
-            "vacuum_kpa": 35.0
-          },
-          "note": null
-        },
-        {
-          "effector_id": "52b49f22648e50d6a17d24731761d18cd145628133df83451c15b9224a46bb22",
-          "display_name": "Designed suction cup, 36 mm",
-          "family": "suction",
-          "group": "random",
-          "fidelity": "approximation",
-          "status": "screened",
-          "certified": false,
-          "eligible": false,
-          "reason": "not certified (not a finalist)",
-          "score": null,
-          "tolerance_mm": {
-            "x": null,
-            "y": null
           },
           "screen_rate": 0.25,
           "n_actuators": 1,
@@ -3623,8 +3539,8 @@
       "fidelity": "approximation",
       "available": true,
       "status": "available",
-      "candidates": 8,
-      "screened": 8,
+      "candidates": 7,
+      "screened": 7,
       "invalid": 0,
       "best": {
         "effector_id": "3907bc284d9e2c3399ddb8b45b1bf94dbb3b0ef0672705c6d90724839ecf7186",
@@ -3679,6 +3595,7 @@
       "title": "Reference",
       "status": "run",
       "reason": null,
+      "note": null,
       "finalists": [
         "233385b9c8312321e06e85d67f78885a6db4ec9b9c2d7e9078902b9413bd9894",
         "f5e20b9e22d0b812ec15dfba17c71a6ec5fdbf44cd76b1397c89d9eccd6c4c96"
@@ -3701,6 +3618,7 @@
       "title": "Catalog",
       "status": "run",
       "reason": null,
+      "note": null,
       "finalists": [
         "52613f2b72143b61b490ddfc05c4e3ed38c49de7005b77f07a5ccbfada0ab476",
         "bbb8214caaf4a70aac3e2c08331f0166c12470bf97db57db00dc834a77ff4dd1"
@@ -3723,6 +3641,7 @@
       "title": "Soft arm",
       "status": "run",
       "reason": null,
+      "note": null,
       "finalists": [
         "743fc0bc1efc93c288065cff91b147fd993ad974831e50b7617f7f15a0ab66fc",
         "2f5e4f974b13a6445127a6afead695a9e58a54cdeb12a3101724db21f6b368e9"
@@ -3745,6 +3664,7 @@
       "title": "Suction",
       "status": "run",
       "reason": null,
+      "note": null,
       "finalists": [
         "3907bc284d9e2c3399ddb8b45b1bf94dbb3b0ef0672705c6d90724839ecf7186",
         "e72e88518c0ebe7a74ec5db104b671180e9dbb5b51d0b11045814506657f31bf"
@@ -3767,6 +3687,7 @@
       "title": "Designed (Nemotron)",
       "status": "run",
       "reason": null,
+      "note": null,
       "finalists": [
         "d468bc227e497f2fe28d0345a219c5839fba3a77138a7b2461954906354a32de",
         "4dbc7ff296c5a29cf6fe37acb69e14c8254b8d38cba7d0208c0062ab5ff76c81"
@@ -3789,22 +3710,23 @@
       "title": "Random control",
       "status": "run",
       "reason": null,
+      "note": "matched to the 7 Nemotron designs screened (fingered_hand, hook_gripper, segmented_tentacle, soft_arm/tentacle, suction/suction_cup)",
       "finalists": [
-        "ff5c5b10faf89b649405f1edb55da11fcf862cc676241f67199e0a50cc32f51e",
-        "25ad49b27d596a9fd9d2e8f5ca7226da7de51a92d32f3ea21996ba79a484da5d"
+        "25ad49b27d596a9fd9d2e8f5ca7226da7de51a92d32f3ea21996ba79a484da5d",
+        "52b49f22648e50d6a17d24731761d18cd145628133df83451c15b9224a46bb22"
       ],
       "budget": {
-        "candidates": 8,
-        "buildable": 8,
-        "screened": 8,
-        "screen_episodes": 64,
-        "reference_episodes": 8,
+        "candidates": 7,
+        "buildable": 7,
+        "screened": 7,
+        "screen_episodes": 56,
+        "reference_episodes": 7,
         "certificates": 2,
         "certificate_episodes": 38,
         "max_screen_episodes": 96,
         "max_certificates": 2
       },
-      "sampled_from": 8
+      "sampled_from": 7
     }
   ],
   "candidates": [
@@ -5050,8 +4972,8 @@
       "reach_mm": 26.5,
       "max_opening_mm": null,
       "reference": "nominal_episode",
-      "finalist": false,
-      "certified": false,
+      "finalist": true,
+      "certified": true,
       "screen": {
         "n": 8,
         "held": 0.625,
@@ -5088,45 +5010,6 @@
         "vacuum_kpa": 58.0
       },
       "reach_mm": 26.5,
-      "max_opening_mm": null,
-      "reference": "nominal_episode",
-      "finalist": true,
-      "certified": true,
-      "screen": {
-        "n": 8,
-        "held": 1.0,
-        "registered": 0.25,
-        "held_count": 8,
-        "registered_count": 2,
-        "failure_modes": {
-          "not_registered": 6
-        }
-      },
-      "note": null
-    },
-    {
-      "effector_id": "ff5c5b10faf89b649405f1edb55da11fcf862cc676241f67199e0a50cc32f51e",
-      "display_name": "Designed suction cup, 21 mm",
-      "family": "suction",
-      "model": "designed-cup",
-      "primitive": "seal",
-      "origin": "random",
-      "group": "random",
-      "fidelity": "approximation",
-      "source": "random",
-      "status": "screened",
-      "reason": null,
-      "n_actuators": 1,
-      "mass_kg": 0.0625,
-      "actuation": {
-        "bellows_stiffness_n_per_mm": 2.268,
-        "bellows_stroke_mm": 6.0,
-        "holding_force_max_n": 12.122620652039616,
-        "lip_area_mm2": 346.36059005827474,
-        "max_tilt_deg": 8.0,
-        "vacuum_kpa": 35.0
-      },
-      "reach_mm": 26.26,
       "max_opening_mm": null,
       "reference": "nominal_episode",
       "finalist": true,
@@ -7171,6 +7054,228 @@
         }
       ]
     },
+    "52b49f22648e50d6a17d24731761d18cd145628133df83451c15b9224a46bb22": {
+      "reference": "nominal_episode",
+      "held_score": 0.265,
+      "registered_score": 0.1368,
+      "held_scores": {
+        "placement": 0.4615,
+        "shake": 0.3333,
+        "push": 0.0
+      },
+      "registered_scores": {
+        "placement": 0.0769,
+        "shake": 0.3333,
+        "push": 0.0
+      },
+      "held_tolerance_mm": {
+        "x": 1.0,
+        "y": 1.0
+      },
+      "registered_tolerance_mm": {
+        "x": 0.0,
+        "y": 0.0
+      },
+      "held": "7/18",
+      "registered": "2/18",
+      "effector_mass_kg": 0.0972,
+      "tests": [
+        {
+          "name": "nominal",
+          "category": "placement",
+          "held": true,
+          "registered": true,
+          "failure_mode": null,
+          "registration_flags": [],
+          "offset_mm": 0.0
+        },
+        {
+          "name": "offset_x_+1mm",
+          "category": "placement",
+          "held": true,
+          "registered": false,
+          "failure_mode": "not_registered",
+          "registration_flags": [
+            "off_centre"
+          ],
+          "offset_mm": 1.0003
+        },
+        {
+          "name": "offset_x_-1mm",
+          "category": "placement",
+          "held": true,
+          "registered": false,
+          "failure_mode": "not_registered",
+          "registration_flags": [
+            "off_centre"
+          ],
+          "offset_mm": 1.0003
+        },
+        {
+          "name": "offset_x_+2mm",
+          "category": "placement",
+          "held": true,
+          "registered": false,
+          "failure_mode": "not_registered",
+          "registration_flags": [
+            "off_centre",
+            "no_seal"
+          ],
+          "offset_mm": 1.9882
+        },
+        {
+          "name": "offset_x_-2mm",
+          "category": "placement",
+          "held": false,
+          "registered": false,
+          "failure_mode": "missed_grasp",
+          "registration_flags": [
+            "off_centre",
+            "no_seal"
+          ],
+          "offset_mm": 2.0481
+        },
+        {
+          "name": "offset_x_+3mm",
+          "category": "placement",
+          "held": false,
+          "registered": false,
+          "failure_mode": "missed_grasp",
+          "registration_flags": [
+            "off_centre",
+            "no_seal"
+          ],
+          "offset_mm": 3.0065
+        },
+        {
+          "name": "offset_x_-3mm",
+          "category": "placement",
+          "held": false,
+          "registered": false,
+          "failure_mode": "missed_grasp",
+          "registration_flags": [
+            "off_centre",
+            "no_seal"
+          ],
+          "offset_mm": 3.0201
+        },
+        {
+          "name": "offset_y_+1mm",
+          "category": "placement",
+          "held": true,
+          "registered": false,
+          "failure_mode": "not_registered",
+          "registration_flags": [
+            "off_centre"
+          ],
+          "offset_mm": 1.0003
+        },
+        {
+          "name": "offset_y_-1mm",
+          "category": "placement",
+          "held": true,
+          "registered": false,
+          "failure_mode": "not_registered",
+          "registration_flags": [
+            "off_centre"
+          ],
+          "offset_mm": 1.0003
+        },
+        {
+          "name": "offset_y_+2mm",
+          "category": "placement",
+          "held": false,
+          "registered": false,
+          "failure_mode": "missed_grasp",
+          "registration_flags": [
+            "off_centre",
+            "no_seal"
+          ],
+          "offset_mm": 2.0491
+        },
+        {
+          "name": "offset_y_-2mm",
+          "category": "placement",
+          "held": false,
+          "registered": false,
+          "failure_mode": "missed_grasp",
+          "registration_flags": [
+            "off_centre",
+            "no_seal"
+          ],
+          "offset_mm": 1.9943
+        },
+        {
+          "name": "offset_y_+3mm",
+          "category": "placement",
+          "held": false,
+          "registered": false,
+          "failure_mode": "missed_grasp",
+          "registration_flags": [
+            "off_centre",
+            "no_seal"
+          ],
+          "offset_mm": 3.0042
+        },
+        {
+          "name": "offset_y_-3mm",
+          "category": "placement",
+          "held": false,
+          "registered": false,
+          "failure_mode": "missed_grasp",
+          "registration_flags": [
+            "off_centre",
+            "no_seal"
+          ],
+          "offset_mm": 3.0033
+        },
+        {
+          "name": "shake_x",
+          "category": "shake",
+          "held": false,
+          "registered": false,
+          "failure_mode": "unstable_hold",
+          "registration_flags": [],
+          "offset_mm": 0.0
+        },
+        {
+          "name": "shake_y",
+          "category": "shake",
+          "held": false,
+          "registered": false,
+          "failure_mode": "unstable_hold",
+          "registration_flags": [],
+          "offset_mm": 0.0
+        },
+        {
+          "name": "shake_z",
+          "category": "shake",
+          "held": true,
+          "registered": true,
+          "failure_mode": null,
+          "registration_flags": [],
+          "offset_mm": 0.0
+        },
+        {
+          "name": "push_x",
+          "category": "push",
+          "held": false,
+          "registered": false,
+          "failure_mode": "unstable_hold",
+          "registration_flags": [],
+          "offset_mm": 0.0
+        },
+        {
+          "name": "push_y",
+          "category": "push",
+          "held": false,
+          "registered": false,
+          "failure_mode": "unstable_hold",
+          "registration_flags": [],
+          "offset_mm": 0.0
+        }
+      ]
+    },
     "25ad49b27d596a9fd9d2e8f5ca7226da7de51a92d32f3ea21996ba79a484da5d": {
       "reference": "nominal_episode",
       "held_score": 0.4444,
@@ -7362,220 +7467,6 @@
           "held": true,
           "registered": true,
           "failure_mode": null,
-          "registration_flags": [],
-          "offset_mm": 0.0
-        },
-        {
-          "name": "push_x",
-          "category": "push",
-          "held": false,
-          "registered": false,
-          "failure_mode": "unstable_hold",
-          "registration_flags": [],
-          "offset_mm": 0.0
-        },
-        {
-          "name": "push_y",
-          "category": "push",
-          "held": false,
-          "registered": false,
-          "failure_mode": "unstable_hold",
-          "registration_flags": [],
-          "offset_mm": 0.0
-        }
-      ]
-    },
-    "ff5c5b10faf89b649405f1edb55da11fcf862cc676241f67199e0a50cc32f51e": {
-      "reference": "nominal_episode",
-      "held_score": 0.3333,
-      "registered_score": 0.0256,
-      "held_scores": {
-        "placement": 1.0,
-        "shake": 0.0,
-        "push": 0.0
-      },
-      "registered_scores": {
-        "placement": 0.0769,
-        "shake": 0.0,
-        "push": 0.0
-      },
-      "held_tolerance_mm": {
-        "x": 3.0,
-        "y": 3.0
-      },
-      "registered_tolerance_mm": {
-        "x": 0.0,
-        "y": 0.0
-      },
-      "held": "13/18",
-      "registered": "1/18",
-      "effector_mass_kg": 0.0625,
-      "tests": [
-        {
-          "name": "nominal",
-          "category": "placement",
-          "held": true,
-          "registered": true,
-          "failure_mode": null,
-          "registration_flags": [],
-          "offset_mm": 0.0
-        },
-        {
-          "name": "offset_x_+1mm",
-          "category": "placement",
-          "held": true,
-          "registered": false,
-          "failure_mode": "not_registered",
-          "registration_flags": [
-            "off_centre"
-          ],
-          "offset_mm": 1.0004
-        },
-        {
-          "name": "offset_x_-1mm",
-          "category": "placement",
-          "held": true,
-          "registered": false,
-          "failure_mode": "not_registered",
-          "registration_flags": [
-            "off_centre"
-          ],
-          "offset_mm": 1.0004
-        },
-        {
-          "name": "offset_x_+2mm",
-          "category": "placement",
-          "held": true,
-          "registered": false,
-          "failure_mode": "not_registered",
-          "registration_flags": [
-            "off_centre"
-          ],
-          "offset_mm": 2.0008
-        },
-        {
-          "name": "offset_x_-2mm",
-          "category": "placement",
-          "held": true,
-          "registered": false,
-          "failure_mode": "not_registered",
-          "registration_flags": [
-            "off_centre"
-          ],
-          "offset_mm": 2.0008
-        },
-        {
-          "name": "offset_x_+3mm",
-          "category": "placement",
-          "held": true,
-          "registered": false,
-          "failure_mode": "not_registered",
-          "registration_flags": [
-            "off_centre"
-          ],
-          "offset_mm": 3.0012
-        },
-        {
-          "name": "offset_x_-3mm",
-          "category": "placement",
-          "held": true,
-          "registered": false,
-          "failure_mode": "not_registered",
-          "registration_flags": [
-            "off_centre"
-          ],
-          "offset_mm": 3.0012
-        },
-        {
-          "name": "offset_y_+1mm",
-          "category": "placement",
-          "held": true,
-          "registered": false,
-          "failure_mode": "not_registered",
-          "registration_flags": [
-            "off_centre"
-          ],
-          "offset_mm": 1.0004
-        },
-        {
-          "name": "offset_y_-1mm",
-          "category": "placement",
-          "held": true,
-          "registered": false,
-          "failure_mode": "not_registered",
-          "registration_flags": [
-            "off_centre"
-          ],
-          "offset_mm": 1.0004
-        },
-        {
-          "name": "offset_y_+2mm",
-          "category": "placement",
-          "held": true,
-          "registered": false,
-          "failure_mode": "not_registered",
-          "registration_flags": [
-            "off_centre"
-          ],
-          "offset_mm": 2.0007
-        },
-        {
-          "name": "offset_y_-2mm",
-          "category": "placement",
-          "held": true,
-          "registered": false,
-          "failure_mode": "not_registered",
-          "registration_flags": [
-            "off_centre"
-          ],
-          "offset_mm": 2.0007
-        },
-        {
-          "name": "offset_y_+3mm",
-          "category": "placement",
-          "held": true,
-          "registered": false,
-          "failure_mode": "not_registered",
-          "registration_flags": [
-            "off_centre"
-          ],
-          "offset_mm": 3.0011
-        },
-        {
-          "name": "offset_y_-3mm",
-          "category": "placement",
-          "held": true,
-          "registered": false,
-          "failure_mode": "not_registered",
-          "registration_flags": [
-            "off_centre"
-          ],
-          "offset_mm": 3.0011
-        },
-        {
-          "name": "shake_x",
-          "category": "shake",
-          "held": false,
-          "registered": false,
-          "failure_mode": "unstable_hold",
-          "registration_flags": [],
-          "offset_mm": 0.0
-        },
-        {
-          "name": "shake_y",
-          "category": "shake",
-          "held": false,
-          "registered": false,
-          "failure_mode": "unstable_hold",
-          "registration_flags": [],
-          "offset_mm": 0.0
-        },
-        {
-          "name": "shake_z",
-          "category": "shake",
-          "held": false,
-          "registered": false,
-          "failure_mode": "unstable_hold",
           "registration_flags": [],
           "offset_mm": 0.0
         },
@@ -8053,14 +7944,14 @@
       }
     },
     {
-      "id": "finalist-ff5c5b10faf8",
-      "replay": "replays/effectors-steel_slug/finalist-ff5c5b10faf8",
+      "id": "finalist-52b49f22648e",
+      "replay": "replays/effectors-steel_slug/finalist-52b49f22648e",
       "roles": [
         "finalist"
       ],
       "effector": {
-        "effector_id": "ff5c5b10faf89b649405f1edb55da11fcf862cc676241f67199e0a50cc32f51e",
-        "display_name": "Designed suction cup, 21 mm",
+        "effector_id": "52b49f22648e50d6a17d24731761d18cd145628133df83451c15b9224a46bb22",
+        "display_name": "Designed suction cup, 36 mm",
         "family": "suction",
         "model": "designed-cup",
         "primitive": "seal",
@@ -8074,23 +7965,24 @@
       "condition": "3 mm off centre across",
       "seed": "1536070491857272883",
       "fps": 30,
-      "n_frames": 182,
-      "duration_s": 6.0333,
-      "bytes": 36797,
+      "n_frames": 168,
+      "duration_s": 5.5667,
+      "bytes": 34911,
       "reference": "nominal_episode",
       "outcome": {
         "registered": false,
-        "held": true,
-        "engaged": true,
-        "failure_mode": "not_registered",
+        "held": false,
+        "engaged": false,
+        "failure_mode": "missed_grasp",
         "registration_flags": [
-          "off_centre"
+          "off_centre",
+          "no_seal"
         ],
-        "max_lift_mm": 145.48,
-        "hold_s": 2.01,
-        "penetration_mm": 0.164,
-        "sim_steps": 6060,
-        "traj_sha": "c4237c3bf1923cc76d988a653a84be678e90eccc1ade262f282916d1ee005eb3"
+        "max_lift_mm": 0.0,
+        "hold_s": 0.0,
+        "penetration_mm": 0.068,
+        "sim_steps": 5600,
+        "traj_sha": "1c5fcc46648d35a53251307e8cbe6045f36f9d39ba994bd59a00b08f4232cdaf"
       }
     }
   ],
@@ -8224,16 +8116,16 @@
     }
   },
   "physics": {
-    "episodes": 321,
+    "episodes": 312,
     "certificate_episodes": 216,
     "bad_qacc": 0,
     "physics_invalid": 0,
     "physics_unreliable": 7,
-    "held_episodes": 161,
+    "held_episodes": 152,
     "failure_modes": {
       "ejected_on_close": 29,
       "missed_grasp": 37,
-      "not_registered": 86,
+      "not_registered": 80,
       "physics_unreliable": 1,
       "slip_during_lift": 93
     }
@@ -8291,12 +8183,12 @@
     "fidelity": "an approximation winner carries the best core or rigid candidate as runner-up"
   },
   "provenance": {
-    "code_version": "8c1011c4743f",
+    "code_version": "790c47d65853",
     "task_digest": "8168db801332",
     "engine": "MuJoCo 3.15.0",
     "executor": "cpu",
-    "created_utc": "2026-10-17T11:05:34Z",
+    "created_utc": "2026-10-17T11:55:42Z",
     "run_id": "effectors-steel-slug",
-    "digest": "8b444988647cff5c8c740768a9be0809669c5f976a5e479cc357cfa38eb063b3"
+    "digest": "dac1abb49145a5ce070173a3fba7e6107234c3c72780dd1065d5a361605d47b4"
   }
 }

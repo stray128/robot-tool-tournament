@@ -3,7 +3,7 @@
   "version": 1,
   "contract": "rtt-effectors/1",
   "label": "Product mode: not part of the pre-registered experiment",
-  "generated_utc": "2026-10-17T11:06:51Z",
+  "generated_utc": "2026-10-17T11:57:16Z",
   "families": [
     {
       "family": "parallel_jaw",
@@ -101,9 +101,9 @@
         "random"
       ],
       "lanes": 12,
-      "candidates": 35,
-      "episodes": 528,
-      "code_version": "8c1011c4743f"
+      "candidates": 33,
+      "episodes": 510,
+      "code_version": "790c47d65853"
     },
     {
       "part_id": "flanged_bushing",
@@ -163,9 +163,9 @@
         "random"
       ],
       "lanes": 12,
-      "candidates": 33,
-      "episodes": 510,
-      "code_version": "8c1011c4743f"
+      "candidates": 29,
+      "episodes": 474,
+      "code_version": "790c47d65853"
     },
     {
       "part_id": "hex_standoff",
@@ -225,9 +225,9 @@
         "random"
       ],
       "lanes": 12,
-      "candidates": 36,
-      "episodes": 537,
-      "code_version": "8c1011c4743f"
+      "candidates": 35,
+      "episodes": 528,
+      "code_version": "790c47d65853"
     },
     {
       "part_id": "l_bracket",
@@ -287,9 +287,9 @@
         "random"
       ],
       "lanes": 12,
-      "candidates": 34,
-      "episodes": 519,
-      "code_version": "8c1011c4743f"
+      "candidates": 31,
+      "episodes": 492,
+      "code_version": "790c47d65853"
     },
     {
       "part_id": "pipe_tee",
@@ -349,9 +349,9 @@
         "random"
       ],
       "lanes": 12,
-      "candidates": 33,
-      "episodes": 510,
-      "code_version": "8c1011c4743f"
+      "candidates": 29,
+      "episodes": 474,
+      "code_version": "790c47d65853"
     },
     {
       "part_id": "steel_slug",
@@ -411,9 +411,9 @@
         "random"
       ],
       "lanes": 12,
-      "candidates": 36,
-      "episodes": 537,
-      "code_version": "8c1011c4743f"
+      "candidates": 35,
+      "episodes": 528,
+      "code_version": "790c47d65853"
     }
   ]
 }
