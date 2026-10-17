@@ -18,8 +18,12 @@ computed by code (:mod:`rtt.effectors.recommend`): the model only explains it.
 
 Caps are the toolbox's (:mod:`rtt.agent.tools`): the call counts toward the 12 tool calls, at
 most 2 jobs (of any kind) run at once, and ``design = true`` needs the passcode and reserves
-:data:`DESIGN_RESERVE_USD` against the session and day caps before the job starts; the
-Nemotron spend is charged when the job ends. Every result carries the product-mode label.
+:data:`DESIGN_RESERVE_USD` against the session and day caps before the job starts, within the
+session's Nemotron design cap :data:`DESIGN_SESSION_USD`; the Nemotron spend is charged when the
+job ends. The API service gives a live (passcode) session a runner with the designer
+(:func:`designer_factory`, its client capped at the reservation); an offline session's runner
+has none (``designs = False``), and ``design = true`` there runs without Nemotron and reserves
+nothing. Every result carries the product-mode label.
 """
 
 from __future__ import annotations
@@ -36,10 +40,12 @@ from rtt.agent.recorder import PRODUCT_MODE_LABEL, redact_paths
 
 __all__ = [
     "DESIGN_RESERVE_USD",
+    "DESIGN_SESSION_USD",
     "EFFECTOR_GROUPS",
     "EffectorJobRunner",
     "EffectorRequest",
     "compact_result",
+    "designer_factory",
     "resolve_upload",
     "tournament_job",
 ]
@@ -53,9 +59,14 @@ EFFECTOR_GROUPS: Final[tuple[str, ...]] = (
     "designed",
     "random",
 )
-#: Worst case of one tournament's Nemotron proposals: 2 forced calls, each an 8k-token prompt plus
-#: 8,192 output tokens at $0.30 and $0.90 per million tokens (about $0.0098 each).
-DESIGN_RESERVE_USD: Final = 0.02
+#: Worst case of one tournament's Nemotron proposals: 2 rounds of one forced call plus at most one
+#: repair, each at most about $0.0125 as the client reserves it (its conservative prompt estimate
+#: plus 8,192 output tokens, at $0.30 and $0.90 per million tokens). The designer's client is
+#: capped at this, so a job never spends more. Measured: $0.011 to $0.015 per training part.
+DESIGN_RESERVE_USD: Final = 0.05
+#: Nemotron design spend one session may commit (reservations in flight plus what finished jobs
+#: cost), on top of the session and day caps that every reservation must also fit.
+DESIGN_SESSION_USD: Final = 0.10
 _RANKING_ROWS: Final = 6
 
 
@@ -71,7 +82,11 @@ class EffectorRequest:
 
 
 class EffectorJobRunner(LocalJobRunner):
-    """Tournament jobs on this machine (no compute cost); ``results`` returns the job's document."""
+    """Tournament jobs on this machine (no compute cost); ``results`` returns the job's document.
+
+    ``designs``: whether a job of this runner can ask Nemotron for morphologies (the runner's job
+    has a live designer). Without one, ``design = true`` is answered without Nemotron and nothing
+    is reserved."""
 
     def __init__(
         self,
@@ -79,9 +94,11 @@ class EffectorJobRunner(LocalJobRunner):
         *,
         max_workers: int = 2,
         clock: Callable[[], float] = time.time,
+        designs: bool = True,
     ) -> None:
         super().__init__(lambda part_id, designs: [], max_workers=max_workers, clock=clock)
         self._run = run
+        self.designs = designs
 
     def launch_request(self, request: EffectorRequest) -> JobRecord:
         job_id = _new_local_id()
@@ -186,6 +203,33 @@ def tournament_job(
         }
 
     return run
+
+
+def designer_factory(
+    root: str | Path, *, transport: Callable[[], Any] | None = None
+) -> Callable[[float], Any]:
+    """``factory(budget_usd)``: track B3's designer on a client capped at ``budget_usd`` (one job's
+    reservation), with the scrubbing response cache under ``root/llm_cache`` and the call ledger
+    ``root/llm_ledger.jsonl``. ``transport`` builds the model transport (default: Token Factory
+    from ``NEBIUS_API_KEY``, read on the first live call)."""
+    base = Path(root)
+
+    def make(budget_usd: float) -> Any:
+        from rtt.effectors.morphology import make_designer_client
+        from rtt.effectors.tournament import default_designer
+
+        client = make_designer_client(
+            base / "llm_cache",
+            ledger_path=base / "llm_ledger.jsonl",
+            budget_usd=float(budget_usd),
+            transport=transport() if transport is not None else None,
+        )
+        designer = default_designer(client)
+        if designer is None:
+            raise RuntimeError("the morphology designer (rtt.effectors.morphology) is not available")
+        return designer
+
+    return make
 
 
 # --------------------------------------------------------------------------- what the model sees

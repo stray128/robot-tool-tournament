@@ -38,7 +38,7 @@ from rtt.agent.caps import (
     PasscodeRequiredError,
     SpendGuard,
 )
-from rtt.agent.effector_tool import EffectorJobRunner, tournament_job
+from rtt.agent.effector_tool import EffectorJobRunner, designer_factory, tournament_job
 from rtt.agent.engineer import DEFAULT_GOAL, AgentLLM, GraspEngineer, SessionResult
 from rtt.agent.jobs import JobRunner, LocalJobRunner
 from rtt.agent.proposer import NemotronDesignProposer
@@ -247,6 +247,7 @@ class _Running:
     thread: threading.Thread
     stop: threading.Event
     result: SessionResult | None = None
+    effectors: EffectorJobRunner | None = None  # the session's own runner (live designer), if any
 
 
 class AgentService:
@@ -262,6 +263,10 @@ class AgentService:
         nebius_runner: Runner for ``target='nebius'`` (default: built from
             ``~/.config/rtt`` when ``enable_nebius``).
         baselines: Entrant designs offered to the agent (default ``configs/entrants.yaml``).
+        designer_factory: ``factory(budget_usd)`` -> the Nemotron morphology designer for
+            ``recommend_effector(design=true)`` in live sessions (default: track B3's designer on
+            Token Factory, built by :func:`rtt.agent.effector_tool.designer_factory`, with the
+            sessions' transport factory when one is given). Offline sessions never get one.
     """
 
     def __init__(
@@ -273,6 +278,7 @@ class AgentService:
         transport_factory: Callable[[], Any] | None = None,
         nebius_runner: JobRunner | None = None,
         baselines: Sequence[FingerDesign] | None = None,
+        designer_factory: Callable[[float], Any] | None = None,
     ) -> None:
         self.settings = settings or ApiSettings()
         self.store = AgentStore(self.settings.root)
@@ -298,12 +304,16 @@ class AgentService:
         self.local_runner = LocalJobRunner(self.backend.evaluate, max_workers=caps.max_concurrent_jobs)
         # recommend_effector (product mode): tournaments on this machine, outputs under
         # <root>/effectors/<part_id>/. They need the simulator backend's parts (resolve_upload);
-        # the offline fake cannot run them, so the tool is not offered there.
+        # the offline fake cannot run them, so the tool is not offered there. This shared runner
+        # has no designer (offline sessions); a live session, which needed the passcode, gets
+        # its own runner with the Nemotron designer (_session_effectors).
+        self._effectors_on = callable(getattr(self.backend, "_get", None))
         self.effectors: EffectorJobRunner | None = (
-            EffectorJobRunner(tournament_job(self.backend, self.store.root / "effectors"))
-            if callable(getattr(self.backend, "_get", None))
+            EffectorJobRunner(tournament_job(self.backend, self.store.root / "effectors"), designs=False)
+            if self._effectors_on
             else None
         )
+        self._designer_factory = designer_factory
         self._nebius = nebius_runner
         self.baselines = list(baselines) if baselines is not None else load_entrants(DEFAULT_ENTRANTS)
         self._sessions: dict[str, _Running] = {}
@@ -312,6 +322,17 @@ class AgentService:
 
     def __repr__(self) -> str:
         return f"AgentService(root={str(self.store.root)!r}, offline={self.settings.offline})"
+
+    def _session_effectors(self, offline: bool) -> EffectorJobRunner | None:
+        """The effector runner of one session: the shared designer-free one offline, else the
+        session's own with a live Nemotron designer (each job's client capped at its reservation;
+        the toolbox keeps the session's design spend under its design cap, the session cap and
+        the day cap)."""
+        if not self._effectors_on or offline:
+            return self.effectors
+        root = self.store.root / "effectors"
+        factory = self._designer_factory or designer_factory(root, transport=self.transport_factory)
+        return EffectorJobRunner(tournament_job(self.backend, root, designer_factory=factory), designs=True)
 
     # ------------------------------------------------------------------ parts
 
@@ -440,6 +461,7 @@ class AgentService:
             meta={"part": part.to_json(), "goal": goal_text, "offline": offline},
         )
         proposer = NemotronDesignProposer.create(ledger, transport=transport)
+        effectors = self._session_effectors(offline)
         toolbox = Toolbox(
             session_id=session_id,
             part_id=part_id,
@@ -454,7 +476,7 @@ class AgentService:
             recorder=recorder,
             baselines=self.baselines,
             offline=offline,
-            effectors=self.effectors,
+            effectors=effectors,
         )
         stop = threading.Event()
         engineer = GraspEngineer(
@@ -467,10 +489,15 @@ class AgentService:
             stop=stop,
             offline=offline,
         )
-        running = _Running(recorder, threading.Thread(target=lambda: None), stop)
+        own = effectors if effectors is not None and effectors is not self.effectors else None
+        running = _Running(recorder, threading.Thread(target=lambda: None), stop, effectors=own)
 
         def run() -> None:
-            running.result = engineer.run()
+            try:
+                running.result = engineer.run()
+            finally:
+                if own is not None:  # the session's jobs were settled or cancelled by the toolbox
+                    own.shutdown()
 
         running.thread = threading.Thread(target=run, name=f"rtt-agent-{session_id}", daemon=True)
         with self._lock:  # registered and alive before the slot claimed in start_session is freed
@@ -526,6 +553,8 @@ class AgentService:
             running = list(self._sessions.values())
         for item in running:
             item.stop.set()
+            if item.effectors is not None:
+                item.effectors.shutdown()
         self.local_runner.shutdown()
         if self.effectors is not None:
             self.effectors.shutdown()

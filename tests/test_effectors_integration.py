@@ -252,3 +252,108 @@ def test_the_cli_designs_with_the_b3_designer_client(tmp_path: Path) -> None:
     with pytest.raises(SystemExit, match="spend-usd"):
         _designer(argparse.Namespace(design=True, spend_usd=None), tmp_path)
     assert _designer(argparse.Namespace(design=False, spend_usd=None), tmp_path) is None
+
+
+def _fake_tournament_job(log: list[tuple[bool, float, bool]]) -> Any:
+    """A ``tournament_job`` stand-in: no physics; the designer is asked for when a job may design."""
+    from rtt.effectors.recommend import recommend_for
+
+    def make(backend: Any, out_root: Any, *, workers: int | None = 2, designer_factory: Any = None) -> Any:
+        def run(request: Any) -> dict[str, Any]:
+            designer = designer_factory(request.budget_usd) if request.design and designer_factory else None
+            log.append((request.design, request.budget_usd, designer is not None))
+            rec = {**recommend_for([], Requirement.REGISTERED), "requirement": "registered", "groups": {}}
+            return {
+                "recommendation": rec,
+                "episodes": 0,
+                "llm_usd": 0.012 if designer is not None else 0.0,
+                "llm_calls": 2 if designer is not None else 0,
+                "fair": True,
+                "digest": "0" * 64,
+            }
+
+        return run
+
+    return make
+
+
+@pytest.mark.parametrize("offline", [False, True])
+def test_a_live_session_designs_with_nemotron_behind_the_passcode(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, offline: bool
+) -> None:
+    """Live sessions (passcode) get the designer, capped per job; offline ones stay designer-free."""
+    import trimesh
+
+    import rtt.api.service as service_module
+    from rtt.agent import effector_tool as et
+    from rtt.agent.backends import SimPartBackend
+    from rtt.agent.caps import AgentCaps, PasscodeGate, PasscodeRequiredError, passcode_digest
+    from rtt.agent.fakes import ScriptedAgentTransport
+    from rtt.api.service import AgentService, ApiSettings
+
+    log: list[tuple[bool, float, bool]] = []
+    budgets: list[float] = []
+    seen: dict[str, Any] = {}
+
+    class Engineer:
+        def __init__(self, llm: Any, toolbox: Any, *args: Any, **kwargs: Any) -> None:
+            self.toolbox = toolbox
+
+        def run(self) -> None:
+            box = self.toolbox
+            started = box.call("recommend_effector", {"part_id": box.part_id, "design": True})
+            seen["started"] = started
+            seen["poll"] = box.call("poll_job", {"job_id": started.result["job_id"]})
+            seen["fetch"] = box.call("fetch_results", {"job_id": started.result["job_id"]})
+            seen["spend"] = box.guard.snapshot()
+            seen["designs"] = box.effectors.designs
+            box.close()
+
+    def factory(budget: float) -> object:
+        budgets.append(budget)
+        return object()
+
+    monkeypatch.setattr(service_module, "GraspEngineer", Engineer)
+    monkeypatch.setattr(service_module, "tournament_job", _fake_tournament_job(log))
+    settings = ApiSettings(root=tmp_path / "agent", offline=offline, caps=AgentCaps(poll_wait_s=5.0))
+    backend = SimPartBackend(tmp_path / "agent" / "parts", workers=1, decomposition="hull")
+    svc = AgentService(
+        settings,
+        backend=backend,
+        gate=PasscodeGate(passcode_digest("open sesame")),
+        transport_factory=ScriptedAgentTransport,
+        designer_factory=factory,
+    )
+    try:
+        stl = trimesh.creation.box(extents=(30.0, 24.0, 40.0)).export(file_type="stl")
+        part = svc.upload_part(stl, name="box")
+        if not offline:
+            with pytest.raises(PasscodeRequiredError):  # no passcode, no live session at all
+                svc.start_session(part.part_id)
+        sid = svc.start_session(part.part_id, passcode=None if offline else "open sesame")
+        svc.wait_session(sid, timeout_s=30)
+    finally:
+        svc.shutdown()
+    assert seen["started"].ok and seen["poll"].result["state"] == "COMPLETED" and seen["fetch"].ok
+    if offline:  # the shared runner: no designer, nothing reserved, nothing spent
+        assert seen["designs"] is False and seen["started"].result["reserved_usd"] == 0
+        assert log == [(False, 0.0, False)] and budgets == []
+        assert seen["spend"]["by_kind_usd"] == {}
+    else:  # the session's own runner: the designer on a client capped at the job's reservation
+        assert seen["designs"] is True and seen["started"].result["reserved_usd"] == et.DESIGN_RESERVE_USD
+        assert log == [(True, et.DESIGN_RESERVE_USD, True)] and budgets == [et.DESIGN_RESERVE_USD]
+        assert seen["spend"]["by_kind_usd"] == {"llm": pytest.approx(0.012)}
+        assert seen["fetch"].result["nemotron_usd"] == pytest.approx(0.012)
+
+
+def test_the_default_designer_factory_caps_its_client_at_the_reservation(tmp_path: Path) -> None:
+    """No live call: the client is built, not used."""
+    from rtt.agent.effector_tool import DESIGN_RESERVE_USD, designer_factory
+    from rtt.effectors.morphology import DESIGNER_SAMPLING
+    from rtt.effectors.morphology.proposer import ScrubbingCache
+
+    designer = designer_factory(tmp_path / "eff", transport=lambda: _Scripted([]))(DESIGN_RESERVE_USD)
+    client = designer.client
+    assert client.ledger.budget_usd == DESIGN_RESERVE_USD and isinstance(client.cache, ScrubbingCache)
+    assert client.temperature == DESIGNER_SAMPLING["temperature"]
+    assert client.ledger.path == tmp_path / "eff" / "llm_ledger.jsonl"

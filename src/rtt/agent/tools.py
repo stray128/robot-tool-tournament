@@ -42,6 +42,7 @@ from rtt.agent.caps import (
     CapError,
     ConcurrencyCapError,
     PasscodeRequiredError,
+    SpendCapExceededError,
     SpendGuard,
     ToolBudgetExhaustedError,
 )
@@ -102,6 +103,7 @@ class _JobEntry:
     run_id: str | None = None
     kind: str = "design"  # "design" (launch_sim_job) or "effector" (recommend_effector)
     effector_result: dict[str, Any] | None = None
+    charged_usd: float = 0.0  # what the settled job was charged
 
 
 @dataclass(frozen=True)
@@ -182,6 +184,8 @@ class Toolbox:
         pass_threshold: Success rate a design needs for a ``pass`` verdict.
         offline: Model calls come from the scripted transport (recorded as such).
         effectors: Effector tournament jobs (enables ``recommend_effector``; ``None``: not offered).
+        design_cap_usd: Nemotron design spend this session may commit over all its
+            ``recommend_effector(design=true)`` jobs (reservations in flight plus charges).
     """
 
     def __init__(
@@ -203,9 +207,11 @@ class Toolbox:
         offline: bool = False,
         clock: Callable[[], float] = time.monotonic,
         effectors: et.EffectorJobRunner | None = None,
+        design_cap_usd: float = et.DESIGN_SESSION_USD,
     ) -> None:
         self.offline = offline
         self.effectors = effectors
+        self.design_cap_usd = float(design_cap_usd)
         self.session_id = session_id
         self.part_id = part_id
         self.backend = backend
@@ -370,6 +376,7 @@ class Toolbox:
                         spent = min(entry.reserved_usd, float(entry.effector_result.get("llm_usd", 0.0)))
                     except Exception:  # noqa: BLE001 - keep the reservation as the charge
                         spent = entry.reserved_usd
+                entry.charged_usd = spent
                 self.guard.charge(spent, "llm")
                 return
             self.guard.charge(record.est_usd, "compute")
@@ -696,15 +703,25 @@ class Toolbox:
             "caps": self.caps.to_json(),
         }
 
+    def _design_committed(self) -> float:
+        """Nemotron design spend this session has committed: reservations of design jobs in
+        flight plus what settled ones were charged (call with the lock held)."""
+        return sum(
+            (e.charged_usd if e.settled else e.reserved_usd)
+            for e in self._jobs.values()
+            if e.kind == "effector"
+        )
+
     def _recommend_effector(self, args: RecommendEffectorArgs) -> dict[str, Any]:
         if self.effectors is None:
             raise ArgsError("recommend_effector", ["the effector layer is not enabled on this server"])
-        reserve = et.DESIGN_RESERVE_USD if args.design else 0.0
+        live = bool(args.design) and bool(getattr(self.effectors, "designs", True))
+        reserve = et.DESIGN_RESERVE_USD if live else 0.0
         request = et.EffectorRequest(
             part_id=args.part_id,
             requirement=args.requirement,
             groups=et.groups_or_none(args.groups),
-            design=args.design,
+            design=live,
             budget_usd=reserve,
         )
         with self._lock:
@@ -714,6 +731,12 @@ class Toolbox:
                     f"{active} jobs are already in flight (limit {self.caps.max_concurrent_jobs}); poll one first"
                 )
             if reserve > 0:
+                committed = self._design_committed()
+                if committed + reserve > self.design_cap_usd + 1e-12:
+                    raise SpendCapExceededError(
+                        f"refused: ${reserve:.2f} more Nemotron design spend would exceed this session's "
+                        f"${self.design_cap_usd:.2f} design cap (${committed:.4f} committed)"
+                    )
                 self.guard.reserve(reserve)
             try:
                 record = self.effectors.launch_request(request)
@@ -728,7 +751,14 @@ class Toolbox:
             "kind": "effector_tournament",
             "requirement": args.requirement,
             "groups": list(args.groups) if args.groups else "all",
-            "design": args.design,
+            "design": live,
+            **(
+                {
+                    "design_note": "this session has no live designer: the Nemotron group is skipped, nothing reserved"
+                }
+                if args.design and not live
+                else {}
+            ),
             "reserved_usd": round(reserve, 4),
             "label": PRODUCT_MODE_LABEL,
             "next": "poll_job, then fetch_results",
@@ -769,6 +799,7 @@ class Toolbox:
                 else:  # still running (a local thread cannot be interrupted): charge the reservation
                     entry.settled = True
                     if entry.reserved_usd > 0:
+                        entry.charged_usd = entry.reserved_usd
                         self.guard.release(entry.reserved_usd)
                         self.guard.charge(
                             entry.reserved_usd, "llm" if entry.kind == "effector" else "compute"
