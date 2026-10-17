@@ -461,6 +461,66 @@ def test_designed_group_runs_two_rounds_of_four_and_random_draws_eight(block: An
     assert res.tournament_doc()["groups"]["designed"]["status"] == "run"
 
 
+def test_the_random_control_is_matched_to_the_nemotron_designs_screened(block: Any) -> None:
+    """Same count as Nemotron's screened designs, the same spaces, drawn after the rounds."""
+    from rtt.effectors.tournament import RANDOM_RECIPES
+    from rtt.effectors.types import InvalidEffector
+
+    class Picky(DesignedPads):
+        def build(self, ctx: Any) -> Any:
+            if int(ctx.effector.params["force_n"]) % 2:
+                raise InvalidEffector("odd forces do not build here")
+            return super().build(ctx)
+
+    class Matched(FakeDesigner):
+        def __init__(self) -> None:
+            super().__init__()
+            self.draws: list[tuple[int, tuple[str, ...]]] = []
+
+        def random_recipes(  # type: ignore[override]
+            self, part: Any, n: int, seed: int, *, kinds: Sequence[str] | None = None
+        ) -> list[MorphologyRecipe]:
+            self.draws.append((n, tuple(kinds or ())))
+            return [
+                MorphologyRecipe(EffectorFamily.DESIGNED, "pads", {"force_n": 31 + i}, origin="random")
+                for i in range(n)
+            ]
+
+        def propose(self, part: Any, history: Sequence[Any], n: int) -> DesignBatch:
+            batch = super().propose(part, history, n)
+            keep = batch.recipes if len(self.histories) == 1 else batch.recipes[:1]
+            return dataclasses.replace(batch, recipes=keep, kinds=("pads",))
+
+    designer = Matched()
+    with registry.override_family(Picky()):
+        res = run_tournament(
+            block,
+            groups=["designed", "random"],
+            families=["designed"],
+            design=True,
+            designer=designer,
+            executor=FakePhysics(),
+        )
+    d, r = res.groups[EntrantGroup.DESIGNED], res.groups[EntrantGroup.RANDOM]
+    # Nemotron: 10, 11, 12, 13 then 20; the odd ones do not build, so 3 are screened
+    assert [force_of(c.spec) for c in d.screened()] == [10.0, 12.0, 20.0]
+    # the control grows its draw (a prefix-stable sequence) until exactly 3 build: 32, 34, 36
+    assert [force_of(c.spec) for c in r.screened()] == [32.0, 34.0, 36.0]
+    assert [c.status for c in r.candidates].count("invalid_build") == 3
+    assert designer.draws == [(3, ("pads",)), (5, ("pads",)), (6, ("pads",))]
+    assert d.budget()["screen_episodes"] == r.budget()["screen_episodes"] == 24
+    assert r.note == "matched to the 3 Nemotron designs screened (pads)"
+    assert res.tournament_doc()["groups"]["random"]["note"] == r.note
+    # without the Nemotron rounds the control keeps its fixed draw, screened with the presets
+    plain = Matched()
+    with registry.override_family(DesignedPads()):
+        alone = run_tournament(
+            block, groups=["random"], families=["designed"], designer=plain, executor=FakePhysics()
+        )
+    ra = alone.groups[EntrantGroup.RANDOM]
+    assert len(ra.screened()) == RANDOM_RECIPES and ra.note is None and plain.draws == [(RANDOM_RECIPES, ())]
+
+
 def test_a_failed_proposal_round_keeps_the_earlier_designs(block: Any) -> None:
     class Flaky(FakeDesigner):
         def propose(self, part: Any, history: Sequence[Any], n: int) -> DesignBatch:
@@ -858,6 +918,39 @@ def test_recommend_effector_design_needs_the_passcode_and_reserves_spend(tmp_pat
     poor = _toolbox(tmp_path / "c", Gate(_doc()), session_usd=0.01)
     over = poor.call("recommend_effector", {"part_id": PART, "design": True})
     assert over.refused and over.code == "spend_cap" and poor.guard.reserved_usd == 0.0
+
+
+def test_recommend_effector_design_spend_stays_under_the_session_design_cap(tmp_path: Path) -> None:
+    """At most DESIGN_SESSION_USD of Nemotron design spend per session: in flight plus charged."""
+    assert (et.DESIGN_RESERVE_USD, et.DESIGN_SESSION_USD) == (0.05, 0.10)
+    gate = Gate(_doc(), llm_usd=0.03)
+    gate.event.set()
+    box = _toolbox(tmp_path, gate)
+    for _ in range(2):
+        started = box.call("recommend_effector", {"part_id": PART, "design": True})
+        assert started.ok and started.result["reserved_usd"] == et.DESIGN_RESERVE_USD
+        polled = box.call("poll_job", {"job_id": started.result["job_id"]})
+        assert polled.result["state"] == "COMPLETED"
+    assert box.guard.snapshot()["by_kind_usd"] == {"llm": pytest.approx(0.06)}
+    over = box.call("recommend_effector", {"part_id": PART, "design": True})  # 0.06 + 0.05 > 0.10
+    assert over.refused and over.code == "spend_cap" and "design cap" in (over.error or "")
+    assert box.guard.reserved_usd == 0.0
+    free = box.call("recommend_effector", {"part_id": PART})  # without Nemotron it stays free
+    assert free.ok and free.result["reserved_usd"] == 0
+    assert box.call("poll_job", {"job_id": free.result["job_id"]}).result["state"] == "COMPLETED"
+    assert [r.budget_usd for r in gate.requests] == [et.DESIGN_RESERVE_USD, et.DESIGN_RESERVE_USD, 0.0]
+
+
+def test_recommend_effector_without_a_live_designer_reserves_nothing(tmp_path: Path) -> None:
+    gate = Gate(_doc(), llm_usd=0.0)
+    gate.event.set()
+    box = _toolbox(tmp_path, gate)
+    box.effectors = et.EffectorJobRunner(gate, designs=False)
+    started = box.call("recommend_effector", {"part_id": PART, "design": True})
+    assert started.ok and started.result["design"] is False and started.result["reserved_usd"] == 0
+    assert "no live designer" in started.result["design_note"] and box.guard.reserved_usd == 0.0
+    assert box.call("poll_job", {"job_id": started.result["job_id"]}).result["state"] == "COMPLETED"
+    assert gate.requests[0].design is False and gate.requests[0].budget_usd == 0.0
 
 
 def test_recommend_effector_shares_the_two_job_cap_and_the_tool_budget(tmp_path: Path) -> None:

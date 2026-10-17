@@ -9,9 +9,12 @@ Stages (:func:`run_tournament`):
 1. **Entrants.** Every preset of every available family (:func:`rtt.effectors.registry.available_families`,
    so a family that registers itself is picked up without a list to edit), bucketed by
    :attr:`~rtt.effectors.types.EffectorSpec.group`. The designed group adds Nemotron proposals in
-   :data:`DESIGN_ROUNDS` rounds of :data:`DESIGNS_PER_ROUND` (round 2 sees round 1's physics), the
-   random group :data:`RANDOM_RECIPES` recipes from the same spaces (a :class:`MorphologyDesigner`,
-   track B3's :mod:`rtt.effectors.morphology` by default).
+   :data:`DESIGN_ROUNDS` rounds of :data:`DESIGNS_PER_ROUND` (round 2 sees round 1's physics). The
+   random control is matched to them: after the rounds it draws, from the same spaces Nemotron was
+   offered and with the same validators, exactly as many screened designs as Nemotron's valid
+   designs screened on this part (:func:`_match_random`). Without the Nemotron rounds it draws
+   :data:`RANDOM_RECIPES`. Both come from a :class:`MorphologyDesigner` (track B3's
+   :mod:`rtt.effectors.morphology` by default).
 2. **Build check.** Each candidate is built into the shared scene; an
    :class:`~rtt.effectors.types.InvalidEffector` (or an unbuildable jaw) is listed with its reason and
    scores 0. The compiled model gives the candidate's fairness signature (wrist servos, solver,
@@ -121,8 +124,11 @@ CERTIFICATES_PER_GROUP: Final = 2
 #: Nemotron proposals: rounds and designs per round (the second round sees the first's physics).
 DESIGN_ROUNDS: Final = 2
 DESIGNS_PER_ROUND: Final = 4
-#: Recipes the random control draws from the same spaces.
+#: Recipes the random control draws when no Nemotron rounds run (with them, it is matched to
+#: the number of Nemotron designs screened on the part).
 RANDOM_RECIPES: Final = 8
+#: A matched random draw stops after this many recipes per design wanted (unbuildable draws).
+RANDOM_DRAW_FACTOR: Final = 4
 #: The condition every lane of a part plays (the part 3 mm off centre), first seed.
 LANE_CONDITION: Final = "c2"
 _FIDELITY_RANK: Final = {"core": 0, "rigid": 1, "approximation": 2}
@@ -228,12 +234,16 @@ class DesignBatch:
     calls: int = 0
     cost_usd: float = 0.0
     analysis: str = ""
+    kinds: tuple[str, ...] = ()  # the spaces the proposer was offered (labels; empty: unknown)
 
 
 class MorphologyDesigner(Protocol):
     """What the designed and random groups need (track B3's :mod:`rtt.effectors.morphology`)."""
 
-    def random_recipes(self, part: PartSpec, n: int, seed: int) -> Sequence[MorphologyRecipe]: ...
+    def random_recipes(self, part: PartSpec, n: int, seed: int) -> Sequence[MorphologyRecipe]:
+        """``n`` valid recipes; the first ``n`` of a larger draw with the same seed are the same.
+        An implementation may accept ``kinds=`` (space labels) to draw from those spaces only."""
+        ...
 
     def propose(self, part: PartSpec, history: Sequence[DesignFeedback], n: int) -> DesignBatch: ...
 
@@ -247,8 +257,10 @@ class _MorphologyAdapter:
         self.module = module
         self.client = client
 
-    def random_recipes(self, part: PartSpec, n: int, seed: int) -> Sequence[MorphologyRecipe]:
-        return list(self.module.random_recipes(part, n, seed))
+    def random_recipes(
+        self, part: PartSpec, n: int, seed: int, *, kinds: Sequence[str] | None = None
+    ) -> Sequence[MorphologyRecipe]:
+        return list(self.module.random_recipes(part, n, seed, kinds=list(kinds) if kinds else None))
 
     def propose(self, part: PartSpec, history: Sequence[DesignFeedback], n: int) -> DesignBatch:
         if self.client is None:
@@ -277,6 +289,7 @@ class _MorphologyAdapter:
             calls=len(entries),
             cost_usd=cost,
             analysis=str(getattr(batch, "analysis", "") or ""),
+            kinds=tuple(str(k) for k in (getattr(batch, "kinds", None) or ())),
         )
 
     def spec_for(self, recipe: MorphologyRecipe) -> EffectorSpec:
@@ -289,6 +302,62 @@ def _rejection(r: Any) -> dict[str, Any]:
         return dict(r)
     to_dict = getattr(r, "to_dict", None)
     return dict(to_dict()) if callable(to_dict) else {"reason": str(r)}
+
+
+def _random_draw(
+    designer: MorphologyDesigner, part: PartSpec, n: int, seed: int, kinds: Sequence[str]
+) -> list[MorphologyRecipe]:
+    if kinds:
+        return list(designer.random_recipes(part, n, seed, kinds=kinds))  # type: ignore[call-arg]
+    return list(designer.random_recipes(part, n, seed))
+
+
+def _match_random(
+    designer: MorphologyDesigner,
+    st: GroupState,
+    target: int,
+    kinds: Sequence[str],
+    seed: int,
+    add: Callable[[EntrantGroup, Sequence[MorphologyRecipe], str], list[Candidate]],
+    build_check: Callable[[Candidate], None],
+    screen: Callable[[list[Candidate]], None],
+    part: PartSpec,
+) -> None:
+    """Draw the random control after the Nemotron rounds: exactly ``target`` buildable recipes
+    (the Nemotron designs screened on this part), from the spaces Nemotron was offered, with the
+    same validators. A draw is the prefix of a larger one with the same seed, so the draw grows
+    until enough recipes build (at most :data:`RANDOM_DRAW_FACTOR` x ``target`` + 8 recipes)."""
+    pool = ", ".join(kinds) if kinds else "every design space"
+    st.note = f"matched to the {target} Nemotron design{'s' if target != 1 else ''} screened ({pool})"
+    if target <= 0:
+        st.reason = "no Nemotron design was screened on this part, so the matched control is empty"
+        return
+    drawn: list[MorphologyRecipe] = []
+    buildable: list[Candidate] = []
+    n = target
+    limit = RANDOM_DRAW_FACTOR * target + RANDOM_RECIPES
+    while len(buildable) < target and n <= limit:
+        recipes = _random_draw(designer, part, n, seed, kinds)
+        if [r.recipe_id for r in recipes[: len(drawn)]] != [r.recipe_id for r in drawn]:
+            raise ContractError("the random draw is not a prefix of a larger draw with the same seed")
+        new = recipes[len(drawn) :]
+        drawn = recipes
+        for cand in add(EntrantGroup.RANDOM, new, "random"):
+            build_check(cand)
+            if cand.status == "pending":
+                if len(buildable) < target:
+                    buildable.append(cand)
+                else:  # built, but the control is already full
+                    cand.status, cand.reason = "not_sampled", "the matched control already had its designs"
+        if len(recipes) < n:  # the draw cap of the spaces was reached
+            break
+        n += target - len(buildable) if len(buildable) < target else 0
+        if not new:
+            break
+    st.sampled_from = len(drawn)
+    if len(buildable) < target:
+        st.note += f"; only {len(buildable)} buildable random designs could be drawn"
+    screen(buildable)
 
 
 def _first_attr(obj: Any, names: Sequence[str], default: Any) -> Any:
@@ -643,6 +712,7 @@ class GroupState:
     candidates: list[Candidate] = field(default_factory=list)
     sampled_from: int = 0
     finalists: list[Candidate] = field(default_factory=list)
+    note: str | None = None  # how the group was drawn, when that is not the plain rule
 
     def screened(self) -> list[Candidate]:
         return [c for c in self.candidates if c.status == "screened"]
@@ -768,6 +838,7 @@ class TournamentResult:
                     "requested": s.requested,
                     "status": s.status,
                     "reason": s.reason,
+                    "note": s.note,
                     "sampled_from": s.sampled_from,
                     "candidates": [c.effector_id for c in s.candidates],
                     "finalists": [c.effector_id for c in s.finalists],
@@ -1101,13 +1172,6 @@ def run_tournament(
     def designable() -> bool:
         return designer is not None and EffectorFamily.DESIGNED in fams
 
-    if EntrantGroup.RANDOM in wanted:
-        if not designable():
-            states[EntrantGroup.RANDOM].reason = "the morphology designer (track B3) is not available"
-        else:
-            assert designer is not None
-            rseed = derive_seed(seed, part.name, part.geometry_sha256, "random")
-            add_recipes(EntrantGroup.RANDOM, designer.random_recipes(part, RANDOM_RECIPES, rseed), "random")
     design_on = EntrantGroup.DESIGNED in wanted and design
     if EntrantGroup.DESIGNED in wanted:
         if not designable():
@@ -1115,6 +1179,13 @@ def run_tournament(
             design_on = False
         elif not design:
             states[EntrantGroup.DESIGNED].reason = "Nemotron proposals not requested (design = false)"
+    rseed = derive_seed(seed, part.name, part.geometry_sha256, "random")
+    if EntrantGroup.RANDOM in wanted:
+        if not designable():
+            states[EntrantGroup.RANDOM].reason = "the morphology designer (track B3) is not available"
+        elif not design_on:  # no Nemotron rounds to match: the fixed draw, screened with the presets
+            assert designer is not None
+            add_recipes(EntrantGroup.RANDOM, designer.random_recipes(part, RANDOM_RECIPES, rseed), "random")
 
     own_executor = executor is None
     ex: Executor = executor if executor is not None else TournamentExecutor(workers)
@@ -1133,10 +1204,12 @@ def run_tournament(
         # 4-5. references and the screen, every group in one batch
         first = [c for g in GROUP_ORDER for c in states[g].candidates if c.status == "pending"]
         _run_screen(first, part, task, conditions, ex, progress)
-        # the designed group: Nemotron in rounds, each round screened before the next
+        # the designed group: Nemotron in rounds, each round screened before the next; then the
+        # random control, matched to the Nemotron designs screened
         if design_on:
             assert designer is not None
             st = states[EntrantGroup.DESIGNED]
+            offered: tuple[str, ...] = ()
             for rnd in range(1, DESIGN_ROUNDS + 1):
                 history = [
                     _feedback(c)
@@ -1170,6 +1243,20 @@ def run_tournament(
                         "cost_usd": round(float(batch.cost_usd), 6),
                         "analysis": batch.analysis[:2000],
                     }
+                )
+                offered = offered or batch.kinds
+            if EntrantGroup.RANDOM in wanted:
+                target = sum(c.source.startswith("nemotron") for c in st.screened())
+                _match_random(
+                    designer,
+                    states[EntrantGroup.RANDOM],
+                    target,
+                    offered,
+                    rseed,
+                    add_recipes,
+                    lambda c: _build_check(c, part, task),
+                    lambda cs: _run_screen(cs, part, task, conditions, ex, progress),
+                    part,
                 )
         for g, st in states.items():
             if st.requested and not st.candidates:

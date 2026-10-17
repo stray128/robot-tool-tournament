@@ -239,6 +239,8 @@ export interface GroupRow {
   title: string;
   status: "run" | "empty" | "skipped";
   reason: string | null;
+  /** How the group was drawn when that is not the plain rule (the matched random control). */
+  note: string | null;
   finalists: string[];
   budget: GroupBudget;
   sampled_from: number;
@@ -645,6 +647,7 @@ export function parseEffectorPage(raw: unknown, file = "effectors/part.json"): E
           title: g.get("title").nonEmpty(),
           status: g.get("status").oneOf(["run", "empty", "skipped"] as const),
           reason: optStr(g.get("reason")),
+          note: optNote(g),
           finalists: g.get("finalists").items().map(sha),
           budget,
           sampled_from: g.get("sampled_from").int(),

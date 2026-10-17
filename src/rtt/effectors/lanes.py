@@ -743,6 +743,7 @@ def export_part(
                 "title": GROUP_TITLES[g],
                 "status": st["status"],
                 "reason": st["reason"],
+                "note": st.get("note"),
                 "finalists": st["finalists"],
                 "budget": st["budget"],
                 "sampled_from": st["sampled_from"],

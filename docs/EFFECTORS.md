@@ -310,8 +310,11 @@ groups to run, a seed.
 **Budget per group, equal for every group:** at most 96 screen episodes (12 candidates x 8)
 and 2 certificates. A group with more candidates samples them (fixed seed); a group with
 fewer uses fewer. The designed group's candidates are Nemotron proposals in 2 rounds of 4
-(the second round sees the first round's physics feedback); the random group draws 8 recipes
-from the same spaces with the same validators.
+(the second round sees the first round's physics feedback). The random control is matched to
+them (integration decision, 2026-10-17): after the rounds it draws, from the spaces Nemotron
+was offered and with the same validators, exactly as many buildable recipes as Nemotron
+designs were screened on that part, and screens them. Without the Nemotron rounds
+(`design = false`) it draws 8 recipes from the same spaces.
 
 **Fairness rules (asserted by B4's tests):** same part, placements, seeds and certificate
 battery for all; same wrist, servo gains, force and torque limits, phases, lift and hold; the
@@ -408,9 +411,11 @@ B4 adds one tool to the Grasp Engineer: `recommend_effector(part_id, requirement
 design)`. It starts a tournament job (local CPU) and returns a job id; `poll_job` and
 `fetch_results` return the recommendation (the existing job runner). Caps as for every
 tool: it counts toward the 12 tool calls, at most 2 concurrent jobs, `design = true` (the
-Nemotron morphology proposals) needs the passcode and reserves its spend against the
-session and day caps. The verdict is computed by code; the model only explains it. Results
-carry the product-mode label.
+Nemotron morphology proposals) needs the passcode and reserves its worst case ($0.05: 2 rounds
+of a call and a repair) against the session and day caps, within a per-session design cap of
+$0.10. The API service gives live (passcode) sessions the designer, its client capped at the
+reservation; offline sessions stay designer-free. The verdict is computed by code; the model
+only explains it. Results carry the product-mode label.
 
 ## 8. Labels and brand rules
 

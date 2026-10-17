@@ -265,7 +265,10 @@ export default async function EffectorPartPage({ params }: Params) {
                   <th scope="row" className="py-2 pr-3 font-normal text-ink">
                     {GROUP_TITLES[g.group]}
                   </th>
-                  <td className="py-2 pr-3 text-xs text-ink-2">{g.status === "run" ? "run" : `${g.status}: ${g.reason ?? ""}`}</td>
+                  <td className="py-2 pr-3 text-xs text-ink-2">
+                    {g.status === "run" ? "run" : `${g.status}: ${g.reason ?? ""}`}
+                    {g.note ? <span className="mt-0.5 block text-ink-3">{g.note}</span> : null}
+                  </td>
                   <td className="num py-2 pr-3 text-right">{g.budget.candidates}</td>
                   <td className="num py-2 pr-3 text-right">
                     {g.budget.screen_episodes} <span className="text-ink-3">/ {g.budget.max_screen_episodes}</span>
