@@ -31,6 +31,7 @@ evaluation or any number in `docs/TASK.md`.
    | `stress_test(design_id, part_id)` | the robustness certificate on every kept pose: placement error of 0 to ±3 mm on both axes, a shake and a push | free |
    | `export_print_pack(run_id)` | the `rtt.part` print pack: finger STLs, a printable jaw, the certificate as HTML and JSON, the results, and a manifest with a checksum for each file and the product-mode label, all zipped. `stress_tested` says whether the design was stress-tested in the session; a certificate made at export has no verdict in the session | free |
    | `cost_ledger()` | session spend by kind and by model, the caps, and the tool calls left | free |
+   | `recommend_effector(part_id, requirement, groups, design)` | offered only when the toolbox has an effector runner (product mode, `docs/EFFECTORS.md` section 7; `AgentService` gives every session one when its part backend runs the simulator, not with the offline fake): a tournament job on this machine (`rtt.effectors.tournament` on the uploaded part, every available effector family on the same placements and seeds, the best two per group certified); `poll_job` and `fetch_results` return the recommendation with `verdict` `recommended` or `no_winner` computed by code (`rtt.effectors.recommend`), the winner's `certificate_verdict` (the `stress_test` rule), a rigid runner-up for an approximation, and the label. It counts toward the 12 calls and the 2 jobs in flight. `design=true` (Nemotron morphologies) needs the passcode and reserves $0.05 (its worst case) against the session and day caps before the job starts, within a per-session design cap of $0.10; live sessions get the designer (its client capped at the reservation), offline sessions none, so there `design=true` runs without Nemotron and reserves nothing | free; `design=true` Token Factory |
 
 4. **Answer.** The loop ends when the model answers in plain text. Lightning then
    summarises the outcome. The session file records the verdicts computed by code next
@@ -164,6 +165,7 @@ before the first live agent job.
 - `src/rtt/agent/`:
   - `engineer.py`: the loop.
   - `tools.py`: the tools and caps.
+  - `effector_tool.py`: `recommend_effector`'s jobs and answers (product mode).
   - `schemas.py`: the tool schemas and argument validation.
   - `caps.py`: the session caps, spend tracking and passcode check.
   - `backends.py`: part intake and physics, through the `rtt.part` adapter or `rtt.sim` directly.

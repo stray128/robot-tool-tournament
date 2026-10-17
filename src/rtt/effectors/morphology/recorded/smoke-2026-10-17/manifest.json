@@ -1,0 +1,2107 @@
+{
+  "arms": {
+    "nemotron": {
+      "designs": [
+        {
+          "failure_modes": {
+            "invalid_build": 16,
+            "missed_grasp": 16,
+            "slip_during_lift": 16
+          },
+          "held_rate": 0.0,
+          "mass_kg": 0.2634,
+          "n_actuators": 3,
+          "n_episodes": 48,
+          "nominal": {
+            "block": {
+              "failure_mode": "slip_during_lift",
+              "held": false,
+              "registered": false,
+              "traj_sha": "b7c7055ec3fe9f0e402f9d032ee6a01add7e0a86a5fbbd5f453bd0ef8acc68b6"
+            },
+            "flanged_bushing": {
+              "failure_mode": "missed_grasp",
+              "held": false,
+              "registered": false,
+              "traj_sha": "0695c5c9e4763d5bf0a4dc199be649d9d2967e714fe2e5b3e7ea77324072b92a"
+            },
+            "hex_standoff": {
+              "failure_mode": "missed_grasp",
+              "held": false,
+              "registered": false,
+              "traj_sha": "c6f18b8f78d51e8271a9b815a4d23ce67b17797e1133304a2fca516ac0cdd430"
+            },
+            "l_bracket": {
+              "failure_mode": "invalid_build",
+              "held": false,
+              "registered": false,
+              "traj_sha": ""
+            },
+            "pipe_tee": {
+              "failure_mode": "invalid_build",
+              "held": false,
+              "registered": false,
+              "traj_sha": ""
+            },
+            "steel_slug": {
+              "failure_mode": "slip_during_lift",
+              "held": false,
+              "registered": false,
+              "traj_sha": "294bee15684e99b2c5ee819b4bb232bf0b1bc4763bea62f35b0d06f04a44eeeb"
+            }
+          },
+          "nominal_held_parts": [],
+          "per_part": {
+            "block": [
+              0.0,
+              0.0
+            ],
+            "flanged_bushing": [
+              0.0,
+              0.0
+            ],
+            "hex_standoff": [
+              0.0,
+              0.0
+            ],
+            "l_bracket": [
+              0.0,
+              0.0
+            ],
+            "pipe_tee": [
+              0.0,
+              0.0
+            ],
+            "steel_slug": [
+              0.0,
+              0.0
+            ]
+          },
+          "recipe": {
+            "family": "designed",
+            "hypothesis": "Three-finger tendon pinch with wider spread and larger palm gives adequate opening for irregular parts while keeping joint count low.",
+            "kind": "fingered_hand",
+            "origin": "nemotron",
+            "params": {
+              "actuation": "tendon",
+              "finger_length_mm": 85,
+              "finger_thickness_mm": 6,
+              "finger_width_mm": 14,
+              "grasp": "pinch",
+              "grip_force_n": 14,
+              "grip_height_frac": 0.55,
+              "layout": "opposed",
+              "material": "aluminium",
+              "n_fingers": 3,
+              "n_phalanges": 2,
+              "pad": "flat",
+              "pad_thickness_mm": 3,
+              "palm_radius_mm": 40,
+              "palm_thickness_mm": 12,
+              "proximal_frac": 0.5,
+              "spread_deg": 100,
+              "yaw_deg": 15
+            },
+            "parents": [],
+            "recipe_id": "3e588e927c7efa0d4de56f80bfaec048f1fd36142e90942408c7c509a17c793a",
+            "schema": "rtt-morphology/1"
+          },
+          "registered_rate": 0.0
+        },
+        {
+          "failure_modes": {
+            "invalid_build": 16,
+            "not_registered": 9,
+            "slip_during_lift": 8
+          },
+          "held_rate": 0.5,
+          "mass_kg": 0.6043,
+          "n_actuators": 4,
+          "n_episodes": 48,
+          "nominal": {
+            "block": {
+              "failure_mode": null,
+              "held": true,
+              "registered": true,
+              "traj_sha": "c6927c82fc8110acd24f0f011f1082e9df8dc7ec0c7993addd51fce4d32361c5"
+            },
+            "flanged_bushing": {
+              "failure_mode": null,
+              "held": true,
+              "registered": true,
+              "traj_sha": "e0767df69362cd0c255e58dd409bcfcf0d2f0484a9d72e839d3677c5d99c48e8"
+            },
+            "hex_standoff": {
+              "failure_mode": null,
+              "held": true,
+              "registered": true,
+              "traj_sha": "2385562c6eab03739f8d6135283426f6621fb23c6e9d88ebfa9a89eb4bcb9a65"
+            },
+            "l_bracket": {
+              "failure_mode": "invalid_build",
+              "held": false,
+              "registered": false,
+              "traj_sha": ""
+            },
+            "pipe_tee": {
+              "failure_mode": "invalid_build",
+              "held": false,
+              "registered": false,
+              "traj_sha": ""
+            },
+            "steel_slug": {
+              "failure_mode": "slip_during_lift",
+              "held": false,
+              "registered": false,
+              "traj_sha": "0f0bfc4d27823b2b2a8ebe46355c0a45bd7ac33b026cdbf0f495dc286d2aa8e5"
+            }
+          },
+          "nominal_held_parts": [
+            "block",
+            "hex_standoff",
+            "flanged_bushing"
+          ],
+          "per_part": {
+            "block": [
+              1.0,
+              0.5
+            ],
+            "flanged_bushing": [
+              1.0,
+              0.75
+            ],
+            "hex_standoff": [
+              1.0,
+              0.625
+            ],
+            "l_bracket": [
+              0.0,
+              0.0
+            ],
+            "pipe_tee": [
+              0.0,
+              0.0
+            ],
+            "steel_slug": [
+              0.0,
+              0.0
+            ]
+          },
+          "recipe": {
+            "family": "designed",
+            "hypothesis": "Four-finger even power grasp with longer fingers provides high force and redundancy for bulky components while respecting servo limits via reduced phalanges.",
+            "kind": "fingered_hand",
+            "origin": "nemotron",
+            "params": {
+              "actuation": "per_joint",
+              "finger_length_mm": 95,
+              "finger_thickness_mm": 5,
+              "finger_width_mm": 12,
+              "grasp": "power",
+              "grip_force_n": 18,
+              "grip_height_frac": 0.6,
+              "layout": "even",
+              "material": "steel",
+              "n_fingers": 4,
+              "n_phalanges": 1,
+              "pad": "round",
+              "pad_thickness_mm": 2,
+              "palm_radius_mm": 38,
+              "palm_thickness_mm": 10,
+              "proximal_frac": 0.5,
+              "spread_deg": 60,
+              "yaw_deg": 45
+            },
+            "parents": [],
+            "recipe_id": "e35229e060486e8a8dd6607176e233789f06868696e1769da25b0b0d6645c3d1",
+            "schema": "rtt-morphology/1"
+          },
+          "registered_rate": 0.3125
+        },
+        {
+          "failure_modes": {
+            "ejected_on_close": 2,
+            "invalid_build": 16,
+            "not_registered": 11,
+            "slip_during_lift": 8
+          },
+          "held_rate": 0.4583333333333333,
+          "mass_kg": 0.1692,
+          "n_actuators": 3,
+          "n_episodes": 48,
+          "nominal": {
+            "block": {
+              "failure_mode": "not_registered",
+              "held": true,
+              "registered": false,
+              "traj_sha": "0d77f4fba628a3aaa266ea6a33f9c33fd3468b87f5cf30788caa2a44479d0276"
+            },
+            "flanged_bushing": {
+              "failure_mode": null,
+              "held": true,
+              "registered": true,
+              "traj_sha": "ee0df71a1a6307d73952dcc3bbad8638048a18def2b6d938bb77fce73f2fdeba"
+            },
+            "hex_standoff": {
+              "failure_mode": null,
+              "held": true,
+              "registered": true,
+              "traj_sha": "7b055efe7c9dc3fb53100f9cdbc44bf133c941583b9c0eae40274d82d1de18ca"
+            },
+            "l_bracket": {
+              "failure_mode": "invalid_build",
+              "held": false,
+              "registered": false,
+              "traj_sha": ""
+            },
+            "pipe_tee": {
+              "failure_mode": "invalid_build",
+              "held": false,
+              "registered": false,
+              "traj_sha": ""
+            },
+            "steel_slug": {
+              "failure_mode": "slip_during_lift",
+              "held": false,
+              "registered": false,
+              "traj_sha": "f90146b884f70d91ece4f9e917d6d507bada05b525901127839dc38648782b5a"
+            }
+          },
+          "nominal_held_parts": [
+            "block",
+            "hex_standoff",
+            "flanged_bushing"
+          ],
+          "per_part": {
+            "block": [
+              0.75,
+              0.0
+            ],
+            "flanged_bushing": [
+              1.0,
+              0.875
+            ],
+            "hex_standoff": [
+              1.0,
+              0.5
+            ],
+            "l_bracket": [
+              0.0,
+              0.0
+            ],
+            "pipe_tee": [
+              0.0,
+              0.0
+            ],
+            "steel_slug": [
+              0.0,
+              0.0
+            ]
+          },
+          "recipe": {
+            "family": "designed",
+            "hypothesis": "Opposed three-finger tendon pinch yields precise alignment for asymmetric parts while limiting servo usage.",
+            "kind": "fingered_hand",
+            "origin": "nemotron",
+            "params": {
+              "actuation": "tendon",
+              "finger_length_mm": 80,
+              "finger_thickness_mm": 5,
+              "finger_width_mm": 12,
+              "grasp": "pinch",
+              "grip_force_n": 20,
+              "grip_height_frac": 0.55,
+              "layout": "opposed",
+              "material": "aluminium",
+              "n_fingers": 3,
+              "n_phalanges": 1,
+              "pad": "flat",
+              "pad_thickness_mm": 2,
+              "palm_radius_mm": 35,
+              "palm_thickness_mm": 10,
+              "proximal_frac": 0.5,
+              "spread_deg": 120,
+              "yaw_deg": 30
+            },
+            "parents": [],
+            "recipe_id": "ca8b76ad45e773b8b656b9316cedbe6f7ec2b851bc58f473d3f350878a0f093f",
+            "schema": "rtt-morphology/1"
+          },
+          "registered_rate": 0.22916666666666666
+        },
+        {
+          "failure_modes": {
+            "invalid_build": 16,
+            "not_registered": 11
+          },
+          "held_rate": 0.6666666666666666,
+          "mass_kg": 0.6631,
+          "n_actuators": 4,
+          "n_episodes": 48,
+          "nominal": {
+            "block": {
+              "failure_mode": null,
+              "held": true,
+              "registered": true,
+              "traj_sha": "67562700e2de004c12010fcd7eb5f51c29d8b7e91f55cff1b51e8d11766c97ff"
+            },
+            "flanged_bushing": {
+              "failure_mode": null,
+              "held": true,
+              "registered": true,
+              "traj_sha": "2029947f16dbe27d35559b3968f3622ab086725bdfcc977724375ca6a64b4c46"
+            },
+            "hex_standoff": {
+              "failure_mode": null,
+              "held": true,
+              "registered": true,
+              "traj_sha": "535503842537cd7dff1dd848cd0e3566a4817e436d85fea029d20058c759ed05"
+            },
+            "l_bracket": {
+              "failure_mode": "invalid_build",
+              "held": false,
+              "registered": false,
+              "traj_sha": ""
+            },
+            "pipe_tee": {
+              "failure_mode": "invalid_build",
+              "held": false,
+              "registered": false,
+              "traj_sha": ""
+            },
+            "steel_slug": {
+              "failure_mode": null,
+              "held": true,
+              "registered": true,
+              "traj_sha": "87a2177542fa170fc9d7f38a56efe45c2e3ef407f2d8791523f52705cbaf1a4e"
+            }
+          },
+          "nominal_held_parts": [
+            "block",
+            "hex_standoff",
+            "flanged_bushing",
+            "steel_slug"
+          ],
+          "per_part": {
+            "block": [
+              1.0,
+              0.75
+            ],
+            "flanged_bushing": [
+              1.0,
+              0.75
+            ],
+            "hex_standoff": [
+              1.0,
+              0.5
+            ],
+            "l_bracket": [
+              0.0,
+              0.0
+            ],
+            "pipe_tee": [
+              0.0,
+              0.0
+            ],
+            "steel_slug": [
+              1.0,
+              0.625
+            ]
+          },
+          "recipe": {
+            "family": "designed",
+            "hypothesis": "Four-finger hook gripper swinging motion catches flanges and rims, improving hold on parts with overhangs.",
+            "kind": "hook_gripper",
+            "origin": "nemotron",
+            "params": {
+              "finger_length_mm": 90,
+              "finger_thickness_mm": 5,
+              "finger_width_mm": 13,
+              "grip_force_n": 25,
+              "grip_height_frac": 0.6,
+              "hook_depth_mm": 4,
+              "hook_height_mm": 3,
+              "layout": "even",
+              "material": "steel",
+              "motion": "swing",
+              "n_fingers": 4,
+              "pad_thickness_mm": 2,
+              "palm_radius_mm": 40,
+              "palm_thickness_mm": 10,
+              "spread_deg": 60,
+              "yaw_deg": 45
+            },
+            "parents": [],
+            "recipe_id": "052ccc568d133dfefdd6133788c81e4b13c267a3989e8b0ffb8c36a73d229e50",
+            "schema": "rtt-morphology/1"
+          },
+          "registered_rate": 0.4375
+        },
+        {
+          "failure_modes": {
+            "ejected_on_close": 17,
+            "invalid_build": 16,
+            "not_registered": 2,
+            "physics_unreliable": 2,
+            "slip_during_lift": 9,
+            "unstable_hold": 2
+          },
+          "held_rate": 0.041666666666666664,
+          "mass_kg": 0.2016,
+          "n_actuators": 3,
+          "n_episodes": 48,
+          "nominal": {
+            "block": {
+              "failure_mode": "ejected_on_close",
+              "held": false,
+              "registered": false,
+              "traj_sha": "4c5366515b2208074b4af50da7d95195241a2593180377935aa4f147776c0810"
+            },
+            "flanged_bushing": {
+              "failure_mode": "ejected_on_close",
+              "held": false,
+              "registered": false,
+              "traj_sha": "efc00484fbc83a1ca0dff8d8650bced40404d49cfb46172ce66f513dd70217f4"
+            },
+            "hex_standoff": {
+              "failure_mode": "slip_during_lift",
+              "held": false,
+              "registered": false,
+              "traj_sha": "f7da0eb27f479cf50cb72c9c68b982bc2702cf763eaf0d1b84b51974c9fbe131"
+            },
+            "l_bracket": {
+              "failure_mode": "invalid_build",
+              "held": false,
+              "registered": false,
+              "traj_sha": ""
+            },
+            "pipe_tee": {
+              "failure_mode": "invalid_build",
+              "held": false,
+              "registered": false,
+              "traj_sha": ""
+            },
+            "steel_slug": {
+              "failure_mode": "slip_during_lift",
+              "held": false,
+              "registered": false,
+              "traj_sha": "fa6610d98c2d1aff220f962b13ef70bbdb814f36082e3d3ae9da131749c570fd"
+            }
+          },
+          "nominal_held_parts": [],
+          "per_part": {
+            "block": [
+              0.0,
+              0.0
+            ],
+            "flanged_bushing": [
+              0.0,
+              0.0
+            ],
+            "hex_standoff": [
+              0.25,
+              0.0
+            ],
+            "l_bracket": [
+              0.0,
+              0.0
+            ],
+            "pipe_tee": [
+              0.0,
+              0.0
+            ],
+            "steel_slug": [
+              0.0,
+              0.0
+            ]
+          },
+          "recipe": {
+            "family": "designed",
+            "hypothesis": "Three-digit tentacle with increased palm radius and moderate curl bias wraps around cylindrical and hexagonal parts while avoiding narrow openings.",
+            "kind": "segmented_tentacle",
+            "origin": "nemotron",
+            "params": {
+              "curl_bias": 0.5,
+              "digit_length_mm": 110,
+              "grip_force_n": 22,
+              "grip_height_frac": 0.58,
+              "layout": "opposed",
+              "material": "aluminium",
+              "n_digits": 3,
+              "n_segments": 5,
+              "palm_radius_mm": 40,
+              "palm_thickness_mm": 8,
+              "root_radius_mm": 5,
+              "spread_deg": 90,
+              "taper": 0.6,
+              "yaw_deg": 15
+            },
+            "parents": [],
+            "recipe_id": "90e8ed6fff52093a93a07e3daeb7a223183706ce1211c6d353b8f559f27d0ce1",
+            "schema": "rtt-morphology/1"
+          },
+          "registered_rate": 0.0
+        }
+      ],
+      "summary": {
+        "arm": "nemotron",
+        "best_by_screen": "052ccc568d133dfefdd6133788c81e4b13c267a3989e8b0ffb8c36a73d229e50",
+        "best_nominal_held": 4,
+        "best_nominal_held_parts": [
+          "block",
+          "hex_standoff",
+          "flanged_bushing",
+          "steel_slug"
+        ],
+        "designs": 5,
+        "most_parts_held_by_any_design": 4,
+        "parts_held_by_some_design": [
+          "block",
+          "flanged_bushing",
+          "hex_standoff",
+          "steel_slug"
+        ]
+      }
+    },
+    "random": {
+      "designs": [
+        {
+          "failure_modes": {
+            "ejected_on_close": 3,
+            "invalid_build": 16,
+            "missed_grasp": 2,
+            "not_registered": 17,
+            "slip_during_lift": 2,
+            "unstable_hold": 2
+          },
+          "held_rate": 0.4791666666666667,
+          "mass_kg": 0.3272,
+          "n_actuators": 2,
+          "n_episodes": 48,
+          "nominal": {
+            "block": {
+              "failure_mode": null,
+              "held": true,
+              "registered": true,
+              "traj_sha": "3bede42e8d1bfb23a244fc41744922272957540ae3565ae1668754b8ac95e797"
+            },
+            "flanged_bushing": {
+              "failure_mode": null,
+              "held": true,
+              "registered": true,
+              "traj_sha": "a906272161a6a6a14dc6e2da76adedf5fb2c751cfbdcf8134eb7c36dda50ddcf"
+            },
+            "hex_standoff": {
+              "failure_mode": "invalid_build",
+              "held": false,
+              "registered": false,
+              "traj_sha": ""
+            },
+            "l_bracket": {
+              "failure_mode": "unstable_hold",
+              "held": false,
+              "registered": false,
+              "traj_sha": "636c6becb779e2214e4fac5c5f2af3bfe92dbdcb399ce2ae1c5886afc222d37b"
+            },
+            "pipe_tee": {
+              "failure_mode": "invalid_build",
+              "held": false,
+              "registered": false,
+              "traj_sha": ""
+            },
+            "steel_slug": {
+              "failure_mode": null,
+              "held": true,
+              "registered": true,
+              "traj_sha": "327541c0423945897c50c447368386c31f8a7220bc7c6bada2b9909cffe14b0f"
+            }
+          },
+          "nominal_held_parts": [
+            "block",
+            "flanged_bushing",
+            "steel_slug"
+          ],
+          "per_part": {
+            "block": [
+              1.0,
+              0.25
+            ],
+            "flanged_bushing": [
+              1.0,
+              0.25
+            ],
+            "hex_standoff": [
+              0.0,
+              0.0
+            ],
+            "l_bracket": [
+              0.125,
+              0.0
+            ],
+            "pipe_tee": [
+              0.0,
+              0.0
+            ],
+            "steel_slug": [
+              0.75,
+              0.25
+            ]
+          },
+          "recipe": {
+            "family": "designed",
+            "hypothesis": "random draw (equal-budget control)",
+            "kind": "segmented_tentacle",
+            "origin": "random",
+            "params": {
+              "curl_bias": 0.9,
+              "digit_length_mm": 125.5,
+              "grip_force_n": 35.5,
+              "grip_height_frac": 0.81,
+              "layout": "even",
+              "material": "aluminium",
+              "n_digits": 2,
+              "n_segments": 7,
+              "palm_radius_mm": 32.5,
+              "palm_thickness_mm": 25.5,
+              "root_radius_mm": 3.5,
+              "spread_deg": 60,
+              "taper": 0.95,
+              "yaw_deg": 5
+            },
+            "parents": [],
+            "recipe_id": "bd20747bf3a4d91a17ce09bcc031a850e95d59a6dbddf405d52cc3b8eba95686",
+            "schema": "rtt-morphology/1"
+          },
+          "registered_rate": 0.125
+        },
+        {
+          "failure_modes": {
+            "invalid_build": 16,
+            "missed_grasp": 32
+          },
+          "held_rate": 0.0,
+          "mass_kg": 0.7682,
+          "n_actuators": 2,
+          "n_episodes": 48,
+          "nominal": {
+            "block": {
+              "failure_mode": "missed_grasp",
+              "held": false,
+              "registered": false,
+              "traj_sha": "1eef4ef4b344cfdaca457eae48e19eb8abb46328603696ed4ed3fbff02e43d2b"
+            },
+            "flanged_bushing": {
+              "failure_mode": "missed_grasp",
+              "held": false,
+              "registered": false,
+              "traj_sha": "b66b415693699c80385444cef141b734ea4cada15aa164f13ec370860da6fcdd"
+            },
+            "hex_standoff": {
+              "failure_mode": "invalid_build",
+              "held": false,
+              "registered": false,
+              "traj_sha": ""
+            },
+            "l_bracket": {
+              "failure_mode": "missed_grasp",
+              "held": false,
+              "registered": false,
+              "traj_sha": "0bcc658886d6a94d17e88b8375817e5f5d5129d53c8b1e5ab00852718333a30d"
+            },
+            "pipe_tee": {
+              "failure_mode": "invalid_build",
+              "held": false,
+              "registered": false,
+              "traj_sha": ""
+            },
+            "steel_slug": {
+              "failure_mode": "missed_grasp",
+              "held": false,
+              "registered": false,
+              "traj_sha": "b62adfc35d5a4deefc40e71529fdf4b8b3c8465f272e46fb3a8db0d284909527"
+            }
+          },
+          "nominal_held_parts": [],
+          "per_part": {
+            "block": [
+              0.0,
+              0.0
+            ],
+            "flanged_bushing": [
+              0.0,
+              0.0
+            ],
+            "hex_standoff": [
+              0.0,
+              0.0
+            ],
+            "l_bracket": [
+              0.0,
+              0.0
+            ],
+            "pipe_tee": [
+              0.0,
+              0.0
+            ],
+            "steel_slug": [
+              0.0,
+              0.0
+            ]
+          },
+          "recipe": {
+            "family": "designed",
+            "hypothesis": "random draw (equal-budget control)",
+            "kind": "fingered_hand",
+            "origin": "random",
+            "params": {
+              "actuation": "tendon",
+              "finger_length_mm": 116,
+              "finger_thickness_mm": 4,
+              "finger_width_mm": 26.5,
+              "grasp": "pinch",
+              "grip_force_n": 10,
+              "grip_height_frac": 0.77,
+              "layout": "even",
+              "material": "aluminium",
+              "n_fingers": 2,
+              "n_phalanges": 3,
+              "pad": "round",
+              "pad_thickness_mm": 2.5,
+              "palm_radius_mm": 57.5,
+              "palm_thickness_mm": 22.5,
+              "proximal_frac": 0.66,
+              "spread_deg": 60,
+              "yaw_deg": 163
+            },
+            "parents": [],
+            "recipe_id": "bc794b9aef8bfa37fd04f5cb67cde1e857486a7614789b5fb610685a9bfbe9d6",
+            "schema": "rtt-morphology/1"
+          },
+          "registered_rate": 0.0
+        },
+        {
+          "failure_modes": {
+            "invalid_build": 16,
+            "not_registered": 18
+          },
+          "held_rate": 0.6666666666666666,
+          "mass_kg": 0.2397,
+          "n_actuators": 3,
+          "n_episodes": 48,
+          "nominal": {
+            "block": {
+              "failure_mode": "not_registered",
+              "held": true,
+              "registered": false,
+              "traj_sha": "34a5d07625157b0f487992204342f5191abddca7acdecf33039debdacb6128a1"
+            },
+            "flanged_bushing": {
+              "failure_mode": null,
+              "held": true,
+              "registered": true,
+              "traj_sha": "ac51c0231b378fdb9a103dc0a9ed060eb48ba3b2502f8867ea860746f2d75247"
+            },
+            "hex_standoff": {
+              "failure_mode": "not_registered",
+              "held": true,
+              "registered": false,
+              "traj_sha": "97ed07a6f63ab1f3a8f7c242a946496e5b89a34ce48f588647e85f4bec093f3d"
+            },
+            "l_bracket": {
+              "failure_mode": "invalid_build",
+              "held": false,
+              "registered": false,
+              "traj_sha": ""
+            },
+            "pipe_tee": {
+              "failure_mode": "invalid_build",
+              "held": false,
+              "registered": false,
+              "traj_sha": ""
+            },
+            "steel_slug": {
+              "failure_mode": null,
+              "held": true,
+              "registered": true,
+              "traj_sha": "ac6518d38d5e361cebe14d89a87a8fde6d9c2eba4513d093744b16d9374b761c"
+            }
+          },
+          "nominal_held_parts": [
+            "block",
+            "hex_standoff",
+            "flanged_bushing",
+            "steel_slug"
+          ],
+          "per_part": {
+            "block": [
+              1.0,
+              0.0
+            ],
+            "flanged_bushing": [
+              1.0,
+              1.0
+            ],
+            "hex_standoff": [
+              1.0,
+              0.0
+            ],
+            "l_bracket": [
+              0.0,
+              0.0
+            ],
+            "pipe_tee": [
+              0.0,
+              0.0
+            ],
+            "steel_slug": [
+              1.0,
+              0.75
+            ]
+          },
+          "recipe": {
+            "family": "designed",
+            "hypothesis": "random draw (equal-budget control)",
+            "kind": "hook_gripper",
+            "origin": "random",
+            "params": {
+              "finger_length_mm": 45.5,
+              "finger_thickness_mm": 8.5,
+              "finger_width_mm": 13.5,
+              "grip_force_n": 32.5,
+              "grip_height_frac": 0.47,
+              "hook_depth_mm": 6,
+              "hook_height_mm": 7,
+              "layout": "even",
+              "material": "pla",
+              "motion": "slide",
+              "n_fingers": 3,
+              "pad_thickness_mm": 7.5,
+              "palm_radius_mm": 54.5,
+              "palm_thickness_mm": 15,
+              "spread_deg": 60,
+              "yaw_deg": 84
+            },
+            "parents": [],
+            "recipe_id": "424275ce1ccd93f7d165e55a4fe3a412a36ab673742f3c7731d15fcbeca05e00",
+            "schema": "rtt-morphology/1"
+          },
+          "registered_rate": 0.2916666666666667
+        },
+        {
+          "failure_modes": {
+            "ejected_on_close": 27,
+            "invalid_build": 8,
+            "missed_grasp": 5,
+            "slip_during_lift": 8
+          },
+          "held_rate": 0.0,
+          "mass_kg": 0.6524,
+          "n_actuators": 2,
+          "n_episodes": 48,
+          "nominal": {
+            "block": {
+              "failure_mode": null,
+              "held": true,
+              "registered": true,
+              "traj_sha": "61bf9c36b8837ee68c0dbb88ea8ff83b6092d934ae39f6482fd3105ec530fac4"
+            },
+            "flanged_bushing": {
+              "failure_mode": "missed_grasp",
+              "held": false,
+              "registered": false,
+              "traj_sha": "efca299ecf75008059e85de8101d02a529cfd5359235311f785ea4e6cbf1941f"
+            },
+            "hex_standoff": {
+              "failure_mode": "missed_grasp",
+              "held": false,
+              "registered": false,
+              "traj_sha": "2c78b930a46861a71206e21db685c6c32f8bdd799fb85b67b73c73f55e8f4eec"
+            },
+            "l_bracket": {
+              "failure_mode": "invalid_build",
+              "held": false,
+              "registered": false,
+              "traj_sha": ""
+            },
+            "pipe_tee": {
+              "failure_mode": "ejected_on_close",
+              "held": false,
+              "registered": false,
+              "traj_sha": "d2eae8a5dd388b22c2bcf5d7d321ebe7c9a46e58b8b475f648b4a8d0ba5e974f"
+            },
+            "steel_slug": {
+              "failure_mode": "slip_during_lift",
+              "held": false,
+              "registered": false,
+              "traj_sha": "f3c343f6d1bd40d7013dfb2da5e5964dcfd1f8b608176f66b72135c5eb1a33fb"
+            }
+          },
+          "nominal_held_parts": [
+            "block"
+          ],
+          "per_part": {
+            "block": [
+              0.0,
+              0.0
+            ],
+            "flanged_bushing": [
+              0.0,
+              0.0
+            ],
+            "hex_standoff": [
+              0.0,
+              0.0
+            ],
+            "l_bracket": [
+              0.0,
+              0.0
+            ],
+            "pipe_tee": [
+              0.0,
+              0.0
+            ],
+            "steel_slug": [
+              0.0,
+              0.0
+            ]
+          },
+          "recipe": {
+            "family": "designed",
+            "hypothesis": "random draw (equal-budget control)",
+            "kind": "segmented_tentacle",
+            "origin": "random",
+            "params": {
+              "curl_bias": 0.99,
+              "digit_length_mm": 149.5,
+              "grip_force_n": 14.5,
+              "grip_height_frac": 0.65,
+              "layout": "even",
+              "material": "pla",
+              "n_digits": 2,
+              "n_segments": 4,
+              "palm_radius_mm": 66,
+              "palm_thickness_mm": 26.5,
+              "root_radius_mm": 7.5,
+              "spread_deg": 60,
+              "taper": 0.96,
+              "yaw_deg": 93
+            },
+            "parents": [],
+            "recipe_id": "9ea49763a503f6e2240c5dacf66a6c9d421cc8fdd819a0b5bdf88b570731414f",
+            "schema": "rtt-morphology/1"
+          },
+          "registered_rate": 0.0
+        },
+        {
+          "failure_modes": {
+            "invalid_build": 8,
+            "not_registered": 29,
+            "slip_during_lift": 8
+          },
+          "held_rate": 0.6666666666666666,
+          "mass_kg": 0.5819,
+          "n_actuators": 2,
+          "n_episodes": 48,
+          "nominal": {
+            "block": {
+              "failure_mode": "invalid_build",
+              "held": false,
+              "registered": false,
+              "traj_sha": ""
+            },
+            "flanged_bushing": {
+              "failure_mode": null,
+              "held": true,
+              "registered": true,
+              "traj_sha": "051c7ce67dacb1fa3e8c13bab0a09eb05805a4a304825f6ecdf8db10b695094a"
+            },
+            "hex_standoff": {
+              "failure_mode": "not_registered",
+              "held": true,
+              "registered": false,
+              "traj_sha": "9b11d7cc1ac54479d545e702e7eeed0fc77f1c8448e951d4c6d7b7fcc0a3970b"
+            },
+            "l_bracket": {
+              "failure_mode": "not_registered",
+              "held": true,
+              "registered": false,
+              "traj_sha": "838f0fa523ba39deba2deaf2c197452e225625e355060edb7c2c2329196d9087"
+            },
+            "pipe_tee": {
+              "failure_mode": "not_registered",
+              "held": true,
+              "registered": false,
+              "traj_sha": "6f9324ed1fa18c2665a1795ff0a56a01eb10e5e46b9132f55b1694c16e787ad7"
+            },
+            "steel_slug": {
+              "failure_mode": "slip_during_lift",
+              "held": false,
+              "registered": false,
+              "traj_sha": "36941834aec2f8c68deea08cdf267aaa246fa430500269e4868baafc27805490"
+            }
+          },
+          "nominal_held_parts": [
+            "pipe_tee",
+            "hex_standoff",
+            "flanged_bushing",
+            "l_bracket"
+          ],
+          "per_part": {
+            "block": [
+              0.0,
+              0.0
+            ],
+            "flanged_bushing": [
+              1.0,
+              0.375
+            ],
+            "hex_standoff": [
+              1.0,
+              0.0
+            ],
+            "l_bracket": [
+              1.0,
+              0.0
+            ],
+            "pipe_tee": [
+              1.0,
+              0.0
+            ],
+            "steel_slug": [
+              0.0,
+              0.0
+            ]
+          },
+          "recipe": {
+            "family": "designed",
+            "hypothesis": "random draw (equal-budget control)",
+            "kind": "hook_gripper",
+            "origin": "random",
+            "params": {
+              "finger_length_mm": 56,
+              "finger_thickness_mm": 8,
+              "finger_width_mm": 15.5,
+              "grip_force_n": 8,
+              "grip_height_frac": 0.19,
+              "hook_depth_mm": 6,
+              "hook_height_mm": 3.5,
+              "layout": "opposed",
+              "material": "aluminium",
+              "motion": "slide",
+              "n_fingers": 2,
+              "pad_thickness_mm": 1.5,
+              "palm_radius_mm": 45,
+              "palm_thickness_mm": 25.5,
+              "spread_deg": 60,
+              "yaw_deg": 3
+            },
+            "parents": [],
+            "recipe_id": "d3296f753f59f9b2765072abc9bc358f3dac0a6342df0ae968c5c696330cd1bf",
+            "schema": "rtt-morphology/1"
+          },
+          "registered_rate": 0.0625
+        },
+        {
+          "failure_modes": {
+            "ejected_on_close": 5,
+            "invalid_build": 16,
+            "missed_grasp": 5,
+            "slip_during_lift": 22
+          },
+          "held_rate": 0.0,
+          "mass_kg": 1.1163,
+          "n_actuators": 2,
+          "n_episodes": 48,
+          "nominal": {
+            "block": {
+              "failure_mode": "slip_during_lift",
+              "held": false,
+              "registered": false,
+              "traj_sha": "a00df4252ffb70096b0b55d7b817f03104b724c09e7eacfb31e47327de6a3dff"
+            },
+            "flanged_bushing": {
+              "failure_mode": "slip_during_lift",
+              "held": false,
+              "registered": false,
+              "traj_sha": "e02364cb81252a431132d493ed1ea2977bc3fa92c3e1455af1a564e23d2a2613"
+            },
+            "hex_standoff": {
+              "failure_mode": "invalid_build",
+              "held": false,
+              "registered": false,
+              "traj_sha": ""
+            },
+            "l_bracket": {
+              "failure_mode": "slip_during_lift",
+              "held": false,
+              "registered": false,
+              "traj_sha": "83df6b146975e4ae6f5766dafe651c3de70bb5335dcad416072ad40bded795c3"
+            },
+            "pipe_tee": {
+              "failure_mode": "invalid_build",
+              "held": false,
+              "registered": false,
+              "traj_sha": ""
+            },
+            "steel_slug": {
+              "failure_mode": "slip_during_lift",
+              "held": false,
+              "registered": false,
+              "traj_sha": "43329495f0367536abbbfecaeeb548058a8445050702bdecab4bff6a76b982f0"
+            }
+          },
+          "nominal_held_parts": [],
+          "per_part": {
+            "block": [
+              0.0,
+              0.0
+            ],
+            "flanged_bushing": [
+              0.0,
+              0.0
+            ],
+            "hex_standoff": [
+              0.0,
+              0.0
+            ],
+            "l_bracket": [
+              0.0,
+              0.0
+            ],
+            "pipe_tee": [
+              0.0,
+              0.0
+            ],
+            "steel_slug": [
+              0.0,
+              0.0
+            ]
+          },
+          "recipe": {
+            "family": "designed",
+            "hypothesis": "random draw (equal-budget control)",
+            "kind": "hook_gripper",
+            "origin": "random",
+            "params": {
+              "finger_length_mm": 110.5,
+              "finger_thickness_mm": 13,
+              "finger_width_mm": 9.5,
+              "grip_force_n": 18,
+              "grip_height_frac": 0.68,
+              "hook_depth_mm": 9,
+              "hook_height_mm": 7.5,
+              "layout": "opposed",
+              "material": "steel",
+              "motion": "swing",
+              "n_fingers": 2,
+              "pad_thickness_mm": 1,
+              "palm_radius_mm": 67,
+              "palm_thickness_mm": 6.5,
+              "spread_deg": 60,
+              "yaw_deg": 161
+            },
+            "parents": [],
+            "recipe_id": "6b8d031c1bd8cb05aa34409f1dadda367bc415d52016fa92b6a10aff02a940d3",
+            "schema": "rtt-morphology/1"
+          },
+          "registered_rate": 0.0
+        },
+        {
+          "failure_modes": {
+            "invalid_build": 16,
+            "not_registered": 24,
+            "slip_during_lift": 8
+          },
+          "held_rate": 0.5,
+          "mass_kg": 0.0808,
+          "n_actuators": 3,
+          "n_episodes": 48,
+          "nominal": {
+            "block": {
+              "failure_mode": "not_registered",
+              "held": true,
+              "registered": false,
+              "traj_sha": "7f8caa4b5c1716951244cedb5db19f02d2ef5231d9e0ae054ce97d9ebdff0154"
+            },
+            "flanged_bushing": {
+              "failure_mode": "not_registered",
+              "held": true,
+              "registered": false,
+              "traj_sha": "4351bf6200b23a712822d947827a697000fae1add7ac36c371c866d936a82ec0"
+            },
+            "hex_standoff": {
+              "failure_mode": "not_registered",
+              "held": true,
+              "registered": false,
+              "traj_sha": "910d188dca9fcf2b0df937d95bb6eaa32ce6fe81d1d27af9e54562ee7c71a0e9"
+            },
+            "l_bracket": {
+              "failure_mode": "invalid_build",
+              "held": false,
+              "registered": false,
+              "traj_sha": ""
+            },
+            "pipe_tee": {
+              "failure_mode": "invalid_build",
+              "held": false,
+              "registered": false,
+              "traj_sha": ""
+            },
+            "steel_slug": {
+              "failure_mode": "slip_during_lift",
+              "held": false,
+              "registered": false,
+              "traj_sha": "2f1db24e285f4fed8c2f8372b5226376cd7789f849a89099072dc0b1a1cb59f1"
+            }
+          },
+          "nominal_held_parts": [
+            "block",
+            "hex_standoff",
+            "flanged_bushing"
+          ],
+          "per_part": {
+            "block": [
+              1.0,
+              0.0
+            ],
+            "flanged_bushing": [
+              1.0,
+              0.0
+            ],
+            "hex_standoff": [
+              1.0,
+              0.0
+            ],
+            "l_bracket": [
+              0.0,
+              0.0
+            ],
+            "pipe_tee": [
+              0.0,
+              0.0
+            ],
+            "steel_slug": [
+              0.0,
+              0.0
+            ]
+          },
+          "recipe": {
+            "family": "designed",
+            "hypothesis": "random draw (equal-budget control)",
+            "kind": "hook_gripper",
+            "origin": "random",
+            "params": {
+              "finger_length_mm": 93.5,
+              "finger_thickness_mm": 7.5,
+              "finger_width_mm": 6.5,
+              "grip_force_n": 15,
+              "grip_height_frac": 0.38,
+              "hook_depth_mm": 5.5,
+              "hook_height_mm": 10,
+              "layout": "opposed",
+              "material": "pla",
+              "motion": "slide",
+              "n_fingers": 3,
+              "pad_thickness_mm": 2.5,
+              "palm_radius_mm": 50.5,
+              "palm_thickness_mm": 5,
+              "spread_deg": 53,
+              "yaw_deg": 110
+            },
+            "parents": [],
+            "recipe_id": "adad172a1bdc2f61c85c0f915bca2fcbb39a315c570740375e5ad84515602ac1",
+            "schema": "rtt-morphology/1"
+          },
+          "registered_rate": 0.0
+        },
+        {
+          "failure_modes": {
+            "ejected_on_close": 3,
+            "invalid_build": 16,
+            "missed_grasp": 2,
+            "not_registered": 19,
+            "slip_during_lift": 1
+          },
+          "held_rate": 0.5416666666666666,
+          "mass_kg": 0.4782,
+          "n_actuators": 6,
+          "n_episodes": 48,
+          "nominal": {
+            "block": {
+              "failure_mode": "not_registered",
+              "held": true,
+              "registered": false,
+              "traj_sha": "49cfba23c4693f013286b0a6d67e15983cbee54ad0f5c83c42023f7b8641b68d"
+            },
+            "flanged_bushing": {
+              "failure_mode": null,
+              "held": true,
+              "registered": true,
+              "traj_sha": "f88031cead4e6e1f7df086499681a92d0471d429b38c7dc4e9f3af75514abba8"
+            },
+            "hex_standoff": {
+              "failure_mode": null,
+              "held": true,
+              "registered": true,
+              "traj_sha": "1a37afa07810870cffac8657850fe7dff4b34c92d2a9f025feaf22f36bcdeb05"
+            },
+            "l_bracket": {
+              "failure_mode": "invalid_build",
+              "held": false,
+              "registered": false,
+              "traj_sha": ""
+            },
+            "pipe_tee": {
+              "failure_mode": "invalid_build",
+              "held": false,
+              "registered": false,
+              "traj_sha": ""
+            },
+            "steel_slug": {
+              "failure_mode": null,
+              "held": true,
+              "registered": true,
+              "traj_sha": "200e2a1f14d44d4b795cb9e4df67522959fcd9d7d78465a3868258d3e2c10f8e"
+            }
+          },
+          "nominal_held_parts": [
+            "block",
+            "hex_standoff",
+            "flanged_bushing",
+            "steel_slug"
+          ],
+          "per_part": {
+            "block": [
+              0.625,
+              0.0
+            ],
+            "flanged_bushing": [
+              0.625,
+              0.25
+            ],
+            "hex_standoff": [
+              1.0,
+              0.0
+            ],
+            "l_bracket": [
+              0.0,
+              0.0
+            ],
+            "pipe_tee": [
+              0.0,
+              0.0
+            ],
+            "steel_slug": [
+              1.0,
+              0.625
+            ]
+          },
+          "recipe": {
+            "family": "designed",
+            "hypothesis": "random draw (equal-budget control)",
+            "kind": "fingered_hand",
+            "origin": "random",
+            "params": {
+              "actuation": "per_joint",
+              "finger_length_mm": 75.5,
+              "finger_thickness_mm": 3.5,
+              "finger_width_mm": 15,
+              "grasp": "power",
+              "grip_force_n": 25.5,
+              "grip_height_frac": 0.7,
+              "layout": "even",
+              "material": "steel",
+              "n_fingers": 3,
+              "n_phalanges": 2,
+              "pad": "round",
+              "pad_thickness_mm": 7.5,
+              "palm_radius_mm": 45.5,
+              "palm_thickness_mm": 6.5,
+              "proximal_frac": 0.34,
+              "spread_deg": 60,
+              "yaw_deg": 80
+            },
+            "parents": [],
+            "recipe_id": "ddbf780f4728dc034537aa5721989fe759f355753f6390eb89ef980c7d3ef9af",
+            "schema": "rtt-morphology/1"
+          },
+          "registered_rate": 0.14583333333333334
+        }
+      ],
+      "draws": {
+        "draws": 89,
+        "refused": {
+          "above_part": 2,
+          "cannot_reach": 2,
+          "digit_collision": 3,
+          "over_budget": 7,
+          "self_intersecting": 14,
+          "too_heavy": 9,
+          "too_narrow": 22,
+          "too_short": 1,
+          "unprintable": 21
+        }
+      },
+      "seed": 0,
+      "summary": {
+        "arm": "random",
+        "best_by_screen": "424275ce1ccd93f7d165e55a4fe3a412a36ab673742f3c7731d15fcbeca05e00",
+        "best_nominal_held": 4,
+        "best_nominal_held_parts": [
+          "block",
+          "hex_standoff",
+          "flanged_bushing",
+          "steel_slug"
+        ],
+        "designs": 8,
+        "most_parts_held_by_any_design": 4,
+        "parts_held_by_some_design": [
+          "block",
+          "flanged_bushing",
+          "hex_standoff",
+          "l_bracket",
+          "pipe_tee",
+          "steel_slug"
+        ]
+      }
+    }
+  },
+  "batches": [
+    {
+      "analysis": "First round: aim for versatile effectors using moderate grip forces (~10-20 N) and heights near mid-part. Vary finger count, actuation, and generator type to explore pinch vs power and hook/tentacle strategies while staying within validator limits.",
+      "calls": [
+        {
+          "cached": false,
+          "completion_tokens": 1383,
+          "cost_usd": 0.0038253000000000002,
+          "error": null,
+          "finish_reason": "tool_calls",
+          "latency_s": 8.0161,
+          "notes": [],
+          "ok": true,
+          "prompt_tokens": 8602,
+          "reasoning_tokens": 552,
+          "request_hash": "5c263cee89a1bf796d1be704ec12959598864369e815bce2ecfe500e8b4cd071",
+          "stage": "main"
+        },
+        {
+          "cached": false,
+          "completion_tokens": 921,
+          "cost_usd": 0.0040308,
+          "error": null,
+          "finish_reason": "tool_calls",
+          "latency_s": 4.7344,
+          "notes": [],
+          "ok": true,
+          "prompt_tokens": 10673,
+          "reasoning_tokens": 184,
+          "request_hash": "a894c98b0d96596a974cd7841a56b48d7e8d20a7eb92b05d4442ec07f68412bf",
+          "stage": "repair"
+        }
+      ],
+      "cost_usd": 0.007856100000000001,
+      "kinds": [
+        "fingered_hand",
+        "hook_gripper",
+        "segmented_tentacle"
+      ],
+      "ledger": [
+        {
+          "attempts": 1,
+          "cached": false,
+          "completion_tokens": 1383,
+          "cost_usd": 0.0038253000000000002,
+          "error": null,
+          "latency_s": 8.0161,
+          "mode": "tool",
+          "model": "nvidia/nemotron-3-super-120b-a12b",
+          "ok": true,
+          "prompt_tokens": 8602,
+          "provider": "nebius-tokenfactory",
+          "request_hash": "5c263cee89a1bf796d1be704ec12959598864369e815bce2ecfe500e8b4cd071",
+          "tag": "smoke/round1/main",
+          "ts": "2026-10-17T08:05:35.893Z"
+        },
+        {
+          "attempts": 1,
+          "cached": false,
+          "completion_tokens": 921,
+          "cost_usd": 0.0040308,
+          "error": null,
+          "latency_s": 4.7344,
+          "mode": "tool",
+          "model": "nvidia/nemotron-3-super-120b-a12b",
+          "ok": true,
+          "prompt_tokens": 10673,
+          "provider": "nebius-tokenfactory",
+          "request_hash": "a894c98b0d96596a974cd7841a56b48d7e8d20a7eb92b05d4442ec07f68412bf",
+          "tag": "smoke/round1/repair",
+          "ts": "2026-10-17T08:05:40.685Z"
+        }
+      ],
+      "n_requested": 4,
+      "part_id": "pipe_tee+block+hex_standoff+flanged_bushing+l_bracket+steel_slug",
+      "recipes": [
+        {
+          "family": "designed",
+          "hypothesis": "Three-finger tendon pinch with wider spread and larger palm gives adequate opening for irregular parts while keeping joint count low.",
+          "kind": "fingered_hand",
+          "origin": "nemotron",
+          "params": {
+            "actuation": "tendon",
+            "finger_length_mm": 85,
+            "finger_thickness_mm": 6,
+            "finger_width_mm": 14,
+            "grasp": "pinch",
+            "grip_force_n": 14,
+            "grip_height_frac": 0.55,
+            "layout": "opposed",
+            "material": "aluminium",
+            "n_fingers": 3,
+            "n_phalanges": 2,
+            "pad": "flat",
+            "pad_thickness_mm": 3,
+            "palm_radius_mm": 40,
+            "palm_thickness_mm": 12,
+            "proximal_frac": 0.5,
+            "spread_deg": 100,
+            "yaw_deg": 15
+          },
+          "parents": [],
+          "recipe_id": "3e588e927c7efa0d4de56f80bfaec048f1fd36142e90942408c7c509a17c793a",
+          "schema": "rtt-morphology/1"
+        },
+        {
+          "family": "designed",
+          "hypothesis": "Four-finger even power grasp with longer fingers provides high force and redundancy for bulky components while respecting servo limits via reduced phalanges.",
+          "kind": "fingered_hand",
+          "origin": "nemotron",
+          "params": {
+            "actuation": "per_joint",
+            "finger_length_mm": 95,
+            "finger_thickness_mm": 5,
+            "finger_width_mm": 12,
+            "grasp": "power",
+            "grip_force_n": 18,
+            "grip_height_frac": 0.6,
+            "layout": "even",
+            "material": "steel",
+            "n_fingers": 4,
+            "n_phalanges": 1,
+            "pad": "round",
+            "pad_thickness_mm": 2,
+            "palm_radius_mm": 38,
+            "palm_thickness_mm": 10,
+            "proximal_frac": 0.5,
+            "spread_deg": 60,
+            "yaw_deg": 45
+          },
+          "parents": [],
+          "recipe_id": "e35229e060486e8a8dd6607176e233789f06868696e1769da25b0b0d6645c3d1",
+          "schema": "rtt-morphology/1"
+        }
+      ],
+      "rejections": [
+        {
+          "errors": [
+            "buildable on 3 of 6 parts (needs 4)",
+            "pipe_tee: too_narrow: open, digit 1 (at -90 deg on the part) has its inner face 25.5 mm from the centre; the part reaches 25.6 mm that way, so it needs 30.6 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)",
+            "block: too_narrow: open, digit 1 (at -90 deg on the part) has its inner face 25.5 mm from the centre; the part reaches 21.7 mm that way, so it needs 26.7 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)",
+            "l_bracket: too_narrow: open, digit 3 (at 130 deg on the part) has its inner face 25.5 mm from the centre; the part reaches 38.0 mm that way, so it needs 43.0 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)"
+          ],
+          "kind": "fingered_hand",
+          "params": {
+            "actuation": "tendon",
+            "finger_length_mm": 80,
+            "finger_thickness_mm": 5,
+            "finger_width_mm": 12,
+            "grasp": "pinch",
+            "grip_force_n": 12,
+            "grip_height_frac": 0.5,
+            "layout": "opposed",
+            "material": "aluminium",
+            "n_fingers": 3,
+            "n_phalanges": 2,
+            "pad": "flat",
+            "pad_thickness_mm": 2,
+            "palm_radius_mm": 30,
+            "palm_thickness_mm": 10,
+            "proximal_frac": 0.5,
+            "spread_deg": 80,
+            "yaw_deg": 0
+          },
+          "reason": "invalid",
+          "slot": 1,
+          "stage": "main"
+        },
+        {
+          "errors": [
+            "buildable on 0 of 6 parts (needs 4)",
+            "pipe_tee: over_budget: 15 servos (5 digits x 3 joints, one per joint); the budget is 12 (fewer joints, or tendon actuation)",
+            "block: over_budget: 15 servos (5 digits x 3 joints, one per joint); the budget is 12 (fewer joints, or tendon actuation)",
+            "hex_standoff: over_budget: 15 servos (5 digits x 3 joints, one per joint); the budget is 12 (fewer joints, or tendon actuation)",
+            "flanged_bushing: over_budget: 15 servos (5 digits x 3 joints, one per joint); the budget is 12 (fewer joints, or tendon actuation)",
+            "l_bracket: over_budget: 15 servos (5 digits x 3 joints, one per joint); the budget is 12 (fewer joints, or tendon actuation)",
+            "steel_slug: over_budget: 15 servos (5 digits x 3 joints, one per joint); the budget is 12 (fewer joints, or tendon actuation)"
+          ],
+          "kind": "fingered_hand",
+          "params": {
+            "actuation": "per_joint",
+            "finger_length_mm": 100,
+            "finger_thickness_mm": 4,
+            "finger_width_mm": 10,
+            "grasp": "power",
+            "grip_force_n": 20,
+            "grip_height_frac": 0.7,
+            "layout": "even",
+            "material": "steel",
+            "n_fingers": 5,
+            "n_phalanges": 3,
+            "pad": "round",
+            "pad_thickness_mm": 3,
+            "palm_radius_mm": 45,
+            "palm_thickness_mm": 15,
+            "proximal_frac": 0.4,
+            "spread_deg": 0,
+            "yaw_deg": 30
+          },
+          "reason": "invalid",
+          "slot": 2,
+          "stage": "main"
+        },
+        {
+          "errors": [
+            "buildable on 1 of 6 parts (needs 4)",
+            "pipe_tee: too_narrow: open, digit 1 (at -45 deg on the part) has its inner face 17.5 mm from the centre; the part reaches 37.3 mm that way, so it needs 42.3 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)",
+            "block: too_narrow: open, digit 1 (at -45 deg on the part) has its inner face 17.5 mm from the centre; the part reaches 25.0 mm that way, so it needs 30.0 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)",
+            "flanged_bushing: too_narrow: open, digit 1 (at -45 deg on the part) has its inner face 17.5 mm from the centre; the part reaches 18.3 mm that way, so it needs 23.3 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)",
+            "l_bracket: too_narrow: open, digit 1 (at -45 deg on the part) has its inner face 17.5 mm from the centre; the part reaches 13.1 mm that way, so it needs 18.1 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)",
+            "steel_slug: too_narrow: open, digit 1 (at -45 deg on the part) has its inner face 17.5 mm from the centre; the part reaches 20.1 mm that way, so it needs 25.1 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)"
+          ],
+          "kind": "hook_gripper",
+          "params": {
+            "finger_length_mm": 70,
+            "finger_thickness_mm": 3,
+            "finger_width_mm": 8,
+            "grip_force_n": 15,
+            "grip_height_frac": 0.6,
+            "hook_depth_mm": 4,
+            "hook_height_mm": 3,
+            "layout": "opposed",
+            "material": "aluminium",
+            "motion": "swing",
+            "n_fingers": 3,
+            "pad_thickness_mm": 2,
+            "palm_radius_mm": 25,
+            "palm_thickness_mm": 8,
+            "spread_deg": 100,
+            "yaw_deg": 45
+          },
+          "reason": "invalid",
+          "slot": 3,
+          "stage": "main"
+        },
+        {
+          "errors": [
+            "buildable on 1 of 6 parts (needs 4)",
+            "pipe_tee: too_narrow: open, digit 1 (at 90 deg on the part) has its inner face 15.0 mm from the centre; the part reaches 23.7 mm that way, so it needs 28.7 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)",
+            "block: too_narrow: open, digit 1 (at 90 deg on the part) has its inner face 15.0 mm from the centre; the part reaches 21.7 mm that way, so it needs 26.7 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)",
+            "flanged_bushing: too_narrow: open, digit 1 (at 90 deg on the part) has its inner face 15.0 mm from the centre; the part reaches 18.3 mm that way, so it needs 23.3 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)",
+            "l_bracket: too_narrow: open, digit 1 (at 90 deg on the part) has its inner face 15.0 mm from the centre; the part reaches 19.5 mm that way, so it needs 24.5 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)",
+            "steel_slug: too_narrow: open, digit 1 (at 90 deg on the part) has its inner face 15.0 mm from the centre; the part reaches 20.1 mm that way, so it needs 25.1 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)"
+          ],
+          "kind": "segmented_tentacle",
+          "params": {
+            "curl_bias": 0.8,
+            "digit_length_mm": 90,
+            "grip_force_n": 10,
+            "grip_height_frac": 0.5,
+            "layout": "even",
+            "material": "pla",
+            "n_digits": 2,
+            "n_segments": 5,
+            "palm_radius_mm": 20,
+            "palm_thickness_mm": 6,
+            "root_radius_mm": 5,
+            "spread_deg": 0,
+            "taper": 0.5,
+            "yaw_deg": 0
+          },
+          "reason": "invalid",
+          "slot": 4,
+          "stage": "main"
+        },
+        {
+          "errors": [
+            "buildable on 1 of 6 parts (needs 4)",
+            "pipe_tee: too_narrow: open, digit 1 (at -60 deg on the part) has its inner face 22.0 mm from the centre; the part reaches 35.7 mm that way, so it needs 40.7 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)",
+            "block: too_narrow: open, digit 1 (at -60 deg on the part) has its inner face 22.0 mm from the centre; the part reaches 25.0 mm that way, so it needs 30.0 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)",
+            "flanged_bushing: too_narrow: open, digit 1 (at -60 deg on the part) has its inner face 22.0 mm from the centre; the part reaches 18.4 mm that way, so it needs 23.4 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)",
+            "l_bracket: too_narrow: open, digit 3 (at 175 deg on the part) has its inner face 22.0 mm from the centre; the part reaches 40.3 mm that way, so it needs 45.3 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)",
+            "steel_slug: too_narrow: open, digit 1 (at -60 deg on the part) has its inner face 22.0 mm from the centre; the part reaches 20.1 mm that way, so it needs 25.1 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)"
+          ],
+          "kind": "hook_gripper",
+          "params": {
+            "finger_length_mm": 78,
+            "finger_thickness_mm": 4,
+            "finger_width_mm": 10,
+            "grip_force_n": 16,
+            "grip_height_frac": 0.58,
+            "hook_depth_mm": 5,
+            "hook_height_mm": 4,
+            "layout": "opposed",
+            "material": "aluminium",
+            "motion": "swing",
+            "n_fingers": 3,
+            "pad_thickness_mm": 3,
+            "palm_radius_mm": 32,
+            "palm_thickness_mm": 9,
+            "spread_deg": 110,
+            "yaw_deg": 30
+          },
+          "reason": "invalid",
+          "slot": 3,
+          "stage": "repair"
+        },
+        {
+          "errors": [
+            "buildable on 1 of 6 parts (needs 4)",
+            "pipe_tee: too_narrow: open, digit 1 (at -90 deg on the part) has its inner face 22.0 mm from the centre; the part reaches 25.6 mm that way, so it needs 30.6 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)",
+            "block: too_narrow: open, digit 1 (at -90 deg on the part) has its inner face 22.0 mm from the centre; the part reaches 21.7 mm that way, so it needs 26.7 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)",
+            "flanged_bushing: too_narrow: open, digit 1 (at -90 deg on the part) has its inner face 22.0 mm from the centre; the part reaches 18.3 mm that way, so it needs 23.3 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)",
+            "l_bracket: too_narrow: open, digit 1 (at -90 deg on the part) has its inner face 22.0 mm from the centre; the part reaches 19.5 mm that way, so it needs 24.5 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)",
+            "steel_slug: too_narrow: open, digit 1 (at -90 deg on the part) has its inner face 22.0 mm from the centre; the part reaches 20.1 mm that way, so it needs 25.1 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)"
+          ],
+          "kind": "segmented_tentacle",
+          "params": {
+            "curl_bias": 0.6,
+            "digit_length_mm": 100,
+            "grip_force_n": 12,
+            "grip_height_frac": 0.52,
+            "layout": "opposed",
+            "material": "pla",
+            "n_digits": 3,
+            "n_segments": 6,
+            "palm_radius_mm": 28,
+            "palm_thickness_mm": 8,
+            "root_radius_mm": 6,
+            "spread_deg": 90,
+            "taper": 0.4,
+            "yaw_deg": 0
+          },
+          "reason": "invalid",
+          "slot": 4,
+          "stage": "repair"
+        }
+      ],
+      "template_hashes": {
+        "notes.md": "fc921a8b7d29cd937f5559e0f2388974186ef041f8a81f22260fd666bd4ed440",
+        "repair.md": "93947c6e62fba158c49e2993a9f78eea2859338e260d2f6e45029f2bc8ddf464",
+        "system.md": "a4148567cf23d5cb11f807790f5c0ce7b2af96113b4490ddc281d65f0c21bbf4",
+        "user.md": "266cb66db625b2dcab08d02b50b6e86575371e334293c287976ac4ae06d8ace7"
+      }
+    },
+    {
+      "analysis": "Previous tests showed low success except for block, hex, flanged with powered four-finger even layout (t2). Need higher holding across more parts; vary finger count, actuation, grasp type, and layout to improve adaptability while staying within validator bounds.",
+      "calls": [
+        {
+          "cached": false,
+          "completion_tokens": 996,
+          "cost_usd": 0.0036411,
+          "error": null,
+          "finish_reason": "tool_calls",
+          "latency_s": 5.8351,
+          "notes": [],
+          "ok": true,
+          "prompt_tokens": 9149,
+          "reasoning_tokens": 134,
+          "request_hash": "200c83f4f43c125220869116af6e98ece67ecfb1d824968a3c7323a846a3006a",
+          "stage": "main"
+        },
+        {
+          "cached": false,
+          "completion_tokens": 1152,
+          "cost_usd": 0.0041784,
+          "error": null,
+          "finish_reason": "tool_calls",
+          "latency_s": 6.1521,
+          "notes": [],
+          "ok": true,
+          "prompt_tokens": 10472,
+          "reasoning_tokens": 389,
+          "request_hash": "2be9acfcedb07667252668555d48f7356aaa74e7339d5a81e0cbc6bd38a45509",
+          "stage": "repair"
+        }
+      ],
+      "cost_usd": 0.0078195,
+      "kinds": [
+        "fingered_hand",
+        "hook_gripper",
+        "segmented_tentacle"
+      ],
+      "ledger": [
+        {
+          "attempts": 1,
+          "cached": false,
+          "completion_tokens": 996,
+          "cost_usd": 0.0036411,
+          "error": null,
+          "latency_s": 5.8351,
+          "mode": "tool",
+          "model": "nvidia/nemotron-3-super-120b-a12b",
+          "ok": true,
+          "prompt_tokens": 9149,
+          "provider": "nebius-tokenfactory",
+          "request_hash": "200c83f4f43c125220869116af6e98ece67ecfb1d824968a3c7323a846a3006a",
+          "tag": "smoke/round2/main",
+          "ts": "2026-10-17T08:06:00.525Z"
+        },
+        {
+          "attempts": 1,
+          "cached": false,
+          "completion_tokens": 1152,
+          "cost_usd": 0.0041784,
+          "error": null,
+          "latency_s": 6.1521,
+          "mode": "tool",
+          "model": "nvidia/nemotron-3-super-120b-a12b",
+          "ok": true,
+          "prompt_tokens": 10472,
+          "provider": "nebius-tokenfactory",
+          "request_hash": "2be9acfcedb07667252668555d48f7356aaa74e7339d5a81e0cbc6bd38a45509",
+          "tag": "smoke/round2/repair",
+          "ts": "2026-10-17T08:06:06.846Z"
+        }
+      ],
+      "n_requested": 4,
+      "part_id": "pipe_tee+block+hex_standoff+flanged_bushing+l_bracket+steel_slug",
+      "recipes": [
+        {
+          "family": "designed",
+          "hypothesis": "Opposed three-finger tendon pinch yields precise alignment for asymmetric parts while limiting servo usage.",
+          "kind": "fingered_hand",
+          "origin": "nemotron",
+          "params": {
+            "actuation": "tendon",
+            "finger_length_mm": 80,
+            "finger_thickness_mm": 5,
+            "finger_width_mm": 12,
+            "grasp": "pinch",
+            "grip_force_n": 20,
+            "grip_height_frac": 0.55,
+            "layout": "opposed",
+            "material": "aluminium",
+            "n_fingers": 3,
+            "n_phalanges": 1,
+            "pad": "flat",
+            "pad_thickness_mm": 2,
+            "palm_radius_mm": 35,
+            "palm_thickness_mm": 10,
+            "proximal_frac": 0.5,
+            "spread_deg": 120,
+            "yaw_deg": 30
+          },
+          "parents": [],
+          "recipe_id": "ca8b76ad45e773b8b656b9316cedbe6f7ec2b851bc58f473d3f350878a0f093f",
+          "schema": "rtt-morphology/1"
+        },
+        {
+          "family": "designed",
+          "hypothesis": "Four-finger hook gripper swinging motion catches flanges and rims, improving hold on parts with overhangs.",
+          "kind": "hook_gripper",
+          "origin": "nemotron",
+          "params": {
+            "finger_length_mm": 90,
+            "finger_thickness_mm": 5,
+            "finger_width_mm": 13,
+            "grip_force_n": 25,
+            "grip_height_frac": 0.6,
+            "hook_depth_mm": 4,
+            "hook_height_mm": 3,
+            "layout": "even",
+            "material": "steel",
+            "motion": "swing",
+            "n_fingers": 4,
+            "pad_thickness_mm": 2,
+            "palm_radius_mm": 40,
+            "palm_thickness_mm": 10,
+            "spread_deg": 60,
+            "yaw_deg": 45
+          },
+          "parents": [],
+          "recipe_id": "052ccc568d133dfefdd6133788c81e4b13c267a3989e8b0ffb8c36a73d229e50",
+          "schema": "rtt-morphology/1"
+        },
+        {
+          "family": "designed",
+          "hypothesis": "Three-digit tentacle with increased palm radius and moderate curl bias wraps around cylindrical and hexagonal parts while avoiding narrow openings.",
+          "kind": "segmented_tentacle",
+          "origin": "nemotron",
+          "params": {
+            "curl_bias": 0.5,
+            "digit_length_mm": 110,
+            "grip_force_n": 22,
+            "grip_height_frac": 0.58,
+            "layout": "opposed",
+            "material": "aluminium",
+            "n_digits": 3,
+            "n_segments": 5,
+            "palm_radius_mm": 40,
+            "palm_thickness_mm": 8,
+            "root_radius_mm": 5,
+            "spread_deg": 90,
+            "taper": 0.6,
+            "yaw_deg": 15
+          },
+          "parents": [],
+          "recipe_id": "90e8ed6fff52093a93a07e3daeb7a223183706ce1211c6d353b8f559f27d0ce1",
+          "schema": "rtt-morphology/1"
+        }
+      ],
+      "rejections": [
+        {
+          "errors": [
+            "buildable on 3 of 6 parts (needs 4)",
+            "pipe_tee: too_narrow: open, digit 3 (at -126 deg on the part) has its inner face 39.0 mm from the centre; the part reaches 36.6 mm that way, so it needs 41.6 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)",
+            "hex_standoff: digit_collision: closing over hex_standoff, digits 1 and 2 run into each other at 18 % closure before both reach the part (spread them, narrow them or grip a wider section)",
+            "l_bracket: too_narrow: open, digit 2 (at 162 deg on the part) has its inner face 39.0 mm from the centre; the part reaches 40.9 mm that way, so it needs 45.9 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)"
+          ],
+          "kind": "fingered_hand",
+          "params": {
+            "actuation": "per_joint",
+            "finger_length_mm": 100,
+            "finger_thickness_mm": 6,
+            "finger_width_mm": 14,
+            "grasp": "power",
+            "grip_force_n": 30,
+            "grip_height_frac": 0.65,
+            "layout": "even",
+            "material": "steel",
+            "n_fingers": 5,
+            "n_phalanges": 2,
+            "pad": "round",
+            "pad_thickness_mm": 3,
+            "palm_radius_mm": 45,
+            "palm_thickness_mm": 12,
+            "proximal_frac": 0.5,
+            "spread_deg": 60,
+            "yaw_deg": 0
+          },
+          "reason": "invalid",
+          "slot": 1,
+          "stage": "main"
+        },
+        {
+          "errors": [
+            "buildable on 2 of 6 parts (needs 4)",
+            "pipe_tee: too_narrow: open, digit 1 (at -75 deg on the part) has its inner face 24.0 mm from the centre; the part reaches 31.8 mm that way, so it needs 36.8 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)",
+            "block: too_narrow: open, digit 1 (at -75 deg on the part) has its inner face 24.0 mm from the centre; the part reaches 24.2 mm that way, so it needs 29.2 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)",
+            "l_bracket: too_narrow: open, digit 2 (at 105 deg on the part) has its inner face 24.0 mm from the centre; the part reaches 28.1 mm that way, so it needs 33.1 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)",
+            "steel_slug: too_narrow: open, digit 1 (at -75 deg on the part) has its inner face 24.0 mm from the centre; the part reaches 20.1 mm that way, so it needs 25.1 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)"
+          ],
+          "kind": "segmented_tentacle",
+          "params": {
+            "curl_bias": 0.8,
+            "digit_length_mm": 110,
+            "grip_force_n": 22,
+            "grip_height_frac": 0.58,
+            "layout": "opposed",
+            "material": "aluminium",
+            "n_digits": 2,
+            "n_segments": 6,
+            "palm_radius_mm": 30,
+            "palm_thickness_mm": 8,
+            "root_radius_mm": 6,
+            "spread_deg": 100,
+            "taper": 0.5,
+            "yaw_deg": 15
+          },
+          "reason": "invalid",
+          "slot": 4,
+          "stage": "main"
+        },
+        {
+          "errors": [
+            "too_similar: 92 points from t2 (needs at least 100: change a choice, or move the numbers by a whole range in total)"
+          ],
+          "kind": "fingered_hand",
+          "params": {
+            "actuation": "per_joint",
+            "finger_length_mm": 100,
+            "finger_thickness_mm": 4,
+            "finger_width_mm": 10,
+            "grasp": "power",
+            "grip_force_n": 25,
+            "grip_height_frac": 0.6,
+            "layout": "even",
+            "material": "steel",
+            "n_fingers": 4,
+            "n_phalanges": 1,
+            "pad": "round",
+            "pad_thickness_mm": 2,
+            "palm_radius_mm": 55,
+            "palm_thickness_mm": 10,
+            "proximal_frac": 0.5,
+            "spread_deg": 60,
+            "yaw_deg": 0
+          },
+          "reason": "too_similar",
+          "slot": 1,
+          "stage": "repair"
+        }
+      ],
+      "template_hashes": {
+        "notes.md": "fc921a8b7d29cd937f5559e0f2388974186ef041f8a81f22260fd666bd4ed440",
+        "repair.md": "93947c6e62fba158c49e2993a9f78eea2859338e260d2f6e45029f2bc8ddf464",
+        "system.md": "a4148567cf23d5cb11f807790f5c0ce7b2af96113b4490ddc281d65f0c21bbf4",
+        "user.md": "266cb66db625b2dcab08d02b50b6e86575371e334293c287976ac4ae06d8ace7"
+      }
+    }
+  ],
+  "budget_usd": 0.05,
+  "code_version": "815ac94",
+  "created_utc": "2026-10-17T08:07:26+00:00",
+  "gate": {
+    "claim": "none: one run, one seed; the random control is reported beside Nemotron, not ranked against it",
+    "nemotron_best_nominal_held": 4,
+    "passed": true,
+    "random_best_nominal_held": 4,
+    "required": 4
+  },
+  "kind": "rtt-effectors/designer-smoke",
+  "label": "Product mode: not part of the pre-registered experiment",
+  "llm": {
+    "calls": 4,
+    "completion_tokens": 4452,
+    "cost_usd": 0.015676,
+    "errors": [],
+    "live_calls": 4,
+    "prompt_tokens": 38896
+  },
+  "mode": "live",
+  "model": "nvidia/nemotron-3-super-120b-a12b",
+  "parts": [
+    "pipe_tee",
+    "block",
+    "hex_standoff",
+    "flanged_bushing",
+    "l_bracket",
+    "steel_slug"
+  ],
+  "protocol": {
+    "best": "on the screen: held rate, registered rate, fewer servos, lower mass, recipe id",
+    "gate": "best Nemotron design held at nominal on at least 4 of 6 parts",
+    "nominal": "certificate nominal test (no placement error, jitter off, seed 0)",
+    "per_round": 4,
+    "rounds": 2,
+    "screen": "train_v2: 4 placements x 2 jitter seeds per part"
+  },
+  "sampling": {
+    "max_tokens": 8192,
+    "temperature": 1.0,
+    "top_p": 0.95
+  },
+  "task": "task_v2",
+  "task_digest": "8168db801332",
+  "wall_s": 119.0
+}

@@ -24,6 +24,7 @@ export interface NavItem {
 export const NAV: readonly NavItem[] = [
   { href: "/", label: "Overview", wideOnly: true },
   { href: "/part/", label: "Your part" },
+  { href: "/effectors/", label: "Effectors" },
   { href: "/benchmark/", label: "Benchmark" },
   { href: "/results/", label: "Results" },
   { href: "/compute/", label: "Compute" },

@@ -81,6 +81,38 @@ MuJoCo models by Kevin Zakka, kevinzakka/mujoco_scanned_objects at commit `6ff8d
 - **Short credit (assets, replays):** `Google Scanned Objects, CC BY 4.0, modified (full
   credit: /credits#gso)`.
 
+## Effector catalog models (product mode; vendored)
+
+Product mode, not part of the pre-registered experiment (`docs/EFFECTORS.md`). Six models
+from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie)
+at commit `62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35`, each under a generic key in
+`assets/effectors/catalog/<key>/` with its upstream `LICENSE` and a `SOURCE.json` that pins
+every shipped file (upstream path and sha256, sha256 as shipped, SPDX licence, copyright,
+credit line, changes). `scripts/vendor_effectors.py --check` re-hashes them; so does
+`tests/test_effectors_catalog.py`. On screen each model has its generic name only.
+
+| Key (screen name) | Credit | Licence | Modified |
+|---|---|---|---|
+| `hand-4f-16dof` (Four-finger 16-joint hand) | Allegro Hand v3 (right) by Wonik Robotics; MJCF derived from SimLab's allegro_hand_ros URDF | BSD-2-Clause, Copyright (c) 2016, SimLab | no file changes |
+| `hand-5f-18act` (Five-finger 18-actuator hand) | Shadow Hand E3M5 (right) by Shadow Robot Company | Apache-2.0, Copyright 2022 Shadow Robot Company Ltd | the two distal collision meshes shipped as their convex hulls, at most 64 vertices |
+| `hand-5f-22dof` (Five-finger 22-joint hand) | Sharpa Wave hand (right) by Sharpa Robotics, from sharpa-robotics/sharpa-urdf-usd-xml | Apache-2.0, Copyright 2025 Sharpa Group | no file changes |
+| `gripper-2f-finray` (Two-finger parallel gripper, fin-ray pads) | UMI Gripper by the Columbia Artificial Intelligence and Robotics Lab | MIT, Copyright (c) 2023 Columbia Artificial Intelligence and Robotics Lab | the six collision meshes shipped as their exact convex hulls (what MuJoCo collides with) |
+| `gripper-2f-rigid-a` (Two-finger parallel gripper, rigid pads A) | linear gripper of the YAM arm by I2RT Robotics, from i2rt-robotics/i2rt | MIT, Copyright (c) 2025 i2rt robotics | no file changes |
+| `gripper-2f-rigid-b` (Two-finger parallel gripper, rigid pads B) | gripper of the PiPER arm by AgileX Robotics, from agilexrobotics/Piper_ros | MIT, Copyright (c) 2024 RosenYin | no file changes |
+
+- **Load-time changes (code, not files):** keyframes, lights, cameras and sensors dropped;
+  only the gripper or hand subtree attached; upstream wrist and positioning joints removed
+  (the shared 4-DoF wrist replaces them); visual geometry that carries no mass not loaded;
+  the fin-ray gripper base's mass properties pinned at the upstream values (so the hulls never
+  change a mass). Actuator gains, force ranges, joint limits and contact settings are
+  unmodified.
+- **Not vendored:** an amber-licence hand (founder decision), a hand whose upstream hardware
+  files are non-commercial (red), and two permissive grippers withheld by the private leak
+  list (`docs/EFFECTORS.md` section 9).
+- **Procedural adaptive grippers** (`adaptive-2f`, `adaptive-3f`): this project's own
+  geometry, Apache-2.0.
+- **Short credit (cards, replays):** `Open robot model, <licence>, credits: /credits#effectors`.
+
 ## Software used to make the assets
 
 MuJoCo (Apache-2.0), trimesh (MIT), manifold3d (Apache-2.0), CoACD (MIT), Pillow (MIT-CMU)

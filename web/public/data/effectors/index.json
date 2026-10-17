@@ -1,0 +1,419 @@
+{
+  "schema": "rtt-web-effectors",
+  "version": 1,
+  "contract": "rtt-effectors/1",
+  "label": "Product mode: not part of the pre-registered experiment",
+  "generated_utc": "2026-10-17T11:57:16Z",
+  "families": [
+    {
+      "family": "parallel_jaw",
+      "title": "Parallel jaw",
+      "fidelity": "core",
+      "available": true
+    },
+    {
+      "family": "catalog_hand",
+      "title": "Multi-finger hand",
+      "fidelity": "rigid",
+      "available": true
+    },
+    {
+      "family": "catalog_gripper",
+      "title": "Industrial gripper",
+      "fidelity": "rigid",
+      "available": true
+    },
+    {
+      "family": "soft_arm",
+      "title": "Soft arm",
+      "fidelity": "approximation",
+      "available": true
+    },
+    {
+      "family": "suction",
+      "title": "Suction cup",
+      "fidelity": "approximation",
+      "available": true
+    },
+    {
+      "family": "designed",
+      "title": "Designed morphology",
+      "fidelity": "rigid",
+      "available": true
+    }
+  ],
+  "parts": [
+    {
+      "part_id": "block",
+      "title": "Block",
+      "family": "block",
+      "size_mm": [
+        30.0,
+        40.0,
+        60.0
+      ],
+      "page": "effectors/block.json",
+      "requirement": "registered",
+      "winner": {
+        "effector_id": "f5e20b9e22d0b812ec15dfba17c71a6ec5fdbf44cd76b1397c89d9eccd6c4c96",
+        "display_name": "Parallel jaw, stock blade",
+        "family": "parallel_jaw",
+        "fidelity": "core",
+        "score": 0.6795,
+        "tolerance_mm": {
+          "x": 0.0,
+          "y": 3.0
+        },
+        "caveat": null
+      },
+      "by_requirement": {
+        "held": {
+          "effector_id": "ada49390b318948c7d5f983bf90ef5dc28c96883c2cfef7afe5a9757356499b7",
+          "display_name": "Parallel jaw, flat pad",
+          "family": "parallel_jaw",
+          "fidelity": "core",
+          "score": 1.0,
+          "tolerance_mm": {
+            "x": 3.0,
+            "y": 3.0
+          },
+          "caveat": null
+        },
+        "registered": {
+          "effector_id": "f5e20b9e22d0b812ec15dfba17c71a6ec5fdbf44cd76b1397c89d9eccd6c4c96",
+          "display_name": "Parallel jaw, stock blade",
+          "family": "parallel_jaw",
+          "fidelity": "core",
+          "score": 0.6795,
+          "tolerance_mm": {
+            "x": 0.0,
+            "y": 3.0
+          },
+          "caveat": null
+        }
+      },
+      "groups_run": [
+        "reference",
+        "catalog",
+        "soft_arm",
+        "suction",
+        "designed",
+        "random"
+      ],
+      "lanes": 12,
+      "candidates": 33,
+      "episodes": 510,
+      "code_version": "790c47d65853"
+    },
+    {
+      "part_id": "flanged_bushing",
+      "title": "Flanged bushing",
+      "family": "flanged_bushing",
+      "size_mm": [
+        36.0,
+        36.0,
+        35.0
+      ],
+      "page": "effectors/flanged_bushing.json",
+      "requirement": "registered",
+      "winner": {
+        "effector_id": "233385b9c8312321e06e85d67f78885a6db4ec9b9c2d7e9078902b9413bd9894",
+        "display_name": "Parallel jaw, configurator imprint",
+        "family": "parallel_jaw",
+        "fidelity": "core",
+        "score": 1.0,
+        "tolerance_mm": {
+          "x": 3.0,
+          "y": 3.0
+        },
+        "caveat": null
+      },
+      "by_requirement": {
+        "held": {
+          "effector_id": "233385b9c8312321e06e85d67f78885a6db4ec9b9c2d7e9078902b9413bd9894",
+          "display_name": "Parallel jaw, configurator imprint",
+          "family": "parallel_jaw",
+          "fidelity": "core",
+          "score": 1.0,
+          "tolerance_mm": {
+            "x": 3.0,
+            "y": 3.0
+          },
+          "caveat": null
+        },
+        "registered": {
+          "effector_id": "233385b9c8312321e06e85d67f78885a6db4ec9b9c2d7e9078902b9413bd9894",
+          "display_name": "Parallel jaw, configurator imprint",
+          "family": "parallel_jaw",
+          "fidelity": "core",
+          "score": 1.0,
+          "tolerance_mm": {
+            "x": 3.0,
+            "y": 3.0
+          },
+          "caveat": null
+        }
+      },
+      "groups_run": [
+        "reference",
+        "catalog",
+        "soft_arm",
+        "suction",
+        "designed",
+        "random"
+      ],
+      "lanes": 12,
+      "candidates": 29,
+      "episodes": 474,
+      "code_version": "790c47d65853"
+    },
+    {
+      "part_id": "hex_standoff",
+      "title": "Hex standoff",
+      "family": "hex_standoff",
+      "size_mm": [
+        19.63,
+        17.0,
+        45.0
+      ],
+      "page": "effectors/hex_standoff.json",
+      "requirement": "registered",
+      "winner": {
+        "effector_id": "314c49960421c38199e07044fa8504082d54a02f6b6939f76e5404a55920d006",
+        "display_name": "Designed four-finger hand, 2 joints per finger e900",
+        "family": "designed",
+        "fidelity": "rigid",
+        "score": 0.8462,
+        "tolerance_mm": {
+          "x": 2.0,
+          "y": 1.0
+        },
+        "caveat": null
+      },
+      "by_requirement": {
+        "held": {
+          "effector_id": "314c49960421c38199e07044fa8504082d54a02f6b6939f76e5404a55920d006",
+          "display_name": "Designed four-finger hand, 2 joints per finger e900",
+          "family": "designed",
+          "fidelity": "rigid",
+          "score": 1.0,
+          "tolerance_mm": {
+            "x": 3.0,
+            "y": 3.0
+          },
+          "caveat": null
+        },
+        "registered": {
+          "effector_id": "314c49960421c38199e07044fa8504082d54a02f6b6939f76e5404a55920d006",
+          "display_name": "Designed four-finger hand, 2 joints per finger e900",
+          "family": "designed",
+          "fidelity": "rigid",
+          "score": 0.8462,
+          "tolerance_mm": {
+            "x": 2.0,
+            "y": 1.0
+          },
+          "caveat": null
+        }
+      },
+      "groups_run": [
+        "reference",
+        "catalog",
+        "soft_arm",
+        "suction",
+        "designed",
+        "random"
+      ],
+      "lanes": 12,
+      "candidates": 35,
+      "episodes": 528,
+      "code_version": "790c47d65853"
+    },
+    {
+      "part_id": "l_bracket",
+      "title": "L bracket",
+      "family": "l_bracket",
+      "size_mm": [
+        40.0,
+        30.0,
+        40.0
+      ],
+      "page": "effectors/l_bracket.json",
+      "requirement": "registered",
+      "winner": {
+        "effector_id": "cb7bd7aa029161da9a45c98836e7294b8e313f6c9b30d1645655cc4fbab84d39",
+        "display_name": "Designed three-finger sliding hook gripper 4a1d",
+        "family": "designed",
+        "fidelity": "rigid",
+        "score": 0.5641,
+        "tolerance_mm": {
+          "x": 1.0,
+          "y": 3.0
+        },
+        "caveat": null
+      },
+      "by_requirement": {
+        "held": {
+          "effector_id": "f5e20b9e22d0b812ec15dfba17c71a6ec5fdbf44cd76b1397c89d9eccd6c4c96",
+          "display_name": "Parallel jaw, stock blade",
+          "family": "parallel_jaw",
+          "fidelity": "core",
+          "score": 0.6667,
+          "tolerance_mm": {
+            "x": 3.0,
+            "y": 3.0
+          },
+          "caveat": null
+        },
+        "registered": {
+          "effector_id": "cb7bd7aa029161da9a45c98836e7294b8e313f6c9b30d1645655cc4fbab84d39",
+          "display_name": "Designed three-finger sliding hook gripper 4a1d",
+          "family": "designed",
+          "fidelity": "rigid",
+          "score": 0.5641,
+          "tolerance_mm": {
+            "x": 1.0,
+            "y": 3.0
+          },
+          "caveat": null
+        }
+      },
+      "groups_run": [
+        "reference",
+        "catalog",
+        "soft_arm",
+        "suction",
+        "designed",
+        "random"
+      ],
+      "lanes": 12,
+      "candidates": 31,
+      "episodes": 492,
+      "code_version": "790c47d65853"
+    },
+    {
+      "part_id": "pipe_tee",
+      "title": "Pipe tee",
+      "family": "pipe_tee",
+      "size_mm": [
+        60.0,
+        44.25,
+        28.5
+      ],
+      "page": "effectors/pipe_tee.json",
+      "requirement": "registered",
+      "winner": {
+        "effector_id": "ada49390b318948c7d5f983bf90ef5dc28c96883c2cfef7afe5a9757356499b7",
+        "display_name": "Parallel jaw, flat pad",
+        "family": "parallel_jaw",
+        "fidelity": "core",
+        "score": 0.6795,
+        "tolerance_mm": {
+          "x": 0.0,
+          "y": 3.0
+        },
+        "caveat": null
+      },
+      "by_requirement": {
+        "held": {
+          "effector_id": "ada49390b318948c7d5f983bf90ef5dc28c96883c2cfef7afe5a9757356499b7",
+          "display_name": "Parallel jaw, flat pad",
+          "family": "parallel_jaw",
+          "fidelity": "core",
+          "score": 0.8333,
+          "tolerance_mm": {
+            "x": 3.0,
+            "y": 3.0
+          },
+          "caveat": null
+        },
+        "registered": {
+          "effector_id": "ada49390b318948c7d5f983bf90ef5dc28c96883c2cfef7afe5a9757356499b7",
+          "display_name": "Parallel jaw, flat pad",
+          "family": "parallel_jaw",
+          "fidelity": "core",
+          "score": 0.6795,
+          "tolerance_mm": {
+            "x": 0.0,
+            "y": 3.0
+          },
+          "caveat": null
+        }
+      },
+      "groups_run": [
+        "reference",
+        "catalog",
+        "soft_arm",
+        "suction",
+        "designed",
+        "random"
+      ],
+      "lanes": 12,
+      "candidates": 29,
+      "episodes": 474,
+      "code_version": "790c47d65853"
+    },
+    {
+      "part_id": "steel_slug",
+      "title": "Steel slug",
+      "family": "slug",
+      "size_mm": [
+        40.0,
+        40.0,
+        50.0
+      ],
+      "page": "effectors/steel_slug.json",
+      "requirement": "registered",
+      "winner": {
+        "effector_id": "233385b9c8312321e06e85d67f78885a6db4ec9b9c2d7e9078902b9413bd9894",
+        "display_name": "Parallel jaw, configurator imprint",
+        "family": "parallel_jaw",
+        "fidelity": "core",
+        "score": 1.0,
+        "tolerance_mm": {
+          "x": 3.0,
+          "y": 3.0
+        },
+        "caveat": null
+      },
+      "by_requirement": {
+        "held": {
+          "effector_id": "233385b9c8312321e06e85d67f78885a6db4ec9b9c2d7e9078902b9413bd9894",
+          "display_name": "Parallel jaw, configurator imprint",
+          "family": "parallel_jaw",
+          "fidelity": "core",
+          "score": 1.0,
+          "tolerance_mm": {
+            "x": 3.0,
+            "y": 3.0
+          },
+          "caveat": null
+        },
+        "registered": {
+          "effector_id": "233385b9c8312321e06e85d67f78885a6db4ec9b9c2d7e9078902b9413bd9894",
+          "display_name": "Parallel jaw, configurator imprint",
+          "family": "parallel_jaw",
+          "fidelity": "core",
+          "score": 1.0,
+          "tolerance_mm": {
+            "x": 3.0,
+            "y": 3.0
+          },
+          "caveat": null
+        }
+      },
+      "groups_run": [
+        "reference",
+        "catalog",
+        "soft_arm",
+        "suction",
+        "designed",
+        "random"
+      ],
+      "lanes": 12,
+      "candidates": 35,
+      "episodes": 528,
+      "code_version": "790c47d65853"
+    }
+  ]
+}

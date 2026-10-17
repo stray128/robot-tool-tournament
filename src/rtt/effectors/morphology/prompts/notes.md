@@ -1,0 +1,7 @@
+- Grip is friction only. The part's friction coefficient ($mu) governs every contact, so pads, materials and shapes never add grip; they decide where and how the effector touches. $squeeze in total to lift it, and about twice that to survive the 1 g shake test.
+- Each digit closes with grip_force_n / digits at its nominal contact point and stops when it meets the part. A digit that meets nothing stops at its joint limit with no force.
+- Swinging digits rotate about their knuckle, so they meet a vertical face at an angle and their tips rise as they close; sliding digits move straight in and stay upright. A power grasp curls every joint; a pinch keeps the last phalanx upright.
+- Digits converge as they close. Neighbours that are close in angle or wide can run into each other before they reach a small part.
+- A hook only helps where something overhangs, such as a flange or a rim; on a plain face it behaves like a narrower pad.
+- Every effector body is gravity compensated (the arm carries the effector), so mass only adds inertia; the 1.5 kg limit still applies.
+- The wrist cannot tilt. Placement errors are unknown to the controller: the open effector must clear the part wherever it actually is, and registration then asks the grasp to bring the part back to the same pose every time.

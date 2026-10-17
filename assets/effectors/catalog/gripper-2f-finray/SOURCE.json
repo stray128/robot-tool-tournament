@@ -1,0 +1,194 @@
+{
+  "format": "rtt-effector-source",
+  "version": 1,
+  "model": "gripper-2f-finray",
+  "display_name": "Two-finger parallel gripper, fin-ray pads",
+  "upstream": {
+    "repository": "https://github.com/google-deepmind/mujoco_menagerie",
+    "commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+    "directory": "umi_gripper",
+    "model_file": "umi_gripper.xml"
+  },
+  "license": "MIT",
+  "copyright": "Copyright (c) 2023 Columbia Artificial Intelligence and Robotics Lab",
+  "attribution": "UMI Gripper (Universal Manipulation Interface) by the Columbia Artificial Intelligence and Robotics Lab; MJCF from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie); MIT, Copyright (c) 2023 Columbia Artificial Intelligence and Robotics Lab",
+  "status": "green",
+  "note": "",
+  "chain": "the project's published CAD (MIT)",
+  "vendor": {
+    "hulls": {
+      "base_link": null,
+      "gopro": null,
+      "left_finger_holder": null,
+      "left_finger": null,
+      "right_finger_holder": null,
+      "right_finger": null
+    },
+    "freeze_inertia": [
+      "base"
+    ]
+  },
+  "files": [
+    {
+      "path": "assets/effectors/catalog/gripper-2f-finray/LICENSE",
+      "sha256": "304e99a48271e10820f71a1b86ef395c06c100d7f68dd1d308790d1064fc4d41",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "umi_gripper/LICENSE",
+      "upstream_sha256": "304e99a48271e10820f71a1b86ef395c06c100d7f68dd1d308790d1064fc4d41",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2023 Columbia Artificial Intelligence and Robotics Lab",
+      "attribution": "UMI Gripper (Universal Manipulation Interface) by the Columbia Artificial Intelligence and Robotics Lab; MJCF from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie); MIT, Copyright (c) 2023 Columbia Artificial Intelligence and Robotics Lab",
+      "changes": [],
+      "status": "green",
+      "note": ""
+    },
+    {
+      "path": "assets/effectors/catalog/gripper-2f-finray/assets/hull/base_link.obj",
+      "sha256": "81afb36d64fdd2dcaf4252e9e1164997a5bc11d2a8e3e69ad404d128958fd072",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "umi_gripper/assets/base_link.stl",
+      "upstream_sha256": "ff7a08fd2a590881854760190d9a2960f165c4f5b1e96aefb538ad15fd74c39f",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2023 Columbia Artificial Intelligence and Robotics Lab",
+      "attribution": "UMI Gripper (Universal Manipulation Interface) by the Columbia Artificial Intelligence and Robotics Lab; MJCF from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie); MIT, Copyright (c) 2023 Columbia Artificial Intelligence and Robotics Lab",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame and units"
+      ],
+      "status": "green",
+      "note": ""
+    },
+    {
+      "path": "assets/effectors/catalog/gripper-2f-finray/assets/hull/gopro.obj",
+      "sha256": "06f366e008fc1af4beb8bf7ea45830877ddeebbc19140aee508bb2d4cea44743",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "umi_gripper/assets/gopro.stl",
+      "upstream_sha256": "4fb4aff15691c6580c9f8fbdbbbc5bc18e1f9a610e220fa82dece62527e39e93",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2023 Columbia Artificial Intelligence and Robotics Lab",
+      "attribution": "UMI Gripper (Universal Manipulation Interface) by the Columbia Artificial Intelligence and Robotics Lab; MJCF from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie); MIT, Copyright (c) 2023 Columbia Artificial Intelligence and Robotics Lab",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame and units"
+      ],
+      "status": "green",
+      "note": ""
+    },
+    {
+      "path": "assets/effectors/catalog/gripper-2f-finray/assets/hull/left_finger.obj",
+      "sha256": "3c7632c7898b500d449efef929b707b66c05eee524c749720fedde1e8e508698",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "umi_gripper/assets/left_finger.stl",
+      "upstream_sha256": "142a917051f92f449f12c58ce16299547459f2936d78acb2f723e640c1356301",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2023 Columbia Artificial Intelligence and Robotics Lab",
+      "attribution": "UMI Gripper (Universal Manipulation Interface) by the Columbia Artificial Intelligence and Robotics Lab; MJCF from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie); MIT, Copyright (c) 2023 Columbia Artificial Intelligence and Robotics Lab",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame and units"
+      ],
+      "status": "green",
+      "note": ""
+    },
+    {
+      "path": "assets/effectors/catalog/gripper-2f-finray/assets/hull/left_finger_holder.obj",
+      "sha256": "09e7a73e0d2ebaed44cb611a77a4fcf32235f91faccf58e3627d7f4e9fd78bf9",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "umi_gripper/assets/left_finger_holder.stl",
+      "upstream_sha256": "6362f14b463459daf2b3e9c8b66ec2b40dda16b84948ec64134950515e423d88",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2023 Columbia Artificial Intelligence and Robotics Lab",
+      "attribution": "UMI Gripper (Universal Manipulation Interface) by the Columbia Artificial Intelligence and Robotics Lab; MJCF from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie); MIT, Copyright (c) 2023 Columbia Artificial Intelligence and Robotics Lab",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame and units"
+      ],
+      "status": "green",
+      "note": ""
+    },
+    {
+      "path": "assets/effectors/catalog/gripper-2f-finray/assets/hull/right_finger.obj",
+      "sha256": "84dea871450bddf90208093c8b9d17983b748da6eb9f8859aa90df9eb37dd903",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "umi_gripper/assets/right_finger.stl",
+      "upstream_sha256": "720a15851c3e4110cc66f62341843e3a9c16b561717d2d4807611ab3f1a7dbaa",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2023 Columbia Artificial Intelligence and Robotics Lab",
+      "attribution": "UMI Gripper (Universal Manipulation Interface) by the Columbia Artificial Intelligence and Robotics Lab; MJCF from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie); MIT, Copyright (c) 2023 Columbia Artificial Intelligence and Robotics Lab",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame and units"
+      ],
+      "status": "green",
+      "note": ""
+    },
+    {
+      "path": "assets/effectors/catalog/gripper-2f-finray/assets/hull/right_finger_holder.obj",
+      "sha256": "40ac89a5f09d4eacd038f2ff31aae5e851e8e18326694f00e4a7f52352d7c70c",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "umi_gripper/assets/right_finger_holder.stl",
+      "upstream_sha256": "50c75605ea879e451ab12a6ab94616f6f8683866790878c92e3443a45898e139",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2023 Columbia Artificial Intelligence and Robotics Lab",
+      "attribution": "UMI Gripper (Universal Manipulation Interface) by the Columbia Artificial Intelligence and Robotics Lab; MJCF from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie); MIT, Copyright (c) 2023 Columbia Artificial Intelligence and Robotics Lab",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame and units"
+      ],
+      "status": "green",
+      "note": ""
+    },
+    {
+      "path": "assets/effectors/catalog/gripper-2f-finray/umi_gripper.xml",
+      "sha256": "12b6bbd5e94758164141d54417cad9cde6acdc073311c7c9657dca1ae3fde6ec",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "umi_gripper/umi_gripper.xml",
+      "upstream_sha256": "12b6bbd5e94758164141d54417cad9cde6acdc073311c7c9657dca1ae3fde6ec",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2023 Columbia Artificial Intelligence and Robotics Lab",
+      "attribution": "UMI Gripper (Universal Manipulation Interface) by the Columbia Artificial Intelligence and Robotics Lab; MJCF from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie); MIT, Copyright (c) 2023 Columbia Artificial Intelligence and Robotics Lab",
+      "changes": [],
+      "status": "green",
+      "note": ""
+    }
+  ],
+  "derived": {
+    "mesh_files": {
+      "base_link": "hull/base_link.obj",
+      "gopro": "hull/gopro.obj",
+      "left_finger": "hull/left_finger.obj",
+      "left_finger_holder": "hull/left_finger_holder.obj",
+      "right_finger": "hull/right_finger.obj",
+      "right_finger_holder": "hull/right_finger_holder.obj"
+    },
+    "inertials": {
+      "base": {
+        "mass": 1.56012625,
+        "ipos": [
+          0.001596798,
+          0.003504282,
+          0.022871666
+        ],
+        "iquat": [
+          0.46896345,
+          0.549468252,
+          -0.46035149,
+          0.515979097
+        ],
+        "inertia": [
+          0.00553070529,
+          0.0040921097,
+          0.00272420582
+        ]
+      }
+    }
+  }
+}

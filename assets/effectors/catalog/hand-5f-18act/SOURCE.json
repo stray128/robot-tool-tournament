@@ -1,0 +1,95 @@
+{
+  "format": "rtt-effector-source",
+  "version": 1,
+  "model": "hand-5f-18act",
+  "display_name": "Five-finger 18-actuator hand",
+  "upstream": {
+    "repository": "https://github.com/google-deepmind/mujoco_menagerie",
+    "commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+    "directory": "shadow_hand",
+    "model_file": "right_hand.xml"
+  },
+  "license": "Apache-2.0",
+  "copyright": "Copyright 2022 Shadow Robot Company Ltd",
+  "attribution": "Shadow Hand E3M5 (right) by Shadow Robot Company; MJCF from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie); Apache-2.0, Copyright 2022 Shadow Robot Company Ltd",
+  "status": "green",
+  "note": "",
+  "chain": "README: URDF and assets provided directly by Shadow Robot Company under Apache-2.0; https://github.com/shadow-robot/sr_common is BSD-3-Clause on GitHub (a third-party table calls it GPL-3.0; the direct grant governs the Menagerie copy)",
+  "vendor": {
+    "hulls": {
+      "f_distal_pst": 64,
+      "th_distal_pst": 64
+    }
+  },
+  "files": [
+    {
+      "path": "assets/effectors/catalog/hand-5f-18act/LICENSE",
+      "sha256": "d42cae9a0f292b7a713597ba26e1e1e23d50df906c488f0d36fd3538af200bc1",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "shadow_hand/LICENSE",
+      "upstream_sha256": "d42cae9a0f292b7a713597ba26e1e1e23d50df906c488f0d36fd3538af200bc1",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2022 Shadow Robot Company Ltd",
+      "attribution": "Shadow Hand E3M5 (right) by Shadow Robot Company; MJCF from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie); Apache-2.0, Copyright 2022 Shadow Robot Company Ltd",
+      "changes": [],
+      "status": "green",
+      "note": ""
+    },
+    {
+      "path": "assets/effectors/catalog/hand-5f-18act/assets/hull/f_distal_pst.obj",
+      "sha256": "7953e0a26d74c0ea2bdd5bbaaf0c603c887853ab97e64f96d98d57215040108e",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "shadow_hand/assets/f_distal_pst.obj",
+      "upstream_sha256": "350fcd33bc8ead915c0f646c8303d6b7554ad50ce546a128671d8d1fc75d5807",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2022 Shadow Robot Company Ltd",
+      "attribution": "Shadow Hand E3M5 (right) by Shadow Robot Company; MJCF from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie); Apache-2.0, Copyright 2022 Shadow Robot Company Ltd",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull), reduced to at most 64 vertices",
+        "written as OBJ in the upstream file's frame and units"
+      ],
+      "status": "green",
+      "note": ""
+    },
+    {
+      "path": "assets/effectors/catalog/hand-5f-18act/assets/hull/th_distal_pst.obj",
+      "sha256": "f51b4f0a8f98e0018f918fc330ef13d68932b91a9904d09725c5131eef9335ca",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "shadow_hand/assets/th_distal_pst.obj",
+      "upstream_sha256": "ca87b937114face76a91810f2ee60ea4fc217b57ffa9a7a7f166169a3ebf7da1",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2022 Shadow Robot Company Ltd",
+      "attribution": "Shadow Hand E3M5 (right) by Shadow Robot Company; MJCF from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie); Apache-2.0, Copyright 2022 Shadow Robot Company Ltd",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull), reduced to at most 64 vertices",
+        "written as OBJ in the upstream file's frame and units"
+      ],
+      "status": "green",
+      "note": ""
+    },
+    {
+      "path": "assets/effectors/catalog/hand-5f-18act/right_hand.xml",
+      "sha256": "ac14d09dd12b62c3ca62233d0ac646101cc718146dda76e26d0b993a91abf399",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "shadow_hand/right_hand.xml",
+      "upstream_sha256": "ac14d09dd12b62c3ca62233d0ac646101cc718146dda76e26d0b993a91abf399",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2022 Shadow Robot Company Ltd",
+      "attribution": "Shadow Hand E3M5 (right) by Shadow Robot Company; MJCF from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie); Apache-2.0, Copyright 2022 Shadow Robot Company Ltd",
+      "changes": [],
+      "status": "green",
+      "note": ""
+    }
+  ],
+  "derived": {
+    "mesh_files": {
+      "f_distal_pst": "hull/f_distal_pst.obj",
+      "th_distal_pst": "hull/th_distal_pst.obj"
+    },
+    "inertials": {}
+  }
+}
