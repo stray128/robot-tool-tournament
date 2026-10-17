@@ -461,6 +461,28 @@ def test_designed_group_runs_two_rounds_of_four_and_random_draws_eight(block: An
     assert res.tournament_doc()["groups"]["designed"]["status"] == "run"
 
 
+def test_a_failed_proposal_round_keeps_the_earlier_designs(block: Any) -> None:
+    class Flaky(FakeDesigner):
+        def propose(self, part: Any, history: Sequence[Any], n: int) -> DesignBatch:
+            if self.histories:
+                raise RuntimeError("the spend cap refused the call")
+            return super().propose(part, history, n)
+
+    with registry.override_family(DesignedPads()):
+        res = run_tournament(
+            block,
+            groups=["designed"],
+            families=["designed"],
+            design=True,
+            designer=Flaky(),
+            executor=FakePhysics(),
+        )
+    d = res.groups[EntrantGroup.DESIGNED]
+    assert [c.source for c in d.candidates] == ["nemotron-1"] * 4 and d.budget()["certificates"] == 2
+    assert res.design_rounds[1]["error"].startswith("RuntimeError: the spend cap")
+    assert "round 2 did not complete" in (d.reason or "") and res.recommendation["winner"] is not None
+
+
 def test_designed_and_random_groups_are_skipped_without_the_designer(block: Any) -> None:
     res = run_tournament(
         block, groups=["designed", "random"], families=["parallel_jaw"], designer=None, executor=FakePhysics()

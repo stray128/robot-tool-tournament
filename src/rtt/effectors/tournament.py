@@ -1131,7 +1131,13 @@ def run_tournament(
                     for c in st.screened()
                     if c.spec.recipe is not None and c.source.startswith("nemotron")
                 ]
-                batch = designer.propose(part, history, DESIGNS_PER_ROUND)
+                try:
+                    batch = designer.propose(part, history, DESIGNS_PER_ROUND)
+                except Exception as exc:  # noqa: BLE001 - a failed or refused call ends the rounds
+                    error = f"{type(exc).__name__}: {exc}"[:400]
+                    rounds.append({"round": rnd, "error": error, "history_shown": len(history)})
+                    st.reason = f"Nemotron round {rnd} did not complete ({error}); the group keeps its earlier designs"
+                    break
                 llm["calls"] += int(batch.calls)
                 llm["usd"] = round(llm["usd"] + float(batch.cost_usd), 6)
                 added = add_recipes(
