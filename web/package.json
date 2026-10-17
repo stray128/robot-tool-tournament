@@ -2,7 +2,7 @@
   "name": "rtt-web",
   "version": "0.1.0",
   "private": true,
-  "description": "Static web app for the Robot Tool Tournament: bring-your-part agent sessions, recorded replays, designs, certificates, results and compute provenance.",
+  "description": "Static web app for Effector Lab: bring-your-part agent sessions, the effector tournament, recorded replays, designs, certificates, results and compute provenance.",
   "license": "Apache-2.0",
   "type": "module",
   "packageManager": "pnpm@10.29.3",

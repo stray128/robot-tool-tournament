@@ -1,14 +1,14 @@
 /**
- * Product naming and site-wide constants. The product name is not final: change
- * APP_NAME here and nowhere else.
+ * Product naming and site-wide constants. The product name lives here and nowhere
+ * else; the repository and the Python package keep their own names.
  */
 
-export const APP_NAME = "GripForge";
+export const APP_NAME = "Effector Lab";
 
 export const APP_TAGLINE = "Bring your part. Get fingers that hold it.";
 
 export const APP_DESCRIPTION =
-  "Upload a part, let an NVIDIA Nemotron model design parallel-gripper fingers for it, and see them proven in physics simulation on Nebius before you print them.";
+  "Upload a part. NVIDIA Nemotron designs gripper fingers and other end-effectors for it, and physics simulation on Nebius tests them under placement error before you print anything.";
 
 /** Public source repository, set at build time; links are hidden while it is unset. */
 export const REPO_URL: string | null = process.env.NEXT_PUBLIC_REPO_URL || null;

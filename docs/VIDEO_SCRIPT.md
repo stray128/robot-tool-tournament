@@ -1,4 +1,7 @@
-# Video script (first draft)
+# Effector Lab: video script (first draft)
+
+The product is called **Effector Lab** on screen and in the voice-over. The repository
+keeps its slug, `robot-tool-tournament`.
 
 **Hard limit 3:00. Target 2:50.** The voice-over is about 340 words, about 2:15 at 150
 words a minute, which leaves room for on-screen pauses.
@@ -45,7 +48,7 @@ the recorded runs; none of them may be written from this script.
 | 1:55-2:20 | **Pre-registered results.** Run-level dots per arm (Nemotron with feedback vs equal-budget random), the reach curves, the p-value and the effect interval; registered and lift-only side by side; held-out parts including the unseen elbow and gear; a counter: "[N] jobs, [X] simulated grasps, [Y] CPU-hours, $[Z]". Failure clips included. | Results line below (one of three, chosen by the result) | about 40 |
 | 2:20-2:38 | **How it is built.** Architecture diagram: Token Factory, Serverless Jobs on CPU, Object Storage, the replay site. "Apache-2.0", `make demo`, the STL download. | "Every number traces to a job. Jobs, not endpoints, because each batch is a fixed, pinned image that runs, writes its results and stops. The code is Apache-2.0, and `make demo` replays every bout on your laptop." | 38 |
 | 2:38-2:52 | **Limits and roadmap.** Text: "simulation only · rigid fingers · friction assumed". Then a roadmap card, labelled "roadmap, not built": "fine-tune an open Nemotron on simulator rewards (GRPO) · Nebius GPUs · Serverless Endpoints · fingers → attachments → other tasks". | "This is simulation, with rigid fingers and assumed friction; printed tests come next. Then we fine-tune an open Nemotron model with reinforcement learning on simulator rewards, on Nebius GPUs, served from Serverless Endpoints, so it designs end-effectors for a task. Fingers first, then general attachments, then other tasks." | 48 |
-| 2:52-2:58 | **End card** (ends by 2:58, 2 s inside the limit). Repo URL; "Built with Nebius Token Factory, Nebius Serverless Jobs, NVIDIA Nemotron, MuJoCo". | (silent) | 0 |
+| 2:52-2:58 | **End card** (ends by 2:58, 2 s inside the limit). "Effector Lab"; repo URL and live site URL; "Built with Nebius Token Factory, Nebius Serverless Jobs, NVIDIA Nemotron, MuJoCo". | (silent) | 0 |
 
 Total: about 340 words.
 
@@ -58,7 +61,7 @@ Replaces 0:00-0:12 of the build-plan storyboard. One part, one error, three fing
 | 0:00-0:03 | Macro, studio light. The open-source parallel gripper with orange designed jaws closes on the pipe tee, placed +2 mm off centre (ghost outline at the true centre). The tee slides to centre. Readout from the overlay channel: "[2.0] → [0.0x] mm". Lift. |
 | 0:03-0:06 | Triptych at the same +2 mm: **stock** blade, knocked out (red tag); **configurator imprint**, stopped on the branch, "[5] mm short" (amber tag); **designed**, centred (green tag). All three are the same part, the same placement and the same controller. |
 | 0:06-0:09 | "Same recipe, six parts": the compiled jaws for each training part on a turntable, 0.5 s each, no morphing. |
-| 0:09-0:10 | Title card: "Fingers designed by NVIDIA Nemotron. Tested in simulation on Nebius." |
+| 0:09-0:10 | Title card: "Effector Lab. Fingers designed by NVIDIA Nemotron. Tested in simulation on Nebius." |
 
 **Variant B** (fewer than 3 heroes): 0:00-0:06 becomes two panels, imprint vs designed,
 with the offset readouts only. The voice-over drops "The stock finger loses it."
@@ -103,6 +106,9 @@ One take of a real bout, recorded; captions on. If it is a stored run, it is lab
 Module words: about 110, spoken over 70 s with on-screen pauses.
 
 ### 1:55-2:20 Results line (choose by the result; never soften it)
+
+The confirmatory result is in `docs/RESULTS.md`: the **Win** line applies. Fill its
+brackets from that file only.
 
 - **Win:** "Pre-registered before any scored run: Nemotron with feedback reached the target in [a] designs on average, random search in [b]. One-sided p = [p]."
 - **Tie:** "Pre-registered before any scored run: Nemotron and random search needed about the same number of designs, [a] and [b]. That is a tie, and we report it."

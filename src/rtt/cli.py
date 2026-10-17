@@ -593,7 +593,7 @@ def _cmd_cloud(args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     """The ``rtt`` argument parser; each subcommand sets ``handler`` (and ``subparser``)."""
-    parser = argparse.ArgumentParser(prog="rtt", description="Robot Tool Tournament")
+    parser = argparse.ArgumentParser(prog="rtt", description="Effector Lab")
     sub = parser.add_subparsers(dest="cmd", required=True, metavar="command")
 
     version = sub.add_parser("version", help="print the package version")

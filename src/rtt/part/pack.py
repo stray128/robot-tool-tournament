@@ -408,7 +408,7 @@ _ATTRIBUTION_V2: Final = """Attribution
 ===========
 
 Generated files in this pack (STL, GLB, JSON): CC0-1.0. The generator is Apache-2.0
-(Robot Tool Tournament).
+(Effector Lab).
 
 The carriage block's interface dimensions were measured from the published hardware
 sources of an open-source parallel gripper: {credit} (simulation files CC BY 4.0;
@@ -418,7 +418,7 @@ no file from that project is included in this pack.
 
 
 # the pack's GLBs are generated files like its STLs, so they carry the pack's licence (CC0-1.0)
-_PACK_GLB_CREDIT: Final = "Robot Tool Tournament print pack, generated jaw (CC0-1.0)"
+_PACK_GLB_CREDIT: Final = "Effector Lab print pack, generated jaw (CC0-1.0)"
 
 
 def _print_upright(mesh_mm: trimesh.Trimesh) -> trimesh.Trimesh:

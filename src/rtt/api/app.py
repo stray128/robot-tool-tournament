@@ -110,7 +110,7 @@ def create_app(settings: ApiSettings | None = None, *, service: AgentService | N
         svc.shutdown()
 
     app = FastAPI(
-        title="Robot Tool Tournament: Grasp Engineer",
+        title="Effector Lab: Grasp Engineer",
         version="0.1.0",
         description=f"Upload a part, let the agent design fingers for it. {PRODUCT_MODE_LABEL}.",
         lifespan=lifespan,
