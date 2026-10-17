@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import os
 import re
 import shlex
 import subprocess
@@ -260,6 +261,25 @@ class Job:
         return _seconds(self.created_at, end) or 0.0
 
 
+#: ``nebius ai job create --inject-file`` limit on the local file.
+INJECT_FILE_MAX_BYTES = 64 * 1024
+
+
+def check_inject_file(item: str) -> None:
+    """Refuse an ``--inject-file`` value that the CLI would reject or that is unsafe.
+
+    ``LOCAL_PATH:CONTAINER_PATH``: the local file exists and is at most 64 KiB, and the
+    container path is absolute (``ValueError`` otherwise; no file content is ever shown).
+    """
+    local, sep, container = item.rpartition(":")
+    if not sep or not local or not container.startswith("/") or ".." in container.split("/"):
+        raise ValueError("an inject file must be LOCAL_PATH:/absolute/container/path")
+    if not os.path.isfile(local):
+        raise ValueError("an inject file's local path is not a file")
+    if os.path.getsize(local) > INJECT_FILE_MAX_BYTES:
+        raise ValueError(f"an inject file is larger than {INJECT_FILE_MAX_BYTES} bytes")
+
+
 @dataclass(frozen=True)
 class JobSpec:
     """Arguments for ``nebius ai job create``.
@@ -267,6 +287,10 @@ class JobSpec:
     ``env_secrets`` maps a container variable to a MysteryBox secret selector; it is the
     only way credentials reach a job. ``volumes`` use ``SOURCE:/container/path[:mode]``
     with the bucket *ID* as source (a bucket name is rejected by the API).
+    ``inject_files`` are ``LOCAL_PATH:CONTAINER_PATH`` pairs for ``--inject-file``: the CLI
+    reads the local file (at most 64 KiB) and the container sees it read-only at the
+    absolute container path. Only the held-out job uses it, for the held-out secret
+    (:func:`rtt.cloud.runs.job_spec_for` refuses it for every other kind).
     """
 
     name: str
@@ -286,6 +310,7 @@ class JobSpec:
     preemptible: bool = False
     working_dir: str | None = None
     allow_tag: bool = False  # permit a tag instead of a digest (smoke tests of public images)
+    inject_files: Sequence[str] = ()
 
     def __repr__(self) -> str:
         """Names, platform and env keys only: the image path, secret selectors, bucket
@@ -293,7 +318,8 @@ class JobSpec:
         return (
             f"JobSpec(name={self.name!r}, image=<set>, platform={self.platform!r}, preset={self.preset!r},"
             f" env={sorted(self.env)!r}, env_secrets={sorted(self.env_secrets)!r},"
-            f" volumes={len(self.volumes)}, timeout={self.timeout!r}, preemptible={self.preemptible!r})"
+            f" volumes={len(self.volumes)}, inject_files={len(self.inject_files)},"
+            f" timeout={self.timeout!r}, preemptible={self.preemptible!r})"
         )
 
     def validate(self) -> None:
@@ -317,6 +343,8 @@ class JobSpec:
             if ":" not in volume:
                 # the source is a bucket ID, so the value itself is not shown
                 raise ValueError("a volume has no ':': expected SOURCE:/container/path[:mode]")
+        for item in self.inject_files:
+            check_inject_file(item)
 
     def create_args(self, dry_run: bool = False) -> list[str]:
         """The ``ai job create`` argv (without the binary, ``--format`` or ``--profile``)."""
@@ -332,6 +360,8 @@ class JobSpec:
             argv += ["--env-secret", f"{key}={selector}"]
         for volume in self.volumes:
             argv += ["--volume", volume]
+        for item in self.inject_files:
+            argv += ["--inject-file", item]
         argv += ["--platform", self.platform]
         if self.preset:
             argv += ["--preset", self.preset]

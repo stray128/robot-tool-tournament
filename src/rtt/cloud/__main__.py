@@ -4,7 +4,7 @@ Commands:
 
 * ``capacity``: for each target, which platforms can take a job now (GPU capacity
   advice, CPU vCPU quota) and what they cost.
-* ``run {m1,probe,search,gv4}``: submit a run in the pinned image (``RTT_IMAGE``) on a
+* ``run {m1,probe,search,gv4,heldout}``: submit a run in the pinned image (``RTT_IMAGE``) on a
   :class:`~rtt.cloud.nebius_jobs.Target`, pick the first platform with capacity, cancel
   and fall back if provisioning stalls, wait, record the spend, fetch ``runs/<run_id>/``
   from that region's bucket to ``runs/cloud/<run_id>/`` and verify it. The default target
@@ -12,6 +12,13 @@ Commands:
   or every attempt stalls before start, the job moves to ``eun1-gpu`` (H100 fallback)
   unless ``--no-fallback`` or an explicit ``--vcpus`` is given. ``--dry-run`` validates the job spec server-side and creates
   nothing.
+* ``run heldout --frozen-runs A,C --seed-file PATH``: H1 and H2 (:mod:`rtt.heldout_v2`).
+  Before anything is submitted the laptop checks that each named search run is fetched,
+  verified, ``freeform-v2`` and from the target's region (the job reads its frozen picks
+  from that region's bucket), computes their digest for the job to check, and verifies the
+  secret against the committed SHA-256. The secret goes to this job only, as
+  ``--inject-file PATH:/secret/heldout_seed``; it never falls back to another region.
+  ``--dev`` sends a throwaway secret instead (an exploratory infrastructure check).
 * ``status``, ``logs``, ``cancel``: one job, by ID. ``list``: the jobs of every target's
   project.
 * ``fetch RUN_ID``: download and verify a run (from the region recorded next to it).
@@ -25,6 +32,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sys
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -61,8 +69,11 @@ from rtt.cloud.nebius_jobs import (
 )
 from rtt.cloud.runs import (
     DEFAULT_LEDGER,
+    HELDOUT_SUITES,
     KINDS,
     LOCAL_RUNS,
+    SEED_MOUNT,
+    HeldoutJobArgs,
     SearchJobArgs,
     job_spec_for,
     new_run_id,
@@ -197,8 +208,93 @@ def _print_update(update: JobUpdate) -> None:
     print(f"  [{update.elapsed_s:6.0f} s] {job.name}: {job.state} on {job.platform}", flush=True)
 
 
+def prepare_heldout(
+    args: argparse.Namespace, target: Target
+) -> tuple[HeldoutJobArgs, list[str], Path | None]:
+    """Laptop-side checks of a held-out job: ``(job args, inject files, temporary dir)``.
+
+    Each ``--frozen-runs`` ID must be a fetched, verified ``freeform-v2`` search run from
+    ``target``'s region; the secret must match the committed SHA-256 (read through the
+    vault, which refuses inside a search's guard). Nothing is submitted when a check fails.
+    """
+    import tempfile
+
+    from rtt.heldout_v2 import common
+    from rtt.store.vault import HeldoutVault
+
+    runs = [validate_run_id(r.strip()) for r in (args.frozen_runs or "").split(",") if r.strip()]
+    if not runs:
+        raise ValueError("a heldout run needs --frozen-runs RUN_ID[,RUN_ID...] (finished search jobs)")
+    dirs = []
+    for run_id in runs:
+        local = Path(args.fetch_dir) / run_id
+        check = verify_run(local)
+        if not check.ok:
+            raise ValueError(
+                f"{run_id}: the fetched search run does not verify; fetch it once it has finished"
+            )
+        manifest = check.manifest or {}
+        if (
+            manifest.get("kind") != "search"
+            or (manifest.get("inputs") or {}).get("design_space") != "freeform-v2"
+        ):
+            raise ValueError(f"{run_id}: not a freeform-v2 search run")
+        region = _run_region(local, None)
+        if region != target.region:
+            raise ValueError(
+                f"{run_id} ran in {region}: the held-out job must run there too ({target.name} is {target.region})"
+            )
+        dirs.append(local)
+    digest = common.frozen_digest(common.collect_frozen_v2(dirs))
+    tmp: Path | None = None
+    if args.dev:
+        tmp = Path(tempfile.mkdtemp(prefix="rtt-heldout-dev-"))
+        seed_path = HeldoutVault.create(tmp / "heldout_seed").path
+    else:
+        if args.seed_file is None:
+            raise ValueError("a heldout run needs --seed-file (the held-out secret, git-ignored)")
+        commitment = common.read_commitment(args.commitment_file)
+        if commitment is None:
+            raise ValueError(f"no commitment in {args.commitment_file}")
+        HeldoutVault(args.seed_file).verify(commitment)
+        seed_path = Path(args.seed_file).resolve()
+    suites = tuple(s.strip() for s in args.suites.split(",") if s.strip())
+    heldout = HeldoutJobArgs(
+        frozen_runs=tuple(runs),
+        frozen_digest=digest,
+        suites=suites,
+        selection_run=validate_run_id(args.selection_run) if args.selection_run else None,
+        workers=args.workers,
+        select_workers=args.select_workers,
+        dev=args.dev,
+    )
+    heldout.argv()  # refuse bad suites before submitting
+    print(
+        f"heldout: {len(runs)} search runs, frozen digest {digest[:12]}, suites {','.join(suites)}",
+        flush=True,
+    )
+    return heldout, [f"{seed_path}:{SEED_MOUNT}"], tmp
+
+
 def cmd_run(ctx: Context, args: argparse.Namespace) -> int:
     run_id = validate_run_id(args.run_id or new_run_id(args.kind))
+    if args.kind != "heldout" and (args.seed_file or args.frozen_runs or args.dev or args.selection_run):
+        raise ValueError("--seed-file, --frozen-runs, --selection-run and --dev are for heldout runs only")
+    heldout: HeldoutJobArgs | None = None
+    inject: list[str] = []
+    tmp: Path | None = None
+    try:
+        if args.kind == "heldout":
+            heldout, inject, tmp = prepare_heldout(args, _resolve_target(args))
+        return _cmd_run(ctx, args, run_id, heldout, inject)
+    finally:
+        if tmp is not None:  # a --dev run's throwaway secret
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+def _cmd_run(
+    ctx: Context, args: argparse.Namespace, run_id: str, heldout: HeldoutJobArgs | None, inject: list[str]
+) -> int:
     search = None
     if args.kind == "search":
         if not (args.arm and args.runs and args.budget):
@@ -216,7 +312,9 @@ def cmd_run(ctx: Context, args: argparse.Namespace) -> int:
     chain = [first]
     # An explicit --vcpus is a request for that machine size: never swap it silently for a
     # 16-vCPU H100 (about 8.5x the price of the CPU preset) when the quota cannot fit it.
-    if args.fallback and not args.platform and args.vcpus is None and first.name != FALLBACK_TARGET:
+    # A held-out job reads the frozen picks from its region's bucket, so it never moves.
+    fallback_ok = args.fallback and not args.platform and args.vcpus is None and heldout is None
+    if fallback_ok and first.name != FALLBACK_TARGET:
         chain.append(get_target(FALLBACK_TARGET))
 
     ledger = SpendLedger(args.ledger, cap_usd=args.cap_usd)
@@ -240,6 +338,8 @@ def cmd_run(ctx: Context, args: argparse.Namespace) -> int:
                 timeout=args.timeout,
                 search=search,
                 candidate=target.candidates[0],
+                heldout=heldout,
+                inject_files=inject,
             )
         except ConfigError as exc:
             if i + 1 < len(chain):
@@ -459,6 +559,26 @@ def build_parser() -> argparse.ArgumentParser:
     )
     run.add_argument("--workers", type=int, default=None, help="search: CPU processes (default: all vCPUs)")
     run.add_argument("--spend-cap", type=float, default=2.0, help="search: live model spend cap, USD")
+    run.add_argument(
+        "--frozen-runs", default=None, help="heldout: comma-separated run IDs of the finished search jobs"
+    )
+    run.add_argument(
+        "--seed-file", type=Path, default=None, help="heldout: the held-out secret (git-ignored)"
+    )
+    run.add_argument(
+        "--commitment-file",
+        type=Path,
+        default=Path(__file__).resolve().parents[3] / "configs" / "suites" / "heldout_v1.sha256",
+        help="heldout: the committed SHA-256 of the secret",
+    )
+    run.add_argument(
+        "--suites",
+        default=",".join(HELDOUT_SUITES),
+        help="heldout: procedural, real (default both); selection alone draws the scans without scoring",
+    )
+    run.add_argument("--selection-run", default=None, help="heldout: reuse that run's real/selection")
+    run.add_argument("--select-workers", type=int, default=None, help="heldout: parallel scan candidates")
+    run.add_argument("--dev", action="store_true", help="heldout: infrastructure check on a throwaway secret")
     run.add_argument("--platform", help="force one platform (no fallback), e.g. cpu-d3 or gpu-h100-sxm")
     run.add_argument("--preset", help="preset for --platform (default: the target's preset)")
     run.add_argument("--preemptible", action="store_true", help="spot VM (follows the spot price)")

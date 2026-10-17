@@ -24,7 +24,14 @@ LOCAL_RUNS = REPO_ROOT / "runs" / "cloud"
 DEFAULT_LEDGER = LOCAL_RUNS / "spend.jsonl"
 CONTAINER_PYTHON = "/app/.venv/bin/python"
 MOUNT = "/out"
-KINDS = ("m1", "probe", "search", "gv4")
+KINDS = ("m1", "probe", "search", "gv4", "heldout")
+#: Where the held-out job finds the injected secret (``--inject-file``); no other job gets it.
+SEED_MOUNT = "/secret/heldout_seed"
+#: Steps of a heldout job: ``selection`` draws the scored scans (and records their hull
+#: hashes) without scoring anything; ``procedural`` is H1; ``real`` is H2 (drawing the scans
+#: first unless an earlier run's selection is given).
+HELDOUT_STEPS = ("selection", "procedural", "real")
+HELDOUT_SUITES = ("procedural", "real")
 LAUNCHER = "nebius-serverless-jobs"
 LLM_ARMS = frozenset({"nemotron", "zeroshot"})
 """Search arms that call Token Factory from inside the job."""
@@ -52,6 +59,48 @@ class SearchJobArgs:
             args += ["--seeds", self.seeds]
         if self.workers:
             args += ["--workers", str(self.workers)]
+        return args
+
+
+@dataclass(frozen=True)
+class HeldoutJobArgs:
+    """Options of a ``heldout`` job (:func:`rtt.cloud.entry.run_heldout_job`).
+
+    ``frozen_runs`` are the run IDs of finished search jobs in the same region's bucket; the
+    job reads their ``search/frozen/`` records from the mount and refuses to read the secret
+    unless their digest is ``frozen_digest`` (computed on the laptop from the fetched
+    copies). ``selection_run`` names an earlier held-out run whose ``real/selection`` the job
+    scores instead of drawing it again. ``dev`` runs a small exploratory job on a throwaway
+    secret (infrastructure check; it reveals nothing about the held-out suites).
+    """
+
+    frozen_runs: tuple[str, ...]
+    frozen_digest: str
+    suites: tuple[str, ...] = HELDOUT_SUITES  # any of HELDOUT_STEPS
+    selection_run: str | None = None
+    workers: int | None = None
+    select_workers: int | None = None
+    dev: bool = False
+
+    def argv(self) -> list[str]:
+        if not self.frozen_runs:
+            raise ValueError("a heldout job needs the search runs whose frozen picks it scores")
+        unknown = set(self.suites) - set(HELDOUT_STEPS)
+        if unknown or not self.suites:
+            raise ValueError(f"heldout suites must be a non-empty subset of {HELDOUT_STEPS}")
+        if self.selection_run and "selection" in self.suites:
+            raise ValueError("--selection-run reuses a selection; do not also ask for a new one")
+        args = ["--seed-file", SEED_MOUNT, "--expect-frozen-digest", self.frozen_digest]
+        args += ["--suites", ",".join(s for s in HELDOUT_STEPS if s in self.suites)]
+        args += ["--frozen", *(f"{MOUNT}/{run_prefix(r)}/search" for r in self.frozen_runs)]
+        if self.selection_run:
+            args += ["--selection", f"{MOUNT}/{run_prefix(self.selection_run)}/real/selection"]
+        if self.workers:
+            args += ["--workers", str(self.workers)]
+        if self.select_workers:
+            args += ["--select-workers", str(self.select_workers)]
+        if self.dev:
+            args.append("--dev")
         return args
 
 
@@ -103,6 +152,7 @@ def entry_args(
     video: bool = True,
     probe_warp: bool = True,
     search: SearchJobArgs | None = None,
+    heldout: HeldoutJobArgs | None = None,
 ) -> list[str]:
     """Arguments for ``python -m rtt.cloud.entry`` inside the container."""
     if kind not in KINDS:
@@ -112,6 +162,10 @@ def entry_args(
         if search is None:
             raise ValueError("a search job needs SearchJobArgs")
         return args + search.argv()
+    if kind == "heldout":
+        if heldout is None:
+            raise ValueError("a heldout job needs HeldoutJobArgs")
+        return args + heldout.argv()
     if kind == "gv4":  # gate GV4 (rtt.sim.gv4) on every vCPU of the job
         return args
     if kind == "m1":
@@ -148,6 +202,8 @@ def job_spec_for(
     search: SearchJobArgs | None = None,
     candidate: Candidate | None = None,
     attach_key: bool | None = None,
+    heldout: HeldoutJobArgs | None = None,
+    inject_files: Sequence[str] = (),
 ) -> JobSpec:
     """The job that runs ``kind`` in the configured image and writes to the bucket.
 
@@ -164,7 +220,16 @@ def job_spec_for(
     platform, preset and region are added per attempt by :meth:`NebiusJobs.run`). The
     full image reference is not passed: its path holds the registry ID, which must not
     reach published manifests.
+
+    The held-out secret reaches the ``heldout`` job only, as ``inject_files`` (exactly one
+    file, at :data:`SEED_MOUNT`); every other kind refuses ``inject_files``, and a
+    ``heldout`` job refuses to run without it.
     """
+    inject = tuple(inject_files)
+    if kind != "heldout" and inject:
+        raise ValueError(f"only the heldout job may receive injected files, not a {kind} job")
+    if kind == "heldout" and (len(inject) != 1 or not inject[0].endswith(f":{SEED_MOUNT}")):
+        raise ValueError(f"a heldout job needs exactly one injected file, the secret at {SEED_MOUNT}")
     config.require("image", "bucket_id", "subnet_id", "project_id")
     assert config.image is not None and config.bucket_id is not None
     key = needs_token_factory(kind, search) if attach_key is None else attach_key
@@ -182,7 +247,7 @@ def job_spec_for(
         name=name,
         image=config.image,
         command=CONTAINER_PYTHON,
-        args=entry_args(kind, run_id, seed, video, probe_warp, search),
+        args=entry_args(kind, run_id, seed, video, probe_warp, search, heldout),
         env=env,
         env_secrets={"NEBIUS_API_KEY": config.secret_name} if key else {},
         volumes=[f"{config.bucket_id}:{MOUNT}:rw"],
@@ -193,6 +258,7 @@ def job_spec_for(
         subnet_id=config.subnet_id,
         parent_id=config.project_id,
         preemptible=preemptible,
+        inject_files=inject,
     )
 
 
@@ -255,7 +321,41 @@ def verify_run(run_dir: str | Path, expect_video: bool | None = None) -> RunChec
         problems += _verify_search(root)
     elif manifest.get("kind") == "gv4":
         problems += _verify_gv4(root, manifest)
+    elif manifest.get("kind") == "heldout":
+        problems += _verify_heldout(root, manifest)
     return RunCheck(not problems, tuple(problems), manifest)
+
+
+HELDOUT_REPORTS = {
+    "procedural": ("procedural/heldout_v2.json", "rtt.heldout/2"),
+    "real": ("real/heldout_real_v2.json", "rtt.heldout_real/2"),
+}
+
+
+def _verify_heldout(root: Path, manifest: Mapping[str, Any]) -> Sequence[str]:
+    """A held-out job wrote one report per suite it ran, of the right schema; outside a dev
+    run each is an H1 or H2 result (commitment verified, full suite: not exploratory). A scan
+    draw made in the job left its selection and hull hashes under ``real/selection/``."""
+    inputs = manifest.get("inputs") or {}
+    suites = list(inputs.get("suites") or ())
+    problems = []
+    if inputs.get("selection") is None and {"selection", "real"} & set(suites):
+        for name in ("selection.json", "hull_hashes.json"):
+            if _read_json(root / "real" / "selection" / name) is None:
+                problems.append(f"missing or unreadable real/selection/{name}")
+    for suite in suites:
+        if suite not in HELDOUT_REPORTS:
+            continue
+        rel, schema = HELDOUT_REPORTS[suite]
+        report = _read_json(root / rel)
+        if report is None:
+            problems.append(f"missing or unreadable {rel}")
+            continue
+        if report.get("schema") != schema:
+            problems.append(f"{rel}: schema {report.get('schema')!r}, expected {schema}")
+        if not inputs.get("dev") and report.get("exploratory"):
+            problems.append(f"{rel}: exploratory ({report.get('exploratory_reasons')})")
+    return problems
 
 
 def _verify_gv4(root: Path, manifest: Mapping[str, Any]) -> Sequence[str]:
