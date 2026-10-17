@@ -15,7 +15,8 @@
 * ``rtt replay-llm --from DIR --out DIR2``: re-runs an LLM search from its response
   cache with zero API calls and checks every run reproduces.
 * ``rtt heldout --seed-file PATH --frozen DIR...``: scores frozen designs on the
-  commit-reveal held-out suite (:mod:`rtt.pipeline.heldout`).
+  commit-reveal held-out suite (:mod:`rtt.pipeline.heldout`); with ``--space freeform-v2``,
+  frozen v2 recipes on ``heldout_procedural_v2`` (H1, :mod:`rtt.heldout_v2.procedural`).
 * ``rtt certify``: the robustness certificate of a design on training objects.
 * ``rtt slice``: the vertical slice, Nemotron proposes, the simulator scores, replays
   and a manifest are written, and the web data is exported (:mod:`rtt.pipeline.slice`).
@@ -28,7 +29,10 @@
 * ``rtt agent run --stl PART``: one Grasp Engineer session in the terminal (:mod:`rtt.agent`).
 * ``rtt serve``: the Grasp Engineer API on 127.0.0.1 (:mod:`rtt.api`).
 * ``rtt heldout-real {select,run}``: the Google Scanned Objects held-out set
-  (:mod:`rtt.pipeline.heldout_real`).
+  (:mod:`rtt.pipeline.heldout_real`); with ``--space freeform-v2``, the v2 scan draw (H2,
+  :mod:`rtt.heldout_v2.real`).
+* ``rtt analyze-secondary``: S2, H1, H2 and Holm over the v2 secondary family
+  (:mod:`rtt.heldout_v2.secondary`).
 * ``rtt analyze-s1``: the S1 analysis (best-so-far curves, tau rule, test, power) from
   search outputs (:mod:`rtt.analysis.s1`).
 * ``rtt version``: prints the package version.
@@ -253,6 +257,8 @@ def _cmd_replay_llm(args: argparse.Namespace) -> int:
 
 
 def _cmd_heldout(args: argparse.Namespace) -> int:
+    if args.space in ("freeform-v2", "v2"):
+        return _cmd_heldout_v2(args)
     from rtt.design.schema import load_entrants
     from rtt.pipeline.heldout import collect_frozen, run_heldout
 
@@ -266,7 +272,7 @@ def _cmd_heldout(args: argparse.Namespace) -> int:
         )
         return 2
     frozen = collect_frozen(args.frozen)
-    entrants = [] if args.no_entrants else load_entrants(args.entrants)
+    entrants = [] if args.no_entrants else load_entrants(args.entrants or DEFAULT_ENTRANTS)
     report = run_heldout(
         args.seed_file,
         args.out,
@@ -289,6 +295,50 @@ def _cmd_heldout(args: argparse.Namespace) -> int:
     for arm, a in report["arms"].items():
         print(f"  arm {arm}: mean {100 * a['mean']:.1f}% over {len(a['runs'])} runs")
     print(f"Wrote {_display(args.out / 'heldout.json')}")
+    return 0
+
+
+def _cmd_heldout_v2(args: argparse.Namespace) -> int:
+    """H1: frozen ``freeform-v2`` picks and the v2 entrants on ``heldout_procedural_v2``."""
+    from rtt.heldout_v2 import common
+    from rtt.heldout_v2.procedural import REPORT, run_heldout_v2
+
+    # The committed file, never a value typed at run time; --allow-uncommitted (development
+    # runs with a throwaway secret) skips the check and labels the report exploratory.
+    commitment = args.commitment
+    if commitment is None and not args.allow_uncommitted:
+        commitment = common.read_commitment(args.commitment_file)
+        if commitment is None:
+            print(
+                f"error: no commitment ({_display(args.commitment_file)} missing); pass --commitment, "
+                "or --allow-uncommitted for a development run"
+            )
+            return 2
+    try:
+        frozen = common.collect_frozen_v2(args.frozen)
+        entrants = [] if args.no_entrants else common.load_entrants(args.entrants)
+        report = run_heldout_v2(
+            args.seed_file,
+            args.out,
+            frozen,
+            commitment=commitment,
+            entrants=entrants,
+            n_conditions=args.n,
+            seeds_per_condition=args.seeds_per_condition,
+            workers=args.workers,
+        )
+    except (ValueError, FileNotFoundError, FileExistsError) as exc:
+        print(f"error: {exc}")
+        return 2
+    suite = report["suite"]
+    print(
+        f"H1 {'(exploratory) ' if report['exploratory'] else ''}suite {suite['digest'][:12]}"
+        f" ({suite['n_conditions']} conditions x {suite['seeds_per_condition']} seeds), commitment "
+        f"{'verified' if report['commitment_verified'] else 'NOT checked'}; {report['episodes']} episodes"
+    )
+    for arm, a in report["arms"].items():
+        print(f"  arm {arm}: {a['n']} runs")
+    print(f"Wrote {_display(args.out / REPORT)}")
     return 0
 
 
@@ -480,10 +530,50 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     return api_main(args.rest, prog="rtt serve")
 
 
+def _space_arg(rest: Sequence[str]) -> str | None:
+    """The value of ``--space`` (or ``--space=X``) in a pass-through argument list."""
+    for i, token in enumerate(rest):
+        if token == "--space" and i + 1 < len(rest):
+            return rest[i + 1]
+        if token.startswith("--space="):
+            return token.partition("=")[2]
+    return None
+
+
+def _without_space(rest: Sequence[str]) -> list[str]:
+    out: list[str] = []
+    skip = False
+    for i, token in enumerate(rest):
+        if skip:
+            skip = False
+            continue
+        if token == "--space" and i + 1 < len(rest):
+            skip = True
+            continue
+        if token.startswith("--space="):
+            continue
+        out.append(token)
+    return out
+
+
 def _cmd_heldout_real(args: argparse.Namespace) -> int:
+    space = _space_arg(args.rest)
+    if space in ("freeform-v2", "v2"):
+        from rtt.heldout_v2.real import main as heldout_real_v2_main
+
+        return heldout_real_v2_main(args.rest)
+    if space not in (None, "box-v1", "v1"):
+        print(f"error: unknown design space {space!r}; use box-v1 or freeform-v2")
+        return 2
     from rtt.pipeline.heldout_real import main as heldout_real_main
 
-    return heldout_real_main(args.rest)
+    return heldout_real_main(_without_space(args.rest))
+
+
+def _cmd_analyze_secondary(args: argparse.Namespace) -> int:
+    from rtt.heldout_v2.secondary import main as secondary_main
+
+    return secondary_main(args.rest, prog="rtt analyze-secondary")
 
 
 def _cmd_analyze_s1(args: argparse.Namespace) -> int:
@@ -625,10 +715,21 @@ def build_parser() -> argparse.ArgumentParser:
     )
     ho.add_argument("--allow-uncommitted", action="store_true", help="development only: skip the check")
     ho.add_argument("--no-entrants", action="store_true", help="score frozen designs only")
-    ho.add_argument("--entrants", type=Path, default=DEFAULT_ENTRANTS)
+    ho.add_argument(
+        "--entrants",
+        type=Path,
+        default=None,
+        help="entrants YAML (default configs/entrants.yaml, or configs/entrants_v2.yaml for freeform-v2)",
+    )
     ho.add_argument("--n", type=int, default=None, help="conditions (default 100)")
     ho.add_argument("--seeds-per-condition", type=int, default=None, help="jitter seeds (default 2)")
     ho.add_argument("--workers", type=int, default=None)
+    ho.add_argument(
+        "--space",
+        choices=SPACE_CHOICES,
+        default="box-v1",
+        help="box-v1 (the v1 suite) or freeform-v2 (H1: heldout_procedural_v2 under task_v2)",
+    )
     ho.set_defaults(handler=_cmd_heldout)
 
     ce = sub.add_parser(
@@ -736,9 +837,13 @@ PASSTHROUGH = {
     "serve": (_cmd_serve, "serve the Grasp Engineer API on 127.0.0.1 (python -m rtt.api)"),
     "heldout-real": (
         _cmd_heldout_real,
-        "Google Scanned Objects held-out set: select | run (python -m rtt.pipeline.heldout_real)",
+        "Google Scanned Objects held-out set: select | run [--space freeform-v2] (rtt.pipeline.heldout_real)",
     ),
     "analyze-s1": (_cmd_analyze_s1, "S1 analysis: curves, tau rule, test and power (rtt.analysis.s1)"),
+    "analyze-secondary": (
+        _cmd_analyze_secondary,
+        "v2 secondary family: S2, H1, H2 and Holm (python -m rtt.heldout_v2.secondary)",
+    ),
 }
 
 

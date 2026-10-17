@@ -14,6 +14,15 @@ Kinds:
   ``search/``, the job manifest to the top level.
 * ``gv4``: gate GV4 (:mod:`rtt.sim.gv4`): builds and simulates the fixed v2 parity episodes
   on the job's CPUs and writes ``gv4.json``, which the laptop compares with its own run.
+* ``heldout``: H1 and H2 (:mod:`rtt.heldout_v2`) on the job's CPUs. It reads the frozen
+  picks of finished search runs from the bucket mount, refuses to go on unless their digest
+  is the one the laptop computed, then reads the secret (injected at ``/secret/heldout_seed``,
+  this job only) through the vault against the committed SHA-256: first the scored scan
+  draw (``real/selection/``, the step that needs the network and CoACD), then H1
+  (``procedural/``) and H2 (``real/``). ``--suites selection`` draws the scans and records
+  their hull hashes without scoring anything (a later job scores them with ``--selection``).
+  ``--dev`` is an infrastructure check on a throwaway secret: a few procedural conditions
+  and the public dev draw, labelled exploratory.
 
 Every file is first written to a local stage directory and then copied whole to
 ``--out``: the bucket mount rejects seeks (MP4 muxing) and renames (see :func:`publish`).
@@ -559,6 +568,167 @@ def run_gv4_job(
     return manifest, manifest["exit_status"]
 
 
+def _heldout_result(report: dict[str, Any], rel: str) -> dict[str, Any]:
+    return {
+        "report": rel,
+        "schema": report["schema"],
+        "exploratory": report["exploratory"],
+        "exploratory_reasons": report["exploratory_reasons"],
+        "suite_digest": report["suite"]["digest"],
+        "episodes": report["episodes"],
+        "physics": report["physics"],
+        "timing_s": report["timing_s"],
+        "arms": {arm: {k: a[k] for k in ("n", "mean", "lift_mean")} for arm, a in report["arms"].items()},
+    }
+
+
+def run_heldout_job(
+    out_dir: str | Path,
+    seed_file: str | Path,
+    frozen: Sequence[str | Path],
+    *,
+    suites: Sequence[str] = ("procedural", "real"),
+    expect_frozen_digest: str | None = None,
+    selection: str | Path | None = None,
+    workers: int | None = None,
+    select_workers: int | None = None,
+    dev: bool = False,
+    commitment_file: str | Path | None = None,
+    gso_cache: str | Path | None = None,
+    fetch: Any | None = None,
+    real_config: str | Path | None = None,
+    argv: Sequence[str] = (),
+    stage_dir: str | Path | None = None,
+) -> tuple[dict[str, Any], int]:
+    """The held-out job (staged like :func:`run_m1`); return the manifest and status.
+
+    Order: check the frozen picks (before the secret is touched), draw the scan selection
+    (network, CoACD: the step most likely to fail, and it scores nothing), then H1, then H2.
+    ``fetch`` and ``real_config`` (an offline mirror and its suite file) are for tests; a
+    job always draws from ``heldout_real_v2.yaml`` over the network.
+    """
+    from rtt.heldout_v2 import common
+    from rtt.heldout_v2.procedural import REPORT as H1_REPORT
+    from rtt.heldout_v2.procedural import run_heldout_v2
+    from rtt.heldout_v2.real import REPORT as H2_REPORT
+    from rtt.heldout_v2.real import run_real_v2, select_real_v2
+    from rtt.parts.heldout import DEFAULT_CONFIG as PROCEDURAL_CONFIG
+    from rtt.parts.library import DEFAULT_PARTS_FILE
+    from rtt.sim.gso import DEFAULT_CONFIG_V2
+    from rtt.sim.task import DEFAULT_TASK_V2_PATH
+
+    steps = ("selection", "procedural", "real")
+    unknown = set(suites) - set(steps)
+    if unknown or not suites:
+        raise ValueError(f"suites must be a non-empty subset of {steps}; got {sorted(set(suites))}")
+    if selection is not None and "selection" in suites:
+        raise ValueError("a selection was given; do not also ask for a new one")
+    suites = [s for s in steps if s in set(suites)]
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    stage = _stage_for(out, stage_dir)
+    manifest = base_manifest("heldout", out, argv)
+    commitment_path = Path(commitment_file) if commitment_file else common.COMMITMENT_FILE
+    commitment = None if dev else common.read_commitment(commitment_path)
+    manifest["inputs"] = {
+        "suites": suites,
+        "dev": dev,
+        "commitment": commitment,
+        "commitment_file_sha256": file_sha256(commitment_path),
+        "frozen_paths": [str(p) for p in frozen],
+        "expect_frozen_digest": expect_frozen_digest,
+        "selection": str(selection) if selection else None,
+        "task_sha256": file_sha256(DEFAULT_TASK_V2_PATH),
+        "parts_sha256": file_sha256(DEFAULT_PARTS_FILE),
+        "procedural_config_sha256": file_sha256(PROCEDURAL_CONFIG),
+        "real_config_sha256": file_sha256(real_config or DEFAULT_CONFIG_V2),
+        "heldout_code": common.code_listing(),
+    }
+    t0 = time.time()
+    manifest["started_at"] = utc_iso(t0)
+    manifest["environment"] = environment(probe_gl=False, probe_warp=False)
+    t_env = time.time()
+    status = 2
+    cache_tmp = None
+    try:
+        picks = common.collect_frozen_v2(frozen)
+        digest = common.frozen_digest(picks)
+        manifest["inputs"]["frozen_digest"] = digest
+        manifest["inputs"]["frozen"] = [
+            {
+                "arm": f.arm,
+                "run_index": f.run_index,
+                "run_seed": f.run_seed,
+                "content_sha256": f.content_sha256,
+            }
+            for f in picks
+        ]
+        if expect_frozen_digest is not None and digest != expect_frozen_digest:
+            raise ValueError(
+                f"the frozen picks in the bucket (digest {digest[:12]}) are not the ones checked on the"
+                f" laptop ({expect_frozen_digest[:12]}); the secret was not read"
+            )
+        if not dev and commitment is None:
+            raise ValueError(f"no commitment in {commitment_path}; the secret was not read")
+        result: dict[str, Any] = {}
+        if {"selection", "real"} & set(suites) and selection is None:
+            if gso_cache is None:
+                cache_tmp = tempfile.mkdtemp(prefix="rtt-gso-")
+            t_sel = time.time()
+            sel_dir = stage / "real" / "selection"
+            sel = select_real_v2(
+                sel_dir,
+                mode="dev" if dev else "scored",
+                seed_file=None if dev else seed_file,
+                commitment=commitment,
+                config=real_config,
+                n=3 if dev else None,
+                workers=select_workers or max(1, (os.cpu_count() or 3) // 3),
+                cache_root=gso_cache or cache_tmp,
+                fetch=fetch,
+            )
+            selection = sel_dir
+            result["selection"] = {
+                "mode": sel.mode,
+                "digest": sel.digest(),
+                "objects": len(sel.objects),
+                "requested": sel.requested,
+                "examined": sel.examined,
+                "wall_s": round(time.time() - t_sel, 1),
+            }
+            if len(sel.objects) != sel.requested:
+                raise ValueError(f"the scan pool ran out: {len(sel.objects)} of {sel.requested} objects")
+        if "procedural" in suites:
+            report = run_heldout_v2(
+                seed_file,
+                stage / "procedural",
+                picks,
+                commitment=commitment,
+                n_conditions=4 if dev else None,
+                seeds_per_condition=1 if dev else None,
+                workers=workers,
+            )
+            result["procedural"] = _heldout_result(report, f"procedural/{H1_REPORT}")
+        if "real" in suites:
+            assert selection is not None
+            report = run_real_v2(selection, stage / "real", picks, workers=workers)
+            result["real"] = _heldout_result(report, f"real/{H2_REPORT}")
+        manifest["result"] = result
+        status = 0
+    except Exception:  # noqa: BLE001 - record the failure in the manifest, then exit 2
+        manifest["error"] = traceback.format_exc()[-4000:]
+        print(manifest["error"], file=sys.stderr, flush=True)
+    finally:
+        if cache_tmp is not None:
+            shutil.rmtree(cache_tmp, ignore_errors=True)
+    try:
+        manifest = _finish(manifest, stage, out, t0, t_env, status)
+    finally:
+        if stage_dir is None:
+            shutil.rmtree(stage, ignore_errors=True)
+    return manifest, manifest["exit_status"]
+
+
 def _summary_line(manifest: dict[str, Any]) -> str:
     env = manifest.get("environment", {})
     gpu = env.get("gpu")
@@ -603,7 +773,23 @@ def build_parser() -> argparse.ArgumentParser:
     gv4 = sub.add_parser("gv4", help="gate GV4: the v2 parity episodes, gv4.json and manifest.json")
     gv4.add_argument("--out", type=Path, required=True)
     gv4.add_argument("--workers", type=int, default=None)
-    for p in (m1, probe, search, gv4):
+    ho = sub.add_parser("heldout", help="H1 and H2 on frozen v2 picks (the only job given the secret)")
+    ho.add_argument("--out", type=Path, required=True)
+    ho.add_argument(
+        "--seed-file", type=Path, required=True, help="the injected secret (/secret/heldout_seed)"
+    )
+    ho.add_argument("--frozen", nargs="+", required=True, help="search outputs on the mount (<run>/search)")
+    ho.add_argument("--expect-frozen-digest", default=None, help="digest of the picks checked on the laptop")
+    ho.add_argument(
+        "--suites", default="procedural,real", help="comma-separated: selection, procedural, real"
+    )
+    ho.add_argument("--selection", type=Path, default=None, help="an existing scan selection to score")
+    ho.add_argument("--workers", type=int, default=None, help="build and simulation processes")
+    ho.add_argument("--select-workers", type=int, default=None, help="parallel scan candidates")
+    ho.add_argument("--commitment-file", type=Path, default=None, help="default: the committed file")
+    ho.add_argument("--gso-cache", type=Path, default=None, help="scan cache (default: a temporary dir)")
+    ho.add_argument("--dev", action="store_true", help="infrastructure check on a throwaway secret")
+    for p in (m1, probe, search, gv4, ho):
         p.add_argument(
             "--stage",
             type=Path,
@@ -641,6 +827,22 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
     elif args.kind == "gv4":
         manifest, status = run_gv4_job(args.out, workers=args.workers, argv=args_list, stage_dir=args.stage)
+    elif args.kind == "heldout":
+        manifest, status = run_heldout_job(
+            args.out,
+            args.seed_file,
+            args.frozen,
+            suites=[s.strip() for s in args.suites.split(",") if s.strip()],
+            expect_frozen_digest=args.expect_frozen_digest,
+            selection=args.selection,
+            workers=args.workers,
+            select_workers=args.select_workers,
+            dev=args.dev,
+            commitment_file=args.commitment_file,
+            gso_cache=args.gso_cache,
+            argv=args_list,
+            stage_dir=args.stage,
+        )
     else:
         manifest, status = run_probe(
             args.out, probe_warp=not args.no_warp, argv=args_list, stage_dir=args.stage
