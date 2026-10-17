@@ -11,12 +11,12 @@ budget of simulated designs on the same grasping tasks. Scored batches run as Ne
 Serverless AI Jobs from one pinned container image, and a static web app replays every
 bout in the browser.
 
-Status: work in progress (hackathon build, October 2026). The protocol is pre-registered
-before any scored run: the draft is `docs/PREREG.md` (not yet frozen) and changes after the
-freeze go in `docs/DEVIATIONS.md`. A second design space, part-shaped fingers
-(`freeform-v2`, task `docs/TASK_V2.md`), is in development. `docs/PREREG.md` holds both
-protocols: the v2 protocol runs if its gates pass by Oct 19, otherwise the v1 protocol
-(frozen task `docs/TASK.md`) runs as the fallback.
+Status: hackathon build, October 2026. The protocol is pre-registered before any
+confirmatory run: `docs/PREREG.md`, Part A, the part-shaped finger protocol (`freeform-v2`,
+task `docs/TASK_V2.md`). It is frozen at the git tag `prereg-v1`, which precedes the first
+confirmatory job, and every change after the tag goes in `docs/DEVIATIONS.md`. Part B, the
+v1 fallback protocol (frozen task `docs/TASK.md`), is kept in the same file, marked "not
+run".
 
 ## Bring Your Part (quick start)
 

@@ -154,12 +154,82 @@ the hold 5 deg.
   the image of the tagged commit, and its tau and q are the ones frozen. Gate GV4 found the
   laptop and `cpu-d3` identical in outcome on 384 of 384 v2 episodes, so the values are
   expected to carry over. Known before any confirmatory run; no confirmatory seed was used.
-- **Held-out procedural secret.** PREREG A6 (draft) said a new secret would be drawn for
-  `heldout_procedural_v2`. The code draws the suite from the committed secret
-  (`configs/suites/heldout_v1.sha256`, `073055ff...`), domain-separated by
-  `rtt-heldout-procedural-v2`, so the v1 and v2 suites are uncorrelated. The secret has
-  not been used by any run we can find (the real-object development selections use the public
-  dev seed 20261016). **[decide]** keep it (recommended) or draw a new one before the tag.
+- **2026-10-17, 00:50-01:05 IST: the pilot on the executor of record.** With the CLI session
+  renewed, the image of `main` `53e9f57` was built (`make image`, `git_dirty: false`) and
+  pushed to both registries (`rtt-sim@sha256:c6162fa01d41beaab64e1431bc10e07535ce7bd59045fcef7bf0e074857b4b89`),
+  and the protocol's pilot ran on `uks2-cpu` (`cpu-d3`, `32vcpu-128gb`): random seeds
+  101-103 (job `aijob-e05zsdh89e1dj65gc2`) and Nemotron seeds 101-102 (job
+  `aijob-e05eecwevax4wcdjn4`). The random arm reproduced the laptop pilot exactly (all 120
+  design scores, each run's fingerprint and frozen top-1 hash), so tau (37/48) and q (6/172)
+  are unchanged, and the values frozen in PREREG A1 and A7 are the Nebius ones. The Nemotron
+  runs differ from the laptop's, as expected without a model seed; they are descriptive only
+  (PREREG A12). The laptop pilot is superseded.
+- **Held-out procedural secret: kept (founder, 2026-10-17).** PREREG A6 (draft) said a new
+  secret would be drawn for `heldout_procedural_v2`. The code draws the suite from the
+  committed secret (`configs/suites/heldout_v1.sha256`, `073055ff...`), domain-separated by
+  `rtt-heldout-procedural-v2`, so the v1 and v2 suites are uncorrelated. The secret has not
+  been used by any run we can find (the real-object development selections use the public
+  dev seed 20261016). The founder approved keeping it; no new secret is drawn. The
+  commitment is the SHA-256 of the secret string without its trailing newline
+  (`rtt.store.vault.seed_sha256`).
+
+### Founder approvals (2026-10-17), before the tag and before any confirmatory run
+
+| Approval | From | To | Why | Affects |
+|---|---|---|---|---|
+| R | The R rule's result, R = 12 (candidates {8, 10, 12}, fixed before the pilot) | R = 32 per arm, seeds 1001-1032 (all of `configs/seeds_main.yaml`) | No candidate reaches 0.8 power at 2x (0.40 at R = 12). R = 32 gives 0.75 at 2x and a minimum detectable speed-up of 2.25x against 3.25x, for about $1.85-2.90 of Nebius and $3.40-3.90 of Token Factory (PREREG A4.1) | S1 and every secondary endpoint; the job size. Decided after the laptop pilot of both arms had been reported in the PREREG draft; it uses only the random arm's q and the cost |
+| tau source | The laptop pilot (provisional) | The Nebius pilot, the executor of record | The protocol says the pilot runs on `uks2-cpu` | tau and q (equal in value) |
+| Held-out secret | A new secret (PREREG draft) | The committed secret, domain-separated (above) | Unused; uncorrelated with v1 by the domain | H1 |
+| H2 width | Undecided (options in `docs/HELDOUT_REAL.md`) | Option A: the 79 mm limit kept; H2 tested on the whole draw; success also reported at most 50 mm and above 50 mm as a planned split, outside the Holm family | Keeps the 64-object draw; reports the size effect openly | H2 |
+| Release | A private repository | Public at the `prereg-v1` tag | Anyone can check the hashes against the files | The pre-publication checks below |
+
+### Image of record built from `53e9f57`, not from the tagged commit (2026-10-17)
+
+- **What changed:** PREREG A4 (draft) said the image is built from the tagged commit. The
+  image of record is the pilot's, built from `53e9f57`. The tagged commit adds only
+  documentation to it (`docs/PREREG.md`, `docs/DEVIATIONS.md`, `README.md`), so the image is
+  not rebuilt, and the confirmatory manifests will record `git_sha` `53e9f57`.
+- **Why:** the pilot ran this image, and a rebuild would differ only in the documents it
+  carries.
+- **Check:** `git diff --stat 53e9f57 prereg-v1 -- . ':!docs' ':!README.md'` prints nothing.
+- **Affects:** provenance of every confirmatory job. Known before any confirmatory run.
+
+### Open at the tag: the v2 held-out runners (found 2026-10-17)
+
+- **What:** the image of record has no command that scores a frozen v2 recipe on
+  `heldout_procedural_v2` or on the `heldout_real_v2` draw. `rtt heldout` scores v1
+  `FingerDesign`s at a controller setting on the v1 suite, `rtt heldout-real run` scores under
+  `task_v1` with v1 width bands, the job entry point has no held-out kind, and nothing outside
+  the tests calls `rtt.parts.heldout.heldout_procedural_suite`.
+- **Affects:** H1 and H2 (PREREG A6). S1 and S2 are computed from the search outputs and are
+  not affected.
+- **Status:** open, blocks the tag (PREREG freeze checklist item 10). The founder chooses
+  between building the runners before the tag (a new image, A4 and A5 re-recorded) and
+  declaring them here as written after the tag, to the six rules in PREREG A6, with their
+  code hash and image digest logged before the held-out jobs.
+
+### Pre-publication checks (2026-10-17), before the repository is made public
+
+- `scripts/leak_check.sh` (26 private patterns from outside the repository): clean in
+  work-tree, `--staged` and `--history` mode (158 commits, every branch and tag) and in path
+  mode on `docs`, `web/public`, `data`, `configs`, `src`, `scripts`, `tests`, `README.md` and
+  `NOTICE`. On the git-ignored pilot outputs under `runs/` it reports 4 hits of one short
+  numeric pattern, all inside the digits of floating-point values (false positives); those
+  outputs are not in the repository, and a release of them needs a fresh check.
+- A regex sweep of all 1,006 blobs reachable from any ref, and of the work tree, for key
+  shapes (the Token Factory key prefix, AWS access-key IDs, PEM private-key headers,
+  OpenAI-style, GitHub, Slack and Google tokens, JWTs, bearer tokens, secret-looking
+  assignments, credentials or tokens in URLs),
+  private paths and names, AWS account, instance and IP forms, and the value of every ID in
+  the Nebius settings file: no secret and no private content. The only hits are made-up keys
+  and IDs in tests, the public default names of the Token Factory secret and the S3
+  profiles, and Nebius job IDs in site data (approved). Commits are authored under a GitHub
+  noreply address; commit messages are clean.
+- `.gitignore` covers `.env`, `.env.*`, `secrets/` and `runs/`; none of them is tracked.
+  `LICENSE` is Apache-2.0 at the top level; `NOTICE` and the README credit Google Scanned
+  Objects (CC BY 4.0), the SO-ARM-102 meshes (CC BY 4.0, vendored with their licence) and the
+  software dependencies. No file in the tree or in history is over 5 MB (the largest is
+  0.30 MB).
 
 ## After the tag
 
