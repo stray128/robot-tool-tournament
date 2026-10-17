@@ -312,6 +312,17 @@ def _random_draw(
     return list(designer.random_recipes(part, n, seed))
 
 
+def plain_space_name(label: str) -> str:
+    """A design-space label in plain words, for notes people read: ``"fingered_hand"`` ->
+    ``"fingered hand"``, ``"soft_arm/tentacle"`` -> ``"soft arm (tentacle)"``,
+    ``"suction/suction_cup"`` -> ``"suction cup"`` (the kind already names the family)."""
+    fam, sep, kind = str(label).partition("/")
+    if not sep:
+        return fam.replace("_", " ")
+    fam_w, kind_w = fam.replace("_", " "), kind.replace("_", " ")
+    return kind_w if fam_w in kind_w else f"{fam_w} ({kind_w})"
+
+
 def _match_random(
     designer: MorphologyDesigner,
     st: GroupState,
@@ -327,8 +338,11 @@ def _match_random(
     (the Nemotron designs screened on this part), from the spaces Nemotron was offered, with the
     same validators. A draw is the prefix of a larger one with the same seed, so the draw grows
     until enough recipes build (at most :data:`RANDOM_DRAW_FACTOR` x ``target`` + 8 recipes)."""
-    pool = ", ".join(kinds) if kinds else "every design space"
-    st.note = f"matched to the {target} Nemotron design{'s' if target != 1 else ''} screened ({pool})"
+    pool = ", ".join(plain_space_name(k) for k in kinds) if kinds else "every design space"
+    st.note = (
+        f"matched to the {target} Nemotron design{'s' if target != 1 else ''} screened, "
+        f"drawn from the same spaces: {pool}"
+    )
     if target <= 0:
         st.reason = "no Nemotron design was screened on this part, so the matched control is empty"
         return

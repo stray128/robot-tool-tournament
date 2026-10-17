@@ -49,6 +49,7 @@ from rtt.effectors.tournament import (
     _build_check,
     _certify_job,
     _finalist_key,
+    plain_space_name,
     run_tournament,
     spec_from_dict,
     training_conditions,
@@ -509,7 +510,7 @@ def test_the_random_control_is_matched_to_the_nemotron_designs_screened(block: A
     assert [c.status for c in r.candidates].count("invalid_build") == 3
     assert designer.draws == [(3, ("pads",)), (5, ("pads",)), (6, ("pads",))]
     assert d.budget()["screen_episodes"] == r.budget()["screen_episodes"] == 24
-    assert r.note == "matched to the 3 Nemotron designs screened (pads)"
+    assert r.note == "matched to the 3 Nemotron designs screened, drawn from the same spaces: pads"
     assert res.tournament_doc()["groups"]["random"]["note"] == r.note
     # without the Nemotron rounds the control keeps its fixed draw, screened with the presets
     plain = Matched()
@@ -519,6 +520,13 @@ def test_the_random_control_is_matched_to_the_nemotron_designs_screened(block: A
         )
     ra = alone.groups[EntrantGroup.RANDOM]
     assert len(ra.screened()) == RANDOM_RECIPES and ra.note is None and plain.draws == [(RANDOM_RECIPES, ())]
+
+
+def test_the_matched_control_note_names_spaces_in_plain_words() -> None:
+    assert plain_space_name("fingered_hand") == "fingered hand"
+    assert plain_space_name("soft_arm/tentacle") == "soft arm (tentacle)"
+    assert plain_space_name("suction/suction_cup") == "suction cup"
+    assert plain_space_name("pads") == "pads"
 
 
 def test_a_failed_proposal_round_keeps_the_earlier_designs(block: Any) -> None:

@@ -3710,7 +3710,7 @@
       "title": "Random control",
       "status": "run",
       "reason": null,
-      "note": "matched to the 7 Nemotron designs screened (fingered_hand, hook_gripper, segmented_tentacle, soft_arm/tentacle, suction/suction_cup)",
+      "note": "matched to the 7 Nemotron designs screened, drawn from the same spaces: fingered hand, hook gripper, segmented tentacle, soft arm (tentacle), suction cup",
       "finalists": [
         "25ad49b27d596a9fd9d2e8f5ca7226da7de51a92d32f3ea21996ba79a484da5d",
         "52b49f22648e50d6a17d24731761d18cd145628133df83451c15b9224a46bb22"
