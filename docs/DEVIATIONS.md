@@ -358,3 +358,12 @@ failure.
   1. The scored scan selection runs as its own job, matching A5 literally, and its hull hashes are logged.
   2. The `--dev` check runs with a throwaway secret.
   3. The scored H1/H2 job runs, and is the only job given the held-out seed.
+
+### 2026-10-17: scored real-object selection logged before any held-out scoring
+
+- **Job:** `aijob-e05emrmh21bmks3n8c`, run `heldout-20261017-075939`, `--suites selection`, on the held-out image `sha256:b7d54d75…`. It drew 64 scanned objects by the hashed rule. Nothing was scored.
+- **`hull_hashes.json`:** sha256 `1e5e8a4a940b8db59879c49478815e455a04923d8e942575bc092eb69b62d303`.
+- **Digests:** `selection_digest` is `a6add238e4b99bc5189f5cdf7ec143e645fd23f192c3e9e87c20803aaf795b2c` and `config_digest` is `fc72d1187cd704e7b626b9b35c327cb4d2e344871d343dc23aecc80e1ccd41bb`. The band edge is 50 mm.
+- **Next steps:**
+  1. The `--dev` infrastructure check, with a throwaway secret.
+  2. The scored H1/H2 job with `--selection-run heldout-20261017-075939`.
