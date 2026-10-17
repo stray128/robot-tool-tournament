@@ -557,7 +557,7 @@ def _lane_doc(
         "effector": _effector_brief(spec.to_dict()),
         "condition_id": plan.condition_id,
         "condition": _describe_condition(cond),
-        "seed": int(plan.seed),
+        "seed": str(plan.seed),  # 63-bit seeds: text, so a browser shows them exactly
         "fps": int(replay.header["fps"]),
         "n_frames": int(replay.n_frames),
         "duration_s": round((replay.n_frames - 1) / float(replay.header["fps"]), 4),
@@ -745,10 +745,10 @@ def export_part(
         },
         "lanes": lanes,
         "task": _task_doc(task),
-        "conditions": tour["conditions"],
+        "conditions": [{**c, "seeds": [str(x) for x in c["seeds"]]} for c in tour["conditions"]],
         "fairness": {
-            k: tour["fairness"][k]
-            for k in ("identical", "problems", "signature_sha256", "conditions", "seeds")
+            **{k: tour["fairness"][k] for k in ("identical", "problems", "signature_sha256", "conditions")},
+            "seeds": {k: [str(x) for x in v] for k, v in tour["fairness"]["seeds"].items()},
         },
         "physics": tour["physics"],
         "design_rounds": [
