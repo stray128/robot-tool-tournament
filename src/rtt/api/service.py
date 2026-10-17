@@ -38,6 +38,7 @@ from rtt.agent.caps import (
     PasscodeRequiredError,
     SpendGuard,
 )
+from rtt.agent.effector_tool import EffectorJobRunner, tournament_job
 from rtt.agent.engineer import DEFAULT_GOAL, AgentLLM, GraspEngineer, SessionResult
 from rtt.agent.jobs import JobRunner, LocalJobRunner
 from rtt.agent.proposer import NemotronDesignProposer
@@ -295,6 +296,14 @@ class AgentService:
             caps.day_usd,
         )
         self.local_runner = LocalJobRunner(self.backend.evaluate, max_workers=caps.max_concurrent_jobs)
+        # recommend_effector (product mode): tournaments on this machine, outputs under
+        # <root>/effectors/<part_id>/. They need the simulator backend's parts (resolve_upload);
+        # the offline fake cannot run them, so the tool is not offered there.
+        self.effectors: EffectorJobRunner | None = (
+            EffectorJobRunner(tournament_job(self.backend, self.store.root / "effectors"))
+            if callable(getattr(self.backend, "_get", None))
+            else None
+        )
         self._nebius = nebius_runner
         self.baselines = list(baselines) if baselines is not None else load_entrants(DEFAULT_ENTRANTS)
         self._sessions: dict[str, _Running] = {}
@@ -445,6 +454,7 @@ class AgentService:
             recorder=recorder,
             baselines=self.baselines,
             offline=offline,
+            effectors=self.effectors,
         )
         stop = threading.Event()
         engineer = GraspEngineer(
@@ -517,3 +527,5 @@ class AgentService:
         for item in running:
             item.stop.set()
         self.local_runner.shutdown()
+        if self.effectors is not None:
+            self.effectors.shutdown()
