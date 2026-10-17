@@ -477,6 +477,13 @@ Apache-2.0: two phalanges per finger coupled by a tendon, so one actuator closes
 and the distal phalanx wraps when the proximal one is stopped). The amber hand (hand B) only
 with the founder's sign-off. Never the red hand or the withheld models.
 
+**Founder decisions at integration (2026-10-17):** the three vendored hands stay in as honest
+entrants at their upstream gains (no gain changes); the rigid-pad gripper B (1.4 N at its
+published settings) is vendored and credited but not a preset (`in_presets = False`), so the
+catalog group is exactly 12 candidates and is never sampled; the rigid-pad gripper A keeps its
+upstream gains (4.1 N) and every page that shows it prints "Low grip at published settings"
+(`CatalogModel.card_note`). Results: `docs/EFFECTORS_RESULTS.md`.
+
 **Vendoring rules:** files under `assets/effectors/catalog/<generic-model-key>/`, the
 upstream `LICENSE` beside them, a `SOURCE.json` with one `AssetSource` per file (path,
 sha256 as shipped, upstream URL, commit `62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35`, upstream
