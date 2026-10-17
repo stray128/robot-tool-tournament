@@ -210,6 +210,94 @@ the hold 5 deg.
 
 **Founder decision (2026-10-17), before the tag:** tag now, and build the v2 held-out runners after the tag. They follow the six rules in PREREG A6. Their code is committed and its hash, and the image digest that contains them, are logged here before any held-out job runs. No held-out job runs on code written after any held-out outcome has been seen. The confirmatory training-suite runs (S1) need no new code and start right after the tag.
 
+**Runners written (2026-10-17, after the tag). No held-out job has run and no held-out
+outcome has been seen.** The secret was not read to write or test them: every test uses a
+throwaway secret.
+
+- **Code commit:** `84747e939c65e4cc75e3e37fbc9a57b4e51ed6f6` on branch `heldout-v2`, a child
+  of `main` `89b37f3`, the commit tagged `prereg-v1`. Merge it without rewriting it (no squash, no
+  rebase), so this hash stays the commit of record.
+- **Code listing** of the new package `src/rtt/heldout_v2/`:
+  `1c99c5c664a2e50d9261b1b347083989a9ce0d45e38ab143b9a166a64a4dbc73` with files in bytewise
+  order (`(export LC_ALL=C; cd src/rtt/heldout_v2 && sha256sum *.py | sha256sum)` in bash,
+  or the same command in `dash`); `821142f3220205d0fe1f8bec74269c60b44d5ebfaaa25657db07f3adc7d6437d`
+  in bash under `en_US.UTF-8` (the glob sorts `__init__.py` elsewhere, as for the A5
+  listings). The locale must be set before the glob expands: `LC_ALL=C sha256sum *.py`
+  sorts under the calling shell's locale.
+
+  | File | SHA-256 |
+  |---|---|
+  | `src/rtt/heldout_v2/__init__.py` | `b5f9e672b68c4fb24c7f2085f4ceeb08703f714ccf117980eb816f2600b69c4b` |
+  | `src/rtt/heldout_v2/common.py` | `0106daa5d2535438e2944a574fddb9ef72fa010b8aeabdeb2af671572e3c1264` |
+  | `src/rtt/heldout_v2/procedural.py` (H1) | `d59631ae318657671101ec35ebb22eceb321a4c285423edd7d58b7178c6d3ef2` |
+  | `src/rtt/heldout_v2/real.py` (H2) | `07e94e8e3b37885b6e6f5f252c1d1d6f0f3409abe4c07845bf109e4767b4cdad` |
+  | `src/rtt/heldout_v2/secondary.py` (S2, H1, H2, Holm) | `47ee1e7bffe6e77e5cf4a1f5e742317b031927b01df6a54f6534e6198e0e4d25` |
+  | `src/rtt/cli.py` | `1eeb7c837e00e91c60917fad0c500d8afe5c67446bb133916376266e67d2d3bd` |
+  | `src/rtt/cloud/__main__.py` | `d0aca049b79af48b984a9f9fabb988eaa66349d54464eead76a21892e9ee42b0` |
+  | `src/rtt/cloud/entry.py` | `6e4e16dc67381c896bc13acda3f771296b1c71eaa0168db9285b39c3a5780ddf` |
+  | `src/rtt/cloud/nebius_jobs.py` | `d078e23c2ea14550faef59d3db3ae21d798c1d1ce8550e1eb039cbabb8a7df2d` |
+  | `src/rtt/cloud/runs.py` | `fa3efb9ce30b3fe231072151bf2ffcf27c275cc9422073ac32cde02259757c51` |
+
+  Every held-out report and the held-out job's manifest record this listing and these file
+  hashes (`heldout_code`), so each result names the code that produced it.
+- **Frozen inputs unchanged.** The commit touches no file under `src/rtt/{search,sim,parts,design,analysis}`
+  or `configs/`. Recomputed at the commit, the A5 listings are those of PREREG A5 (generator
+  `c3ab4e37...`, parts `62bb2cb1...`, analysis `dc24cc79...`, search `7bc7ad3a...`,
+  simulator `c993eb84...`, prompts `f9d2b5ac...`), so the search and scoring code is the
+  code of the image of record. The full test suite passes (1,477 tests, 5 skipped, 1 xfail).
+- **Image: not built yet.** The image of record has no held-out runner. Before the
+  held-out job, build an image from the merge commit (`make image`), push it, and log its
+  digest here. The push rewrites `~/.config/rtt/image.env`: a search rerun (A11) must
+  still use the image of record, so restore that file after the push, or pass the held-out
+  image as `RTT_IMAGE` and `RTT_IMAGE_UKSOUTH2` on the held-out command line only.
+
+How the code meets the six rules of PREREG A6:
+
+| Rule | Implementation |
+|---|---|
+| 1. Seed only through `HeldoutVault`, against the commitment, after the searches | H1 and the scan draw read it with `HeldoutVault.verify` and the committed file `configs/suites/heldout_v1.sha256`. In a job it arrives as `--inject-file <path>:/secret/heldout_seed`, on the `heldout` job only; `job_spec_for` refuses an injected file for every other kind. Before submitting, the laptop verifies the secret and checks that each named search run is fetched, verified, `freeform-v2` and from the job's region. The job checks the digest of the frozen picks it reads from the bucket against the laptop's before it opens the secret. |
+| 2. Frozen top-1 recompiled with `rtt-freeform-gen/2` | Each `frozen/<arm>-rNN.json` is loaded with its SHA-256 and design id verified, and built against every held-out part by the search's own path (`build_pair(space.buildable(design), part, task)`). |
+| 3. `success_v2` under `task_v2`, as on `train_v2` | `rtt.sim.evaluate.evaluate_designs_v2` under `task_v2`, reduced by `episode_from_record_v2` and `DesignScore.from_episodes_v2`, the functions behind every training score: 1 ms step, native collision, `physics_invalid` and `physics_unreliable` as failures on both criteria, the frozen tolerances, the suite's 2 jitter seeds. |
+| 4. Invalid build fails every episode of that part | `evaluate_designs_v2` writes `invalid_build` records there; they count in every mean. |
+| 5. H1 on the secret's suite, H2 on the scored scan draw with bands | H1: `heldout_procedural_suite` of the secret and the frozen config, 100 conditions x 2 seeds. H2: the v1 selection rule with the v2 config (64 objects x 2 seeds); each object's band is its width across the jaw (its extent on the closing axis after intake, as in v1) against the fixed 50 mm edge, at most 50 mm in the lower band. |
+| 6. Per-episode records, run-level means, lift-only means | `episodes.parquet` per suite; `heldout_v2.json` and `heldout_real_v2.json` hold per-design and per-arm registered and lift-only means (H2 also per band). |
+
+Choices the rules leave open, fixed now:
+
+| Choice | What the code does | Why |
+|---|---|---|
+| What is scored | Each run's frozen pick, plus the 4 round-0 and 2 reference entrants of `configs/entrants_v2.yaml`, reported beside the arms and never in a test | A2: the reference entrants are shown in every comparison |
+| Task for the procedural draw | The suite module's default task (`task_v1`), as frozen | Its only task input, the grip's mass cap, is equal in `task_v1` and `task_v2`; a test checks that the suite is the same under both |
+| Task for the scan screen | `task_v1`, the v1 rule's own task, as for every development draw of this config; scoring is under `task_v2` | The rule is "unchanged apart from the decomposition". Checked offline from the cache: the current v2 dev draw (10 objects) is all in `draw.exclude_names`, so the scored draw will not refuse on that ground |
+| When the scored scan draw runs | Inside the held-out job, first, before anything is scored (the secret goes to that job only). A5 says it runs "before the held-out job": `--suites selection` runs it as a job of its own that scores nothing, and `--selection-run` scores that draw later | Founder to choose; both keep the secret inside a Nebius job |
+| Where the analysis driver lives | `src/rtt/heldout_v2/secondary.py`, not `src/rtt/analysis/`; it calls only `s1.py`'s `permutation_test_means`, `best_so_far_area` and `holm`, on `load_runs_v2` | Keeps the A5 analysis listing valid |
+| Order of runs in each test | By run seed | The 200,000 seeded relabellings depend on the order; a fixed order makes each p-value reproducible |
+| Which reports count | A report is exploratory unless the commitment was verified and the suite is the frozen one at full size; the analysis refuses an exploratory report, and a held-out report scored from other frozen records than the search wrote | H1 and H2 can only come from the registered suites |
+| Builds | Built in a process pool before the episodes, by the same function | A held-out suite has 64-100 parts; results do not depend on the worker count (tested) |
+
+Commands, once the image is built (`<A>` and `<C>` are the fetched confirmatory search runs):
+
+```bash
+# optional infrastructure check first: a throwaway secret, nothing about the held-out suites
+python -m rtt.cloud run heldout --dev --frozen-runs <A>,<C> --target uks2-cpu --vcpus 32 \
+  --timeout 1h --cap-usd 10 --expected-run-s 900
+# H1 and H2 (or --suites selection first, then --selection-run <that run>)
+python -m rtt.cloud run heldout --frozen-runs <A>,<C> --seed-file secrets/heldout_seed.txt \
+  --target uks2-cpu --vcpus 32 --timeout 2h --cap-usd 10 --expected-run-s 2400
+python -m rtt.heldout_v2.secondary --random runs/cloud/<A> --nemotron runs/cloud/<C> \
+  --heldout runs/cloud/<H>/procedural --heldout-real runs/cloud/<H>/real --out runs/analysis/secondary
+```
+
+**Estimated cost [derived]** on `cpu-d3` `32vcpu-128gb` at $1.056 per hour: at most 70
+designs (64 picks and 6 entrants, fewer when picks coincide) x (200 + 128) = 22,960
+episodes, 7-20 min at the pilot's 52 episodes per second to GV4's 1.07 CPU-s per episode
+(held-out parts may run slower **[assumed]**); about 11,500 jaw builds, 1 min on 32
+processes; the scan draw, about 300 candidates examined (10 of 48 accepted in the dev
+draws) and 74 CoACD decompositions at about 65 s each, 8-12 min, plus about 360 MB fetched
+from GitHub inside the job **[assumed: the job has outbound network, as arm C's model
+calls do]**. With provisioning, 20-35 min: **about $0.35-0.65**, ceiling $2.11 at the 2 h
+timeout; no Token Factory spend. The `--dev` check: 5-10 min, about $0.10-0.20.
+
 ### Pre-publication checks (2026-10-17), before the repository is made public
 
 - `scripts/leak_check.sh` (26 private patterns from outside the repository): clean in
@@ -235,7 +323,15 @@ the hold 5 deg.
 
 ## After the tag
 
-None yet.
+### 2026-10-17: the v2 held-out runners written
+
+- **What changed:** new code for H1, H2 and the secondary family (`src/rtt/heldout_v2/`, the
+  `heldout` job kind, `rtt analyze-secondary`), commit `84747e9`. Details, hashes and the
+  choices it fixes are under "Open at the tag: the v2 held-out runners" above.
+- **Why:** the founder's decision of 2026-10-17 (tag first, runners after).
+- **Affects:** H1 and H2 (and the secondary family's Holm adjustment). S1 and S2 come from the
+  search outputs; no search or scoring file changed.
+- **Known before or after seeing the affected result:** before. No held-out job has run.
 
 <!--
 Template:
