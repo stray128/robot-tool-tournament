@@ -3,7 +3,7 @@
   "version": 1,
   "contract": "rtt-effectors/1",
   "label": "Product mode: not part of the pre-registered experiment",
-  "generated_utc": "2026-10-17T08:45:31Z",
+  "generated_utc": "2026-10-17T11:06:51Z",
   "families": [
     {
       "family": "parallel_jaw",
@@ -15,31 +15,31 @@
       "family": "catalog_hand",
       "title": "Multi-finger hand",
       "fidelity": "rigid",
-      "available": false
+      "available": true
     },
     {
       "family": "catalog_gripper",
       "title": "Industrial gripper",
       "fidelity": "rigid",
-      "available": false
+      "available": true
     },
     {
       "family": "soft_arm",
       "title": "Soft arm",
       "fidelity": "approximation",
-      "available": false
+      "available": true
     },
     {
       "family": "suction",
       "title": "Suction cup",
       "fidelity": "approximation",
-      "available": false
+      "available": true
     },
     {
       "family": "designed",
       "title": "Designed morphology",
       "fidelity": "rigid",
-      "available": false
+      "available": true
     }
   ],
   "parts": [
@@ -93,12 +93,17 @@
         }
       },
       "groups_run": [
-        "reference"
+        "reference",
+        "catalog",
+        "soft_arm",
+        "suction",
+        "designed",
+        "random"
       ],
-      "lanes": 2,
-      "candidates": 3,
-      "episodes": 60,
-      "code_version": "ce6f027e862d"
+      "lanes": 12,
+      "candidates": 35,
+      "episodes": 528,
+      "code_version": "8c1011c4743f"
     },
     {
       "part_id": "flanged_bushing",
@@ -150,12 +155,17 @@
         }
       },
       "groups_run": [
-        "reference"
+        "reference",
+        "catalog",
+        "soft_arm",
+        "suction",
+        "designed",
+        "random"
       ],
-      "lanes": 2,
-      "candidates": 3,
-      "episodes": 60,
-      "code_version": "ce6f027e862d"
+      "lanes": 12,
+      "candidates": 33,
+      "episodes": 510,
+      "code_version": "8c1011c4743f"
     },
     {
       "part_id": "hex_standoff",
@@ -169,24 +179,24 @@
       "page": "effectors/hex_standoff.json",
       "requirement": "registered",
       "winner": {
-        "effector_id": "233385b9c8312321e06e85d67f78885a6db4ec9b9c2d7e9078902b9413bd9894",
-        "display_name": "Parallel jaw, configurator imprint",
-        "family": "parallel_jaw",
-        "fidelity": "core",
-        "score": 0.7821,
+        "effector_id": "314c49960421c38199e07044fa8504082d54a02f6b6939f76e5404a55920d006",
+        "display_name": "Designed four-finger hand, 2 joints per finger e900",
+        "family": "designed",
+        "fidelity": "rigid",
+        "score": 0.8462,
         "tolerance_mm": {
           "x": 2.0,
-          "y": 3.0
+          "y": 1.0
         },
         "caveat": null
       },
       "by_requirement": {
         "held": {
-          "effector_id": "f5e20b9e22d0b812ec15dfba17c71a6ec5fdbf44cd76b1397c89d9eccd6c4c96",
-          "display_name": "Parallel jaw, stock blade",
-          "family": "parallel_jaw",
-          "fidelity": "core",
-          "score": 0.8333,
+          "effector_id": "314c49960421c38199e07044fa8504082d54a02f6b6939f76e5404a55920d006",
+          "display_name": "Designed four-finger hand, 2 joints per finger e900",
+          "family": "designed",
+          "fidelity": "rigid",
+          "score": 1.0,
           "tolerance_mm": {
             "x": 3.0,
             "y": 3.0
@@ -194,25 +204,30 @@
           "caveat": null
         },
         "registered": {
-          "effector_id": "233385b9c8312321e06e85d67f78885a6db4ec9b9c2d7e9078902b9413bd9894",
-          "display_name": "Parallel jaw, configurator imprint",
-          "family": "parallel_jaw",
-          "fidelity": "core",
-          "score": 0.7821,
+          "effector_id": "314c49960421c38199e07044fa8504082d54a02f6b6939f76e5404a55920d006",
+          "display_name": "Designed four-finger hand, 2 joints per finger e900",
+          "family": "designed",
+          "fidelity": "rigid",
+          "score": 0.8462,
           "tolerance_mm": {
             "x": 2.0,
-            "y": 3.0
+            "y": 1.0
           },
           "caveat": null
         }
       },
       "groups_run": [
-        "reference"
+        "reference",
+        "catalog",
+        "soft_arm",
+        "suction",
+        "designed",
+        "random"
       ],
-      "lanes": 2,
-      "candidates": 3,
-      "episodes": 60,
-      "code_version": "ce6f027e862d"
+      "lanes": 12,
+      "candidates": 36,
+      "episodes": 537,
+      "code_version": "8c1011c4743f"
     },
     {
       "part_id": "l_bracket",
@@ -226,14 +241,14 @@
       "page": "effectors/l_bracket.json",
       "requirement": "registered",
       "winner": {
-        "effector_id": "f5e20b9e22d0b812ec15dfba17c71a6ec5fdbf44cd76b1397c89d9eccd6c4c96",
-        "display_name": "Parallel jaw, stock blade",
-        "family": "parallel_jaw",
-        "fidelity": "core",
-        "score": 0.4615,
+        "effector_id": "cb7bd7aa029161da9a45c98836e7294b8e313f6c9b30d1645655cc4fbab84d39",
+        "display_name": "Designed three-finger sliding hook gripper 4a1d",
+        "family": "designed",
+        "fidelity": "rigid",
+        "score": 0.5641,
         "tolerance_mm": {
-          "x": 0.0,
-          "y": 2.0
+          "x": 1.0,
+          "y": 3.0
         },
         "caveat": null
       },
@@ -251,25 +266,30 @@
           "caveat": null
         },
         "registered": {
-          "effector_id": "f5e20b9e22d0b812ec15dfba17c71a6ec5fdbf44cd76b1397c89d9eccd6c4c96",
-          "display_name": "Parallel jaw, stock blade",
-          "family": "parallel_jaw",
-          "fidelity": "core",
-          "score": 0.4615,
+          "effector_id": "cb7bd7aa029161da9a45c98836e7294b8e313f6c9b30d1645655cc4fbab84d39",
+          "display_name": "Designed three-finger sliding hook gripper 4a1d",
+          "family": "designed",
+          "fidelity": "rigid",
+          "score": 0.5641,
           "tolerance_mm": {
-            "x": 0.0,
-            "y": 2.0
+            "x": 1.0,
+            "y": 3.0
           },
           "caveat": null
         }
       },
       "groups_run": [
-        "reference"
+        "reference",
+        "catalog",
+        "soft_arm",
+        "suction",
+        "designed",
+        "random"
       ],
-      "lanes": 2,
-      "candidates": 3,
-      "episodes": 60,
-      "code_version": "ce6f027e862d"
+      "lanes": 12,
+      "candidates": 34,
+      "episodes": 519,
+      "code_version": "8c1011c4743f"
     },
     {
       "part_id": "pipe_tee",
@@ -321,12 +341,17 @@
         }
       },
       "groups_run": [
-        "reference"
+        "reference",
+        "catalog",
+        "soft_arm",
+        "suction",
+        "designed",
+        "random"
       ],
-      "lanes": 2,
-      "candidates": 3,
-      "episodes": 60,
-      "code_version": "ce6f027e862d"
+      "lanes": 12,
+      "candidates": 33,
+      "episodes": 510,
+      "code_version": "8c1011c4743f"
     },
     {
       "part_id": "steel_slug",
@@ -378,12 +403,17 @@
         }
       },
       "groups_run": [
-        "reference"
+        "reference",
+        "catalog",
+        "soft_arm",
+        "suction",
+        "designed",
+        "random"
       ],
-      "lanes": 2,
-      "candidates": 3,
-      "episodes": 60,
-      "code_version": "ce6f027e862d"
+      "lanes": 12,
+      "candidates": 36,
+      "episodes": 537,
+      "code_version": "8c1011c4743f"
     }
   ]
 }
