@@ -2,7 +2,8 @@
 
 A plain OpenAI-SDK-style loop over :class:`rtt.llm.LLMClient` (Token Factory, with the
 client's ledger, retries and rate limiting): the model sees the eight tools of
-:mod:`rtt.agent.schemas` with ``tool_choice="auto"``; each tool call it makes is run by
+:mod:`rtt.agent.schemas` (nine when the toolbox has an effector runner: ``recommend_effector``)
+with ``tool_choice="auto"``; each tool call it makes is run by
 :class:`rtt.agent.tools.Toolbox` under the hard caps and answered with a ``tool``
 message; the loop ends when the model answers in plain text, when the stop flag is set,
 or when a cap ends it. Once the tool budget is spent, the next turn is sent with
@@ -183,7 +184,7 @@ class AgentLLM(LLMClient):
 # --------------------------------------------------------------------------- prompts
 
 
-def system_prompt(caps: AgentCaps, targets: Sequence[str]) -> str:
+def system_prompt(caps: AgentCaps, targets: Sequence[str], *, effectors: bool = False) -> str:
     target_text = "'local' (this machine, free)" + (
         " or 'nebius' (Nebius Serverless AI Job, costs money)" if "nebius" in targets else ""
     )
@@ -220,6 +221,17 @@ def system_prompt(caps: AgentCaps, targets: Sequence[str]) -> str:
             "and say what to try next."
         ),
     )
+    if effectors:
+        paragraphs += (
+            (
+                "If the user asks which kind of end effector suits the part (jaw, hand, gripper, suction cup, "
+                "soft arm), call recommend_effector (local, free; design=true asks Nemotron for new morphologies "
+                "and costs money), poll_job until COMPLETED, then fetch_results. Report the recommended effector, "
+                "its certificate score and verdict, and for an approximation the rigid runner-up and that it must "
+                "be verified on hardware, exactly as the tool gives them. It is product mode, not the "
+                "pre-registered experiment."
+            ),
+        )
     return "\n\n".join(paragraphs)
 
 
@@ -291,9 +303,13 @@ class GraspEngineer:
         return models
 
     def run(self) -> SessionResult:
-        tools = openai_tools()
+        effectors = getattr(self.toolbox, "effectors", None) is not None
+        tools = openai_tools(effectors=effectors)
         self.messages = [
-            {"role": "system", "content": system_prompt(self.caps, sorted(self.toolbox.runners))},
+            {
+                "role": "system",
+                "content": system_prompt(self.caps, sorted(self.toolbox.runners), effectors=effectors),
+            },
             {"role": "user", "content": user_prompt(self.toolbox.part_id, self.goal)},
         ]
         self.recorder.emit(
@@ -306,6 +322,7 @@ class GraspEngineer:
             caps=self.caps.to_json(),
             unlocked=self.toolbox.unlocked,
             targets=sorted(self.toolbox.runners),
+            **({"effectors": True} if effectors else {}),
         )
         self.recorder.set_messages(self.messages)
         status, reason, answer = "completed", None, ""

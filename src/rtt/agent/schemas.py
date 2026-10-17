@@ -19,16 +19,27 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Annotated, Any, Final, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, ValidationError, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictBool,
+    StringConstraints,
+    ValidationError,
+    field_validator,
+)
 
 __all__ = [
+    "ALL_TOOL_NAMES",
     "DESIGN_ID_PATTERN",
+    "EFFECTOR_TOOL_SPECS",
     "JOB_ID_PATTERN",
     "PART_ID_PATTERN",
     "RUN_ID_PATTERN",
     "TOOL_NAMES",
     "TOOL_SPECS",
     "ArgsError",
+    "RecommendEffectorArgs",
     "ToolSpec",
     "openai_tools",
     "validate_args",
@@ -91,6 +102,23 @@ class ExportPrintPackArgs(_Args):
 
 class CostLedgerArgs(_Args):
     pass
+
+
+EffectorGroup = Literal["reference", "catalog", "soft_arm", "suction", "designed", "random"]
+
+
+class RecommendEffectorArgs(_Args):
+    part_id: PartId
+    requirement: Literal["held", "registered"] = "registered"
+    groups: list[EffectorGroup] | None = Field(default=None, min_length=1, max_length=6)
+    design: StrictBool = False
+
+    @field_validator("groups")
+    @classmethod
+    def _unique_groups(cls, value: list[str] | None) -> list[str] | None:
+        if value is not None and len(set(value)) != len(value):
+            raise ValueError("groups must be unique")
+        return value
 
 
 def _id(pattern: str, description: str) -> dict[str, Any]:
@@ -216,8 +244,44 @@ TOOL_SPECS: Final[tuple[ToolSpec, ...]] = (
     ),
 )
 
+#: Offered only when the server enables the effector layer (product mode, ``docs/EFFECTORS.md`` 7).
+EFFECTOR_TOOL_SPECS: Final[tuple[ToolSpec, ...]] = (
+    ToolSpec(
+        "recommend_effector",
+        "Which kind of end effector should hold this part? Runs a tournament on this machine: every "
+        "available effector family (parallel jaw, multi-finger hands, grippers, suction cup, soft arm, "
+        "designed morphologies) on the same placements and seeds, the best two per family group "
+        "certified, one recommendation with its robustness certificate (an approximation such as a "
+        "suction cup always comes with a rigid runner-up). Returns a job ID: poll_job, then "
+        "fetch_results. requirement 'registered' (held and in a repeatable pose, the default) or 'held'. "
+        "groups limits the family groups. design=true asks Nemotron for new morphologies and costs money. "
+        "Product mode, not the pre-registered experiment.",
+        _object(
+            {
+                "part_id": _PART,
+                "requirement": {"type": "string", "enum": ["held", "registered"]},
+                "groups": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": ["reference", "catalog", "soft_arm", "suction", "designed", "random"],
+                    },
+                    "minItems": 1,
+                    "maxItems": 6,
+                    "uniqueItems": True,
+                },
+                "design": {"type": "boolean"},
+            },
+            ["part_id"],
+        ),
+        RecommendEffectorArgs,
+        may_spend=True,
+    ),
+)
+
 TOOL_NAMES: Final[tuple[str, ...]] = tuple(spec.name for spec in TOOL_SPECS)
-_BY_NAME: Final[dict[str, ToolSpec]] = {spec.name: spec for spec in TOOL_SPECS}
+ALL_TOOL_NAMES: Final[tuple[str, ...]] = TOOL_NAMES + tuple(spec.name for spec in EFFECTOR_TOOL_SPECS)
+_BY_NAME: Final[dict[str, ToolSpec]] = {spec.name: spec for spec in (*TOOL_SPECS, *EFFECTOR_TOOL_SPECS)}
 
 
 class ArgsError(ValueError):
@@ -234,9 +298,11 @@ def tool_spec(name: str) -> ToolSpec:
     return _BY_NAME[name]
 
 
-def openai_tools() -> list[dict[str, Any]]:
-    """Every tool in OpenAI function-tool format, in a fixed order."""
-    return [spec.openai() for spec in TOOL_SPECS]
+def openai_tools(*, effectors: bool = False) -> list[dict[str, Any]]:
+    """Every tool in OpenAI function-tool format, in a fixed order (``recommend_effector`` last,
+    only when ``effectors``)."""
+    specs = (*TOOL_SPECS, *EFFECTOR_TOOL_SPECS) if effectors else TOOL_SPECS
+    return [spec.openai() for spec in specs]
 
 
 def validate_args(name: str, args: Any) -> _Args:
@@ -247,7 +313,7 @@ def validate_args(name: str, args: Any) -> _Args:
     """
     spec = _BY_NAME.get(name)
     if spec is None:
-        raise ArgsError(name, [f"unknown tool {name!r}; tools are {', '.join(TOOL_NAMES)}"])
+        raise ArgsError(name, [f"unknown tool {name!r}; tools are {', '.join(ALL_TOOL_NAMES)}"])
     if not isinstance(args, Mapping):
         detail = getattr(args, "error", None)  # the agent passes its JSON parse error along
         raise ArgsError(name, [str(detail) if detail else "arguments must be a JSON object"])

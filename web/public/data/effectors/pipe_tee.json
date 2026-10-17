@@ -1,0 +1,1918 @@
+{
+  "schema": "rtt-web-effector-part",
+  "version": 1,
+  "contract": "rtt-effectors/1",
+  "label": "Product mode: not part of the pre-registered experiment",
+  "part": {
+    "part_id": "pipe_tee",
+    "family": "pipe_tee",
+    "size_mm": [
+      60.0,
+      44.25,
+      28.5
+    ],
+    "mass_kg": 0.0399,
+    "geometry_sha256": "98740094d82da2f86be41147051213c143fc57b37f34729654ab186a8596c7a3",
+    "title": "Pipe tee"
+  },
+  "requirement": "registered",
+  "recommendation": {
+    "winner": {
+      "effector": {
+        "effector_id": "ada49390b318948c7d5f983bf90ef5dc28c96883c2cfef7afe5a9757356499b7",
+        "display_name": "Parallel jaw, flat pad",
+        "family": "parallel_jaw",
+        "model": "flat",
+        "primitive": "jaw",
+        "origin": "reference",
+        "group": "reference",
+        "fidelity": "core",
+        "hypothesis": null
+      },
+      "certificate": {
+        "reference": "analytic",
+        "held_score": 0.8333,
+        "registered_score": 0.6795,
+        "held_scores": {
+          "placement": 1.0,
+          "shake": 1.0,
+          "push": 0.5
+        },
+        "registered_scores": {
+          "placement": 0.5385,
+          "shake": 1.0,
+          "push": 0.5
+        },
+        "held_tolerance_mm": {
+          "x": 3.0,
+          "y": 3.0
+        },
+        "registered_tolerance_mm": {
+          "x": 0.0,
+          "y": 3.0
+        },
+        "held": "17/18",
+        "registered": "11/18",
+        "effector_mass_kg": 0.028,
+        "tests": [
+          {
+            "name": "nominal",
+            "category": "placement",
+            "held": true,
+            "registered": true,
+            "failure_mode": null,
+            "registration_flags": [],
+            "offset_mm": 0.081
+          },
+          {
+            "name": "offset_x_+1mm",
+            "category": "placement",
+            "held": true,
+            "registered": false,
+            "failure_mode": "not_registered",
+            "registration_flags": [
+              "off_centre"
+            ],
+            "offset_mm": 1.016
+          },
+          {
+            "name": "offset_x_-1mm",
+            "category": "placement",
+            "held": true,
+            "registered": false,
+            "failure_mode": "not_registered",
+            "registration_flags": [
+              "off_centre"
+            ],
+            "offset_mm": 1.0168
+          },
+          {
+            "name": "offset_x_+2mm",
+            "category": "placement",
+            "held": true,
+            "registered": false,
+            "failure_mode": "not_registered",
+            "registration_flags": [
+              "off_centre"
+            ],
+            "offset_mm": 2.0113
+          },
+          {
+            "name": "offset_x_-2mm",
+            "category": "placement",
+            "held": true,
+            "registered": false,
+            "failure_mode": "not_registered",
+            "registration_flags": [
+              "off_centre"
+            ],
+            "offset_mm": 2.0111
+          },
+          {
+            "name": "offset_x_+3mm",
+            "category": "placement",
+            "held": true,
+            "registered": false,
+            "failure_mode": "not_registered",
+            "registration_flags": [
+              "off_centre"
+            ],
+            "offset_mm": 3.0044
+          },
+          {
+            "name": "offset_x_-3mm",
+            "category": "placement",
+            "held": true,
+            "registered": false,
+            "failure_mode": "not_registered",
+            "registration_flags": [
+              "off_centre"
+            ],
+            "offset_mm": 3.007
+          },
+          {
+            "name": "offset_y_+1mm",
+            "category": "placement",
+            "held": true,
+            "registered": true,
+            "failure_mode": null,
+            "registration_flags": [],
+            "offset_mm": 0.0815
+          },
+          {
+            "name": "offset_y_-1mm",
+            "category": "placement",
+            "held": true,
+            "registered": true,
+            "failure_mode": null,
+            "registration_flags": [],
+            "offset_mm": 0.0807
+          },
+          {
+            "name": "offset_y_+2mm",
+            "category": "placement",
+            "held": true,
+            "registered": true,
+            "failure_mode": null,
+            "registration_flags": [],
+            "offset_mm": 0.081
+          },
+          {
+            "name": "offset_y_-2mm",
+            "category": "placement",
+            "held": true,
+            "registered": true,
+            "failure_mode": null,
+            "registration_flags": [],
+            "offset_mm": 0.081
+          },
+          {
+            "name": "offset_y_+3mm",
+            "category": "placement",
+            "held": true,
+            "registered": true,
+            "failure_mode": null,
+            "registration_flags": [],
+            "offset_mm": 0.0809
+          },
+          {
+            "name": "offset_y_-3mm",
+            "category": "placement",
+            "held": true,
+            "registered": true,
+            "failure_mode": null,
+            "registration_flags": [],
+            "offset_mm": 0.0817
+          },
+          {
+            "name": "shake_x",
+            "category": "shake",
+            "held": true,
+            "registered": true,
+            "failure_mode": null,
+            "registration_flags": [],
+            "offset_mm": 0.081
+          },
+          {
+            "name": "shake_y",
+            "category": "shake",
+            "held": true,
+            "registered": true,
+            "failure_mode": null,
+            "registration_flags": [],
+            "offset_mm": 0.081
+          },
+          {
+            "name": "shake_z",
+            "category": "shake",
+            "held": true,
+            "registered": true,
+            "failure_mode": null,
+            "registration_flags": [],
+            "offset_mm": 0.081
+          },
+          {
+            "name": "push_x",
+            "category": "push",
+            "held": false,
+            "registered": false,
+            "failure_mode": "unstable_hold",
+            "registration_flags": [],
+            "offset_mm": 0.081
+          },
+          {
+            "name": "push_y",
+            "category": "push",
+            "held": true,
+            "registered": true,
+            "failure_mode": null,
+            "registration_flags": [],
+            "offset_mm": 0.081
+          }
+        ]
+      },
+      "screen": {
+        "n": 8,
+        "held": 1.0,
+        "registered": 0.25
+      },
+      "why": "Highest registered certificate score of the 2 eligible candidates (0.68, next 0.51), tolerating 0 mm placement error across and 3 mm along the closing axis.",
+      "score": 0.6795,
+      "tolerance_mm": {
+        "x": 0.0,
+        "y": 3.0
+      },
+      "n_actuators": 1,
+      "mass_kg": 0.028,
+      "actuation": {
+        "grip_force_n": 50.0
+      },
+      "caveat": null
+    },
+    "runner_up_rigid": null,
+    "no_winner": null,
+    "ranking": [
+      {
+        "effector_id": "ada49390b318948c7d5f983bf90ef5dc28c96883c2cfef7afe5a9757356499b7",
+        "display_name": "Parallel jaw, flat pad",
+        "family": "parallel_jaw",
+        "group": "reference",
+        "fidelity": "core",
+        "status": "screened",
+        "certified": true,
+        "eligible": true,
+        "reason": null,
+        "score": 0.6795,
+        "tolerance_mm": {
+          "x": 0.0,
+          "y": 3.0
+        },
+        "screen_rate": 0.25,
+        "n_actuators": 1,
+        "mass_kg": 0.028,
+        "actuation": {
+          "grip_force_n": 50.0
+        }
+      },
+      {
+        "effector_id": "f5e20b9e22d0b812ec15dfba17c71a6ec5fdbf44cd76b1397c89d9eccd6c4c96",
+        "display_name": "Parallel jaw, stock blade",
+        "family": "parallel_jaw",
+        "group": "reference",
+        "fidelity": "core",
+        "status": "screened",
+        "certified": true,
+        "eligible": true,
+        "reason": null,
+        "score": 0.5128,
+        "tolerance_mm": {
+          "x": 0.0,
+          "y": 3.0
+        },
+        "screen_rate": 0.25,
+        "n_actuators": 1,
+        "mass_kg": 0.014,
+        "actuation": {
+          "grip_force_n": 50.0
+        }
+      },
+      {
+        "effector_id": "233385b9c8312321e06e85d67f78885a6db4ec9b9c2d7e9078902b9413bd9894",
+        "display_name": "Parallel jaw, configurator imprint",
+        "family": "parallel_jaw",
+        "group": "reference",
+        "fidelity": "core",
+        "status": "screened",
+        "certified": false,
+        "eligible": false,
+        "reason": "not certified (not a finalist)",
+        "score": null,
+        "tolerance_mm": {
+          "x": null,
+          "y": null
+        },
+        "screen_rate": 0.25,
+        "n_actuators": 1,
+        "mass_kg": 0.045,
+        "actuation": {
+          "grip_force_n": 50.0
+        }
+      }
+    ]
+  },
+  "by_requirement": {
+    "held": {
+      "winner": {
+        "effector": {
+          "effector_id": "ada49390b318948c7d5f983bf90ef5dc28c96883c2cfef7afe5a9757356499b7",
+          "display_name": "Parallel jaw, flat pad",
+          "family": "parallel_jaw",
+          "model": "flat",
+          "primitive": "jaw",
+          "origin": "reference",
+          "group": "reference",
+          "fidelity": "core",
+          "hypothesis": null
+        },
+        "certificate": {
+          "reference": "analytic",
+          "held_score": 0.8333,
+          "registered_score": 0.6795,
+          "held_scores": {
+            "placement": 1.0,
+            "shake": 1.0,
+            "push": 0.5
+          },
+          "registered_scores": {
+            "placement": 0.5385,
+            "shake": 1.0,
+            "push": 0.5
+          },
+          "held_tolerance_mm": {
+            "x": 3.0,
+            "y": 3.0
+          },
+          "registered_tolerance_mm": {
+            "x": 0.0,
+            "y": 3.0
+          },
+          "held": "17/18",
+          "registered": "11/18",
+          "effector_mass_kg": 0.028,
+          "tests": [
+            {
+              "name": "nominal",
+              "category": "placement",
+              "held": true,
+              "registered": true,
+              "failure_mode": null,
+              "registration_flags": [],
+              "offset_mm": 0.081
+            },
+            {
+              "name": "offset_x_+1mm",
+              "category": "placement",
+              "held": true,
+              "registered": false,
+              "failure_mode": "not_registered",
+              "registration_flags": [
+                "off_centre"
+              ],
+              "offset_mm": 1.016
+            },
+            {
+              "name": "offset_x_-1mm",
+              "category": "placement",
+              "held": true,
+              "registered": false,
+              "failure_mode": "not_registered",
+              "registration_flags": [
+                "off_centre"
+              ],
+              "offset_mm": 1.0168
+            },
+            {
+              "name": "offset_x_+2mm",
+              "category": "placement",
+              "held": true,
+              "registered": false,
+              "failure_mode": "not_registered",
+              "registration_flags": [
+                "off_centre"
+              ],
+              "offset_mm": 2.0113
+            },
+            {
+              "name": "offset_x_-2mm",
+              "category": "placement",
+              "held": true,
+              "registered": false,
+              "failure_mode": "not_registered",
+              "registration_flags": [
+                "off_centre"
+              ],
+              "offset_mm": 2.0111
+            },
+            {
+              "name": "offset_x_+3mm",
+              "category": "placement",
+              "held": true,
+              "registered": false,
+              "failure_mode": "not_registered",
+              "registration_flags": [
+                "off_centre"
+              ],
+              "offset_mm": 3.0044
+            },
+            {
+              "name": "offset_x_-3mm",
+              "category": "placement",
+              "held": true,
+              "registered": false,
+              "failure_mode": "not_registered",
+              "registration_flags": [
+                "off_centre"
+              ],
+              "offset_mm": 3.007
+            },
+            {
+              "name": "offset_y_+1mm",
+              "category": "placement",
+              "held": true,
+              "registered": true,
+              "failure_mode": null,
+              "registration_flags": [],
+              "offset_mm": 0.0815
+            },
+            {
+              "name": "offset_y_-1mm",
+              "category": "placement",
+              "held": true,
+              "registered": true,
+              "failure_mode": null,
+              "registration_flags": [],
+              "offset_mm": 0.0807
+            },
+            {
+              "name": "offset_y_+2mm",
+              "category": "placement",
+              "held": true,
+              "registered": true,
+              "failure_mode": null,
+              "registration_flags": [],
+              "offset_mm": 0.081
+            },
+            {
+              "name": "offset_y_-2mm",
+              "category": "placement",
+              "held": true,
+              "registered": true,
+              "failure_mode": null,
+              "registration_flags": [],
+              "offset_mm": 0.081
+            },
+            {
+              "name": "offset_y_+3mm",
+              "category": "placement",
+              "held": true,
+              "registered": true,
+              "failure_mode": null,
+              "registration_flags": [],
+              "offset_mm": 0.0809
+            },
+            {
+              "name": "offset_y_-3mm",
+              "category": "placement",
+              "held": true,
+              "registered": true,
+              "failure_mode": null,
+              "registration_flags": [],
+              "offset_mm": 0.0817
+            },
+            {
+              "name": "shake_x",
+              "category": "shake",
+              "held": true,
+              "registered": true,
+              "failure_mode": null,
+              "registration_flags": [],
+              "offset_mm": 0.081
+            },
+            {
+              "name": "shake_y",
+              "category": "shake",
+              "held": true,
+              "registered": true,
+              "failure_mode": null,
+              "registration_flags": [],
+              "offset_mm": 0.081
+            },
+            {
+              "name": "shake_z",
+              "category": "shake",
+              "held": true,
+              "registered": true,
+              "failure_mode": null,
+              "registration_flags": [],
+              "offset_mm": 0.081
+            },
+            {
+              "name": "push_x",
+              "category": "push",
+              "held": false,
+              "registered": false,
+              "failure_mode": "unstable_hold",
+              "registration_flags": [],
+              "offset_mm": 0.081
+            },
+            {
+              "name": "push_y",
+              "category": "push",
+              "held": true,
+              "registered": true,
+              "failure_mode": null,
+              "registration_flags": [],
+              "offset_mm": 0.081
+            }
+          ]
+        },
+        "screen": {
+          "n": 8,
+          "held": 1.0,
+          "registered": 0.25
+        },
+        "why": "Highest held certificate score of the 2 eligible candidates (0.83, next 0.67), tolerating 3 mm placement error on both axes.",
+        "score": 0.8333,
+        "tolerance_mm": {
+          "x": 3.0,
+          "y": 3.0
+        },
+        "n_actuators": 1,
+        "mass_kg": 0.028,
+        "actuation": {
+          "grip_force_n": 50.0
+        },
+        "caveat": null
+      },
+      "runner_up_rigid": null,
+      "no_winner": null,
+      "ranking": [
+        {
+          "effector_id": "ada49390b318948c7d5f983bf90ef5dc28c96883c2cfef7afe5a9757356499b7",
+          "display_name": "Parallel jaw, flat pad",
+          "family": "parallel_jaw",
+          "group": "reference",
+          "fidelity": "core",
+          "status": "screened",
+          "certified": true,
+          "eligible": true,
+          "reason": null,
+          "score": 0.8333,
+          "tolerance_mm": {
+            "x": 3.0,
+            "y": 3.0
+          },
+          "screen_rate": 1.0,
+          "n_actuators": 1,
+          "mass_kg": 0.028,
+          "actuation": {
+            "grip_force_n": 50.0
+          }
+        },
+        {
+          "effector_id": "f5e20b9e22d0b812ec15dfba17c71a6ec5fdbf44cd76b1397c89d9eccd6c4c96",
+          "display_name": "Parallel jaw, stock blade",
+          "family": "parallel_jaw",
+          "group": "reference",
+          "fidelity": "core",
+          "status": "screened",
+          "certified": true,
+          "eligible": true,
+          "reason": null,
+          "score": 0.6667,
+          "tolerance_mm": {
+            "x": 3.0,
+            "y": 3.0
+          },
+          "screen_rate": 1.0,
+          "n_actuators": 1,
+          "mass_kg": 0.014,
+          "actuation": {
+            "grip_force_n": 50.0
+          }
+        },
+        {
+          "effector_id": "233385b9c8312321e06e85d67f78885a6db4ec9b9c2d7e9078902b9413bd9894",
+          "display_name": "Parallel jaw, configurator imprint",
+          "family": "parallel_jaw",
+          "group": "reference",
+          "fidelity": "core",
+          "status": "screened",
+          "certified": false,
+          "eligible": false,
+          "reason": "not certified (not a finalist)",
+          "score": null,
+          "tolerance_mm": {
+            "x": null,
+            "y": null
+          },
+          "screen_rate": 0.75,
+          "n_actuators": 1,
+          "mass_kg": 0.045,
+          "actuation": {
+            "grip_force_n": 50.0
+          }
+        }
+      ]
+    },
+    "registered": {
+      "winner": {
+        "effector": {
+          "effector_id": "ada49390b318948c7d5f983bf90ef5dc28c96883c2cfef7afe5a9757356499b7",
+          "display_name": "Parallel jaw, flat pad",
+          "family": "parallel_jaw",
+          "model": "flat",
+          "primitive": "jaw",
+          "origin": "reference",
+          "group": "reference",
+          "fidelity": "core",
+          "hypothesis": null
+        },
+        "certificate": {
+          "reference": "analytic",
+          "held_score": 0.8333,
+          "registered_score": 0.6795,
+          "held_scores": {
+            "placement": 1.0,
+            "shake": 1.0,
+            "push": 0.5
+          },
+          "registered_scores": {
+            "placement": 0.5385,
+            "shake": 1.0,
+            "push": 0.5
+          },
+          "held_tolerance_mm": {
+            "x": 3.0,
+            "y": 3.0
+          },
+          "registered_tolerance_mm": {
+            "x": 0.0,
+            "y": 3.0
+          },
+          "held": "17/18",
+          "registered": "11/18",
+          "effector_mass_kg": 0.028,
+          "tests": [
+            {
+              "name": "nominal",
+              "category": "placement",
+              "held": true,
+              "registered": true,
+              "failure_mode": null,
+              "registration_flags": [],
+              "offset_mm": 0.081
+            },
+            {
+              "name": "offset_x_+1mm",
+              "category": "placement",
+              "held": true,
+              "registered": false,
+              "failure_mode": "not_registered",
+              "registration_flags": [
+                "off_centre"
+              ],
+              "offset_mm": 1.016
+            },
+            {
+              "name": "offset_x_-1mm",
+              "category": "placement",
+              "held": true,
+              "registered": false,
+              "failure_mode": "not_registered",
+              "registration_flags": [
+                "off_centre"
+              ],
+              "offset_mm": 1.0168
+            },
+            {
+              "name": "offset_x_+2mm",
+              "category": "placement",
+              "held": true,
+              "registered": false,
+              "failure_mode": "not_registered",
+              "registration_flags": [
+                "off_centre"
+              ],
+              "offset_mm": 2.0113
+            },
+            {
+              "name": "offset_x_-2mm",
+              "category": "placement",
+              "held": true,
+              "registered": false,
+              "failure_mode": "not_registered",
+              "registration_flags": [
+                "off_centre"
+              ],
+              "offset_mm": 2.0111
+            },
+            {
+              "name": "offset_x_+3mm",
+              "category": "placement",
+              "held": true,
+              "registered": false,
+              "failure_mode": "not_registered",
+              "registration_flags": [
+                "off_centre"
+              ],
+              "offset_mm": 3.0044
+            },
+            {
+              "name": "offset_x_-3mm",
+              "category": "placement",
+              "held": true,
+              "registered": false,
+              "failure_mode": "not_registered",
+              "registration_flags": [
+                "off_centre"
+              ],
+              "offset_mm": 3.007
+            },
+            {
+              "name": "offset_y_+1mm",
+              "category": "placement",
+              "held": true,
+              "registered": true,
+              "failure_mode": null,
+              "registration_flags": [],
+              "offset_mm": 0.0815
+            },
+            {
+              "name": "offset_y_-1mm",
+              "category": "placement",
+              "held": true,
+              "registered": true,
+              "failure_mode": null,
+              "registration_flags": [],
+              "offset_mm": 0.0807
+            },
+            {
+              "name": "offset_y_+2mm",
+              "category": "placement",
+              "held": true,
+              "registered": true,
+              "failure_mode": null,
+              "registration_flags": [],
+              "offset_mm": 0.081
+            },
+            {
+              "name": "offset_y_-2mm",
+              "category": "placement",
+              "held": true,
+              "registered": true,
+              "failure_mode": null,
+              "registration_flags": [],
+              "offset_mm": 0.081
+            },
+            {
+              "name": "offset_y_+3mm",
+              "category": "placement",
+              "held": true,
+              "registered": true,
+              "failure_mode": null,
+              "registration_flags": [],
+              "offset_mm": 0.0809
+            },
+            {
+              "name": "offset_y_-3mm",
+              "category": "placement",
+              "held": true,
+              "registered": true,
+              "failure_mode": null,
+              "registration_flags": [],
+              "offset_mm": 0.0817
+            },
+            {
+              "name": "shake_x",
+              "category": "shake",
+              "held": true,
+              "registered": true,
+              "failure_mode": null,
+              "registration_flags": [],
+              "offset_mm": 0.081
+            },
+            {
+              "name": "shake_y",
+              "category": "shake",
+              "held": true,
+              "registered": true,
+              "failure_mode": null,
+              "registration_flags": [],
+              "offset_mm": 0.081
+            },
+            {
+              "name": "shake_z",
+              "category": "shake",
+              "held": true,
+              "registered": true,
+              "failure_mode": null,
+              "registration_flags": [],
+              "offset_mm": 0.081
+            },
+            {
+              "name": "push_x",
+              "category": "push",
+              "held": false,
+              "registered": false,
+              "failure_mode": "unstable_hold",
+              "registration_flags": [],
+              "offset_mm": 0.081
+            },
+            {
+              "name": "push_y",
+              "category": "push",
+              "held": true,
+              "registered": true,
+              "failure_mode": null,
+              "registration_flags": [],
+              "offset_mm": 0.081
+            }
+          ]
+        },
+        "screen": {
+          "n": 8,
+          "held": 1.0,
+          "registered": 0.25
+        },
+        "why": "Highest registered certificate score of the 2 eligible candidates (0.68, next 0.51), tolerating 0 mm placement error across and 3 mm along the closing axis.",
+        "score": 0.6795,
+        "tolerance_mm": {
+          "x": 0.0,
+          "y": 3.0
+        },
+        "n_actuators": 1,
+        "mass_kg": 0.028,
+        "actuation": {
+          "grip_force_n": 50.0
+        },
+        "caveat": null
+      },
+      "runner_up_rigid": null,
+      "no_winner": null,
+      "ranking": [
+        {
+          "effector_id": "ada49390b318948c7d5f983bf90ef5dc28c96883c2cfef7afe5a9757356499b7",
+          "display_name": "Parallel jaw, flat pad",
+          "family": "parallel_jaw",
+          "group": "reference",
+          "fidelity": "core",
+          "status": "screened",
+          "certified": true,
+          "eligible": true,
+          "reason": null,
+          "score": 0.6795,
+          "tolerance_mm": {
+            "x": 0.0,
+            "y": 3.0
+          },
+          "screen_rate": 0.25,
+          "n_actuators": 1,
+          "mass_kg": 0.028,
+          "actuation": {
+            "grip_force_n": 50.0
+          }
+        },
+        {
+          "effector_id": "f5e20b9e22d0b812ec15dfba17c71a6ec5fdbf44cd76b1397c89d9eccd6c4c96",
+          "display_name": "Parallel jaw, stock blade",
+          "family": "parallel_jaw",
+          "group": "reference",
+          "fidelity": "core",
+          "status": "screened",
+          "certified": true,
+          "eligible": true,
+          "reason": null,
+          "score": 0.5128,
+          "tolerance_mm": {
+            "x": 0.0,
+            "y": 3.0
+          },
+          "screen_rate": 0.25,
+          "n_actuators": 1,
+          "mass_kg": 0.014,
+          "actuation": {
+            "grip_force_n": 50.0
+          }
+        },
+        {
+          "effector_id": "233385b9c8312321e06e85d67f78885a6db4ec9b9c2d7e9078902b9413bd9894",
+          "display_name": "Parallel jaw, configurator imprint",
+          "family": "parallel_jaw",
+          "group": "reference",
+          "fidelity": "core",
+          "status": "screened",
+          "certified": false,
+          "eligible": false,
+          "reason": "not certified (not a finalist)",
+          "score": null,
+          "tolerance_mm": {
+            "x": null,
+            "y": null
+          },
+          "screen_rate": 0.25,
+          "n_actuators": 1,
+          "mass_kg": 0.045,
+          "actuation": {
+            "grip_force_n": 50.0
+          }
+        }
+      ]
+    }
+  },
+  "alternatives": {
+    "held": {
+      "effector_id": "ada49390b318948c7d5f983bf90ef5dc28c96883c2cfef7afe5a9757356499b7",
+      "display_name": "Parallel jaw, flat pad",
+      "fidelity": "core"
+    }
+  },
+  "families": [
+    {
+      "family": "parallel_jaw",
+      "title": "Parallel jaw",
+      "blurb": "The open-source parallel gripper of the core experiment, with its entrant fingers.",
+      "fidelity": "core",
+      "available": true,
+      "status": "available",
+      "candidates": 3,
+      "screened": 3,
+      "invalid": 0,
+      "best": {
+        "effector_id": "ada49390b318948c7d5f983bf90ef5dc28c96883c2cfef7afe5a9757356499b7",
+        "display_name": "Parallel jaw, flat pad",
+        "screen": {
+          "n": 8,
+          "held": 1.0,
+          "registered": 0.25,
+          "held_count": 8,
+          "registered_count": 2,
+          "failure_modes": {
+            "not_registered": 6
+          }
+        },
+        "certified": true
+      },
+      "caveat": "The core experiment's own scene, checks and scorer. Registration is measured against the jaw's centre line.",
+      "label": "Product mode: not part of the pre-registered experiment"
+    },
+    {
+      "family": "catalog_hand",
+      "title": "Multi-finger hand",
+      "blurb": "Open multi-finger hand models, palm down, closed by scripted power and pinch synergies.",
+      "fidelity": "rigid",
+      "available": false,
+      "status": "not built yet",
+      "candidates": 0,
+      "screened": 0,
+      "invalid": 0,
+      "best": null,
+      "caveat": "Simplified rigid models with no skin compliance, driven by scripted open-to-closed synergies: no tactile feedback, no regrasp. Actuator limits are the upstream model's. Rubber pads would grip better than the part's mu 0.3 used here, so results are conservative for padded hands.",
+      "label": "Product mode: not part of the pre-registered experiment"
+    },
+    {
+      "family": "catalog_gripper",
+      "title": "Industrial gripper",
+      "blurb": "Open two-finger grippers and procedural two- and three-finger adaptive grippers.",
+      "fidelity": "rigid",
+      "available": false,
+      "status": "not built yet",
+      "candidates": 0,
+      "screened": 0,
+      "invalid": 0,
+      "best": null,
+      "caveat": "Rigid models with the upstream actuator limits; the adaptive grippers are our own geometry. Scripted closing, no tactile feedback.",
+      "label": "Product mode: not part of the pre-registered experiment"
+    },
+    {
+      "family": "soft_arm",
+      "title": "Soft arm",
+      "blurb": "An octopus-style tentacle: spring-jointed segments curled by a cable.",
+      "fidelity": "approximation",
+      "available": false,
+      "status": "not built yet",
+      "candidates": 0,
+      "screened": 0,
+      "invalid": 0,
+      "best": null,
+      "caveat": "Approximation: a chain of rigid capsules with spring-damper joints, curled by a tension-limited cable. Not modelled: continuum mechanics, material non-linearity, suckers. Verify on hardware.",
+      "label": "Product mode: not part of the pre-registered experiment"
+    },
+    {
+      "family": "suction",
+      "title": "Suction cup",
+      "blurb": "A suction cup on a short bellows, its vacuum switched on only while the lip seals.",
+      "fidelity": "approximation",
+      "available": false,
+      "status": "not built yet",
+      "candidates": 0,
+      "screened": 0,
+      "invalid": 0,
+      "best": null,
+      "caveat": "Approximation: the seal is a geometric test gating an adhesion actuator capped at vacuum times lip area. Not modelled: air flow, leaks, porosity, vacuum build-up time, lip hysteresis. Treat as a screen, then verify on hardware.",
+      "label": "Product mode: not part of the pre-registered experiment"
+    },
+    {
+      "family": "designed",
+      "title": "Designed morphology",
+      "blurb": "Fingered morphologies proposed by Nemotron, with a random control from the same space.",
+      "fidelity": "rigid",
+      "available": false,
+      "status": "not built yet",
+      "candidates": 0,
+      "screened": 0,
+      "invalid": 0,
+      "best": null,
+      "caveat": "Rigid models generated from a recipe and driven by scripted synergies. The random control from the same space is shown beside the Nemotron designs; no superiority is claimed.",
+      "label": "Product mode: not part of the pre-registered experiment"
+    }
+  ],
+  "groups": [
+    {
+      "group": "reference",
+      "title": "Reference",
+      "status": "run",
+      "reason": null,
+      "finalists": [
+        "f5e20b9e22d0b812ec15dfba17c71a6ec5fdbf44cd76b1397c89d9eccd6c4c96",
+        "ada49390b318948c7d5f983bf90ef5dc28c96883c2cfef7afe5a9757356499b7"
+      ],
+      "budget": {
+        "candidates": 3,
+        "buildable": 3,
+        "screened": 3,
+        "screen_episodes": 24,
+        "reference_episodes": 0,
+        "certificates": 2,
+        "certificate_episodes": 36,
+        "max_screen_episodes": 96,
+        "max_certificates": 2
+      },
+      "sampled_from": 3
+    },
+    {
+      "group": "catalog",
+      "title": "Catalog",
+      "status": "empty",
+      "reason": "no family of this group is available (catalog_hand, catalog_gripper not built yet)",
+      "finalists": [],
+      "budget": {
+        "candidates": 0,
+        "buildable": 0,
+        "screened": 0,
+        "screen_episodes": 0,
+        "reference_episodes": 0,
+        "certificates": 0,
+        "certificate_episodes": 0,
+        "max_screen_episodes": 96,
+        "max_certificates": 2
+      },
+      "sampled_from": 0
+    },
+    {
+      "group": "soft_arm",
+      "title": "Soft arm",
+      "status": "empty",
+      "reason": "no family of this group is available (soft_arm not built yet)",
+      "finalists": [],
+      "budget": {
+        "candidates": 0,
+        "buildable": 0,
+        "screened": 0,
+        "screen_episodes": 0,
+        "reference_episodes": 0,
+        "certificates": 0,
+        "certificate_episodes": 0,
+        "max_screen_episodes": 96,
+        "max_certificates": 2
+      },
+      "sampled_from": 0
+    },
+    {
+      "group": "suction",
+      "title": "Suction",
+      "status": "empty",
+      "reason": "no family of this group is available (suction not built yet)",
+      "finalists": [],
+      "budget": {
+        "candidates": 0,
+        "buildable": 0,
+        "screened": 0,
+        "screen_episodes": 0,
+        "reference_episodes": 0,
+        "certificates": 0,
+        "certificate_episodes": 0,
+        "max_screen_episodes": 96,
+        "max_certificates": 2
+      },
+      "sampled_from": 0
+    },
+    {
+      "group": "designed",
+      "title": "Designed (Nemotron)",
+      "status": "empty",
+      "reason": "the morphology designer (track B3) is not available",
+      "finalists": [],
+      "budget": {
+        "candidates": 0,
+        "buildable": 0,
+        "screened": 0,
+        "screen_episodes": 0,
+        "reference_episodes": 0,
+        "certificates": 0,
+        "certificate_episodes": 0,
+        "max_screen_episodes": 96,
+        "max_certificates": 2
+      },
+      "sampled_from": 0
+    },
+    {
+      "group": "random",
+      "title": "Random control",
+      "status": "empty",
+      "reason": "the morphology designer (track B3) is not available",
+      "finalists": [],
+      "budget": {
+        "candidates": 0,
+        "buildable": 0,
+        "screened": 0,
+        "screen_episodes": 0,
+        "reference_episodes": 0,
+        "certificates": 0,
+        "certificate_episodes": 0,
+        "max_screen_episodes": 96,
+        "max_certificates": 2
+      },
+      "sampled_from": 0
+    }
+  ],
+  "candidates": [
+    {
+      "effector_id": "f5e20b9e22d0b812ec15dfba17c71a6ec5fdbf44cd76b1397c89d9eccd6c4c96",
+      "display_name": "Parallel jaw, stock blade",
+      "family": "parallel_jaw",
+      "model": "stock",
+      "primitive": "jaw",
+      "origin": "reference",
+      "group": "reference",
+      "fidelity": "core",
+      "source": "preset",
+      "status": "screened",
+      "reason": null,
+      "n_actuators": 1,
+      "mass_kg": 0.014,
+      "actuation": {
+        "grip_force_n": 50.0
+      },
+      "reach_mm": 62.49,
+      "max_opening_mm": 84.0,
+      "reference": "analytic",
+      "finalist": true,
+      "certified": true,
+      "screen": {
+        "n": 8,
+        "held": 1.0,
+        "registered": 0.25,
+        "held_count": 8,
+        "registered_count": 2,
+        "failure_modes": {
+          "not_registered": 6
+        }
+      }
+    },
+    {
+      "effector_id": "ada49390b318948c7d5f983bf90ef5dc28c96883c2cfef7afe5a9757356499b7",
+      "display_name": "Parallel jaw, flat pad",
+      "family": "parallel_jaw",
+      "model": "flat",
+      "primitive": "jaw",
+      "origin": "reference",
+      "group": "reference",
+      "fidelity": "core",
+      "source": "preset",
+      "status": "screened",
+      "reason": null,
+      "n_actuators": 1,
+      "mass_kg": 0.028,
+      "actuation": {
+        "grip_force_n": 50.0
+      },
+      "reach_mm": 35.0,
+      "max_opening_mm": 84.0,
+      "reference": "analytic",
+      "finalist": true,
+      "certified": true,
+      "screen": {
+        "n": 8,
+        "held": 1.0,
+        "registered": 0.25,
+        "held_count": 8,
+        "registered_count": 2,
+        "failure_modes": {
+          "not_registered": 6
+        }
+      }
+    },
+    {
+      "effector_id": "233385b9c8312321e06e85d67f78885a6db4ec9b9c2d7e9078902b9413bd9894",
+      "display_name": "Parallel jaw, configurator imprint",
+      "family": "parallel_jaw",
+      "model": "imprint-configurator",
+      "primitive": "jaw",
+      "origin": "reference",
+      "group": "reference",
+      "fidelity": "core",
+      "source": "preset",
+      "status": "screened",
+      "reason": null,
+      "n_actuators": 1,
+      "mass_kg": 0.045,
+      "actuation": {
+        "grip_force_n": 50.0
+      },
+      "reach_mm": 35.0,
+      "max_opening_mm": 84.0,
+      "reference": "analytic",
+      "finalist": false,
+      "certified": false,
+      "screen": {
+        "n": 8,
+        "held": 0.75,
+        "registered": 0.25,
+        "held_count": 6,
+        "registered_count": 2,
+        "failure_modes": {
+          "not_registered": 4,
+          "physics_unreliable": 1,
+          "slip_during_lift": 1
+        }
+      }
+    }
+  ],
+  "certificates": {
+    "f5e20b9e22d0b812ec15dfba17c71a6ec5fdbf44cd76b1397c89d9eccd6c4c96": {
+      "reference": "analytic",
+      "held_score": 0.6667,
+      "registered_score": 0.5128,
+      "held_scores": {
+        "placement": 1.0,
+        "shake": 1.0,
+        "push": 0.0
+      },
+      "registered_scores": {
+        "placement": 0.5385,
+        "shake": 1.0,
+        "push": 0.0
+      },
+      "held_tolerance_mm": {
+        "x": 3.0,
+        "y": 3.0
+      },
+      "registered_tolerance_mm": {
+        "x": 0.0,
+        "y": 3.0
+      },
+      "held": "16/18",
+      "registered": "10/18",
+      "effector_mass_kg": 0.014,
+      "tests": [
+        {
+          "name": "nominal",
+          "category": "placement",
+          "held": true,
+          "registered": true,
+          "failure_mode": null,
+          "registration_flags": [],
+          "offset_mm": 0.3909
+        },
+        {
+          "name": "offset_x_+1mm",
+          "category": "placement",
+          "held": true,
+          "registered": false,
+          "failure_mode": "not_registered",
+          "registration_flags": [
+            "off_centre"
+          ],
+          "offset_mm": 1.0781
+        },
+        {
+          "name": "offset_x_-1mm",
+          "category": "placement",
+          "held": true,
+          "registered": false,
+          "failure_mode": "not_registered",
+          "registration_flags": [
+            "off_centre"
+          ],
+          "offset_mm": 1.0732
+        },
+        {
+          "name": "offset_x_+2mm",
+          "category": "placement",
+          "held": true,
+          "registered": false,
+          "failure_mode": "not_registered",
+          "registration_flags": [
+            "off_centre"
+          ],
+          "offset_mm": 2.0443
+        },
+        {
+          "name": "offset_x_-2mm",
+          "category": "placement",
+          "held": true,
+          "registered": false,
+          "failure_mode": "not_registered",
+          "registration_flags": [
+            "off_centre"
+          ],
+          "offset_mm": 2.0387
+        },
+        {
+          "name": "offset_x_+3mm",
+          "category": "placement",
+          "held": true,
+          "registered": false,
+          "failure_mode": "not_registered",
+          "registration_flags": [
+            "off_centre"
+          ],
+          "offset_mm": 3.0374
+        },
+        {
+          "name": "offset_x_-3mm",
+          "category": "placement",
+          "held": true,
+          "registered": false,
+          "failure_mode": "not_registered",
+          "registration_flags": [
+            "off_centre"
+          ],
+          "offset_mm": 3.0286
+        },
+        {
+          "name": "offset_y_+1mm",
+          "category": "placement",
+          "held": true,
+          "registered": true,
+          "failure_mode": null,
+          "registration_flags": [],
+          "offset_mm": 0.3907
+        },
+        {
+          "name": "offset_y_-1mm",
+          "category": "placement",
+          "held": true,
+          "registered": true,
+          "failure_mode": null,
+          "registration_flags": [],
+          "offset_mm": 0.3892
+        },
+        {
+          "name": "offset_y_+2mm",
+          "category": "placement",
+          "held": true,
+          "registered": true,
+          "failure_mode": null,
+          "registration_flags": [],
+          "offset_mm": 0.3912
+        },
+        {
+          "name": "offset_y_-2mm",
+          "category": "placement",
+          "held": true,
+          "registered": true,
+          "failure_mode": null,
+          "registration_flags": [],
+          "offset_mm": 0.3904
+        },
+        {
+          "name": "offset_y_+3mm",
+          "category": "placement",
+          "held": true,
+          "registered": true,
+          "failure_mode": null,
+          "registration_flags": [],
+          "offset_mm": 0.3911
+        },
+        {
+          "name": "offset_y_-3mm",
+          "category": "placement",
+          "held": true,
+          "registered": true,
+          "failure_mode": null,
+          "registration_flags": [],
+          "offset_mm": 0.39
+        },
+        {
+          "name": "shake_x",
+          "category": "shake",
+          "held": true,
+          "registered": true,
+          "failure_mode": null,
+          "registration_flags": [],
+          "offset_mm": 0.3909
+        },
+        {
+          "name": "shake_y",
+          "category": "shake",
+          "held": true,
+          "registered": true,
+          "failure_mode": null,
+          "registration_flags": [],
+          "offset_mm": 0.3909
+        },
+        {
+          "name": "shake_z",
+          "category": "shake",
+          "held": true,
+          "registered": true,
+          "failure_mode": null,
+          "registration_flags": [],
+          "offset_mm": 0.3909
+        },
+        {
+          "name": "push_x",
+          "category": "push",
+          "held": false,
+          "registered": false,
+          "failure_mode": "physics_unreliable",
+          "registration_flags": [
+            "tilt_after_hold"
+          ],
+          "offset_mm": 0.3909
+        },
+        {
+          "name": "push_y",
+          "category": "push",
+          "held": false,
+          "registered": false,
+          "failure_mode": "physics_unreliable",
+          "registration_flags": [],
+          "offset_mm": 0.3909
+        }
+      ]
+    },
+    "ada49390b318948c7d5f983bf90ef5dc28c96883c2cfef7afe5a9757356499b7": {
+      "reference": "analytic",
+      "held_score": 0.8333,
+      "registered_score": 0.6795,
+      "held_scores": {
+        "placement": 1.0,
+        "shake": 1.0,
+        "push": 0.5
+      },
+      "registered_scores": {
+        "placement": 0.5385,
+        "shake": 1.0,
+        "push": 0.5
+      },
+      "held_tolerance_mm": {
+        "x": 3.0,
+        "y": 3.0
+      },
+      "registered_tolerance_mm": {
+        "x": 0.0,
+        "y": 3.0
+      },
+      "held": "17/18",
+      "registered": "11/18",
+      "effector_mass_kg": 0.028,
+      "tests": [
+        {
+          "name": "nominal",
+          "category": "placement",
+          "held": true,
+          "registered": true,
+          "failure_mode": null,
+          "registration_flags": [],
+          "offset_mm": 0.081
+        },
+        {
+          "name": "offset_x_+1mm",
+          "category": "placement",
+          "held": true,
+          "registered": false,
+          "failure_mode": "not_registered",
+          "registration_flags": [
+            "off_centre"
+          ],
+          "offset_mm": 1.016
+        },
+        {
+          "name": "offset_x_-1mm",
+          "category": "placement",
+          "held": true,
+          "registered": false,
+          "failure_mode": "not_registered",
+          "registration_flags": [
+            "off_centre"
+          ],
+          "offset_mm": 1.0168
+        },
+        {
+          "name": "offset_x_+2mm",
+          "category": "placement",
+          "held": true,
+          "registered": false,
+          "failure_mode": "not_registered",
+          "registration_flags": [
+            "off_centre"
+          ],
+          "offset_mm": 2.0113
+        },
+        {
+          "name": "offset_x_-2mm",
+          "category": "placement",
+          "held": true,
+          "registered": false,
+          "failure_mode": "not_registered",
+          "registration_flags": [
+            "off_centre"
+          ],
+          "offset_mm": 2.0111
+        },
+        {
+          "name": "offset_x_+3mm",
+          "category": "placement",
+          "held": true,
+          "registered": false,
+          "failure_mode": "not_registered",
+          "registration_flags": [
+            "off_centre"
+          ],
+          "offset_mm": 3.0044
+        },
+        {
+          "name": "offset_x_-3mm",
+          "category": "placement",
+          "held": true,
+          "registered": false,
+          "failure_mode": "not_registered",
+          "registration_flags": [
+            "off_centre"
+          ],
+          "offset_mm": 3.007
+        },
+        {
+          "name": "offset_y_+1mm",
+          "category": "placement",
+          "held": true,
+          "registered": true,
+          "failure_mode": null,
+          "registration_flags": [],
+          "offset_mm": 0.0815
+        },
+        {
+          "name": "offset_y_-1mm",
+          "category": "placement",
+          "held": true,
+          "registered": true,
+          "failure_mode": null,
+          "registration_flags": [],
+          "offset_mm": 0.0807
+        },
+        {
+          "name": "offset_y_+2mm",
+          "category": "placement",
+          "held": true,
+          "registered": true,
+          "failure_mode": null,
+          "registration_flags": [],
+          "offset_mm": 0.081
+        },
+        {
+          "name": "offset_y_-2mm",
+          "category": "placement",
+          "held": true,
+          "registered": true,
+          "failure_mode": null,
+          "registration_flags": [],
+          "offset_mm": 0.081
+        },
+        {
+          "name": "offset_y_+3mm",
+          "category": "placement",
+          "held": true,
+          "registered": true,
+          "failure_mode": null,
+          "registration_flags": [],
+          "offset_mm": 0.0809
+        },
+        {
+          "name": "offset_y_-3mm",
+          "category": "placement",
+          "held": true,
+          "registered": true,
+          "failure_mode": null,
+          "registration_flags": [],
+          "offset_mm": 0.0817
+        },
+        {
+          "name": "shake_x",
+          "category": "shake",
+          "held": true,
+          "registered": true,
+          "failure_mode": null,
+          "registration_flags": [],
+          "offset_mm": 0.081
+        },
+        {
+          "name": "shake_y",
+          "category": "shake",
+          "held": true,
+          "registered": true,
+          "failure_mode": null,
+          "registration_flags": [],
+          "offset_mm": 0.081
+        },
+        {
+          "name": "shake_z",
+          "category": "shake",
+          "held": true,
+          "registered": true,
+          "failure_mode": null,
+          "registration_flags": [],
+          "offset_mm": 0.081
+        },
+        {
+          "name": "push_x",
+          "category": "push",
+          "held": false,
+          "registered": false,
+          "failure_mode": "unstable_hold",
+          "registration_flags": [],
+          "offset_mm": 0.081
+        },
+        {
+          "name": "push_y",
+          "category": "push",
+          "held": true,
+          "registered": true,
+          "failure_mode": null,
+          "registration_flags": [],
+          "offset_mm": 0.081
+        }
+      ]
+    }
+  },
+  "lanes": [
+    {
+      "id": "recommended-ada49390b318",
+      "replay": "replays/effectors-pipe_tee/recommended-ada49390b318",
+      "roles": [
+        "recommended",
+        "recommended_held",
+        "best_reference",
+        "finalist"
+      ],
+      "effector": {
+        "effector_id": "ada49390b318948c7d5f983bf90ef5dc28c96883c2cfef7afe5a9757356499b7",
+        "display_name": "Parallel jaw, flat pad",
+        "family": "parallel_jaw",
+        "model": "flat",
+        "primitive": "jaw",
+        "origin": "reference",
+        "group": "reference",
+        "fidelity": "core",
+        "hypothesis": null
+      },
+      "condition_id": "train_v2/pipe_tee/c2",
+      "condition": "3 mm off centre across",
+      "seed": "7971180315555799254",
+      "fps": 30,
+      "n_frames": 181,
+      "duration_s": 6.0,
+      "bytes": 79045,
+      "reference": "analytic",
+      "outcome": {
+        "registered": false,
+        "held": true,
+        "engaged": true,
+        "failure_mode": "not_registered",
+        "registration_flags": [
+          "off_centre"
+        ],
+        "max_lift_mm": 149.89,
+        "hold_s": 2.0,
+        "penetration_mm": 0.19,
+        "sim_steps": 6020,
+        "traj_sha": "602da6bbe8316ef452d4aacac59cceb28c8896050852e230e29b3cbcadc3c9a1"
+      }
+    },
+    {
+      "id": "finalist-f5e20b9e22d0",
+      "replay": "replays/effectors-pipe_tee/finalist-f5e20b9e22d0",
+      "roles": [
+        "finalist"
+      ],
+      "effector": {
+        "effector_id": "f5e20b9e22d0b812ec15dfba17c71a6ec5fdbf44cd76b1397c89d9eccd6c4c96",
+        "display_name": "Parallel jaw, stock blade",
+        "family": "parallel_jaw",
+        "model": "stock",
+        "primitive": "jaw",
+        "origin": "reference",
+        "group": "reference",
+        "fidelity": "core",
+        "hypothesis": null
+      },
+      "condition_id": "train_v2/pipe_tee/c2",
+      "condition": "3 mm off centre across",
+      "seed": "7971180315555799254",
+      "fps": 30,
+      "n_frames": 181,
+      "duration_s": 6.0,
+      "bytes": 161014,
+      "reference": "analytic",
+      "outcome": {
+        "registered": false,
+        "held": true,
+        "engaged": true,
+        "failure_mode": "not_registered",
+        "registration_flags": [
+          "off_centre"
+        ],
+        "max_lift_mm": 149.9,
+        "hold_s": 2.0,
+        "penetration_mm": 0.188,
+        "sim_steps": 6020,
+        "traj_sha": "bc171586df1280814aea673b827bd2757f98bb6a54a9a83ea66ed5ed7eadb9ca"
+      }
+    }
+  ],
+  "task": {
+    "name": "task_v2",
+    "phases": [
+      {
+        "name": "settle",
+        "start_s": 0,
+        "end_s": 0.3
+      },
+      {
+        "name": "descend",
+        "start_s": 0.3,
+        "end_s": 1.3
+      },
+      {
+        "name": "close",
+        "start_s": 1.3,
+        "end_s": 2.6
+      },
+      {
+        "name": "lift",
+        "start_s": 2.6,
+        "end_s": 4.1
+      },
+      {
+        "name": "hold",
+        "start_s": 4.1,
+        "end_s": null
+      }
+    ],
+    "success_lift_m": 0.1,
+    "success_hold_s": 2.0,
+    "record_tail_s": 0.5,
+    "max_time_s": 12.0
+  },
+  "conditions": [
+    {
+      "condition_id": "train_v2/pipe_tee/c0",
+      "label": "c0",
+      "placement": {
+        "x": 0.0,
+        "y": 0.0,
+        "yaw_deg": 0.0,
+        "err_x_mm": 0.0,
+        "err_y_mm": 0.0,
+        "err_yaw_deg": 0.0
+      },
+      "seeds": [
+        "6582275832967967603",
+        "2092022484185043053"
+      ]
+    },
+    {
+      "condition_id": "train_v2/pipe_tee/c1",
+      "label": "c1",
+      "placement": {
+        "x": 0.0,
+        "y": 0.0,
+        "yaw_deg": 0.0,
+        "err_x_mm": 2.0,
+        "err_y_mm": 0.0,
+        "err_yaw_deg": 0.0
+      },
+      "seeds": [
+        "5821869692351829582",
+        "6221687342667730310"
+      ]
+    },
+    {
+      "condition_id": "train_v2/pipe_tee/c2",
+      "label": "c2",
+      "placement": {
+        "x": 0.0,
+        "y": 0.0,
+        "yaw_deg": 0.0,
+        "err_x_mm": -3.0,
+        "err_y_mm": 0.0,
+        "err_yaw_deg": 0.0
+      },
+      "seeds": [
+        "7971180315555799254",
+        "8758448550024036402"
+      ]
+    },
+    {
+      "condition_id": "train_v2/pipe_tee/c3",
+      "label": "c3",
+      "placement": {
+        "x": 0.0,
+        "y": 0.0,
+        "yaw_deg": 0.0,
+        "err_x_mm": 1.0,
+        "err_y_mm": 0.0,
+        "err_yaw_deg": 6.0
+      },
+      "seeds": [
+        "1326941335222395844",
+        "1923191261308030880"
+      ]
+    }
+  ],
+  "fairness": {
+    "identical": true,
+    "problems": [],
+    "signature_sha256": "4bc8244cb14cfb449fd46ede0db1ea07e9293ba302f28b8c4d520819381f12f8",
+    "conditions": [
+      "train_v2/pipe_tee/c0",
+      "train_v2/pipe_tee/c1",
+      "train_v2/pipe_tee/c2",
+      "train_v2/pipe_tee/c3"
+    ],
+    "seeds": {
+      "train_v2/pipe_tee/c0": [
+        "6582275832967967603",
+        "2092022484185043053"
+      ],
+      "train_v2/pipe_tee/c1": [
+        "5821869692351829582",
+        "6221687342667730310"
+      ],
+      "train_v2/pipe_tee/c2": [
+        "7971180315555799254",
+        "8758448550024036402"
+      ],
+      "train_v2/pipe_tee/c3": [
+        "1326941335222395844",
+        "1923191261308030880"
+      ]
+    }
+  },
+  "physics": {
+    "episodes": 24,
+    "certificate_episodes": 36,
+    "bad_qacc": 0,
+    "physics_invalid": 0,
+    "physics_unreliable": 3,
+    "held_episodes": 22,
+    "failure_modes": {
+      "not_registered": 16,
+      "physics_unreliable": 1,
+      "slip_during_lift": 1
+    }
+  },
+  "design_rounds": [],
+  "caveats": {
+    "common": "Every family: a top-down 4-DoF wrist (no roll or pitch), open-loop timing, no perception (the placement error is unknown to the controller), soft contacts and a 1 ms timestep. The recommendation is a simulation ranking under these conditions, not a hardware guarantee. The jaw's registration reference is its centre line; every other family's is repeatability against its own nominal episode, and each family runs at its own declared actuation limits.",
+    "parallel_jaw": "The core experiment's own scene, checks and scorer. Registration is measured against the jaw's centre line."
+  },
+  "rules": {
+    "eligible": "certified; nominal test passes the requirement; no physics_invalid episode; nominal not physics_unreliable",
+    "rank": "certificate score, then the smaller placement tolerance, then screen success",
+    "simplicity_margin": 0.05,
+    "simplicity": "fewer actuators, then lower mass, then higher fidelity (core, rigid, approximation)",
+    "fidelity": "an approximation winner carries the best core or rigid candidate as runner-up"
+  },
+  "provenance": {
+    "code_version": "ce6f027e862d",
+    "task_digest": "8168db801332",
+    "engine": "MuJoCo 3.15.0",
+    "executor": "cpu",
+    "created_utc": "2026-10-17T08:37:42Z",
+    "run_id": "effectors-pipe-tee",
+    "digest": "dc7934a6b0878c2166a9a193ba4d0d66d58b6da7468350a7062e079839c6ba2e"
+  }
+}

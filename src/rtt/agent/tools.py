@@ -18,6 +18,12 @@ success rate at its best grasp height reaches :data:`PASS_THRESHOLD`, and each
 certificate gets ``verdict`` = ``pass`` when the nominal grasp holds (in every certified
 pose) and its score reaches :data:`CERT_PASS_SCORE`. The agent only orchestrates and explains; the
 verdicts it reports are these, recorded by code in the session file.
+
+With an effector runner (``effectors``, product mode), a ninth tool, ``recommend_effector``,
+starts an effector tournament (:mod:`rtt.agent.effector_tool`). It shares the caps above: it
+counts toward the tool calls, its jobs count toward the jobs in flight, and ``design = true``
+(Nemotron morphologies) needs the passcode and reserves its worst case before it starts. Its
+``verdict`` is ``recommended`` or ``no_winner``, computed by :mod:`rtt.effectors.recommend`.
 """
 
 from __future__ import annotations
@@ -29,6 +35,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import Any, Final
 
+from rtt.agent import effector_tool as et
 from rtt.agent.backends import PartBackend, PartNotFoundError
 from rtt.agent.caps import (
     AgentCaps,
@@ -50,6 +57,7 @@ from rtt.agent.schemas import (
     LaunchSimJobArgs,
     PollJobArgs,
     ProposeDesignsArgs,
+    RecommendEffectorArgs,
     StressTestArgs,
     tool_spec,
     validate_args,
@@ -92,6 +100,8 @@ class _JobEntry:
     reserved_usd: float
     settled: bool = False
     run_id: str | None = None
+    kind: str = "design"  # "design" (launch_sim_job) or "effector" (recommend_effector)
+    effector_result: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -171,6 +181,7 @@ class Toolbox:
         baselines: Entrant designs offered for comparison.
         pass_threshold: Success rate a design needs for a ``pass`` verdict.
         offline: Model calls come from the scripted transport (recorded as such).
+        effectors: Effector tournament jobs (enables ``recommend_effector``; ``None``: not offered).
     """
 
     def __init__(
@@ -191,8 +202,10 @@ class Toolbox:
         pass_threshold: float = PASS_THRESHOLD,
         offline: bool = False,
         clock: Callable[[], float] = time.monotonic,
+        effectors: et.EffectorJobRunner | None = None,
     ) -> None:
         self.offline = offline
+        self.effectors = effectors
         self.session_id = session_id
         self.part_id = part_id
         self.backend = backend
@@ -211,6 +224,7 @@ class Toolbox:
         self.designs: dict[str, DesignEntry] = {}
         self._jobs: dict[str, _JobEntry] = {}
         self._runs: dict[str, dict[str, Any]] = {}
+        self._effector_verdicts: dict[str, dict[str, Any]] = {}
         for design in baselines:
             entry = DesignEntry(design, "baseline", design.name or design.design_id())
             self.designs.setdefault(entry.design_id, entry)
@@ -223,6 +237,7 @@ class Toolbox:
             "stress_test": self._stress_test,
             "export_print_pack": self._export_print_pack,
             "cost_ledger": self._cost_ledger,
+            "recommend_effector": self._recommend_effector,
         }
 
     # ------------------------------------------------------------------ dispatch
@@ -296,7 +311,9 @@ class Toolbox:
             raise ArgsError(name, [f"part_id: this session works on {self.part_id}, not {part_id}"])
 
     def _spend_free(self, name: str, args: Any) -> bool:
-        """``launch_sim_job`` on a free target needs no passcode."""
+        """``launch_sim_job`` on a free target and ``recommend_effector`` without Nemotron need no passcode."""
+        if name == "recommend_effector":
+            return not args.design
         if name != "launch_sim_job":
             return False
         runner = self.runners.get(args.target)
@@ -329,13 +346,32 @@ class Toolbox:
             finish_reason=meta.finish_reason,
         )
 
+    def _runner_for(self, entry: _JobEntry) -> JobRunner:
+        if entry.kind == "effector":
+            assert self.effectors is not None
+            return self.effectors
+        return self.runners[entry.record.target]
+
     def _settle(self, entry: _JobEntry, record: JobRecord) -> None:
-        """Turn a finished job's reservation into its estimated charge (once)."""
+        """Turn a finished job's reservation into its estimated charge (once).
+
+        An effector job's reservation is its Nemotron worst case: it is charged what the
+        proposals cost (``llm``), or the whole reservation when the job did not complete."""
         entry.record = record
         if record.terminal and not entry.settled:
             entry.settled = True
             if entry.reserved_usd > 0:
                 self.guard.release(entry.reserved_usd)
+            if entry.kind == "effector":
+                spent = entry.reserved_usd
+                if record.state == "COMPLETED":
+                    try:
+                        entry.effector_result = dict(self._runner_for(entry).results(record.job_id))
+                        spent = min(entry.reserved_usd, float(entry.effector_result.get("llm_usd", 0.0)))
+                    except Exception:  # noqa: BLE001 - keep the reservation as the charge
+                        spent = entry.reserved_usd
+                self.guard.charge(spent, "llm")
+                return
             self.guard.charge(record.est_usd, "compute")
 
     def _active_jobs(self) -> int:
@@ -343,7 +379,7 @@ class Toolbox:
         for job_id, entry in self._jobs.items():
             if entry.settled:
                 continue
-            record = self.runners[entry.record.target].status(job_id)
+            record = self._runner_for(entry).status(job_id)
             if record.state != entry.record.state:
                 self._emit("job.update", **record.to_json())
             self._settle(entry, record)
@@ -369,7 +405,8 @@ class Toolbox:
         return out
 
     def verdicts(self) -> list[dict[str, Any]]:
-        """Code-computed verdicts for every simulated design (what the session file reports)."""
+        """Code-computed verdicts for every simulated design and every fetched effector
+        recommendation (what the session file reports)."""
         out = []
         for entry in self.designs.values():
             if entry.score is None and entry.certificate is None:
@@ -382,6 +419,7 @@ class Toolbox:
                 row["certificate_score_pct"] = _pct(float(entry.certificate.get("score", 0.0)))
                 row["certificate_verdict"] = entry.certificate.get("verdict")
             out.append(row)
+        out += [dict(v) for v in self._effector_verdicts.values()]
         return out
 
     def _verdict(self, score: DesignScore) -> str:
@@ -477,7 +515,7 @@ class Toolbox:
         if entry is None:
             raise UnknownJobError(args.job_id)
         before = entry.record.state
-        record = self.runners[entry.record.target].wait(args.job_id, self.caps.poll_wait_s)
+        record = self._runner_for(entry).wait(args.job_id, self.caps.poll_wait_s)
         with self._lock:
             self._settle(entry, record)
         if record.state != before:
@@ -488,12 +526,14 @@ class Toolbox:
         entry = self._jobs.get(args.job_id)
         if entry is None:
             raise UnknownJobError(args.job_id)
-        runner = self.runners[entry.record.target]
+        runner = self._runner_for(entry)
         record = runner.status(args.job_id)
         with self._lock:
             self._settle(entry, record)
         if record.state != "COMPLETED":
             raise RuntimeError(f"job {args.job_id} is {record.state}; poll_job until it is COMPLETED")
+        if entry.kind == "effector":
+            return self._effector_results(entry)
         if entry.run_id is not None:
             return self._compact_run(self._runs[entry.run_id])
         scores = runner.results(args.job_id)
@@ -656,6 +696,56 @@ class Toolbox:
             "caps": self.caps.to_json(),
         }
 
+    def _recommend_effector(self, args: RecommendEffectorArgs) -> dict[str, Any]:
+        if self.effectors is None:
+            raise ArgsError("recommend_effector", ["the effector layer is not enabled on this server"])
+        reserve = et.DESIGN_RESERVE_USD if args.design else 0.0
+        request = et.EffectorRequest(
+            part_id=args.part_id,
+            requirement=args.requirement,
+            groups=et.groups_or_none(args.groups),
+            design=args.design,
+            budget_usd=reserve,
+        )
+        with self._lock:
+            active = self._active_jobs()
+            if active >= self.caps.max_concurrent_jobs:
+                raise ConcurrencyCapError(
+                    f"{active} jobs are already in flight (limit {self.caps.max_concurrent_jobs}); poll one first"
+                )
+            if reserve > 0:
+                self.guard.reserve(reserve)
+            try:
+                record = self.effectors.launch_request(request)
+            except BaseException:
+                if reserve > 0:
+                    self.guard.release(reserve)
+                raise
+            self._jobs[record.job_id] = _JobEntry(record, reserve, kind="effector")
+        self._emit("job.update", **record.to_json(), kind="effector_tournament")
+        return {
+            **record.to_json(),
+            "kind": "effector_tournament",
+            "requirement": args.requirement,
+            "groups": list(args.groups) if args.groups else "all",
+            "design": args.design,
+            "reserved_usd": round(reserve, 4),
+            "label": PRODUCT_MODE_LABEL,
+            "next": "poll_job, then fetch_results",
+        }
+
+    def _effector_results(self, entry: _JobEntry) -> dict[str, Any]:
+        if entry.effector_result is None:
+            entry.effector_result = dict(self._runner_for(entry).results(entry.record.job_id))
+        compact = et.compact_result(
+            entry.record.job_id, entry.record.part_id, entry.effector_result, CERT_PASS_SCORE
+        )
+        with self._lock:
+            self._effector_verdicts[entry.record.job_id] = et.verdict_row(
+                entry.record.job_id, entry.record.part_id, compact
+            )
+        return compact
+
     # ------------------------------------------------------------------ lifecycle
 
     def close(self) -> list[dict[str, Any]]:
@@ -665,7 +755,7 @@ class Toolbox:
             for job_id, entry in self._jobs.items():
                 if entry.settled:
                     continue
-                runner = self.runners[entry.record.target]
+                runner = self._runner_for(entry)
                 try:
                     record = runner.status(job_id)
                     if not record.terminal:
@@ -680,7 +770,9 @@ class Toolbox:
                     entry.settled = True
                     if entry.reserved_usd > 0:
                         self.guard.release(entry.reserved_usd)
-                        self.guard.charge(entry.reserved_usd, "compute")
+                        self.guard.charge(
+                            entry.reserved_usd, "llm" if entry.kind == "effector" else "compute"
+                        )
         for record_json in cancelled:
             self._emit("job.update", **record_json)
         return cancelled

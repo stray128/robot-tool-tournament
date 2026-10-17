@@ -4,6 +4,7 @@ import path from "node:path";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import { EffectorCredits } from "@/components/effectors/EffectorCredits";
 import { PageHeader } from "@/components/PageHeader";
 import { TitleBlock } from "@/components/TitleBlock";
 import { creditGroups, parseAssetManifest, splitCredit, type AssetManifest } from "@/lib/assets";
@@ -241,6 +242,10 @@ export default function CreditsPage() {
             print file derived from this CAD would carry the CERN-OHL-P-2.0 notice and a list of the changes.
           </p>
         </Credit>
+      </Section>
+
+      <Section id="effectors" title="Effector models (product mode)">
+        <EffectorCredits />
       </Section>
 
       <Section id="gso" title="Scanned objects">

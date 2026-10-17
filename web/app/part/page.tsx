@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { EffectorsLink } from "@/components/effectors/EffectorsLink";
 import PartWorkbench from "@/components/part/PartWorkbench";
 import { PageHeader } from "@/components/PageHeader";
 import { TitleBlock } from "@/components/TitleBlock";
@@ -45,6 +46,7 @@ export default function PartPage() {
           </Link>
           .
         </p>
+        <EffectorsLink />
       </PageHeader>
 
       <PartWorkbench sessions={sessions} openingMm={openingMm} links={links} />
