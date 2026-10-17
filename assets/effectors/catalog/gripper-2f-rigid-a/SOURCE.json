@@ -1,0 +1,53 @@
+{
+  "format": "rtt-effector-source",
+  "version": 1,
+  "model": "gripper-2f-rigid-a",
+  "display_name": "Two-finger parallel gripper, rigid pads A",
+  "upstream": {
+    "repository": "https://github.com/google-deepmind/mujoco_menagerie",
+    "commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+    "directory": "i2rt_yam",
+    "model_file": "yam.xml"
+  },
+  "license": "MIT",
+  "copyright": "Copyright (c) 2025 i2rt robotics",
+  "attribution": "YAM arm linear gripper by I2RT Robotics; MJCF from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie), derived from https://github.com/i2rt-robotics/i2rt (MIT); MIT, Copyright (c) 2025 i2rt robotics",
+  "status": "green",
+  "note": "",
+  "chain": "URDF from https://github.com/i2rt-robotics/i2rt (MIT); only the gripper subtree (the last link and both fingers) is used",
+  "vendor": {},
+  "files": [
+    {
+      "path": "assets/effectors/catalog/gripper-2f-rigid-a/LICENSE",
+      "sha256": "dc46c3a7dc48221aa783e634d15db0f816ba83ba5cdb77bbaa91525c61c7552f",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "i2rt_yam/LICENSE",
+      "upstream_sha256": "dc46c3a7dc48221aa783e634d15db0f816ba83ba5cdb77bbaa91525c61c7552f",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 i2rt robotics",
+      "attribution": "YAM arm linear gripper by I2RT Robotics; MJCF from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie), derived from https://github.com/i2rt-robotics/i2rt (MIT); MIT, Copyright (c) 2025 i2rt robotics",
+      "changes": [],
+      "status": "green",
+      "note": ""
+    },
+    {
+      "path": "assets/effectors/catalog/gripper-2f-rigid-a/yam.xml",
+      "sha256": "5ae901629db944abd3e6cbb0eaf28ea78bbda3483c840d6db1167e999cc0348c",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "i2rt_yam/yam.xml",
+      "upstream_sha256": "5ae901629db944abd3e6cbb0eaf28ea78bbda3483c840d6db1167e999cc0348c",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 i2rt robotics",
+      "attribution": "YAM arm linear gripper by I2RT Robotics; MJCF from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie), derived from https://github.com/i2rt-robotics/i2rt (MIT); MIT, Copyright (c) 2025 i2rt robotics",
+      "changes": [],
+      "status": "green",
+      "note": ""
+    }
+  ],
+  "derived": {
+    "mesh_files": {},
+    "inertials": {}
+  }
+}

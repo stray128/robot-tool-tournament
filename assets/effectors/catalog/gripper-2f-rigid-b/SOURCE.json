@@ -1,0 +1,67 @@
+{
+  "format": "rtt-effector-source",
+  "version": 1,
+  "model": "gripper-2f-rigid-b",
+  "display_name": "Two-finger parallel gripper, rigid pads B",
+  "upstream": {
+    "repository": "https://github.com/google-deepmind/mujoco_menagerie",
+    "commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+    "directory": "agilex_piper",
+    "model_file": "piper.xml"
+  },
+  "license": "MIT",
+  "copyright": "Copyright (c) 2024 RosenYin",
+  "attribution": "PiPER arm gripper by AgileX Robotics; MJCF from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie), derived from https://github.com/agilexrobotics/Piper_ros (MIT); MIT, Copyright (c) 2024 RosenYin",
+  "status": "green",
+  "note": "",
+  "chain": "https://github.com/agilexrobotics/Piper_ros (MIT); only the gripper subtree (the last link and both fingers) is used",
+  "vendor": {},
+  "files": [
+    {
+      "path": "assets/effectors/catalog/gripper-2f-rigid-b/LICENSE",
+      "sha256": "e32d78fd3761052ab0b2bb42fef8a7a9ad3f298d315d305333c349d2aff1f134",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "agilex_piper/LICENSE",
+      "upstream_sha256": "e32d78fd3761052ab0b2bb42fef8a7a9ad3f298d315d305333c349d2aff1f134",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2024 RosenYin",
+      "attribution": "PiPER arm gripper by AgileX Robotics; MJCF from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie), derived from https://github.com/agilexrobotics/Piper_ros (MIT); MIT, Copyright (c) 2024 RosenYin",
+      "changes": [],
+      "status": "green",
+      "note": ""
+    },
+    {
+      "path": "assets/effectors/catalog/gripper-2f-rigid-b/assets/link6.stl",
+      "sha256": "e0b2050ba81a45c79c045b9f13e3d1dd11f84bca1beb12eebc3102651c8476cf",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "agilex_piper/assets/link6.stl",
+      "upstream_sha256": "e0b2050ba81a45c79c045b9f13e3d1dd11f84bca1beb12eebc3102651c8476cf",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2024 RosenYin",
+      "attribution": "PiPER arm gripper by AgileX Robotics; MJCF from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie), derived from https://github.com/agilexrobotics/Piper_ros (MIT); MIT, Copyright (c) 2024 RosenYin",
+      "changes": [],
+      "status": "green",
+      "note": ""
+    },
+    {
+      "path": "assets/effectors/catalog/gripper-2f-rigid-b/piper.xml",
+      "sha256": "a7b5b5d3b2a68d5c553b2ee9665d54a422bd8bf1fa6f3251bc11834993d37098",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "agilex_piper/piper.xml",
+      "upstream_sha256": "a7b5b5d3b2a68d5c553b2ee9665d54a422bd8bf1fa6f3251bc11834993d37098",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2024 RosenYin",
+      "attribution": "PiPER arm gripper by AgileX Robotics; MJCF from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie), derived from https://github.com/agilexrobotics/Piper_ros (MIT); MIT, Copyright (c) 2024 RosenYin",
+      "changes": [],
+      "status": "green",
+      "note": ""
+    }
+  ],
+  "derived": {
+    "mesh_files": {},
+    "inertials": {}
+  }
+}
