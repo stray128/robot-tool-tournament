@@ -259,10 +259,10 @@ Effector Lab is Apache-2.0 ([`LICENSE`](LICENSE)). Full third-party notices are 
 credits page. On screen, every third-party robot model carries a generic name.
 
 - **Gripper.** The simulated parallel gripper's opening, stroke, frame and stock finger
-  were measured from the open-source SO-ARM-102 parallel gripper by Robonine
-  (https://github.com/roboninecom/SO-ARM-102, commit 190eb162; simulation files CC BY 4.0,
-  hardware sources CERN-OHL-P-2.0). The site draws its CC BY 4.0 simulation meshes,
-  modified (cut, re-posed, simplified, re-encoded).
+  were measured from the open-source SO-ARM-102 parallel gripper: Robonine, SO-ARM 102,
+  https://github.com/roboninecom/SO-ARM-102, CC BY 4.0, at commit 190eb162. Its simulation
+  files are CC BY 4.0 and its hardware sources CERN-OHL-P-2.0. The site draws its CC BY 4.0
+  simulation meshes, modified (cut, re-posed, simplified, re-encoded).
 - **Effector catalog** (product mode), vendored from MuJoCo Menagerie (Google DeepMind,
   commit 62ab00f2), each with its licence and a `SOURCE.json` of pinned hashes in
   `assets/effectors/catalog/`: the Allegro Hand v3 by Wonik Robotics (BSD-2-Clause), the
