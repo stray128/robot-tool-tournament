@@ -6,7 +6,7 @@ How this project uses Nebius AI Cloud and Token Factory, and what we observed wh
 
 | Service | Use |
 |---|---|
-| Token Factory | Nemotron 3 Super proposes finger designs (forced tool call). Nemotron 3.5 Lightning powers the conversational agent. OpenAI-compatible API at `https://api.tokenfactory.nebius.com/v1/`. |
+| Token Factory | Nemotron 3 Super proposes finger and effector designs (forced tool call) and runs the Grasp Engineer agent's tool loop. Nemotron 3.5 Lightning writes the agent's short step summaries. OpenAI-compatible API at `https://api.tokenfactory.nebius.com/v1/`. |
 | Serverless AI Jobs | Every scored simulation batch runs as a job from one pinned container image. |
 | Object Storage | Job outputs (results, manifests, replays) are written to a bucket mounted at `/out`. |
 | Container Registry | Hosts the simulation image. |
@@ -427,3 +427,30 @@ about 12 hours: the token refreshed at 11:53 IST on Oct 16 had expired by 00:00 
 For unattended runs (overnight pilots, the confirmatory batch) the CLI should use a service
 account's key instead of the federation profile, or the session should be refreshed by hand
 right before a batch.
+
+## Confirmatory and held-out jobs (2026-10-17)
+
+Every scored job of the pre-registered experiment ran on uk-south2 `cpu-d3` `32vcpu-128gb`
+($1.056/h) with `--no-fallback`. The costs are the spend ledger's wall-based estimates
+(`runs/cloud/spend.jsonl`, git-ignored; each job's `job.json` sits next to its fetched run).
+Results: `docs/RESULTS.md`.
+
+| Job | Run | What it did | Wall | Est. cost |
+|---|---|---|---|---|
+| `aijob-e05zsdh89e1dj65gc2` | `search-20261016-192030` | pilot, random arm (excluded from the analysis, PREREG A12) | 4 min 45 s | $0.084 |
+| `aijob-e05eecwevax4wcdjn4` | `search-20261016-192545` | pilot, Nemotron arm (excluded) | 8 min 52 s | $0.156 |
+| `aijob-e05yxb1awgg2d68hq1` | `search-20261017-062725` | S1, random arm: 32 runs x 40 designs, 55,488 episodes | 29 min 43 s | $0.523 |
+| `aijob-e05s3f8ka6r508p4mk` | `search-20261017-062726` | S1, Nemotron arm: 32 runs x 40 designs, 54,528 episodes, 473 Token Factory calls from inside the job | 85 min 56 s | $1.512 |
+| `aijob-e05emrmh21bmks3n8c` | `heldout-20261017-075939` | scored scan selection (64 objects, nothing scored) | 8 min 10 s | $0.144 |
+| `aijob-e05dhhd3cywgcw72kx` | `heldout-20261017-080921` | `--dev` infrastructure check with a throwaway secret | 3 min 52 s | $0.068 |
+| `aijob-e05nvfme46ss0q4wp4` | `heldout-20261017-081420` | H1 and H2: 13,600 procedural and 8,704 real-object episodes | 30 min 0 s | $0.528 |
+
+- **The confirmatory batch** (S1 both arms plus the scored held-out job) simulated 132,320
+  grasps for about $2.56 of compute (wall-based).
+- **Token Factory inside the Nemotron arm** (`search/llm_ledger.jsonl`, `search/manifest.json`):
+  473 calls to `nvidia/nemotron-3-super-120b-a12b` from 32 runs in lockstep, 0 errors, and no
+  call needed a retry; 6,980,047 prompt and 1,638,651 completion tokens (584,902 reasoning);
+  **$3.569**; p50 latency 15.1 s, max 65.8 s.
+- **The whole project's AI Cloud ledger** (17 jobs since 2026-10-15, including the H100 jobs
+  of day 1 and one failed cross-region pull): **$4.12** wall-based, $3.02 run-only.
+
