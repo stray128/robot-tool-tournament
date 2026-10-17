@@ -208,6 +208,8 @@ the hold 5 deg.
   declaring them here as written after the tag, to the six rules in PREREG A6, with their
   code hash and image digest logged before the held-out jobs.
 
+**Founder decision (2026-10-17), before the tag:** tag now, and build the v2 held-out runners after the tag. They follow the six rules in PREREG A6. Their code is committed and its hash, and the image digest that contains them, are logged here before any held-out job runs. No held-out job runs on code written after any held-out outcome has been seen. The confirmatory training-suite runs (S1) need no new code and start right after the tag.
+
 ### Pre-publication checks (2026-10-17), before the repository is made public
 
 - `scripts/leak_check.sh` (26 private patterns from outside the repository): clean in
