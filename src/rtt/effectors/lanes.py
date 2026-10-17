@@ -90,6 +90,22 @@ FAMILY_BLURBS: Final[Mapping[str, str]] = {
     "suction": "A suction cup on a short bellows, its vacuum switched on only while the lip seals.",
     "designed": "Fingered morphologies proposed by Nemotron, with a random control from the same space.",
 }
+#: Display titles of the training parts; any other part id is titled from its words.
+PART_TITLES: Final[Mapping[str, str]] = {
+    "block": "Block",
+    "flanged_bushing": "Flanged bushing",
+    "hex_standoff": "Hex standoff",
+    "l_bracket": "L-bracket",
+    "pipe_tee": "Pipe tee",
+    "steel_slug": "Steel slug",
+}
+
+
+def part_title(part_id: str) -> str:
+    """The part's display title: ``l_bracket`` -> ``L-bracket``, ``hex_standoff`` -> ``Hex standoff``."""
+    return PART_TITLES.get(part_id, part_id.replace("_", " ").capitalize())
+
+
 GROUP_TITLES: Final[Mapping[str, str]] = {
     "reference": "Reference",
     "catalog": "Catalog",
@@ -731,7 +747,7 @@ def export_part(
         "version": WEB_VERSION,
         "contract": CONTRACT_VERSION,
         "label": PRODUCT_MODE_LABEL,
-        "part": {**tour["part"], "title": pid.replace("_", " ").capitalize()},
+        "part": {**tour["part"], "title": part_title(pid)},
         "requirement": head,
         "recommendation": _requirement_block(rec["by_requirement"][head]),
         "by_requirement": {k: _requirement_block(v) for k, v in rec["by_requirement"].items()},

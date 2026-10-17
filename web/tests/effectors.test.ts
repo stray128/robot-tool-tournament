@@ -17,6 +17,7 @@ import {
   outcomeLabel,
   parseEffectorIndex,
   parseEffectorPage,
+  partNoun,
   PRODUCT_MODE_LABEL,
   roleLabel,
   toleranceText,
@@ -63,6 +64,25 @@ function firstPage(): { id: string; raw: Record<string, unknown> } {
 }
 
 describe("labels and formatting", () => {
+  it("names parts as nouns in a sentence", () => {
+    expect(partNoun("L-bracket")).toBe("L-bracket");
+    expect(partNoun("Hex standoff")).toBe("hex standoff");
+    expect(partNoun("Block")).toBe("block");
+    expect(partNoun("U bolt")).toBe("U bolt");
+    expect(partNoun("PCB mount")).toBe("PCB mount");
+  });
+
+  it("gives every published part a proper title", () => {
+    if (!published) return;
+    const index = parseEffectorIndex(JSON.parse(readFileSync(INDEX, "utf8")));
+    for (const p of index.parts) {
+      expect(p.title, p.part_id).not.toMatch(/_/);
+      expect(getEffectorPage(p.part_id)?.part.title, p.part_id).toBe(p.title);
+    }
+    const l = index.parts.find((p) => p.part_id === "l_bracket");
+    if (l) expect(partNoun(l.title)).toBe("L-bracket");
+  });
+
   it("speaks in effector words", () => {
     expect(outcomeLabel(true, true, null)).toBe("Registered");
     expect(outcomeLabel(false, true, "not_registered")).toBe("Held, not registered");

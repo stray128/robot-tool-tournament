@@ -13,6 +13,7 @@ import {
   GROUP_TITLES,
   massText,
   OUTCOME_LABELS,
+  partNoun,
   pct,
   type RequirementBlock,
   REQUIREMENT_LABELS,
@@ -35,7 +36,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const page = getEffectorPage((await params).part);
   return page
     ? {
-        title: `Which effector for the ${page.part.title.toLowerCase()}?`,
+        title: `Which effector for the ${partNoun(page.part.title)}?`,
         description: "Product mode: every effector family on the same placements and seeds, one recommendation with its certificate.",
       }
     : {};
@@ -134,10 +135,10 @@ export default async function EffectorPartPage({ params }: Params) {
       </p>
       <ProductModeBanner />
       <PageHeader
-        title={`Which effector for the ${page.part.title.toLowerCase()}?`}
+        title={`Which effector for the ${partNoun(page.part.title)}?`}
         lede={
           <p>
-            Every available effector family grasped the {page.part.title.toLowerCase()} ({page.part.size_mm.map((v) => v.toFixed(0)).join(" x ")} mm,{" "}
+            Every available effector family grasped the {partNoun(page.part.title)} ({page.part.size_mm.map((v) => v.toFixed(0)).join(" x ")} mm,{" "}
             {massText(page.part.mass_kg)}) on the same four placements and two seeds; the best two of each group were
             certified on the same 18 tests. The headline asks for a <strong>{REQUIREMENT_LABELS[req].toLowerCase()}</strong> grasp:{" "}
             {REQUIREMENT_NOTES[req]}.

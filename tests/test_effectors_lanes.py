@@ -26,6 +26,7 @@ from rtt.effectors.lanes import (
     lane_payload,
     lane_plan,
     lift_lane,
+    part_title,
     record_lane,
 )
 from rtt.effectors.parallel_jaw import jaw_spec
@@ -181,6 +182,12 @@ def test_brands_are_refused_in_lanes_and_pages() -> None:
     _check_brands({"bodies": [{"name": "eff_palm"}], "label": PRODUCT_MODE_LABEL}, "lane y")
 
 
+def test_part_titles_are_proper_names() -> None:
+    assert part_title("l_bracket") == "L-bracket"
+    assert part_title("hex_standoff") == "Hex standoff"
+    assert part_title("my_new_part") == "My new part"
+
+
 def test_lane_plan_puts_the_recommendation_first() -> None:
     rec = {
         "winner": {"effector": {"effector_id": "b" * 64}},
@@ -253,6 +260,7 @@ def test_published_effector_data_keeps_every_rule() -> None:
     for path in pages:
         page = json.loads(path.read_text())
         assert page["label"] == PRODUCT_MODE_LABEL and page["fairness"]["identical"], path.name
+        assert page["part"]["title"] == part_title(path.stem), path.name
         assert page["lanes"] and page["lanes"][0]["roles"][0] in ("recommended", "best_reference", "finalist")
         for lane in page["lanes"]:
             stem = WEB_DATA / lane["replay"]

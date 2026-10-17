@@ -817,6 +817,16 @@ export function parseEffectorIndex(raw: unknown, file = "effectors/index.json"):
 
 // ---------------------------------------------------------------- formatting
 
+/**
+ * A part's title as a noun inside a sentence: "Hex standoff" -> "hex standoff", while a
+ * leading letter name or initialism keeps its case ("L-bracket", "U bolt", "PCB mount").
+ */
+export function partNoun(title: string): string {
+  const first = title.split(/\s/)[0] ?? "";
+  if (/^[A-Z](?:$|[-A-Z0-9])/.test(first)) return title;
+  return title.charAt(0).toLowerCase() + title.slice(1);
+}
+
 export function pct(v: number | null | undefined, digits = 0): string {
   return v === null || v === undefined ? "n/a" : `${(100 * v).toFixed(digits)}%`;
 }
