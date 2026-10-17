@@ -206,6 +206,16 @@ every selection writes per-object credits. In v2, unbranded scans shown on the s
 published as modified GLBs (re-posed, decomposed, simplified, re-encoded) with their
 credits.
 
+The effector catalog (product mode, not part of the pre-registered experiment) vendors six
+models from MuJoCo Menagerie (Google DeepMind) at commit 62ab00f2, each under a generic key
+in `assets/effectors/catalog/` with its licence and a `SOURCE.json` of pinned hashes: the
+Allegro Hand v3 by Wonik Robotics (BSD-2-Clause, SimLab), the Shadow Hand E3M5 by Shadow
+Robot Company (Apache-2.0), the Sharpa Wave hand by Sharpa Robotics (Apache-2.0), the UMI
+Gripper by the Columbia Artificial Intelligence and Robotics Lab (MIT), the YAM arm's linear
+gripper by I2RT Robotics (MIT) and the PiPER arm's gripper by AgileX Robotics (MIT, RosenYin).
+Collision meshes of two of them ship as convex hulls; details in `NOTICE` and
+`docs/ATTRIBUTION.md`. On screen they carry generic names.
+
 MuJoCo and MuJoCo Warp are by Google DeepMind (Apache-2.0); NVIDIA Warp is Apache-2.0;
 CoACD is MIT. Full third-party notices are in `NOTICE`.
 
