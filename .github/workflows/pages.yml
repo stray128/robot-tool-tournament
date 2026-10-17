@@ -1,0 +1,80 @@
+# Build the static site (web/, Next.js `output: "export"`) and deploy it to GitHub Pages:
+# https://stray128.github.io/robot-tool-tournament/
+#
+# The site is served from the /robot-tool-tournament sub-path, so the build sets
+# NEXT_PUBLIC_BASE_PATH. next.config.ts turns it into Next.js's basePath (routes and the
+# /_next/ assets, which take the base path when no assetPrefix is set) and lib/paths.ts
+# prefixes every runtime fetch of public/data and public/assets with it.
+# No secrets are used: the site is built only from files committed under web/.
+name: Deploy site to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    env:
+      NEXT_PUBLIC_BASE_PATH: /robot-tool-tournament
+      NEXT_PUBLIC_REPO_URL: https://github.com/stray128/robot-tool-tournament
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: web/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Build the static export
+        run: pnpm build
+
+      - name: Check the export
+        run: |
+          test -f out/index.html
+          grep -q '/robot-tool-tournament/_next/' out/index.html
+          touch out/.nojekyll
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

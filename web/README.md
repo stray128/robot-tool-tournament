@@ -39,10 +39,11 @@ Run from `web/` with Node 20.9 or newer and pnpm.
 | `node scripts/smoke_v2.mjs` | After `pnpm build`: the v2 look in headless Chromium. A v1 bout still plays; the published bout of v2 lanes (`--v2-bout ID`, default the first bout of v2 parts) plays every lane under its own label and replay (design and part checked), with GLB decoding, captions, offset readouts, x-ray and collision toggles, the 300 000-byte payload per lane, credit links and no maker name on the page; then the design views and the credits page. Screenshots go to `.smoke/v2/` |
 | `pnpm smoke` | After `pnpm build`: open every page in headless Chromium at 1280 px and 375 px; fail on console errors, horizontal scroll, replays that do not load or missing canvases. On `/part` it also drops the example STL (a preview canvas and size readout must appear) and plays the first demo session to its end (an illustrative session must be labelled illustrative, never recorded). Screenshots go to `.smoke/` |
 
-For a GitHub Pages project site, build with `NEXT_PUBLIC_BASE_PATH=/<repo-name>`.
+For a GitHub Pages project site, build with `NEXT_PUBLIC_BASE_PATH=/<repo-name>`;
+`.github/workflows/pages.yml` does this for https://stray128.github.io/robot-tool-tournament/.
 `NEXT_PUBLIC_REPO_URL` adds a source link to every page footer.
 
-The product name is a placeholder. Change `APP_NAME` in `lib/site.ts`; nothing else
+The product name, Effector Lab, is `APP_NAME` in `lib/site.ts`; nothing else
 hard-codes it.
 
 ## Data contract
