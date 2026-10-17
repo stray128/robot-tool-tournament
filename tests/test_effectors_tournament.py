@@ -540,6 +540,27 @@ def test_ranking_is_score_then_tolerance_then_screen() -> None:
     assert "screen success" in block["winner"]["why"]
 
 
+def test_a_full_tie_is_explained_by_simplicity_not_by_screen_success() -> None:
+    """Equal score, tolerance and screen: the first on the base order wins because it is simpler."""
+    cert = {"registered_score": 1.0, "reg_tol": {"x": 3.0, "y": 3.0}}
+    other = _cand("catalog_hand", "Hand", n_act=4, cert=cert)
+    simple = next(
+        c
+        for c in (_cand("catalog_gripper", f"Gripper {i}", n_act=1, cert=cert) for i in range(64))
+        if c.effector_id < other.effector_id
+    )
+    why = recommend_for([other, simple], Requirement.REGISTERED)["winner"]["why"]
+    assert why.startswith("Ties with Hand on registered certificate score (1.00)")
+    assert "is simpler: 1 actuator against 4" in why and "higher screen" not in why
+    twin = next(
+        c
+        for c in (_cand("catalog_gripper", f"Twin {i}", n_act=1, cert=cert) for i in range(64))
+        if c.effector_id > simple.effector_id
+    )
+    why = recommend_for([twin, simple], Requirement.REGISTERED)["winner"]["why"]
+    assert why.endswith("the order falls to the effector id.")
+
+
 def test_simplicity_rule_prefers_fewer_actuators_then_mass_then_fidelity() -> None:
     hand = _cand("catalog_hand", "Hand", n_act=16, mass=0.5, cert={"registered_score": 0.97})
     jaw = _cand("parallel_jaw", "Jaw", n_act=1, mass=0.03, cert={"registered_score": 0.93})

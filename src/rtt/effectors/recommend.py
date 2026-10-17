@@ -219,9 +219,30 @@ def _why(
         )
     if pick.tolerance(req) > runner.tolerance(req) + _EPS:
         return f"Ties on {req.value} certificate score ({score:.2f}) and tolerates more: {tol}."
+    if pick.screen_rate(req) > runner.screen_rate(req) + _EPS:
+        return (
+            f"Ties on {req.value} certificate score ({score:.2f}) and tolerance, with the higher screen "
+            f"success ({100.0 * pick.screen_rate(req):.0f}% against {100.0 * runner.screen_rate(req):.0f}%)."
+        )
+    # equal score, tolerance and screen success: first on the base order, so the simplicity rule
+    # kept it (it is at least as simple as every tied candidate)
+    name = runner.candidate.spec.display_name
+    if pick.n_actuators != runner.n_actuators:
+        simpler = (
+            f"{pick.n_actuators} actuator{'s' if pick.n_actuators != 1 else ''} against {runner.n_actuators}"
+        )
+    elif pick.mass != runner.mass:
+        simpler = f"{1000.0 * pick.mass:.0f} g against {1000.0 * runner.mass:.0f} g"
+    elif pick.fidelity != runner.fidelity:
+        simpler = f"{pick.fidelity} fidelity against {runner.fidelity}"
+    else:
+        return (
+            f"Ties with {name} on {req.value} certificate score ({score:.2f}), tolerance ({tol}) and screen "
+            f"success ({100.0 * pick.screen_rate(req):.0f}%); the order falls to the effector id."
+        )
     return (
-        f"Ties on {req.value} certificate score ({score:.2f}) and tolerance, with the higher screen "
-        f"success ({100.0 * pick.screen_rate(req):.0f}%)."
+        f"Ties with {name} on {req.value} certificate score ({score:.2f}), tolerance ({tol}) and screen "
+        f"success ({100.0 * pick.screen_rate(req):.0f}%), and is simpler: {simpler}."
     )
 
 
