@@ -59,6 +59,7 @@ __all__ = [
     "rank_setups",
     "recommend_setups",
     "sensitivity",
+    "stops",
 ]
 
 #: Completion (and weakest-step) rates closer than this count as a tie for the simplicity rule.
@@ -115,15 +116,27 @@ def _modes(sr: SetupResult) -> Counter[str]:
     return Counter(s.failure_mode for r in sr.runs for s in r.steps if s.failure_mode)
 
 
+def stops(sr: SetupResult) -> dict[str, Any]:
+    """Where the runs stop: per step, how many runs failed there (the first failure of a run) and
+    with which failure modes; the most common stopping step first."""
+    where: dict[str, Counter[str]] = {}
+    for r in sr.runs:
+        first = next((s for s in r.steps if not s.success and s.failure_mode != "not_reached"), None)
+        if first is not None:
+            where.setdefault(first.step_id, Counter())[str(first.failure_mode)] += 1
+    order = sorted(where, key=lambda k: (-sum(where[k].values()), k))
+    return {k: {"runs": sum(where[k].values()), "failure_modes": dict(where[k].most_common())} for k in order}
+
+
 def eligibility(sr: SetupResult) -> tuple[bool, str | None]:
     """Whether a setup may be recommended, and why not."""
     if sr.completion_rate <= 0.0:
-        step, rate = sr.weakest_step
-        modes = Counter(
-            s.failure_mode for r in sr.runs for s in r.steps if s.step_id == step and s.failure_mode
-        )
-        why = ", ".join(f"{m} {n}x" for m, n in modes.most_common(3)) or "no run reached it"
-        return False, f"never completed the task (weakest step {step}: {100 * rate:.0f}%, {why})"
+        st = stops(sr)
+        if not st:
+            return False, "never completed the task"
+        step, info = next(iter(st.items()))
+        why = ", ".join(f"{m} {n}x" for m, n in info["failure_modes"].items())
+        return False, f"never completed the task (stops at {step} in {info['runs']}/{len(sr.runs)} runs: {why})"
     if _modes(sr)["physics_invalid"]:
         return False, "a run reset the simulator (physics_invalid)"
     return True, None
@@ -235,6 +248,7 @@ def _row(
         "payload_kg": round(payload.get(sr.setup.setup_id, sr.complexity.tool_mass_kg), 4),
         "fidelity": sr.fidelity.value,
         "failure_modes": dict(_modes(sr).most_common()),
+        "stops_at": stops(sr),
         "best_single": sr.setup.setup_id == best_single_id,
         "n_runs": len(sr.runs),
     }

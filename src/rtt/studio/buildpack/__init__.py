@@ -212,8 +212,7 @@ def export_build_pack(
     report without one needs it). ``out_dir`` must be new or empty unless ``overwrite`` (then a
     previous pack there, recognised by its ``manifest.json``, is replaced).
     """
-    from rtt.studio.scene import build_studio_scene
-    from rtt.studio.search import _PROBE_PART, _probe_task
+    from rtt.studio.search import probe_scene
 
     data = _report_dict(report)
     finalist, recommended = _pick_finalist(data, setup_id)
@@ -281,10 +280,11 @@ def export_build_pack(
             if m.converted:
                 notes.append(f"{m.rel}: converted from OBJ to binary STL (geometry only)")
     # 3. every tool: an upstream link and its licence text (vendored) or reference geometry (procedural)
-    probe = _probe_task(_PROBE_PART)
     upstream: dict[str, dict[str, str]] = {}
     for k, tool in enumerate(setup.tools):
-        scene = build_studio_scene(Setup.single(tool, probe.step_ids), probe, 0, task=task)
+        scene, why = probe_scene(tool, task)
+        if scene is None:
+            raise ValueError(f"tool {k} cannot be built: {why}")
         srcs = list(scene.active.build.sources)
         if any(s.status == "amber" for s in srcs):
             raise ValueError(f"tool {k} has an amber licence record: it is never shipped")

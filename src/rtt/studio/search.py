@@ -113,7 +113,9 @@ __all__ = [
     "candidate_of",
     "combine",
     "default_candidates",
+    "designed_candidates",
     "hold_chains",
+    "last_link_intrusion",
     "mechanism_of",
     "probe_tool",
     "prune",
@@ -137,6 +139,8 @@ SWEEP_CLEARANCE_M: Final = 0.005
 #: The flange's mounting face in the flange frame (m): only the hub may reach above it (the
 #: flange and the arm's last link are there) [assumed keep-out].
 FLANGE_FACE_M: Final = -0.012
+#: Radius of the arm's last link above the flange: the flange's plus 10 mm [assumed].
+LAST_LINK_RADIUS_M: Final = 0.0315 + 0.010
 #: Default screening and search sizes.
 N_SCREEN: Final = 3
 TOP_K: Final = 3
@@ -262,7 +266,7 @@ def candidate_of(
     designed = spec.origin in ("nemotron", "random") or spec.family is EffectorFamily.DESIGNED
     return Candidate(
         spec=spec,
-        source="designed" if designed and source == "preset" else source,
+        source="designed" if designed and source in ("preset", "manual") else source,
         capabilities=frozenset(caps),
         off_the_shelf=not designed,
         item=item,
@@ -286,20 +290,64 @@ def _library_candidates() -> list[Candidate]:
     return out
 
 
-def default_candidates(*, library: bool = True) -> tuple[Candidate, ...]:
-    """Every family preset (in family order), then the library's entrants (deduplicated)."""
+#: The recorded Nemotron designs (the effector layer's morphology smoke run, cached: no spend).
+RECORDED_DESIGNS: Final = "src/rtt/effectors/morphology/recorded/smoke-2026-10-17/manifest.json"
+
+
+def designed_candidates(*, recorded: bool = True) -> list[Candidate]:
+    """Designed effectors: the designed family's hand-written reference recipes and, with
+    ``recorded``, the Nemotron designs of the recorded morphology run (read from its manifest;
+    no model is called). Designs can fill any slot; they are never "off the shelf"."""
+    import json
+
+    from rtt.effectors.designed import reference_recipes
+    from rtt.effectors.scene import REPO_ROOT
+    from rtt.effectors.types import MorphologyRecipe
+
+    recipes = list(reference_recipes())
+    path = REPO_ROOT / RECORDED_DESIGNS
+    if recorded and path.is_file():
+        data = json.loads(path.read_text(encoding="utf-8"))
+        for d in data.get("arms", {}).get("nemotron", {}).get("designs", []):
+            r = d["recipe"]
+            recipes.append(
+                MorphologyRecipe(
+                    family=r["family"],
+                    kind=r["kind"],
+                    params=r["params"],
+                    hypothesis=r.get("hypothesis", ""),
+                    origin=r.get("origin", "nemotron"),
+                    parents=tuple(r.get("parents", ())),
+                    schema=r.get("schema", "rtt-morphology/1"),
+                )
+            )
+    out = []
+    for recipe in recipes:
+        spec = get_family(recipe.family).spec_from_recipe(recipe)
+        out.append(candidate_of(spec, "designed"))
+    return out
+
+
+def default_candidates(*, library: bool = True, designed: bool = True) -> tuple[Candidate, ...]:
+    """Every family preset (in family order), then the library's entrants, then the designed
+    effectors (:func:`designed_candidates`), deduplicated by effector id."""
     out: list[Candidate] = []
     seen: set[str] = set()
+
+    def add(c: Candidate) -> None:
+        if c.effector_id not in seen:
+            seen.add(c.effector_id)
+            out.append(c)
+
     for fam in available_families():
         for spec in get_family(fam).presets():
-            if spec.effector_id not in seen:
-                seen.add(spec.effector_id)
-                out.append(candidate_of(spec, "preset"))
+            add(candidate_of(spec, "preset"))
     if library:
         for c in _library_candidates():
-            if c.effector_id not in seen:
-                seen.add(c.effector_id)
-                out.append(c)
+            add(c)
+    if designed:
+        for c in designed_candidates():
+            add(c)
     return tuple(out)
 
 
@@ -349,30 +397,48 @@ def _probe_task(obj: ObjectInstance) -> TaskSpec:
     return TaskSpec("Probe", "", (obj,), (step,), source="test")
 
 
-_PROBE_PART = _probe_object("probe", "part", shape="box", size_x_mm=20, size_y_mm=20, size_z_mm=20, mass_g=50)
+#: Probe parts a tool is measured on, in order (the first it can be built for): a 20 mm cube, the
+#: library block (what a tool that picks nothing is built against), a 50 mm cube.
+_PROBE_PARTS: Final = (
+    _probe_object("probe", "part", shape="box", size_x_mm=20, size_y_mm=20, size_z_mm=20, mass_g=50),
+    ObjectInstance.of("probe", "part", "Probe part", ref="library:block", shape="mesh"),
+    _probe_object("probe", "part", shape="box", size_x_mm=50, size_y_mm=50, size_z_mm=50, mass_g=200),
+)
+_PROBE_PART = _PROBE_PARTS[0]
 _TOOLS: dict[tuple[str, str], ToolInfo] = {}
 _FITS: dict[tuple[str, str], str | None] = {}
 
 
-def probe_tool(spec: EffectorSpec, task: TaskV2 | None = None) -> ToolInfo:
-    """Build ``spec`` alone in the Studio scene on a 20 mm probe cube and measure it (cached)."""
+def probe_scene(spec: EffectorSpec, task: TaskV2 | None = None) -> tuple[Any, str | None]:
+    """The tool alone in a Studio scene on the first probe part it can be built for, or ``None``
+    and why it cannot be built at all."""
     from rtt.studio.scene import build_studio_scene
 
+    task = task or default_task_v2()
+    reason = None
+    for part in _PROBE_PARTS:
+        probe = _probe_task(part)
+        try:
+            return build_studio_scene(Setup.single(spec, probe.step_ids), probe, 0, task=task), None
+        except NotImplementedError:
+            return (
+                None,
+                "this family runs only inside the frozen v2 episode; it does not build into the Studio scene",
+            )
+        except InvalidEffector as exc:
+            reason = reason or f"cannot be built: {exc}"
+    return None, reason
+
+
+def probe_tool(spec: EffectorSpec, task: TaskV2 | None = None) -> ToolInfo:
+    """Build ``spec`` alone in the Studio scene (:func:`probe_scene`) and measure it (cached)."""
     task = task or default_task_v2()
     key = (spec.effector_id, _task_key(task))
     if key in _TOOLS:
         return _TOOLS[key]
-    probe = _probe_task(_PROBE_PART)
-    try:
-        scene = build_studio_scene(Setup.single(spec, probe.step_ids), probe, 0, task=task)
-    except NotImplementedError:
-        info = ToolInfo(
-            spec.effector_id,
-            False,
-            "this family runs only inside the frozen v2 episode; it does not build into the Studio scene",
-        )
-    except InvalidEffector as exc:
-        info = ToolInfo(spec.effector_id, False, f"cannot be built: {exc}")
+    scene, reason = probe_scene(spec, task)
+    if scene is None:
+        info = ToolInfo(spec.effector_id, False, reason)
     else:
         b = scene.active.build
         info = ToolInfo(
@@ -581,6 +647,13 @@ def prune(
             continue
         for j, chain in enumerate(chains):
             ok = True
+            if not any(task_spec.step(sid).primitive in ACQUIRE for sid in chain):
+                reason = _fits_part(cand.spec, _PROBE_PARTS[1], task)
+                if reason is not None:  # a tool that picks nothing is built against the block
+                    pruned.append(
+                        Pruned(cand.effector_id, cand.name, chain[0], f"built against the block: {reason}")
+                    )
+                    continue
             for sid in chain:
                 step = task_spec.step(sid)
                 reason = capability_problem(cand, step) or fit_problem(cand, info, step, task_spec, task)
@@ -970,6 +1043,21 @@ def _flange_frame(scene: Any, data: mujoco.MjData, geoms: Iterable[int], angle_a
     return np.column_stack([flange, sp[:, 3]])
 
 
+def last_link_intrusion(spheres: np.ndarray) -> float:
+    """How far (m) any sphere (flange frame: centre, radius) enters the arm's last link: a cylinder
+    of :data:`LAST_LINK_RADIUS_M` upward from the flange's mounting face (the floating wrist does
+    not model the arm, so this is its keep-out) [assumed]; 0 when none does."""
+    if not len(spheres):
+        return 0.0
+    c, r = spheres[:, :3], spheres[:, 3]
+    d_rad = np.maximum(0.0, np.linalg.norm(c[:, :2], axis=1) - LAST_LINK_RADIUS_M)
+    d_z = np.maximum(0.0, FLANGE_FACE_M - c[:, 2])
+    inside = np.hypot(d_rad, d_z) < r - 0.002
+    if not np.any(inside):
+        return 0.0
+    return float(np.max((c[:, 2] + r - FLANGE_FACE_M)[inside]))
+
+
 def swept_volume_problems(
     setup: Setup,
     task_spec: TaskSpec,
@@ -1015,14 +1103,12 @@ def swept_volume_problems(
     gap_heads = float(np.min(d - heads[0][:, None, 3] - heads[1][None, :, 3]))
     if gap_heads < 0.002:
         problems.append("the two heads overlap on the bracket")
-    # 0b. below the hub nothing may reach above the flange's mounting face: the flange and the
-    # arm's last link are there (the floating wrist does not model the arm: its keep-out) [assumed]
-    tool_side = np.vstack([heads[0], heads[1], _flange_frame(scene, data, adapters, a[0])])
-    top = float(np.max(tool_side[:, 2] + tool_side[:, 3])) if len(tool_side) else -math.inf
-    if top > FLANGE_FACE_M + 0.002:
+    # 0b. no head or adapter enters the arm's last link (:func:`last_link_intrusion`)
+    depth = last_link_intrusion(np.vstack([heads[0], heads[1], _flange_frame(scene, data, adapters, a[0])]))
+    if depth > 0.0:
         problems.append(
-            f"a head or an adapter reaches {1000 * (top - FLANGE_FACE_M):.0f} mm above the flange's "
-            "mounting face, into the flange and the arm"
+            f"a head or an adapter reaches {1000 * depth:.0f} mm above the flange's mounting face "
+            "within the arm's last link"
         )
     segs = setup.segments(task_spec)
     home = np.array([0.0, 0.0, table_z + HOME_HEIGHT])
