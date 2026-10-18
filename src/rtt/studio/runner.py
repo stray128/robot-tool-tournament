@@ -41,12 +41,12 @@ from rtt.sim.episode import sample_jitter
 from rtt.sim.task import TaskV2, default_task_v2
 from rtt.studio import episode as _ep
 from rtt.studio.episode import (
-    HOME_HEIGHT,
     StudioCondition,
     StudioJob,
     WorldState,
     apply_world_state,
     capture_world_state,
+    home_pose,
     run_task,
 )
 from rtt.studio.plan import ControllerSet
@@ -192,7 +192,7 @@ def run_segments(
         model = scene.model
         data = mujoco.MjData(model)
         model.geom_friction[scene.ids.object_geoms, 0] = scene.object_friction * jit.mu_scale
-        home = np.array([0.0, 0.0, task.physics.table_top_z + HOME_HEIGHT, 0.0])
+        home = home_pose(scene, task, state)
         data.qpos[scene.ids.palm_qpos] = home
         data.qpos[scene.ids.roll_qpos] = 0.0
         if state is not None:

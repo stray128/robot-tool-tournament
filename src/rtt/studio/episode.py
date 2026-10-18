@@ -12,8 +12,8 @@ one episode and the start of the next with the **world state carried over**
 (:class:`WorldState`: every object joint's position, by name, at rest) and the **task clock
 advanced** by the change time: ``ToolChanger.changeover_s`` for a tool change, ``present_s`` for a
 multi-tool head presenting its other tool. The new scene contains the new tool (and, for a
-tool change, only it: the mass swap) and the wrist starts at its home pose, :data:`HOME_HEIGHT`
-above the table centre, roll 0. Swapping a MuJoCo subtree inside one running episode was
+tool change, only it: the mass swap) and the wrist starts at its home pose (:func:`home_pose`): over
+the table centre, roll 0, :data:`HOME_HEIGHT` up or high enough to clear every object. Swapping a MuJoCo subtree inside one running episode was
 rejected: MjSpec recompilation mid-episode would reset the contact warm-start and actuator state
 anyway, and carrying object joints by name is exact for resting objects.
 
@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import collections
 import hashlib
+import itertools
 import math
 import multiprocessing as mp
 import time
@@ -75,19 +76,65 @@ if TYPE_CHECKING:
     from rtt.studio.types import Step
 
 __all__ = [
+    "HOME_CLEARANCE",
     "HOME_HEIGHT",
     "StudioCondition",
     "StudioJob",
     "WorldState",
     "apply_world_state",
     "capture_world_state",
+    "home_pose",
     "run_task",
     "run_task_jobs",
 ]
 
-#: m above the table top: the wrist's position (at the table centre, yaw and roll 0) at the start
-#: of every segment.
+#: m above the table top: the lowest wrist position (at the table centre, yaw and roll 0) at the
+#: start of every segment. :func:`home_pose` raises it when the tool stack would reach an object.
 HOME_HEIGHT: Final = 0.30
+#: m [assumed]: the gap between the tool stack's lowest point and the tallest object at home.
+HOME_CLEARANCE: Final = 0.03
+_CORNERS: Final = np.array(list(itertools.product((-1.0, 1.0), repeat=3)))
+
+
+def _z_range(model: mujoco.MjModel, data: mujoco.MjData, geoms: np.ndarray) -> tuple[float, float]:
+    """The lowest and highest world z of ``geoms``' bounding boxes."""
+    lo, hi = math.inf, -math.inf
+    for g in geoms:
+        box = model.geom_aabb[g]
+        pts = data.geom_xpos[g] + (data.geom_xmat[g].reshape(3, 3) @ (box[:3] + _CORNERS * box[3:]).T).T
+        lo, hi = min(lo, float(pts[:, 2].min())), max(hi, float(pts[:, 2].max()))
+    return lo, hi
+
+
+def home_pose(scene: StudioScene, task: TaskV2, state: WorldState | None = None) -> np.ndarray:
+    """The wrist's start pose for a segment of ``scene`` (x, y, z, yaw; roll is 0).
+
+    Over the table centre, :data:`HOME_HEIGHT` above the table, or higher when needed so the whole
+    tool stack (every head, the bracket, the changer) clears the tallest object, in the world
+    ``state`` the segment starts from, by :data:`HOME_CLEARANCE`. A robot's home is clear of the
+    work; at a fixed height a tall object (a cabinet door, an open lid) at the table centre would
+    start inside the tool (CR-S2b-2).
+    """
+    model = scene.model
+    data = mujoco.MjData(model)
+    base = float(task.physics.table_top_z) + HOME_HEIGHT
+    data.qpos[scene.ids.palm_qpos] = [0.0, 0.0, base, 0.0]
+    data.qpos[scene.ids.roll_qpos] = 0.0
+    if state is not None:
+        apply_world_state(scene, data, state)
+    mujoco.mj_forward(model, data)
+    root = model.body_rootid[model.geom_bodyid]
+    wrist = model.body_rootid[scene.ids.palm_body]
+    tool = np.flatnonzero(root == wrist)
+    objects = np.flatnonzero((root != wrist) & (model.geom_bodyid != 0))
+    z = base
+    if len(tool) and len(objects):
+        tool_lo, _ = _z_range(model, data, tool)
+        _, top = _z_range(model, data, objects)
+        z = max(base, top + (base - tool_lo) + HOME_CLEARANCE)
+    return np.array([0.0, 0.0, z, 0.0])
+
+
 _APPROX_EFFECTOR = "This effector family is a labelled approximation (docs/EFFECTORS.md section 10)."
 
 
@@ -293,7 +340,7 @@ def run_task(job: StudioJob) -> TaskResult:
         model = scene.model
         data = mujoco.MjData(model)
         model.geom_friction[scene.ids.object_geoms, 0] = scene.object_friction * jit.mu_scale
-        home = np.array([0.0, 0.0, task.physics.table_top_z + HOME_HEIGHT, 0.0])
+        home = home_pose(scene, task, state)
         data.qpos[scene.ids.palm_qpos] = home
         data.qpos[scene.ids.roll_qpos] = 0.0
         if state is not None:

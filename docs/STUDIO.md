@@ -256,8 +256,10 @@ segment is one continuous episode in its own compiled scene: steps run back to b
 A **tool change or head switch** is modelled as the end of one episode and the start of the next,
 with the **world state carried** (`WorldState`: every object joint's position by name, at rest) and
 the **task clock advanced** by the change time. The new segment's scene contains the new tool (for
-a tool change only it, so the carried mass swaps) and the wrist starts at home, 0.30 m above the
-table centre. Nothing is held across a change (`Setup.problems`). This is the simplest correct
+a tool change only it, so the carried mass swaps) and the wrist starts at home (`home_pose`): over
+the table centre, roll 0, 0.30 m above the table, or higher so the whole tool stack clears the
+tallest object in the carried world state by 30 mm [assumed] (CR-S2b-2: at a fixed 0.30 m a tall
+door at the table centre started inside the tool). Nothing is held across a change (`Setup.problems`). This is the simplest correct
 model: swapping a MuJoCo subtree mid-episode would recompile the model and reset contact and
 actuator state anyway, while carrying named joint positions is exact for objects at rest.
 
