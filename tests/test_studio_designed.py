@@ -60,3 +60,32 @@ def test_a_designed_pinch_hand_picks_a_part_in_the_studio() -> None:
     (step,) = result.steps
     assert step.success, step.failure_mode
     assert step.quantities["penetration_mm"] <= 1.0
+
+
+def test_a_tool_that_picks_nothing_is_built_against_the_probe_cube() -> None:
+    from rtt.studio.scene import PROBE_PART_NAME, build_part_for
+
+    hook = next(
+        spec_from_recipe(r) for r in reference_recipes() if r.kind == "hook_gripper"
+    )  # its 60 mm digits are too short for the 60 mm library block
+    drawer = ObjectInstance.of("drawer", "drawer", "Drawer", ObjectPose(0.0, 0.0, 0.0))
+    pull = Step.of(
+        "pull",
+        "hook_pull",
+        "drawer",
+        "handle",
+        "Pull the drawer",
+        [SuccessCriterion("travel_mm", at_least=100)],
+    )
+    task = TaskSpec("hook build", "", (drawer,), (pull,), source="test")
+    setup = Setup.single(hook, task.step_ids)
+    assert build_part_for(setup, task, 0).name == PROBE_PART_NAME
+    scene = build_studio_scene(setup, task, 0)  # was invalid_build (too_short) against the block
+    assert scene.active.build.mass > 0
+
+
+def test_a_tool_that_picks_still_sees_its_part() -> None:
+    from rtt.studio.scene import build_part_for
+
+    task = _pick_task()
+    assert build_part_for(Setup.single(_upright_spec(), task.step_ids), task, 0).name != "probe_block_10mm"
