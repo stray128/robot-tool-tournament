@@ -46,6 +46,7 @@ import {
   targetText,
   VERIFY_CAVEAT,
 } from "@/components/studio/schema";
+import { BASE_PATH } from "@/lib/paths";
 import { DataError } from "@/lib/validate";
 
 const WEB = path.join(__dirname, "..");
@@ -373,7 +374,7 @@ describe("the server-rendered sections", () => {
     expect(all.match(BRAND!)).toBeNull();
     // URLs only as link targets.
     expect(html[4]).toContain('href="https://example.org/upstream/gripper"');
-    expect(html[4]).toContain('href="/data/studio/f1/build_pack.zip"');
+    expect(html[4]).toContain(`href="${BASE_PATH}/data/studio/f1/build_pack.zip"`);
     // A caveat shared by later steps is written out once (the published two-tool head repeats one).
     const h1 = published ? getStudioHero("h1") : undefined;
     if (h1?.recommendation) {
