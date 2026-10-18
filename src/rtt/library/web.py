@@ -16,8 +16,9 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Final
 
+from rtt.effectors.lanes import part_title
 from rtt.library.brands import find_library_brands
-from rtt.library.entrants import entrant_reason, gate_item, item_specs
+from rtt.library.entrants import GATE_PARTS, entrant_reason, gate_item, item_specs
 from rtt.library.licence import GREEN_LICENCES, LICENCE_URLS, Rating, classify
 from rtt.library.mounts import CONFIRMED_PATTERNS, ISO_PATTERNS
 from rtt.library.records import LIBRARY_DIR, REPO_ROOT, item_keys, read_item, read_lock
@@ -47,9 +48,7 @@ def _screen(value: Any, where: str) -> None:
         if hits:
             raise ValueError(f"{where}: on-screen text names a brand ({', '.join(sorted(set(hits)))})")
     elif isinstance(value, Mapping):
-        for k, v in value.items():
-            if k in ("url", "source", "upstream_url", "repository", "href"):
-                continue
+        for k, v in value.items():  # every string, URLs removed (a source may be words or a link)
             _screen(v, f"{where}.{k}")
     elif isinstance(value, list | tuple):
         for i, v in enumerate(value):
@@ -203,6 +202,7 @@ def web_index(*, gate: bool = True) -> dict[str, Any]:
         "iso_patterns": [
             {**ISO_PATTERNS[d].to_dict(), "confirmed": d in CONFIRMED_PATTERNS} for d in sorted(ISO_PATTERNS)
         ],
+        "parts": [{"id": p, "title": part_title(p)} for p in GATE_PARTS],
         "items": items,
         "listed": catalog["listed"],
         "excluded": excluded,

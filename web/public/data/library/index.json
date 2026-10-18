@@ -192,6 +192,32 @@
       "confirmed": false
     }
   ],
+  "parts": [
+    {
+      "id": "block",
+      "title": "Block"
+    },
+    {
+      "id": "steel_slug",
+      "title": "Steel slug"
+    },
+    {
+      "id": "hex_standoff",
+      "title": "Hex standoff"
+    },
+    {
+      "id": "l_bracket",
+      "title": "L-bracket"
+    },
+    {
+      "id": "pipe_tee",
+      "title": "Pipe tee"
+    },
+    {
+      "id": "flanged_bushing",
+      "title": "Flanged bushing"
+    }
+  ],
   "items": [
     {
       "key": "adapter-iso50-4-m6-to-iso31p5-4-m5",
@@ -1320,7 +1346,7 @@
       },
       "preview": {
         "url": "data/library/glb/gripper-2f-force-48.glb",
-        "bytes": 226868
+        "bytes": 219972
       },
       "downloads": [
         {
@@ -1648,7 +1674,7 @@
       },
       "preview": {
         "url": "data/library/glb/gripper-2f-hobby-parallel-84.glb",
-        "bytes": 44936
+        "bytes": 383820
       },
       "downloads": [
         {
@@ -2980,7 +3006,7 @@
       },
       "preview": {
         "url": "data/library/glb/hand-3f-12dof-industrial.glb",
-        "bytes": 287124
+        "bytes": 294120
       },
       "downloads": [
         {
@@ -6526,7 +6552,7 @@
     }
   ],
   "provenance": {
-    "manifest_sha256": "1b15e8fdde1e59e6224760464ae97e2af647b57c75c6ccdacfd452b74ca68377",
+    "manifest_sha256": "32ec3092b3c226f86912794ae905c770107fa1f261884a7bd8d74921e88282c3",
     "lock": "assets/effectors/library/lock.json"
   }
 }

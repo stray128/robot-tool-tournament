@@ -266,8 +266,8 @@
   "skipped": [],
   "preview": {
     "path": "web/public/data/library/glb/hand-3f-12dof-industrial.glb",
-    "sha256": "8f28b99fb03a8860d60fa2e6b638ef696b891e0181a02f265c5aabadbdb8b207",
-    "size": 287124,
+    "sha256": "1981766b2eaf22cc26a2f4b51f7bbd3a46e19ac92a094bcfc9e90d9ebc10061a",
+    "size": 294120,
     "license": "Apache-2.0",
     "derived_from": [
       "shadow_dexee/shadow_dexee.xml"

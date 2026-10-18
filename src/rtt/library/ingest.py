@@ -623,8 +623,13 @@ def _rpy_quat(rpy: Sequence[float]) -> list[float]:
     ]
 
 
-def _vendor_urdf(w: _Writer, plan: Mapping[str, Any], fetcher: Fetcher) -> dict[str, Any]:
-    """Convert a URDF subtree (plain XML; xacro macros are not expanded) to MJCF."""
+def _urdf_spec(w: _Writer, plan: Mapping[str, Any], fetcher: Fetcher) -> mujoco.MjSpec:
+    """A URDF subtree (plain XML; xacro macros are not expanded) as an MjSpec.
+
+    ``plan["geometry"]`` picks the ``collision`` (default) or ``visual`` elements. Mesh files
+    are staged and named by their upstream path (``mesh.file``); package URIs resolve through
+    ``mesh_paths`` (exact) or ``package_roots`` (package name -> upstream directory).
+    """
     entry = plan["entry"]
     text = fetcher.read(w.repo, w.commit, entry).decode("utf-8")
     tree = ET.fromstring(text)
@@ -657,7 +662,7 @@ def _vendor_urdf(w: _Writer, plan: Mapping[str, Any], fetcher: Fetcher) -> dict[
             body.ipos = ipos
             body.iquat = _rpy_quat(irpy)
             body.fullinertia = full
-        for col in link.findall("collision"):
+        for col in link.findall(plan.get("geometry", "collision")):
             org = col.find("origin")
             gpos = _floats(org.get("xyz") if org is not None else None, 3)
             gquat = _rpy_quat(_floats(org.get("rpy") if org is not None else None, 3))
@@ -665,7 +670,7 @@ def _vendor_urdf(w: _Writer, plan: Mapping[str, Any], fetcher: Fetcher) -> dict[
             mesh = geo.find("mesh") if geo is not None else None
             if mesh is not None:
                 uri = mesh.get("filename", "")
-                up_path = mesh_map.get(uri) or uri
+                up_path = mesh_map.get(uri) or _package_path(uri, plan.get("package_roots", {}))
                 scale = _floats(mesh.get("scale"), 3, 1.0)
                 mname = mesh_names.setdefault(up_path, f"m{len(mesh_names)}")
                 if not any(m.name == mname for m in spec.meshes):
@@ -721,6 +726,21 @@ def _vendor_urdf(w: _Writer, plan: Mapping[str, Any], fetcher: Fetcher) -> dict[
         a.ctrllimited = mujoco.mjtLimited.mjLIMITED_TRUE
         a.forcerange = list(act["forcerange"])
         a.forcelimited = mujoco.mjtLimited.mjLIMITED_TRUE
+    return spec
+
+
+def _package_path(uri: str, roots: Mapping[str, str]) -> str:
+    if uri.startswith("package://"):
+        pkg, _, rest = uri.removeprefix("package://").partition("/")
+        if pkg in roots:
+            return f"{roots[pkg]}/{rest}"
+    return uri
+
+
+def _vendor_urdf(w: _Writer, plan: Mapping[str, Any], fetcher: Fetcher) -> dict[str, Any]:
+    """Convert a URDF subtree to MJCF (:func:`_urdf_spec`, collision geometry)."""
+    entry = plan["entry"]
+    spec = _urdf_spec(w, plan, fetcher)
     # stage meshes relative to a scratch dir that mirrors upstream paths
     for m in spec.meshes:
         fetcher.path(w.repo, w.commit, m.file)
@@ -1048,8 +1068,17 @@ def _preview_meshes(
         data = mujoco.MjData(model)
         mujoco.mj_forward(model, data)
         root = plan.get("root")
-        rid = model.body(root).id if root else 1
-        sub = [b for b in range(model.nbody) if _is_under(model, b, rid)]
+        rid = model.body(root).id if root else 0  # no root: every body of the model
+        dropped = [model.body(n).id for n in plan.get("delete_bodies", ())]
+        sub = [
+            b
+            for b in range(1, model.nbody)
+            if _is_under(model, b, rid) and not any(_is_under(model, b, d) for d in dropped)
+        ]
+        for g in range(model.ngeom):  # helper shapes in high groups (bounding cylinders, markers) stay out
+            if model.geom_group[g] > 2:
+                model.geom_rgba[g, 3] = 0.0
+                model.geom_contype[g] = model.geom_conaffinity[g] = 0
         skip = tuple(plan.get("skip_meshes", ()))
         if skip:
             for g in range(model.ngeom):
@@ -1096,6 +1125,15 @@ def _preview_meshes(
             meshes.append(m)
             used.append(f["path"])
         return meshes, used
+    if kind == "urdf_visual":  # a converted URDF, drawn from its visual meshes
+        spec = _urdf_spec(w, {**plan, "geometry": "visual"}, fetcher)
+        for m in spec.meshes:
+            m.file = str(fetcher.path(w.repo, w.commit, m.file).resolve())
+        spec.meshdir = ""
+        model = _compile(spec)
+        data = mujoco.MjData(model)
+        mujoco.mj_forward(model, data)
+        return model_meshes(model, data, None, prefer_visual=False), [plan["entry"]]
     if kind == "model":  # a model this script just wrote (converted or generated)
         model = _compile(w.dir / plan["model_file"])
         data = mujoco.MjData(model)
@@ -1105,6 +1143,8 @@ def _preview_meshes(
 
 
 def _is_under(model: mujoco.MjModel, b: int, root: int) -> bool:
+    if root == 0:
+        return True
     while b != 0:
         if b == root:
             return True

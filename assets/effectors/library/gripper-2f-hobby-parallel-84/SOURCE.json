@@ -215,7 +215,17 @@
       }
     ],
     "preview": {
-      "from": "model",
+      "from": "urdf_visual",
+      "entry": "simulation/so_arm_101_description/urdf/so_101.urdf.xacro",
+      "root": "link5_1",
+      "links": [
+        "link5_1",
+        "clamp_1",
+        "clamp_2"
+      ],
+      "package_roots": {
+        "so_arm_101_description": "simulation/so_arm_101_description"
+      },
       "license": "CERN-OHL-P-2.0"
     }
   },
@@ -469,10 +479,12 @@
   ],
   "preview": {
     "path": "web/public/data/library/glb/gripper-2f-hobby-parallel-84.glb",
-    "sha256": "0ef255a0dc7318035db8b7e8abe4b1c3e6f9e7f66d52cc14f41dbefae4be38d8",
-    "size": 44936,
+    "sha256": "fffb75c8a6834624faeaade133bb5b1c6fbf3f4ff9103c8448068a361e42d3e5",
+    "size": 383820,
     "license": "CERN-OHL-P-2.0",
-    "derived_from": [],
+    "derived_from": [
+      "simulation/so_arm_101_description/urdf/so_101.urdf.xacro"
+    ],
     "changes": [
       "drawn from the item's own geometry in its reference pose, simplified by vertex clustering",
       "re-encoded as GLB (Y up, metres) in one flat grey, with generic node names"

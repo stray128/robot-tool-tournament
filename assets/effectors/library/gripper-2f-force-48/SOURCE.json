@@ -198,7 +198,11 @@
       "from": "mjcf",
       "entry": "SSG48_gripper_description/ssg48_gripper.xml",
       "root": "gripper",
-      "license": "Apache-2.0"
+      "license": "Apache-2.0",
+      "delete_bodies": [
+        "camera_center",
+        "tcp_link"
+      ]
     }
   },
   "files": [
@@ -451,8 +455,8 @@
   ],
   "preview": {
     "path": "web/public/data/library/glb/gripper-2f-force-48.glb",
-    "sha256": "e9dbb35753714645c4f5395e811045b413cf33c040fa5d7443a08f32f2fcb240",
-    "size": 226868,
+    "sha256": "eab8c6e51b651d79ed6a636e3b791cd27caae5d0800d8c930d3c5b9bdd25e05f",
+    "size": 219972,
     "license": "Apache-2.0",
     "derived_from": [
       "SSG48_gripper_description/ssg48_gripper.xml"
