@@ -323,6 +323,29 @@ turns in at least one screen condition, three of them in all three.
   force on the latch); the door pull penetrates more than 1 mm; the 8 mm connector jams (S2: the
   12 mm default already does).
 
+### Rerun on the S4c plans (2026-10-18)
+
+Plans from `recorded/gate-2026-10-18-s4c/` (no overlaps, no zero-width windows), contract
+CR-S5-1 (tools that pick nothing are built against a 10 mm probe), the open library merged
+(49 candidates: 21 presets, 19 library entrants, 9 designed), 4 worker processes. S2b's fixes
+(small-plug insert, lid-lip hook pull, door penetration) were not merged yet. No setup
+completes any hero task.
+
+| | H1 `b75435602453` | H2 `59ba912a5fa8` | H3 `4f607694742c` |
+|---|---|---|---|
+| wall time (4 workers) | 257 s | 266 s | 267 s |
+| steps no candidate passes | open_lid 0/29 (slip; the sliding hook gripper 24 N and an angular jaw 32 N against the 20 N limit); pick_carton 0/20, pick_pack 0/18 (the lid stays shut) | tighten_coupling 0/29 (slip: an angular jaw reaches 3.4 turns with 33 deg of slip; hands slip at 0.2 to 0.5 N m) | unlock_latch 0/30 (tools turn about 174 deg over the wing, which stays at 0 deg; contact force 52 to 909 N against a 10 N limit); open_valve 0/34 (the sliding hook gripper turns it 84 deg at 2.9 N m but presses 14 N against a 10 N limit); insert_plug 0/25 (jam, depth 0) |
+| steps some candidate passes | close_lid 29/33 (the lid was never opened) | insert_coupling 22/29 (depth 4.0 mm) | open_door 11/29 (the sliding hook gripper 89 deg at 28 N; a force-controlled library gripper 73 deg) |
+| best single off-the-shelf | a library angular-jaw gripper (0.11 kg, 1 actuator) | a library force-controlled gripper | a library force-controlled gripper |
+
+With the lid set open (diagnostic only: hinge at 100 deg, as if open_lid had worked), a single
+suction cup (16, 25 or 40 mm) does both picks into the tote and closes the lid on all three
+screen conditions, so H1 waits only on the lid-lip hook pull. CR-S5-1 lets the designed sliding
+hook gripper compete, but the designed family's own validators refuse 8 of the 9 designed
+effectors against the 10 mm probe (digits collide, or the lowest point is not 5 mm below the
+probe's top), so they no longer compete on steps that pick nothing; in the first gate three of
+them tightened H2's coupling.
+
 ## 12. Open issues
 
 * **A tool that picks nothing** was built against the library block until contract CR-S5-1
