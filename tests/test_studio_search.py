@@ -530,3 +530,14 @@ def test_designed_effectors_are_not_pruned_for_their_build_on_steps_that_pick_no
         setup = Setup.single(c.spec, sub.step_ids)
         assert build_part_for(setup, sub, 0).name in ("probe_block_10mm", "block")
         build_studio_scene(setup, sub, 0)
+
+
+def test_the_reason_names_a_cycle_difference_it_can_show_and_the_simpler_setup() -> None:
+    task, single, change = _pair()
+    oks = [True] * 4
+    a = _result(single, task, oks, 58.101)
+    b = _result(change, task, oks, 58.146, changes=1)
+    rec = recommend_setups([a, b])
+    assert rec["recommendation"]["setup_id"] == single.setup_id
+    why = rec["recommendation"]["why"]
+    assert "58.10 s against 58.15 s" in why and "simpler: 1 tool against 2" in why

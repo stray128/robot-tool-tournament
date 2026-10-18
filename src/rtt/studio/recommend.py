@@ -219,10 +219,20 @@ def _why(
         return (
             f"Ties on completion ({_pct(rate)}) with a stronger weakest step ({_pct(pick.weakest_step[1])})."
         )
-    if pick.cycle_time_s < nxt.cycle_time_s - 1e-3:
+    a, b = pick.cycle_time_s, nxt.cycle_time_s
+    cycles = f"{a:.2f} s against {b:.2f} s" if abs(a - b) < 0.1 else f"{a:.1f} s against {b:.1f} s"
+    simpler = pick.complexity.key() < nxt.complexity.key()
+    if a < b - 1e-3 and simpler:
         return (
-            f"Ties on completion ({_pct(rate)}) and the weakest step, with the shorter cycle "
-            f"({pick.cycle_time_s:.1f} s against {nxt.cycle_time_s:.1f} s)."
+            f"Ties on completion ({_pct(rate)}) and the weakest step, with the shorter cycle ({cycles}), "
+            f"and is simpler: {_simpler(pick, nxt)}."
+        )
+    if a < b - 1e-3:
+        return f"Ties on completion ({_pct(rate)}) and the weakest step, with the shorter cycle ({cycles})."
+    if simpler:
+        return (
+            f"Ties on completion ({_pct(rate)}), the weakest step and cycle time, and is simpler: "
+            f"{_simpler(pick, nxt)}."
         )
     return f"Ties on completion, weakest step and cycle time, and is at least as simple ({_pct(rate)})."
 
