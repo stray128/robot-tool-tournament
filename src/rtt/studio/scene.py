@@ -438,10 +438,16 @@ def _add_changer(spec: mujoco.MjSpec, flange: mujoco.MjsBody, setup: Setup) -> t
     return body, -stack
 
 
+#: What a tool that picks nothing is built against: a 10 mm cube, so a family's opening and
+#: reach checks (sized for a part to grip) cannot refuse a hook, pusher or twisting tool. Its fit
+#: on the objects it does touch is checked by the search (``rtt.studio.search``).
+PROBE_PART_NAME: Final = "probe_block_10mm"
+
+
 def build_part_for(setup: Setup, task_spec: TaskSpec, tool: int) -> PartSpec:
     """The part a family sees when it builds ``tool`` (its opening checks use it): the first part
-    that tool picks (grasp, suction, wrap), else the library ``block``."""
-    from rtt.parts.library import get_part
+    that tool picks (grasp, suction, wrap), else the 10 mm probe block (:data:`PROBE_PART_NAME`)."""
+    from rtt.parts.library import build_part
     from rtt.studio.templates.part import part_spec_of
 
     picks = (PrimitiveKind.GRASP, PrimitiveKind.SUCTION, PrimitiveKind.WRAP)
@@ -450,7 +456,7 @@ def build_part_for(setup: Setup, task_spec: TaskSpec, tool: int) -> PartSpec:
             obj = task_spec.object(s.object)
             if obj.kind is TemplateKind.PART:
                 return part_spec_of(obj)
-    return get_part("block")
+    return build_part(PROBE_PART_NAME, "block", {"x": 10.0, "y": 10.0, "z": 10.0})
 
 
 # --------------------------------------------------------------------------- compiled checks

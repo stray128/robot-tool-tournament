@@ -239,8 +239,11 @@ the template's quantities; `passive()` drives its own actuators from its own sta
 torque ramps). A kind without a builder raises `TemplateUnavailable`: its steps are
 `not_simulated`.
 
-The family that builds a tool sees the first part that tool picks (else the library `block`), so a
-gripper whose opening is too small for its part is an `invalid_build`, as in v1.
+The family that builds a tool sees the first part that tool picks, so a gripper whose opening is
+too small for its part is an `invalid_build`, as in v1. A tool that picks nothing (hook pull, twist,
+insert, push only) is built against a 10 mm probe cube (`PROBE_PART_NAME`), so a family's
+grip-sized reach and opening checks cannot refuse a hook or pusher; its fit on the objects it
+touches is the search's check (S5, ruling 4). Changed from the library `block` in CR-S5-1.
 
 ### 4.4 Segments and the tool-change hook
 
@@ -477,7 +480,8 @@ descriptively instead); H3; the multi-tool head (keep single plus tool change).
    are [assumed]. They are equal for every candidate, but the cycle-time ranking depends on the
    change times; the founder may want them sourced from a target arm and changer.
 4. **Which part a family sees.** A tool is built against the first part it picks; a tool used only
-   on articulated objects is built against the library `block`. S3 may need per-item opening
-   checks against every object the tool touches.
+   on articulated objects is built against a 10 mm probe cube (CR-S5-1; it was the library
+   `block`, which refused a 60 mm hook gripper as too short). S5 checks fit against every object
+   the tool touches.
 5. **Gravity compensation.** As in v1 the arm carries the tool's weight, so the idle head's mass
    shows only through inertia, not as payload. S5 may add an arm payload limit to complexity.
