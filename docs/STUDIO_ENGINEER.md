@@ -59,8 +59,10 @@ page before anything runs.
    * refs: `upload:<id>` names an upload that exists, and an uploaded part is used; `library:`
      names a training part; `scan:` is not resolvable here;
    * a refusal lists what is not simulated with at least one nearest primitive.
+   * a lid over a bin (the same position) needs the bin 120 mm tall, the lid's fixed hinge height;
+     a use case that states another height has that lid-on-bin combination in `unsupported`.
    Warnings never refuse a plan: objects nothing touches, a lid whose stop is at or below
-   vertical (it falls shut), a lid over a bin that is not 120 mm tall. When the spec as a whole does not
+   vertical (it falls shut). When the spec as a whole does not
    construct, the checks still run on every object and step that does, so one repair prompt
    lists every problem.
 5. **One repair call** if anything is wrong: the same messages plus the previous call (scrubbed)
@@ -77,7 +79,7 @@ The prompt, the checks and the intake page follow S2's models ([STUDIO_PRIMITIVE
 
 | Template | How S2 models it | What a plan must do |
 |---|---|---|
-| `hinged_lid` | lid: closed underside 120 mm above the table (no hinge-height parameter), stays open only past vertical; door: vertical, hinged on its left edge; `angle_deg` 0 closed, positive open | open with `hook_pull`, close with `push` (`angle_deg` at_most) |
+| `hinged_lid` | lid: closed underside 120 mm above the table (no hinge-height parameter), stays open only past vertical; door: vertical, hinged on its left edge; `angle_deg` 0 closed, positive open | open with `hook_pull`, close with `push` (`angle_deg` at_most); a bin under a lid is 120 mm tall |
 | `drawer` | starts closed; `travel_mm` positive open | `hook_pull` out, `push` shut |
 | `quarter_turn_latch` | starts locked at its stop; opens counter-clockwise from above; `angle_deg` ccw from locked | twist `ccw`; no `torque_nm` at_least |
 | `handwheel_valve` | starts closed at its stop; opens counter-clockwise; `angle_deg` ccw from closed | twist `ccw`; closing a valve that starts closed is not modelled |
@@ -198,11 +200,11 @@ all three files and compares them with the committed copies.
 ## 6. Gate (design S4) and spend
 
 Recorded live on 2026-10-18 with S2's conventions in the prompt (`recorded/gate-2026-10-18-s2/`,
-16 calls, $0.122):
+17 calls, $0.130):
 
 | case | setting | result | calls | steps produced | $ |
 |---|---|---|---|---|---|
-| h1_tote | warehouse | valid first try | 1 | hook_pull tote_lid, grasp carton -> tote_bin, grasp pack -> tote_bin, push tote_lid | 0.0081 |
+| h1_tote | warehouse | valid after repair | 2 | hook_pull tote_lid, grasp carton -> tote_bin, grasp pack -> tote_bin, push tote_lid | 0.0157 |
 | h2_coupling | construction | valid after repair | 2 | insert pipe_coupling, twist pipe_coupling (cw) | 0.0145 |
 | h3_cabinet | maintenance | valid after repair | 2 | twist qtr_latch (ccw), hook_pull cab_door, twist handwheel (ccw), insert service_port | 0.0212 |
 | e1_drawer_kitting | warehouse | valid first try | 1 | hook_pull shelf_drawer, grasp cube_part -> kit_tray, grasp rod_part -> kit_tray, push shelf_drawer | 0.0075 |
@@ -213,8 +215,10 @@ Recorded live on 2026-10-18 with S2's conventions in the prompt (`recorded/gate-
 | u1_fold_shirt | unsupported | refused (nearest: grasp) | 1 | none | 0.0063 |
 | u2_pour | unsupported | refused (nearest: grasp) | 2 | none | 0.0127 |
 
-Plans valid 8/8 (3 on the first call, 5 after the repair); unsupported 2/2 refused with a reason
-and a nearest primitive. What the repairs fixed: h2 and e2 ended the insert holding the member;
+Plans valid 8/8 (2 on the first call, 6 after the repair); unsupported 2/2 refused with a reason
+and a nearest primitive. What the repairs fixed: h1 put its lid on a 200 mm tote (the lid's hinge
+is fixed at 120 mm, now an error; the repair made the tote 120 mm and says so in its assumptions);
+h2 and e2 ended the insert holding the member;
 h3 and e3 asked a latch or valve twist for `torque_nm` at_least; e4 ended a pick holding the vial
 before inserting another object; u2's refusal named no nearest primitive.
 
@@ -224,15 +228,18 @@ modelled tasks (an M10 nut **sits loose on top of** the rod; the isolation valve
 one full turn counter-clockwise) and h3 got "(90 degrees)" after "a quarter turn", because the
 model read a quarter turn as 22 to 45 degrees; those were re-run live, and h2 was repaired live
 after the insert-release rule was added ($0.037); h3 and e3 were repaired live after the rule on
-`torque_nm` at_least ($0.021). The unchanged requests of the earlier runs are reused, so the
-recorded cache holds exactly the 16 calls the manifest replays.
+`torque_nm` at_least ($0.021); h1 was repaired live after a lid over a bin of another height
+became an error, with the prompt unchanged so that the other recordings stay byte-identical
+($0.008). The unchanged requests of the earlier runs are reused, so the recorded cache holds
+exactly the 17 calls the manifest replays.
 
 The three hero plans, as recorded:
 
-* **h1_tote**: hook_pull the lid (lip, top, `angle_deg` 90 to 110, 20 N), grasp the carton
+* **h1_tote**: a 400 x 300 x 120 mm fixed tote with a 380 x 280 mm lid at the same position
+  (lip, stop 110 deg); hook_pull the lid (lip, top, `angle_deg` 90 to 110, 20 N), grasp the carton
   (120 x 80 x 60 mm, 300 g) into the tote, grasp the pack (150 x 100 x 20 mm, 150 g) into the tote,
-  push the lid shut (`angle_deg` at_most 10, 20 N). Warning: the tote is 200 mm tall, the lid's
-  hinge 120 mm.
+  push the lid shut (`angle_deg` at_most 10, 20 N). Assumption stated by the plan: "The tote bin
+  height is 120 mm to match the lid hinge height."
 * **h2_coupling**: insert the coupling (40 mm, 45 mm long, pitch 1.5 mm, 3 turns, 0.2 to 6 N m) to
   the thread start (`depth_mm` 4 = 1 mm chamfer + 3 mm, 30 N, releases), twist `cw` at 60 deg/s to
   `turns` at_least 3 with `torque_nm` at_most 8 (`max_torque_nm` 10).
@@ -244,11 +251,19 @@ The three hero plans, as recorded:
 One more recorded plan (`recorded/upload-2026-10-18-s2/`, $0.0073) plans a use case with an
 uploaded STL (`assets/parts/rounded_tub.stl`) and uses it as `upload:stl-575c1d026461`.
 
-Token Factory spend: S4 $0.149 (cap $0.50); S4b $0.167 (cap $0.20): $0.065 + $0.037 + $0.021 of
-recorded gate calls, $0.038 of first-run calls that the rewording made stale (old e2 and e3, the
-first h3 attempt chain), and $0.007 for the upload plan.
+Token Factory spend: S4 $0.149 (cap $0.50); S4b $0.175 (cap $0.20): $0.065 + $0.037 + $0.021 +
+$0.008 of recorded gate calls, $0.038 of first-run calls that the rewording made stale (old e2 and
+e3, the first h3 attempt chain), and $0.007 for the upload plan.
 
 ## 7. Open issues
+
+* **First-call rule deferred to the next full re-record.** The lid-on-bin height is enforced by
+  the checks and its repair message, not yet stated in the prompt's rules, because any prompt
+  change re-records every case (about $0.11) and S5 records against these exact prompts. The rule
+  text is ready: "Lids on bins: a lid's hinge height is fixed (120 mm, its closed underside), so a
+  bin a lid covers (at the lid's position) is 120 mm tall; when the use case states another bin
+  height, put that lid on that bin in unsupported (not modelled) instead of changing the height."
+  Until then a lid-on-tote plan gets it right after the one repair (h1 did).
 
 * **Semantics beyond the rules are not checked.** Layouts are not checked for overlapping
   footprints; the model may still misread a quantity (it read "a quarter turn" as 22 to 45 deg

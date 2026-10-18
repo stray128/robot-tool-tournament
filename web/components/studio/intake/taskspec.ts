@@ -671,6 +671,7 @@ function checkParts(catalog: Catalog, objects: PlanObject[], steps: PlanStep[], 
   for (const key of uploads) {
     if (!used.has(key)) out.push(`objects: the uploaded part upload:${key} is not used; model it as a part with shape mesh and ref upload:${key}`);
   }
+  out.push(...lidProblems(catalog, objects));
   const byName = new Map<string, PlanObject>(objects.map((o) => [o.name, o]));
   const sim = catalog.sim;
   const wrist = sim.wrist_torque_share * catalog.limits.roll_torque_nm;
@@ -766,21 +767,34 @@ function checkParts(catalog: Catalog, objects: PlanObject[], steps: PlanStep[], 
   return out;
 }
 
-/** `_layout_warnings`: lids the simulator cannot keep open, and lids over a bin of another height. */
+/** `_layout_warnings`: lids the simulator cannot keep open. */
 function layoutWarnings(catalog: Catalog, objects: PlanObject[], steps: PlanStep[]): string[] {
   const out: string[] = [];
   const opened = new Set(steps.filter((s) => s.primitive === "hook_pull").map((s) => s.object));
-  const hinge = catalog.sim.lid_hinge_mm;
   objects.forEach((o, i) => {
     if (o.kind !== "hinged_lid" || o.params.orientation !== "lid") return;
     const where = `objects[${i}] (${o.name})`;
     const stop = Number(o.params.max_angle_deg);
     if (opened.has(o.name) && stop <= 90) out.push(`${where}: a lid stays open only past vertical; with max_angle_deg ${num(stop)} it falls shut when the tool lets go`);
+  });
+  return out;
+}
+
+/** `_lid_problems`: a lid over a bin (same position) whose height is not the lid's fixed hinge height. */
+function lidProblems(catalog: Catalog, objects: PlanObject[]): string[] {
+  const out: string[] = [];
+  const hinge = catalog.sim.lid_hinge_mm;
+  objects.forEach((o, i) => {
+    if (o.kind !== "hinged_lid" || o.params.orientation !== "lid") return;
     for (const b of objects) {
       if (b.kind !== "bin") continue;
       const same = Math.abs(b.pose.x_mm - o.pose.x_mm) < 1 && Math.abs(b.pose.y_mm - o.pose.y_mm) < 1;
       const height = Number(b.params.height_mm);
-      if (same && Math.abs(height - hinge) > 1) out.push(`${where}: a lid's closed underside is ${num(hinge)} mm above the table; the bin ${pyRepr(b.name)} under it is ${num(height)} mm tall`);
+      if (same && Math.abs(height - hinge) > 1) {
+        out.push(
+          `objects[${i}] (${o.name}): the lid template's hinge height is fixed at ${num(hinge)} mm, so the bin ${pyRepr(b.name)} it covers must be ${num(hinge)} mm tall (it is ${num(height)} mm); if the use case states another height, put that lid on that bin in unsupported (not modelled) instead of changing it`,
+        );
+      }
     }
   });
   return out;

@@ -25,9 +25,9 @@ simulator's own conventions (track S2, ``docs/STUDIO_PRIMITIVES.md``):
 * a **refusal** lists what is not simulated with at least one nearest primitive.
 
 Problems carry a path (``objects[2] (tote): ...``, ``steps[1] (open_lid): ...``) so a repair
-prompt and the intake page can point at the entry. Warnings never refuse a plan: objects nothing
-touches, a lid that falls shut (its stop at or below vertical), a lid over a bin that is not as
-tall as the lid's fixed hinge height.
+prompt and the intake page can point at the entry. A lid over a bin (the same position) needs the
+bin to be as tall as the lid's fixed hinge height (120 mm). Warnings never refuse a plan: objects
+nothing touches, a lid that falls shut (its stop at or below vertical).
 
 :func:`nearest_primitive` maps free text (an unsupported action) to the closest primitive by
 keyword; it backs a refusal whose nearest primitive the model left out.
@@ -350,7 +350,7 @@ def _step_problems(objects: Sequence[ObjectInstance], steps: Sequence[Step]) -> 
 
 
 def _layout_warnings(objects: Sequence[ObjectInstance], steps: Sequence[Step]) -> list[str]:
-    """Lids the simulator cannot keep open, and lids over a bin of another height (warnings)."""
+    """Lids the simulator cannot keep open (warnings)."""
     out: list[str] = []
     opened = {s.object for s in steps if s.primitive is PrimitiveKind.HOOK_PULL}
     for i, o in enumerate(objects):
@@ -363,6 +363,15 @@ def _layout_warnings(objects: Sequence[ObjectInstance], steps: Sequence[Step]) -
                 f"{where}: a lid stays open only past vertical; with max_angle_deg {num(stop)} it falls shut "
                 "when the tool lets go"
             )
+    return out
+
+
+def _lid_problems(objects: Sequence[ObjectInstance]) -> list[str]:
+    """A lid over a bin (same position) whose height is not the lid's fixed hinge height."""
+    out: list[str] = []
+    for i, o in enumerate(objects):
+        if o.kind is not TemplateKind.HINGED_LID or o.params["orientation"] != "lid":
+            continue
         for b in objects:
             if b.kind is not TemplateKind.BIN:
                 continue
@@ -370,8 +379,10 @@ def _layout_warnings(objects: Sequence[ObjectInstance], steps: Sequence[Step]) -
             height = float(b.params["height_mm"])
             if same and abs(height - LID_HINGE_MM) > 1.0:
                 out.append(
-                    f"{where}: a lid's closed underside is {num(LID_HINGE_MM)} mm above the table; the bin "
-                    f"{b.name!r} under it is {num(height)} mm tall"
+                    f"objects[{i}] ({o.name}): the lid template's hinge height is fixed at {num(LID_HINGE_MM)} mm, "
+                    f"so the bin {b.name!r} it covers must be {num(LID_HINGE_MM)} mm tall (it is {num(height)} mm); "
+                    "if the use case states another height, put that lid on that bin in unsupported (not "
+                    "modelled) instead of changing it"
                 )
     return out
 
@@ -386,7 +397,11 @@ def check_parts(
 ) -> list[str]:
     """The plan checks on whatever objects and steps parsed (also when the task spec as a whole
     did not), so one repair prompt can list every problem at once."""
-    return _ref_problems(objects, uploads, required_uploads, check_library) + _step_problems(objects, steps)
+    return (
+        _ref_problems(objects, uploads, required_uploads, check_library)
+        + _lid_problems(objects)
+        + _step_problems(objects, steps)
+    )
 
 
 def check_plan(

@@ -11,7 +11,7 @@
   },
   "mode": "live",
   "budget_usd": 0.2,
-  "written_at": "2026-10-18T11:05:04Z",
+  "written_at": "2026-10-18T11:49:55Z",
   "tool": {
     "compact": false,
     "sha256": "d5ac5d4361ab8f61ccff4a3c3919298be5d00a84134fe85e5bd2fe2ec35cd702",
@@ -30,8 +30,8 @@
     "plans": {
       "n": 8,
       "valid": 8,
-      "valid_first_try": 3,
-      "valid_after_repair": 5,
+      "valid_first_try": 2,
+      "valid_after_repair": 6,
       "valid_rate": 1.0
     },
     "refusals": {
@@ -42,11 +42,11 @@
     "n": 10
   },
   "llm": {
-    "calls": 16,
-    "live_calls": 16,
-    "cost_usd": 0.122465,
-    "prompt_tokens": 319898,
-    "completion_tokens": 29440
+    "calls": 17,
+    "live_calls": 17,
+    "cost_usd": 0.13013,
+    "prompt_tokens": 340875,
+    "completion_tokens": 30964
   },
   "cases": [
     {
@@ -57,9 +57,9 @@
       "text": "Warehouse returns: a plastic tote on the packing bench has a hinged lid. Open the lid, put a small rigid carton (about 120 x 80 x 60 mm, 300 g) and a flat shrink-wrapped pack (about 150 x 100 x 20 mm, 150 g) from the bench into the tote, then close the lid.",
       "status": "valid",
       "passed": true,
-      "first_try": true,
-      "repaired": false,
-      "calls": 1,
+      "first_try": false,
+      "repaired": true,
+      "calls": 2,
       "steps": [
         {
           "id": "open_lid",
@@ -89,21 +89,23 @@
       "n_objects": 4,
       "refusal": null,
       "nearest_primitives": [],
-      "task_id": "fcd4ca49e8724f951df57504fe0c72030914e06448d5897a09c60b60771ca317",
+      "task_id": "0bf0b255bbe77eb15f32c4e0aa70d2e785bd7da8001383bb5c542e1c34a8c1a6",
       "problems": [],
-      "first_problems": [],
-      "warnings": [
-        "objects[1] (tote_lid): a lid's closed underside is 120 mm above the table; the bin 'tote_bin' under it is 200 mm tall"
+      "first_problems": [
+        "objects[1] (tote_lid): the lid template's hinge height is fixed at 120 mm, so the bin 'tote_bin' it covers must be 120 mm tall (it is 200 mm); if the use case states another height, put that lid on that bin in unsupported (not modelled) instead of changing it"
       ],
+      "warnings": [],
       "notes": [
         "Null written as text was read as null (refusal)."
       ],
-      "cost_usd": 0.008076,
+      "cost_usd": 0.01574,
       "attempts": [
         {
           "stage": "main",
-          "outcome": "valid",
-          "problems": [],
+          "outcome": "invalid",
+          "problems": [
+            "objects[1] (tote_lid): the lid template's hinge height is fixed at 120 mm, so the bin 'tote_bin' it covers must be 120 mm tall (it is 200 mm); if the use case states another height, put that lid on that bin in unsupported (not modelled) instead of changing it"
+          ],
           "request_hash": "148421d464a42c4622d0abe0745ea9468390549ab55cf988fab32390f280f1be",
           "cached": false,
           "prompt_tokens": 19740,
@@ -111,6 +113,21 @@
           "reasoning_tokens": 966,
           "cost_usd": 0.0080757,
           "latency_s": 29.6306,
+          "finish_reason": "tool_calls",
+          "notes": [],
+          "error": null
+        },
+        {
+          "stage": "repair",
+          "outcome": "valid",
+          "problems": [],
+          "request_hash": "17ed576d6e013fdd7be40e64b0369343b9dc502725b3296c201579480e9b7822",
+          "cached": false,
+          "prompt_tokens": 20977,
+          "completion_tokens": 1524,
+          "reasoning_tokens": 79,
+          "cost_usd": 0.0076647,
+          "latency_s": 21.9468,
           "finish_reason": "tool_calls",
           "notes": [],
           "error": null
@@ -124,12 +141,10 @@
         "model": "nvidia/nemotron-3-super-120b-a12b",
         "use_case": "Warehouse returns: a plastic tote on the packing bench has a hinged lid. Open the lid, put a small rigid carton (about 120 x 80 x 60 mm, 300 g) and a flat shrink-wrapped pack (about 150 x 100 x 20 mm, 150 g) from the bench into the tote, then close the lid.",
         "status": "valid",
-        "first_try": true,
-        "repaired": false,
+        "first_try": false,
+        "repaired": true,
         "problems": [],
-        "warnings": [
-          "objects[1] (tote_lid): a lid's closed underside is 120 mm above the table; the bin 'tote_bin' under it is 200 mm tall"
-        ],
+        "warnings": [],
         "notes": [
           "Null written as text was read as null (refusal)."
         ],
@@ -137,7 +152,7 @@
         "plan": {
           "contract": "rtt-effectors/2",
           "label": "Product mode: not part of the pre-registered experiment",
-          "task_id": "fcd4ca49e8724f951df57504fe0c72030914e06448d5897a09c60b60771ca317",
+          "task_id": "0bf0b255bbe77eb15f32c4e0aa70d2e785bd7da8001383bb5c542e1c34a8c1a6",
           "source": "nemotron",
           "title": "Warehouse returns tote operation",
           "description": "Open the tote lid, place a carton and a shrink-wrapped pack inside, then close the lid.",
@@ -147,7 +162,7 @@
               "kind": "bin",
               "params": {
                 "fixed": true,
-                "height_mm": 200,
+                "height_mm": 120,
                 "length_mm": 400,
                 "wall_mm": 5,
                 "width_mm": 300
@@ -357,7 +372,8 @@
           "assumptions": [
             "The tote lid behaves as a lid opening upward with a lip for hooking.",
             "The carton dimensions are 120x80x60 mm and mass 300 g.",
-            "The shrink-wrapped pack dimensions are 150x100x20 mm and mass 150 g."
+            "The shrink-wrapped pack dimensions are 150x100x20 mm and mass 150 g.",
+            "The tote bin height is 120 mm to match the lid hinge height."
           ],
           "clarifications": [],
           "unsupported": [],
@@ -372,8 +388,10 @@
         "attempts": [
           {
             "stage": "main",
-            "outcome": "valid",
-            "problems": [],
+            "outcome": "invalid",
+            "problems": [
+              "objects[1] (tote_lid): the lid template's hinge height is fixed at 120 mm, so the bin 'tote_bin' it covers must be 120 mm tall (it is 200 mm); if the use case states another height, put that lid on that bin in unsupported (not modelled) instead of changing it"
+            ],
             "request_hash": "148421d464a42c4622d0abe0745ea9468390549ab55cf988fab32390f280f1be",
             "cached": false,
             "prompt_tokens": 19740,
@@ -384,9 +402,24 @@
             "finish_reason": "tool_calls",
             "notes": [],
             "error": null
+          },
+          {
+            "stage": "repair",
+            "outcome": "valid",
+            "problems": [],
+            "request_hash": "17ed576d6e013fdd7be40e64b0369343b9dc502725b3296c201579480e9b7822",
+            "cached": false,
+            "prompt_tokens": 20977,
+            "completion_tokens": 1524,
+            "reasoning_tokens": 79,
+            "cost_usd": 0.0076647,
+            "latency_s": 21.9468,
+            "finish_reason": "tool_calls",
+            "notes": [],
+            "error": null
           }
         ],
-        "cost_usd": 0.008076,
+        "cost_usd": 0.01574,
         "template_hashes": {
           "system.md": "69589cf14a708eb214576522923c7193695f0e3189fffae1195c9ecadb386edb",
           "user.md": "9eeadc86596227a22bcbe63a4be3f061cffc0de96d0f9d1b0c89801e40214cd1",
@@ -2680,6 +2713,12 @@
       "what": "h3 and e3 repaired live after the rule that a latch or valve twist takes no torque_nm at_least",
       "calls": 2,
       "cost_usd": 0.020723
+    },
+    {
+      "run": "gate5",
+      "what": "h1 repaired live after a lid over a bin that is not 120 mm tall became an error (the prompt unchanged)",
+      "calls": 1,
+      "cost_usd": 0.007665
     }
   ]
 }

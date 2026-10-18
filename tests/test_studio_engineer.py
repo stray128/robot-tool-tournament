@@ -443,22 +443,32 @@ def test_twist_torque_is_checked_against_its_share_the_wrist_and_the_criterion()
     )
 
 
-def test_lids_that_fall_shut_or_sit_on_another_bin_height_are_warned_about() -> None:
+def test_a_lid_needs_a_120_mm_bin_under_it_and_a_low_stop_is_warned_about() -> None:
     tote = ObjectInstance.of("tote", "bin", "Tote", ObjectPose(0, 0, 0), height_mm=200)
     lid = ObjectInstance.of("lid", "hinged_lid", "Lid", ObjectPose(0, 0, 0), max_angle_deg=85)
     open_lid = Step.of("open", "hook_pull", "lid", "handle", "Open it.", [_crit("angle_deg", 80)])
     problems, warnings = check_plan(_spec([tote, lid], [open_lid]))
-    assert problems == [] and warnings == [
+    assert problems == [
+        (
+            "objects[1] (lid): the lid template's hinge height is fixed at 120 mm, so the bin 'tote' it covers must "
+            "be 120 mm tall (it is 200 mm); if the use case states another height, put that lid on that bin in "
+            "unsupported (not modelled) instead of changing it"
+        )
+    ]
+    assert warnings == [
         "objects[0] (tote): no step acts on it or places into it",
         (
             "objects[1] (lid): a lid stays open only past vertical; with max_angle_deg 85 it falls shut when the "
             "tool lets go"
         ),
-        (
-            "objects[1] (lid): a lid's closed underside is 120 mm above the table; the bin 'tote' under it is 200 "
-            "mm tall"
-        ),
     ]
+    fits = ObjectInstance.of("tote", "bin", "Tote", ObjectPose(0, 0, 0), height_mm=120)
+    assert check_plan(_spec([fits, lid], [open_lid]))[0] == []
+    apart = ObjectInstance.of("tote", "bin", "Tote", ObjectPose(150, 0, 0), height_mm=200)
+    assert check_plan(_spec([apart, lid], [open_lid]))[0] == []  # not under the lid
+    door = ObjectInstance.of("door", "hinged_lid", "Door", ObjectPose(0, 0, 0), orientation="door")
+    swing = Step.of("open", "hook_pull", "door", "handle", "Open it.", [_crit("angle_deg", 80)])
+    assert check_plan(_spec([tote, door], [swing]))[0] == []  # a door is not a lid on a bin
 
 
 def test_the_simulator_numbers_match_the_template_and_primitive_modules() -> None:

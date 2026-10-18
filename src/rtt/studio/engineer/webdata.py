@@ -385,8 +385,14 @@ def _edits() -> list[tuple[str, str, Callable[[dict[str, Any]], None]]]:
         (
             "lid_low_stop",
             "h1_tote",
-            chain(setp("hinged_lid", "max_angle_deg", 80), crit("hook_pull", [angle])),
+            chain(
+                setp("hinged_lid", "max_angle_deg", 80),
+                setp("bin", "height_mm", 120),
+                crit("hook_pull", [angle]),
+            ),
         ),
+        ("lid_on_a_120_mm_bin", "h1_tote", setp("bin", "height_mm", 120)),
+        ("lid_on_a_bin_moved_away", "h1_tote", pose("bin", "x_mm", 150)),
     ]
 
 

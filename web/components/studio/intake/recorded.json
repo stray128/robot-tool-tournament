@@ -4,15 +4,15 @@
  "label": "Product mode: not part of the pre-registered experiment",
  "contract": "rtt-effectors/2",
  "model": "nvidia/nemotron-3-super-120b-a12b",
- "recorded_at": "2026-10-18T11:05:04Z",
+ "recorded_at": "2026-10-18T11:49:55Z",
  "gate": {
   "passed": true,
   "summary": {
    "plans": {
     "n": 8,
     "valid": 8,
-    "valid_first_try": 3,
-    "valid_after_repair": 5,
+    "valid_first_try": 2,
+    "valid_after_repair": 6,
     "valid_rate": 1.0
    },
    "refusals": {
@@ -32,23 +32,32 @@
    "hero": true,
    "expect": "plan",
    "status": "valid",
-   "first_try": true,
-   "repaired": false,
+   "first_try": false,
+   "repaired": true,
    "attempts": [
     {
      "stage": "main",
-     "outcome": "valid",
-     "problems": [],
+     "outcome": "invalid",
+     "problems": [
+      "objects[1] (tote_lid): the lid template's hinge height is fixed at 120 mm, so the bin 'tote_bin' it covers must be 120 mm tall (it is 200 mm); if the use case states another height, put that lid on that bin in unsupported (not modelled) instead of changing it"
+     ],
      "cost_usd": 0.0080757,
      "latency_s": 29.6306,
      "prompt_tokens": 19740,
      "completion_tokens": 2393
+    },
+    {
+     "stage": "repair",
+     "outcome": "valid",
+     "problems": [],
+     "cost_usd": 0.0076647,
+     "latency_s": 21.9468,
+     "prompt_tokens": 20977,
+     "completion_tokens": 1524
     }
    ],
    "problems": [],
-   "warnings": [
-    "objects[1] (tote_lid): a lid's closed underside is 120 mm above the table; the bin 'tote_bin' under it is 200 mm tall"
-   ],
+   "warnings": [],
    "notes": [
     "Null written as text was read as null (refusal)."
    ],
@@ -56,7 +65,7 @@
    "plan": {
     "contract": "rtt-effectors/2",
     "label": "Product mode: not part of the pre-registered experiment",
-    "task_id": "fcd4ca49e8724f951df57504fe0c72030914e06448d5897a09c60b60771ca317",
+    "task_id": "0bf0b255bbe77eb15f32c4e0aa70d2e785bd7da8001383bb5c542e1c34a8c1a6",
     "source": "nemotron",
     "title": "Warehouse returns tote operation",
     "description": "Open the tote lid, place a carton and a shrink-wrapped pack inside, then close the lid.",
@@ -66,7 +75,7 @@
       "kind": "bin",
       "params": {
        "fixed": true,
-       "height_mm": 200,
+       "height_mm": 120,
        "length_mm": 400,
        "wall_mm": 5,
        "width_mm": 300
@@ -276,7 +285,8 @@
     "assumptions": [
      "The tote lid behaves as a lid opening upward with a lip for hooking.",
      "The carton dimensions are 120x80x60 mm and mass 300 g.",
-     "The shrink-wrapped pack dimensions are 150x100x20 mm and mass 150 g."
+     "The shrink-wrapped pack dimensions are 150x100x20 mm and mass 150 g.",
+     "The tote bin height is 120 mm to match the lid hinge height."
     ],
     "clarifications": [],
     "unsupported": [],
@@ -288,7 +298,7 @@
      "close_lid": "rigid"
     }
    },
-   "cost_usd": 0.008076
+   "cost_usd": 0.01574
   },
   {
    "case_id": "h2_coupling",
