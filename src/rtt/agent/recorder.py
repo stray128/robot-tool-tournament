@@ -137,10 +137,10 @@ class SessionRecorder:
         """Emit ``session.finished`` and mark the session done (``completed``/``stopped``/``failed``)."""
         if status not in TERMINAL_STATUSES:
             raise ValueError(f"status must be one of {sorted(TERMINAL_STATUSES)}")
-        with self._cond:
+        with self._cond:  # one lock hold: no reader sees the session done before the event exists
             self.status = status
             self._meta["finished_at"] = _iso(self._clock())
-        return self.emit("session.finished", status=status, **data)
+            return self.emit("session.finished", status=status, **data)
 
     # -- reading
 
