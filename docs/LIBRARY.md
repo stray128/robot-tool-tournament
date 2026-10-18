@@ -102,9 +102,9 @@ them instead (see open items).
 * `--check` (no network) re-hashes every shipped file against `SOURCE.json` and `lock.json`,
   finds stray files, and applies the licence gate and the screen-name rules.
 
-Size: 25.0 MB of library files and 5.7 MB of previews and
-page data (30.7 MB in all; the budget is about 60 MB). Lock manifest:
-`1b15e8fdde1e59e6224760464ae97e2af647b57c75c6ccdacfd452b74ca68377`.
+Size: 25.0 MB of library files and 6.1 MB of previews and
+page data (31.1 MB in all; the budget is about 60 MB). Lock manifest:
+`32ec3092b3c226f86912794ae905c770107fa1f261884a7bd8d74921e88282c3`.
 
 One source class could not be fetched: a model-sharing site behind a bot check. Bypassing bot
 detection is not allowed, so those items are listed with a link and not mirrored.
