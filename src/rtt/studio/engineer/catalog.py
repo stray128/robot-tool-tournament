@@ -21,6 +21,7 @@ from collections.abc import Mapping
 from typing import Any, Final
 
 from rtt.effectors.types import ParamSpec
+from rtt.studio.engineer.layout import CLEARANCE_MM
 from rtt.studio.types import (
     CONTRACT_VERSION,
     MAX_OBJECTS,
@@ -50,7 +51,6 @@ __all__ = [
     "MAPPING_ROWS",
     "NO_PICK",
     "PICKS",
-    "SEPARATION_MM",
     "THREAD_LEAD_EXTRA_MM",
     "TORQUE_SHARE",
     "TWIST_SENSE",
@@ -99,8 +99,6 @@ GOAL_EXTRA: Final[frozenset[str]] = frozenset({"lift_mm", "hold_s", "in_target"}
 PICKS: Final[frozenset[PrimitiveKind]] = frozenset(
     {PrimitiveKind.GRASP, PrimitiveKind.SUCTION, PrimitiveKind.WRAP}
 )
-#: Footprint gap the prompt asks for between separate objects (a layout hint, not a check).
-SEPARATION_MM: Final = 60.0
 
 # --------------------------------------------------------------------------- the simulator's conventions (S2)
 
@@ -334,6 +332,12 @@ def render_rules() -> str:
                 "step succeeded."
             ),
             (
+                "- Windows: a criterion with both at_least and at_most leaves room for measurement: at least 1 mm "
+                "(depth_mm, travel_mm, lift_mm, slip_mm, penetration_mm), 5 deg (angle_deg, tilt_deg, slip_deg), "
+                "0.25 turns, 0.2 N m (torque_nm), 1 N (force_n, lateral_force_n) or 0.2 s (hold_s) between them; "
+                "the flags in_target and jam are exempt. Use one bound when the other adds nothing."
+            ),
+            (
                 "- in_target needs a target bin. A step that places its object in a target releases it "
                 "(hold_after false)."
             ),
@@ -352,6 +356,12 @@ def render_rules() -> str:
                 "on one comes after an insert of it (insert it to the thread start with hold_after false, then "
                 "twist cw); an insert "
                 f"pushes it no deeper than the thread start, chamfer_mm + {num(THREAD_LEAD_EXTRA_MM)} mm."
+            ),
+            (
+                f"- Lids on bins: a lid's hinge height is fixed ({num(LID_HINGE_MM)} mm, its closed underside), so "
+                f"a bin a lid covers (at the lid's position) is {num(LID_HINGE_MM)} mm tall; when the use case "
+                "states another bin height, put that lid on that bin in unsupported (not modelled) instead of "
+                "changing the height."
             ),
             (
                 "- Reachable criteria: a lid's or door's angle within its max_angle_deg; a drawer's travel "
@@ -458,11 +468,25 @@ def render_limits() -> str:
                 f"rolls the tool continuously (at most {num(w.roll_torque_nm)} N m and "
                 f"{num(w.roll_speed_max_deg_s)} deg/s). It does not tilt a held part."
             ),
+            f"- Every object stands on the table, within -{lim} to {lim} mm of its centre in x and y.",
             (
-                f"- Every object stands on the table, within -{lim} to {lim} mm of its centre in x and y. Give "
-                "separate objects their own spots so their footprints do not overlap (at least "
-                f"{num(SEPARATION_MM)} mm between edges); parts of one assembly (a lid on its tote, a door on "
-                "its cabinet) may share a position."
+                "- Plan-view footprints (mm, centred on the pose, x and y before yaw_deg turns them): a bin "
+                "length_mm x width_mm; a part size_x_mm x size_y_mm (a cylinder size_x_mm across); a latch's "
+                "plate and a threaded joint's base max(1.6 x head_diameter_mm or diameter_mm, 40) square; a "
+                "valve max(rim_diameter_mm, 70) x max(rim_diameter_mm, 50); a port its socket (about "
+                "plug_diameter_mm + 2 x max(6, plug_diameter_mm / 2) + 2 x chamfer_mm across) with its plug "
+                "standing 40 mm beyond it along +x; a drawer width_mm x depth_mm plus its front and handle toward "
+                "-y, and it slides out toward -y by travel_mm; a lid width_mm x depth_mm with its hinge and back "
+                "wall on the +y edge, swinging past vertical up to depth_mm x -cos(max_angle_deg) beyond it; a "
+                "door a panel depth_mm long along x, hinged at x = -depth_mm / 2, swinging toward -y through the "
+                "circular sector of radius depth_mm from closed to max_angle_deg."
+            ),
+            (
+                f"- Layout: keep every footprint and every swing (a lid's, a door's, a drawer's travel) at least "
+                f"{num(CLEARANCE_MM)} mm clear of every other object's. Only a lid at its bin's position (the lid "
+                "covers the bin) may overlap. A part a step picks into a bin starts outside that bin and outside "
+                "every lid and door; a latch or anything else on a cabinet stands beside the door, clear of its "
+                "swing, not on it."
             ),
             f"- A step lasts at most {num(MAX_STEP_S)} s, so choose speeds that finish the motion in time.",
         ]
@@ -489,6 +513,31 @@ def _library_parts() -> tuple[str, ...]:
     from rtt.studio.engineer.checks import library_part_names
 
     return library_part_names()
+
+
+def _window_min() -> dict[str, float]:
+    from rtt.studio.engineer.checks import WINDOW_MIN
+
+    return dict(WINDOW_MIN)
+
+
+def _layout_constants() -> dict[str, Any]:
+    from rtt.studio.engineer import layout as lay
+
+    return {
+        "clearance_mm": lay.CLEARANCE_MM,
+        "door_jamb_mm": list(lay.DOOR_JAMB_MM),
+        "bar_diameter_mm": lay.BAR_DIAMETER_MM,
+        "drawer_front_mm": lay.DRAWER_FRONT_MM,
+        "knob_head_mm": lay.KNOB_HEAD_MM,
+        "valve_body_mm": list(lay.VALVE_BODY_MM),
+        "plate_min_mm": lay.LATCH_PLATE_MIN_MM,
+        "port_wall_mm": lay.PORT_WALL_MM,
+        "port_sides": lay.PORT_SIDES,
+        "plug_gap_mm": lay.PLUG_GAP_MM,
+        "lid_back_wall_mm": lay.LID_BACK_WALL_MM,
+        "arc_step_deg": lay.ARC_STEP_DEG,
+    }
 
 
 def web_catalog() -> dict[str, Any]:
@@ -553,6 +602,8 @@ def web_catalog() -> dict[str, Any]:
             "wrist_torque_share": WRIST_TORQUE_SHARE,
             "lid_hinge_mm": LID_HINGE_MM,
             "depth_tolerance_mm": 0.5,
+            "window_min": dict(_window_min()),
+            "layout": _layout_constants(),
         },
         "limit_quantities": sorted(LIMIT_QUANTITIES),
         "goal_extra": sorted(GOAL_EXTRA),

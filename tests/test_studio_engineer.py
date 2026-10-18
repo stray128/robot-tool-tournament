@@ -245,7 +245,7 @@ def _crit(q: str, lo: float | None = None, hi: float | None = None) -> SuccessCr
 
 def test_checks_need_a_goal_and_keep_targets_and_holding_consistent() -> None:
     part = ObjectInstance.of("box", "part", "Box", ObjectPose(0, 0, 0))
-    tote = ObjectInstance.of("tote", "bin", "Tote", ObjectPose(150, 0, 0))
+    tote = ObjectInstance.of("tote", "bin", "Tote", ObjectPose(200, 150, 0))
     only_limits = Step.of("pick", "grasp", "box", "part", "Pick it.", [_crit("force_n", hi=20)])
     problems, _ = check_plan(_spec([part, tote], [only_limits]))
     assert len(problems) == 1 and "add a criterion on what the step achieves" in problems[0]
@@ -464,11 +464,168 @@ def test_a_lid_needs_a_120_mm_bin_under_it_and_a_low_stop_is_warned_about() -> N
     ]
     fits = ObjectInstance.of("tote", "bin", "Tote", ObjectPose(0, 0, 0), height_mm=120)
     assert check_plan(_spec([fits, lid], [open_lid]))[0] == []
-    apart = ObjectInstance.of("tote", "bin", "Tote", ObjectPose(150, 0, 0), height_mm=200)
-    assert check_plan(_spec([apart, lid], [open_lid]))[0] == []  # not under the lid
+    apart = ObjectInstance.of("tote", "bin", "Tote", ObjectPose(0, -260, 0), height_mm=200)
+    assert check_plan(_spec([apart, lid], [open_lid]))[0] == []  # not under the lid, and clear of it
     door = ObjectInstance.of("door", "hinged_lid", "Door", ObjectPose(0, 0, 0), orientation="door")
     swing = Step.of("open", "hook_pull", "door", "handle", "Open it.", [_crit("angle_deg", 80)])
-    assert check_plan(_spec([tote, door], [swing]))[0] == []  # a door is not a lid on a bin
+    on_door = check_plan(_spec([tote, door], [swing]))[0]  # a door is not a lid on a bin ...
+    assert (
+        len(on_door) == 1 and "overlaps the footprint of objects[0] (tote)" in on_door[0]
+    )  # ... it overlaps
+
+
+def _inside(px: float, py: float, poly: list[tuple[float, float]], tol: float) -> bool:
+    """``(px, py)`` lies in the convex polygon or within ``tol`` mm of it."""
+    import math as _m
+
+    n = len(poly)
+    signs = []
+    for i in range(n):
+        (x0, y0), (x1, y1) = poly[i], poly[(i + 1) % n]
+        signs.append((x1 - x0) * (py - y0) - (y1 - y0) * (px - x0))
+    if all(v >= 0 for v in signs) or all(v <= 0 for v in signs):
+        return True
+    best = _m.inf
+    for i in range(n):
+        (x0, y0), (x1, y1) = poly[i], poly[(i + 1) % n]
+        dx, dy = x1 - x0, y1 - y0
+        den = dx * dx + dy * dy or 1.0
+        u = max(0.0, min(1.0, ((px - x0) * dx + (py - y0) * dy) / den))
+        best = min(best, _m.hypot(px - x0 - u * dx, py - y0 - u * dy))
+    return best <= tol
+
+
+_FOOTPRINT_VARIANTS = {
+    "bin": ("bin", {"length_mm": 260, "width_mm": 180}),
+    "box": ("part", {"size_x_mm": 70, "size_y_mm": 30}),
+    "cylinder": ("part", {"shape": "cylinder", "size_x_mm": 50}),
+    "latch": ("quarter_turn_latch", {"head_diameter_mm": 40}),
+    "thread": ("threaded_joint", {"diameter_mm": 50}),
+    "valve": ("handwheel_valve", {"rim_diameter_mm": 160}),
+    "port": ("port_plug", {"plug_diameter_mm": 20, "chamfer_mm": 2}),
+    "drawer_bar": ("drawer", {"travel_mm": 150}),
+    "drawer_knob": ("drawer", {"handle": "knob", "travel_mm": 150}),
+    "lid_lip": ("hinged_lid", {"width_mm": 200, "depth_mm": 150}),
+    "lid_handle": (
+        "hinged_lid",
+        {"width_mm": 200, "depth_mm": 150, "feature": "handle", "max_angle_deg": 120},
+    ),
+    "door_lip": ("hinged_lid", {"orientation": "door", "width_mm": 200, "depth_mm": 160}),
+    "door_handle": (
+        "hinged_lid",
+        {"orientation": "door", "width_mm": 200, "depth_mm": 160, "feature": "handle"},
+    ),
+}
+
+
+@pytest.mark.parametrize("variant", sorted(_FOOTPRINT_VARIANTS))
+@pytest.mark.parametrize("yaw", [0.0, 30.0])
+def test_footprints_and_swings_hold_the_built_geometry(variant: str, yaw: float) -> None:
+    """The plan-view footprint (closed) and footprint plus swing (at the stop) contain every geom S2's
+    builder makes, within 5 mm (the swing's arc is drawn as chords)."""
+    import mujoco
+    import numpy as np
+
+    from rtt.studio.engineer.layout import regions
+    from rtt.studio.scene import build_studio_scene
+    from rtt.studio.types import Setup
+    from studio_fixtures import gripper
+
+    kind, params = _FOOTPRINT_VARIANTS[variant]
+    obj = ObjectInstance.of("thing", kind, "Thing", ObjectPose(20.0, -30.0, yaw), **params)
+    probe = ObjectInstance.of(
+        "probe", "part", "Probe", ObjectPose(-280.0, -280.0, 0.0), size_x_mm=10, size_y_mm=10
+    )
+    step = Step.of("s", "push", "probe", "part", "Probe.", [_crit("tilt_deg", hi=30)])
+    spec = TaskSpec("Footprint", "", (obj, probe), (step,), source="test")
+    scene = build_studio_scene(Setup.single(gripper(), spec.step_ids), spec, 0)
+    m, d = scene.model, mujoco.MjData(scene.model)
+    handles = scene.objects["thing"]
+    polys = {name: poly for name, poly in regions(obj)}
+    states = [("closed", ["footprint"])]
+    joint = next((j for role, j in handles.handles.joints.items() if role in ("hinge", "slide")), None)
+    if kind in ("drawer", "hinged_lid") and joint is not None:
+        states.append(("open", ["footprint", "swing"]))
+    for state, names in states:
+        mujoco.mj_resetData(m, d)
+        if state == "open":
+            jid = m.joint(joint).id
+            d.qpos[m.jnt_qposadr[jid]] = m.jnt_range[jid][1]
+        mujoco.mj_forward(m, d)
+        for g in handles.geom_ids:
+            c, h = m.geom_aabb[g][:3], m.geom_aabb[g][3:]
+            for sx in (-1, 1):
+                for sy in (-1, 1):
+                    for sz in (-1, 1):
+                        p = d.geom_xpos[g] + d.geom_xmat[g].reshape(3, 3) @ (c + h * np.array([sx, sy, sz]))
+                        px, py = 1000.0 * p[0], 1000.0 * p[1]
+                        assert any(_inside(px, py, polys[n], 5.0) for n in names if n in polys), (
+                            variant,
+                            state,
+                            m.geom(g).name,
+                            round(px, 1),
+                            round(py, 1),
+                        )
+
+
+def test_layout_refuses_overlaps_and_swings_but_not_a_lid_on_its_bin() -> None:
+    from rtt.studio.engineer.layout import CLEARANCE_MM, layout_problems
+
+    tote = ObjectInstance.of("tote", "bin", "Tote", ObjectPose(0, 0, 0), height_mm=120)
+    lid = ObjectInstance.of("lid", "hinged_lid", "Lid", ObjectPose(0, 0, 0), width_mm=300, depth_mm=200)
+    inside = ObjectInstance.of("box", "part", "Box", ObjectPose(0, 0, 0))
+    pick = Step.of("pick", "grasp", "box", "part", "Pick it.", [_crit("in_target", 1)], target="tote")
+    problems = layout_problems([tote, lid, inside], [pick])
+    assert problems == [
+        (
+            "objects[2] (box): its footprint overlaps the footprint of objects[0] (tote); keep them at least 20 mm "
+            "apart; a part picked into a bin starts outside it"
+        ),
+        "objects[2] (box): its footprint overlaps the footprint of objects[1] (lid); keep them at least 20 mm apart",
+    ]
+    beside = ObjectInstance.of(
+        "box", "part", "Box", ObjectPose(150 + 20 + 15, -200, 0), size_x_mm=30, size_y_mm=30
+    )
+    assert layout_problems([tote, lid, beside], [pick]) == []  # the lid on its tote is allowed
+    close = ObjectInstance.of(
+        "box", "part", "Box", ObjectPose(150 + 10 + 15, 0, 0), size_x_mm=30, size_y_mm=30
+    )
+    assert "comes within 20 mm of the footprint of objects[0] (tote)" in layout_problems([tote, close], [])[0]
+    door = ObjectInstance.of(
+        "door", "hinged_lid", "Door", ObjectPose(0, 0, 0), orientation="door", depth_mm=200
+    )
+    latch = ObjectInstance.of("latch", "quarter_turn_latch", "Latch", ObjectPose(0, -100, 0))
+    assert layout_problems([door, latch], []) == [
+        "objects[1] (latch): its footprint overlaps the swing of objects[0] (door); keep them at least 20 mm apart"
+    ]
+    clear = ObjectInstance.of("latch", "quarter_turn_latch", "Latch", ObjectPose(150, 60, 0))
+    assert layout_problems([door, clear], []) == []
+    drawer = ObjectInstance.of(
+        "drawer", "drawer", "Drawer", ObjectPose(0, 150, 0), depth_mm=200, travel_mm=150
+    )
+    in_travel = ObjectInstance.of("box", "part", "Box", ObjectPose(0, -100, 0))
+    assert "overlaps the swing of objects[0] (drawer)" in layout_problems([drawer, in_travel], [])[0]
+    assert CLEARANCE_MM == 20.0
+
+
+def test_windows_leave_room_for_measurement_and_flags_are_exempt() -> None:
+    from rtt.studio.engineer.checks import WINDOW_MIN
+
+    port = ObjectInstance.of("port", "port_plug", "Port", ObjectPose(0, 0, 0), depth_mm=15)
+    exact = Step.of("plug_in", "insert", "port", "plug", "Plug it in.", [_crit("depth_mm", 15, 15)])
+    assert check_plan(_spec([port], [exact]))[0] == [
+        (
+            "steps[0] (plug_in): the depth_mm window 15 to 15 is narrower than 1 mm; a measurement never lands "
+            "exactly, so widen it or keep one bound"
+        )
+    ]
+    ok = Step.of("plug_in", "insert", "port", "plug", "Plug it in.", [_crit("depth_mm", 14, 15)])
+    assert check_plan(_spec([port], [ok]))[0] == []
+    tote = ObjectInstance.of("tote", "bin", "Tote", ObjectPose(150, 0, 0), length_mm=200, width_mm=200)
+    box = ObjectInstance.of("box", "part", "Box", ObjectPose(-150, 0, 0))
+    flag = Step.of("pick", "grasp", "box", "part", "Pick it.", [_crit("in_target", 1, 1)], target="tote")
+    assert check_plan(_spec([tote, box], [flag]))[0] == []
+    assert WINDOW_MIN["angle_deg"] == 5.0 and WINDOW_MIN["turns"] == 0.25 and "in_target" not in WINDOW_MIN
 
 
 def test_the_simulator_numbers_match_the_template_and_primitive_modules() -> None:

@@ -1168,7 +1168,44 @@
   "torque_share": 0.9,
   "wrist_torque_share": 0.95,
   "lid_hinge_mm": 120.0,
-  "depth_tolerance_mm": 0.5
+  "depth_tolerance_mm": 0.5,
+  "window_min": {
+   "depth_mm": 1.0,
+   "travel_mm": 1.0,
+   "lift_mm": 1.0,
+   "slip_mm": 1.0,
+   "penetration_mm": 1.0,
+   "angle_deg": 5.0,
+   "tilt_deg": 5.0,
+   "slip_deg": 5.0,
+   "turns": 0.25,
+   "torque_nm": 0.2,
+   "force_n": 1.0,
+   "lateral_force_n": 1.0,
+   "hold_s": 0.2
+  },
+  "layout": {
+   "clearance_mm": 20.0,
+   "door_jamb_mm": [
+    15.0,
+    5.0,
+    1.0,
+    21.0
+   ],
+   "bar_diameter_mm": 10.0,
+   "drawer_front_mm": 13.0,
+   "knob_head_mm": 6.0,
+   "valve_body_mm": [
+    70.0,
+    50.0
+   ],
+   "plate_min_mm": 40.0,
+   "port_wall_mm": 6.0,
+   "port_sides": 16,
+   "plug_gap_mm": 40.0,
+   "lid_back_wall_mm": 8.0,
+   "arc_step_deg": 15.0
+  }
  },
  "limit_quantities": [
   "force_n",
