@@ -15,7 +15,8 @@ toward the wrist, x the tilt axis of the heads. It is the union of
   the head's mount centre, trimmed flush with the hub's flange face and the adapter's tool face;
 * one adapter per head: a 63 mm disc ``adapter_thickness_mm`` thick whose wrist-side face is the
   :class:`~rtt.studio.types.HeadMount` plane (tilted ``angle_deg`` about x, ``standoff_mm`` from
-  the wrist centre, turned ``spin_deg``); the tool bolts to its other face.
+  the wrist centre, turned ``spin_deg``); the tool bolts to its other face. A tilted adapter may
+  rise beside the flange, never into the arm's last link (the flange radius plus 10 mm).
 
 **Changer plate** (a ``tool_change`` setup, one per tool): a 63 mm disc half the changer stack thick
 that carries the tool on the changer's tool side, with a central pass-through bore.
@@ -60,6 +61,8 @@ FLANGE_DIAMETER_MM: Final = 2000.0 * FLANGE_RADIUS
 BOLT_CIRCLE_MM: Final = 50.0
 BOLT_HOLE_MM: Final = 6.6
 BORE_MM: Final = 20.0  # changer plate pass-through bore [assumed]
+#: The arm's last link above the flange: the flange's radius plus 10 mm (as the search's keep-out).
+LAST_LINK_RADIUS_MM: Final = 1000.0 * FLANGE_RADIUS + 10.0
 SEGMENTS: Final = 64
 
 
@@ -181,8 +184,10 @@ def bracket_part(mounts: Sequence[HeadMount], bracket: BracketSpec) -> Printable
         adapter = _disc_with_holes(ad_t, hole_angles=_PATTERN).transform(_affine(rot, centre))
         solid = solid + arm + adapter
     mesh = _to_trimesh(solid)
-    if float(mesh.bounds[1][2]) > 0.5:
-        raise ValueError("the bracket's adapters reach above the flange's mounting face")
+    v = np.asarray(mesh.vertices)
+    above = v[:, 2] > 0.5
+    if np.any(above & (np.hypot(v[:, 0], v[:, 1]) < LAST_LINK_RADIUS_MM)):
+        raise ValueError("the bracket reaches above the flange's mounting face within the arm's last link")
     check_printable(mesh, "the bracket")
     angles = ", ".join(f"{m.angle_deg:g}" for m in mounts)
     return PrintablePart(

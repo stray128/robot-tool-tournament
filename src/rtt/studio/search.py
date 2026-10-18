@@ -1202,6 +1202,8 @@ def bracket_search(
 ) -> tuple[BracketGeometry | None, list[str]]:
     """The lightest feasible bracket geometry for two heads (module docstring), or ``None`` and
     the reasons every geometry was rejected (the first per layout)."""
+    from rtt.studio.buildpack.geometry import bracket_part
+
     task = task or default_task_v2()
     bracket = BracketSpec()
     found: list[tuple[tuple[float, float, float], BracketGeometry]] = []
@@ -1227,6 +1229,11 @@ def bracket_search(
         carried = float(scene.tool_mass_kg)
         if carried > payload_kg:
             problems.append(f"the head weighs {carried:.2f} kg; the arm carries at most {payload_kg:g} kg")
+        if not problems:
+            try:  # the build pack must be able to print it as one solid
+                bracket_part(mounts, bracket)
+            except ValueError as exc:
+                problems.append(f"the bracket cannot be printed: {exc}")
         if problems:
             reasons.append(f"heads at {a0:g}/{a1:g} deg, {standoff:g} mm: {problems[0]}")
             continue

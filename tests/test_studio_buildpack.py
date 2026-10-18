@@ -14,6 +14,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import mujoco
+import numpy as np
 import pytest
 import trimesh
 
@@ -113,6 +114,7 @@ def report() -> dict:
         (HeadMount(-45.0, 70.0), HeadMount(45.0, 70.0)),
         (HeadMount(-60.0, 100.0), HeadMount(60.0, 100.0, spin_deg=30.0)),
         (HeadMount(0.0, 50.0), HeadMount(60.0, 150.0)),
+        (HeadMount(0.0, 50.0), HeadMount(60.0, 50.0)),  # the tilted adapter rises beside the flange
     ],
 )
 def test_the_bracket_is_one_watertight_solid_below_the_flange(mounts, tmp_path: Path) -> None:
@@ -121,7 +123,8 @@ def test_the_bracket_is_one_watertight_solid_below_the_flange(mounts, tmp_path: 
     mesh = trimesh.load(str(path), force="mesh")
     check_printable(mesh, "reloaded bracket")
     assert mesh.is_watertight and mesh.body_count == 1 and mesh.volume > 0
-    assert mesh.bounds[1][2] <= 0.5  # nothing above the flange's mounting face
+    v = mesh.vertices  # nothing above the flange's mounting face within the arm's last link
+    assert not ((v[:, 2] > 0.5) & (np.hypot(v[:, 0], v[:, 1]) < 41.5)).any()
     assert part.facts()["genus"] >= 12  # 4 bolt holes on the hub and on each adapter
     assert 0.03 < part.mass_kg < 0.5
 
