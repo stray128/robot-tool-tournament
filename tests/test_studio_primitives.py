@@ -999,3 +999,50 @@ def test_a_push_meets_its_force_goal_and_its_observed_travel_goal() -> None:
     )
     r = run_task(job(TaskSpec("drawer shut", "", (drawer,), steps, source="test"), key))
     assert r.completed, [(s.step_id, s.failure_mode, dict(s.quantities)) for s in r.steps]
+
+
+# --------------------------------------------------------------------------- S2e: a push's approach
+
+
+def test_a_lid_opened_past_vertical_is_pushed_shut_within_the_step_force_limit() -> None:
+    """S2e: a lid with a bar handle, opened to 110 deg, pushed shut (angle_deg <= 3, 40 N limit).
+    The move into the push used to be planned off the lid's face, so the tool ran into the bar
+    standing off it: 58 N (the rigid-pad gripper), 57 N (the servo gripper) and 104 N (the linkage
+    gripper) before the push started. The push now stands off the bar and the whole tool, moves in
+    guarded and meets the face at the touch speed, and each tool closes the lid under the limit."""
+    from rtt.studio.runner import run_segments
+    from rtt.studio.search import sub_task
+
+    lid = ObjectInstance.of("lid", "hinged_lid", "Lid", ObjectPose(0.0, 120.0, 0.0), feature="handle")
+    steps = (
+        Step.of(
+            "open", "hook_pull", "lid", "handle", "Open the lid", [SuccessCriterion("angle_deg", at_least=60)]
+        ),
+        Step.of(
+            "close",
+            "push",
+            "lid",
+            "lid",
+            "Push the lid shut",
+            [SuccessCriterion("angle_deg", at_most=3)],
+            constraints=StepConstraints(max_force_n=40),
+        ),
+    )
+    spec = TaskSpec("lid shut from past vertical", "", (lid,), steps, source="test")
+    cond = StudioCondition("seed0", 0)
+    opened, state = run_segments(
+        Setup.single(preset("catalog_gripper", "adaptive-2f", "pinch"), ("open",)),
+        sub_task(spec, ("open",)),
+        cond,
+    )
+    assert opened.steps[0].quantities["angle_deg"] > 100.0  # past vertical: gravity holds it open
+    tools = (
+        preset("catalog_gripper", "gripper-2f-rigid-a"),
+        _candidate("Industrial servo parallel gripper"),
+        _candidate("Two-finger linkage gripper"),
+    )
+    for tool in tools:
+        r, _ = run_segments(Setup.single(tool, ("close",)), sub_task(spec, ("close",)), cond, initial=state)
+        out = r.steps[0]
+        assert out.success, (tool.model, out.failure_mode, dict(out.quantities))
+        assert out.quantities["force_n"] <= 40.0 and out.quantities["angle_deg"] <= 3.0

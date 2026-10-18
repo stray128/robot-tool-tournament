@@ -12,28 +12,42 @@ Objects and handles: ``hinged_lid`` (``lid``: close, or open further, a lid or a
 2. **Where it pushes** (from observed sites and the template geometry; the object's angle or
    travel is the observed one):
 
-   * a panel: on its outer face 15 mm in from the free edge (the most leverage, and clear of
-     a bar handle), along the arc about the hinge to the ``angle_deg`` goal (3 deg past it). A
-     lid open past vertical that has to close is pushed only to 80 deg; its weight closes it,
-     and the tool then presses the closed lid home from above (a second, downward push);
+   * a panel: on its outer face 15 mm in from the free edge (the most leverage), along the arc
+     about the hinge to the ``angle_deg`` goal (3 deg past it). A bar handle stands off the face
+     there: a lid with one is pushed on the bar's outer side, just on the hinge side of it
+     (:data:`BAR_CLEAR`), so the tool, which reaches from its tip toward the free edge, meets the
+     whole bar; a door with one at the middle of its outer face (the ``lid`` site), clear of the
+     bar that runs up it. A lid open past vertical that has to close is pushed only to 80 deg;
+     its weight closes it, and the tool then presses the closed lid home from above at the middle
+     of its outer face (a second, downward push);
    * a drawer: on the front of its handle (the part that stands out), along the slide to the
      ``travel_mm`` goal (3 mm past it);
    * a part: straight down on its top until the press force; a plug: straight down on its top to
      the ``depth_mm`` goal (0.5 mm past it; without one, seated).
 
-3. **Force-limited progress** (force feedback through the wrist only): the push advances at the
+3. **Approach** (S2e): a transit to above the standoff point (:data:`APPROACH` off it), then a
+   guarded move in (:data:`APPROACH_S`; it stops advancing while the tool presses on any object
+   harder than the guard force or the push limit, and the push then starts where it stopped).
+   The standoff (:data:`STANDOFF`) is the whole tool's: whatever reaches further toward the face
+   than the contact point (a wrist flange, a long finger, :func:`_overhang`) stands off it too.
+   The push meets the face, and its object its stop (the last :data:`END_MM`), at
+   :data:`TOUCH_SPEED` at most, so an impact stays under the limit.
+4. **Force-limited progress** (force feedback through the wrist only): the push advances at the
    step's ``speed_mm_s`` while the tool's net force on the object is under the limit (80 % of
    ``max_force_n``, else :data:`PUSH_N`; a ``force_n`` at_most limits it the same way), and holds
    while it is over, within the equal budget :data:`~._common.BUDGET_S` ``push_slack``. A press
    stops 0.5 s after reaching :data:`PRESS_N` (or 60 % of the limit).
-4. **Every goal** (``docs/STUDIO_PRIMITIVES.md`` section 10): a push to a criterion on the
+5. **Every goal** (``docs/STUDIO_PRIMITIVES.md`` section 10): a push to a criterion on the
    object's state ends when the observed state meets it (:data:`MET_DEG`, :data:`MET_MM`,
    :data:`MET_DEPTH_MM` inside its bounds), not when the command arrives (the wrist servo lags
    under the object's resistance), going on up to :func:`~._common.press_reach` of the limit
    past its path. A ``force_n`` at_least is a goal of the last push on top of its travel: it
    presses on (within that reach, while the observed state still meets its criteria) until the
-   force is reached and held 0.5 s, within the equal budget ``force_press`` plus that travel.
-5. **Retract**: hold 0.3 s, back off 30 mm along the face normal, rise 60 mm.
+   force is reached and held 0.5 s, within the equal budget ``force_press`` plus that travel. A
+   push whose observed state meets its criteria while it is held at its limit (a panel or a
+   drawer shut against its stop) is done.
+6. **Retract**: the wrist target comes back to where the wrist is (the push stops), hold 0.3 s,
+   back off 30 mm along the face normal, rise 60 mm.
 
 **Predicate** (:class:`PushPredicate`): the template state at the end (``angle_deg``,
 ``travel_mm``, ``depth_mm``, ``lift_mm``/``tilt_deg``), ``force_n`` (the peak net force of the
@@ -50,6 +64,7 @@ from typing import Any
 import mujoco
 import numpy as np
 
+from rtt.effectors.scene import FLANGE_RADIUS
 from rtt.sim.controller import Phase, min_jerk
 from rtt.studio.plan import (
     PrimitiveCommand,
@@ -61,6 +76,8 @@ from rtt.studio.plan import (
 )
 from rtt.studio.primitives._common import (
     BUDGET_S,
+    GUARD_FORCE_N,
+    Guarded,
     Path,
     Tool,
     contacts,
@@ -88,9 +105,14 @@ PRESS_N = 10.0  # N, a press on a part or a closed lid [assumed]
 ANGLE_PAST = math.radians(3.0)
 TRAVEL_PAST = 0.003
 EDGE_IN = 0.015  # m in from a panel's free edge
+BAR_CLEAR = 0.005  # m: a lid with a bar handle is pushed this far on the hinge side of the bar
 GRAVITY_HANDOFF = math.radians(80.0)
 STANDOFF = 0.010  # m off the face before a push starts
 APPROACH = 0.030
+APPROACH_S = 0.8  # s of the guarded move into a push's standoff point
+TOUCH_SPEED = 0.015  # m/s: a push meets the face no faster than this [assumed]
+TOUCH_MM = 0.005  # m past the face it keeps to that speed (aim errors) [assumed]
+END_MM = 0.020  # m: the last of a push's travel, where its object meets its stop, at that speed [assumed]
 MET_DEG = 1.0  # the observed state inside a criterion's bound by this much meets it [assumed]
 MET_MM = 1.0
 MET_DEPTH_MM = 0.2
@@ -155,8 +177,23 @@ def _pushes(ctx: StepContext, data: mujoco.MjData) -> list[Segment]:
         mid = lid0 - 0.5 * info["thickness_m"] * out0  # panel centre on its mid-plane
         unit = mid / float(np.linalg.norm(mid))
         edge0 = 2.0 * mid - EDGE_IN * unit + 0.5 * info["thickness_m"] * out0  # outer face near the edge
-        radius = float(np.linalg.norm(np.cross(axis, edge0)))
         theta = math.radians(state["angle_deg"])
+        if info["feature"] == 1.0 and info["orientation"] == 0.0:
+            # a lid's bar handle stands off the face near the free edge, over the point above: the
+            # push is planned on the bar's outer side (the clearance under it plus its diameter off
+            # the face), just on the hinge side of the bar, so the move in stops clear of the bar
+            # and the tool, which reaches from its tip toward the free edge, meets the whole bar
+            r_bar = info["bar_radius_m"]
+            handle0 = rotate(ctx.observe_site(data, "handle") - hinge, axis, -theta)
+            bar_in = float((2.0 * mid - handle0) @ unit)  # the bar's middle, in from the free edge
+            proud = info["feature_m"] + 2.0 * r_bar + 0.5 * info["thickness_m"]
+            edge0 = 2.0 * mid - (bar_in + r_bar + BAR_CLEAR) * unit + proud * out0
+        elif info["feature"] == 1.0:
+            # a door's bar runs up the face near the free edge and across the tool's way down to
+            # it: a door with a bar is pushed at the middle of its outer face (the template's
+            # ``lid`` site), clear of the bar
+            edge0 = lid0.copy()
+        radius = float(np.linalg.norm(np.cross(axis, edge0)))
         lo, hi = criterion_bounds(ctx, "angle_deg")
         if hi is not None:
             goal = max(-ANGLE_PAST, math.radians(hi) - ANGLE_PAST)
@@ -175,7 +212,9 @@ def _pushes(ctx: StepContext, data: mujoco.MjData) -> list[Segment]:
 
         lid = info["orientation"] == 0.0
         if lid and theta > math.radians(92.0) and goal < GRAVITY_HANDOFF:
-            closed = hinge + rotate(edge0, axis, max(0.0, goal))
+            # the closed lid is pressed home at the centre of its outer face (the template's
+            # ``lid`` site): a press near the free edge lands on a bar handle standing off it
+            closed = hinge + rotate(lid0, axis, max(0.0, goal))
             return [
                 arc(theta, GRAVITY_HANDOFF, None),
                 Segment(
@@ -245,6 +284,20 @@ def _contact_point(tool: Tool, normal: np.ndarray, heading: float) -> np.ndarray
     return side
 
 
+def _overhang(tool: Tool, normal: np.ndarray, heading: float) -> float:
+    """How much further than its contact point (:func:`_contact_point`) the whole tool, the wrist
+    flange included, reaches toward a face of outward ``normal`` (m along the normal; 0 for a face
+    pressed from above): what meets a tall face first."""
+    n_h = np.array([normal[0], normal[1], 0.0])
+    size = float(np.linalg.norm(n_h))
+    if size < 1e-6:
+        return 0.0
+    d_wrist = rot_z(heading).T @ (-n_h / size)
+    fp = tool.footprint(1.0 if tool.mechanism == "fingers" else 0.0)
+    side = float(_contact_point(tool, normal, heading)[:2] @ d_wrist[:2])
+    return max(0.0, max(fp.front(d_wrist), FLANGE_RADIUS) - side) * size
+
+
 @dataclass(frozen=True)
 class PushController:
     primitive: PrimitiveKind = PrimitiveKind.PUSH
@@ -262,20 +315,28 @@ class PushController:
         limit = force_allowed(ctx, PUSH_N)
         over = press_reach(ctx, limit)  # how far past the goal a push may go on (module docstring)
         safe = safe_palm_z(ctx, model, data, tool)
+        touch = min(speed, TOUCH_SPEED)
+        # the standoff and the first TOUCH_MM of the face, and the last END_MM of the travel, at the
+        # touch speed (the same for every tool)
+        touch_t = 1.3 * (STANDOFF + TOUCH_MM + END_MM) * (1.0 / touch - 1.0 / speed)
         t = 0.0
         here = start.copy()
-        for seg in segments:  # each push: a transit to its standoff point, then the force-limited push
+        for seg in segments:  # each push: a transit to above its standoff point, a guarded move in, the push
             n0 = seg.normal(0.0)
+            # the standoff is the whole tool's: whatever of it reaches further toward the face than
+            # its contact point (a wrist flange, a long finger) stands off STANDOFF too
+            ov = _overhang(tool, n0, yaw + roll)
             pre = wrist_target(
-                seg.point(0.0) + STANDOFF * n0, _contact_point(tool, n0, yaw + roll), yaw, roll
+                seg.point(0.0) + (STANDOFF + ov) * n0, _contact_point(tool, n0, yaw + roll), yaw, roll
             )
             path = Path.start(here)
             above = pre + np.concatenate([APPROACH * n0, [0.0, 0.0]])
             above[2] = max(above[2], pre[2] + APPROACH)
             transit(path, above, max(above[2], safe))
-            path.to(pre, 0.8)
-            seg.state.update(path=path, t0=t, t_push=t + path.end)
-            t = t + path.end + 1.3 * (seg.length + STANDOFF) / speed + 0.5 * BUDGET_S["push_slack"]
+            guard = Guarded(above.copy(), pre, t + path.end, APPROACH_S, force=min(GUARD_FORCE_N, limit))
+            seg.state.update(path=path, guard=guard, t0=t, t_push=t + path.end + APPROACH_S, ov=ov)
+            t = t + path.end + APPROACH_S + touch_t
+            t += 1.3 * (seg.length + STANDOFF + ov) / speed + 0.5 * BUDGET_S["push_slack"]
             if seg.pressing_on:  # pressing on to the force goal
                 t += 1.3 * over / speed + BUDGET_S["force_press"]
             seg.state["t_end"] = t
@@ -287,6 +348,7 @@ class PushController:
             "segments": segments,
             "index": 0,
             "speed": speed,
+            "touch": touch,
             "limit": limit,
             "over": over,
             "yaw": yaw,
@@ -324,18 +386,31 @@ class PushController:
         segs: list[Segment] = run["segments"]
         seg = segs[run["index"]]
         st = seg.state
-        if t < st["t_push"]:  # the transit to this segment's standoff point
+        if t < st["t_push"]:  # the transit to above this segment's standoff point, then the guarded move in
             start = st.get("from")
             if start is None:
                 start = run["last"].copy()
                 st["from"] = start
                 path: Path = st["path"]
                 path.poses[0] = start
-            return st["path"].at(t - st["t0"])
+            if t - st["t0"] < st["path"].end:
+                return st["path"].at(t - st["t0"])
+            # it stops on anything in the way (any object, over the guard force or the step's limit)
+            pressing = contacts(model, data, tool_geoms(ctx.scene), ctx.scene.ids.object_geoms).normal
+            return st["guard"].at(t, pressing)
+        if "shift" not in st:
+            # a guarded move stopped short: the push starts where it stopped, its standoff longer
+            # by how far short along the push and its line moved by the rest
+            guard: Guarded = st["guard"]
+            delta = guard.at(t, math.inf)[:3] - guard.b[:3] if guard.blocked else np.zeros(3)
+            n0 = seg.normal(0.0)
+            st["extra"] = max(0.0, float(delta @ n0))
+            st["shift"] = delta - st["extra"] * n0
         tool: Tool = schedule(ctx).tool
         dt = ctx.task.controller.control_period
         force = float(np.linalg.norm(contacts(model, data, tool_geoms(ctx.scene), ctx.obj.geom_ids).net))
-        total = STANDOFF + seg.length  # the contact point travels the standoff, then the push
+        stand = STANDOFF + st["ov"] + st["extra"]
+        total = stand + seg.length  # the contact point travels the standoff, then the push
         # a push to a criterion goes on (up to ``over``) until the observed state meets it, and a
         # press until its force: the servo lags under the object's resistance
         cap = total + (run["over"] if (seg.press is not None or seg.met is not None) else 0.0)
@@ -344,16 +419,23 @@ class PushController:
         arrived = travelled >= total - 1e-9 and (ok or travelled >= cap - 1e-9)
         travel = seg.reach and not arrived
         stop_at = run["limit"] if (seg.press is None or travel) else min(run["limit"], seg.press)
+        # it meets the face, and its object meets its stop, at the touch speed, so an impact stays
+        # under the limit
+        near = travelled < stand - st["ov"] + TOUCH_MM or travelled > total - END_MM
+        speed = run["touch"] if near else run["speed"]
         if force < stop_at and (travel or ok):  # pressing on keeps the state inside its criteria
-            st["s"] = min(cap, travelled + run["speed"] * dt)
+            st["s"] = min(cap, travelled + speed * dt)
         travelled = st.get("s", 0.0)
         arrived = travelled >= total - 1e-9 and (ok or travelled >= cap - 1e-9)
-        off = max(0.0, STANDOFF - travelled) - max(0.0, travelled - total)
-        u = 1.0 if seg.length <= 1e-9 else min(1.0, max(0.0, travelled - STANDOFF) / seg.length)
+        # the observed state meets its criteria and the push is held at its limit (a panel or a
+        # drawer shut against its stop): nothing is left to push for
+        arrived = arrived or (seg.met is not None and ok and force >= run["limit"])
+        off = max(0.0, stand - travelled) - max(0.0, travelled - total)
+        u = 1.0 if seg.length <= 1e-9 else min(1.0, max(0.0, travelled - stand) / seg.length)
         n = seg.normal(u)
         heading = run["yaw"] + run["roll"]
         wrist = wrist_target(
-            seg.point(u) + off * n, _contact_point(tool, n, heading), run["yaw"], run["roll"]
+            seg.point(u) + off * n + st["shift"], _contact_point(tool, n, heading), run["yaw"], run["roll"]
         )
         if seg.press is not None and force >= seg.press and st.get("pressed_t") is None:
             st["pressed_t"] = t
@@ -367,7 +449,7 @@ class PushController:
                 nxt = segs[run["index"]].state
                 budget = nxt["t_end"] - nxt["t_push"]
                 nxt["t0"] = t
-                nxt["t_push"] = t + nxt["path"].end
+                nxt["t_push"] = t + nxt["path"].end + APPROACH_S
                 nxt["t_end"] = nxt["t_push"] + budget
                 nxt["from"] = None
                 lifted = wrist.copy()
@@ -377,6 +459,10 @@ class PushController:
                 run["done_at"] = t
                 run["n_end"] = np.asarray(n, dtype=np.float64)
                 schedule(ctx).released = t
+                # the push stops: the wrist target comes back to where the wrist is, so the hold
+                # and the retract do not go on pressing with the servo's lag behind the command
+                for i in range(3):
+                    run["last"][i] = float(data.qpos[ctx.scene.ids.palm_qpos[i]])
         return wrist
 
 
