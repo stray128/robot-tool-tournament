@@ -512,3 +512,251 @@ def test_unknown_controller_inputs_are_refused_by_the_runner() -> None:
     )
     r = run_task(job(TaskSpec("fast", "", spec.objects, (fast,), source="test"), ref))
     assert r.steps[0].failure_mode in (None, "criterion_not_met", "slip")
+
+
+# --------------------------------------------------------------------------- S2b: the hero-task limits
+
+#: the equipment-cabinet connector's port (8 mm plug, 0.2 mm clearance, 1 mm chamfer, 15 mm deep)
+SMALL_PORT = {
+    "chamfer_mm": 1,
+    "clearance_mm": 0.2,
+    "depth_mm": 15,
+    "insert_force_n": 5,
+    "latch": False,
+    "plug_length_mm": 30,
+}
+
+
+def _plug_task(diameter_mm: float) -> TaskSpec:
+    port = ObjectInstance.of(
+        "port", "port_plug", "Port", ObjectPose(200.0, 0.0, 0.0), plug_diameter_mm=diameter_mm, **SMALL_PORT
+    )
+    step = Step.of(
+        "plug_in",
+        "insert",
+        "port",
+        "plug",
+        "Plug the connector in",
+        [SuccessCriterion("depth_mm", at_least=15.0), SuccessCriterion("force_n", at_most=20)],
+        constraints=StepConstraints(max_force_n=20),
+        params={"speed_mm_s": 10, "standoff_mm": 5},
+    )
+    return TaskSpec(f"small plug {diameter_mm:g} mm", "", (port,), (step,), source="test")
+
+
+@pytest.mark.parametrize(
+    ("diameter_mm", "key"),
+    [
+        (8, ("catalog_gripper", "gripper-2f-finray", None)),  # pads mounted off the TCP
+        (12, ("catalog_gripper", "gripper-2f-rigid-a", None)),
+        (20, ("catalog_gripper", "adaptive-2f", "power")),
+    ],
+)
+def test_a_small_plug_is_gripped_low_started_and_pressed_home(
+    diameter_mm: float, key: tuple[str, str, str | None]
+) -> None:
+    """A slim plug is gripped below its tip-over height, started past the chamfer by the grip,
+    let go and pressed home by the fist, within the step's force limit."""
+    out = run_task(job(_plug_task(diameter_mm), key)).steps[0]
+    assert out.success, (diameter_mm, key, out.failure_mode, dict(out.quantities))
+    assert out.quantities["depth_mm"] == pytest.approx(15.0)
+    assert out.quantities["force_n"] <= 20.0
+    assert out.quantities["penetration_mm"] <= HELD_PENETRATION_MAX_MM
+
+
+def test_curling_fingers_cannot_carry_a_slim_plug_upright() -> None:
+    """An honest limit: the adaptive gripper's fingers curl into a V around an 8 mm pin and
+    squeeze it out of the grasp; the plug never reaches the socket."""
+    out = run_task(job(_plug_task(8), ("catalog_gripper", "adaptive-2f", "power"))).steps[0]
+    assert not out.success
+    assert out.quantities["depth_mm"] == 0.0
+
+
+def test_pads_mounted_off_the_tcp_grip_a_plug_between_them() -> None:
+    from rtt.studio.primitives._common import footprint
+    from rtt.studio.scene import build_studio_scene
+
+    spec = _plug_task(8)
+    centres = {}
+    for model in ("gripper-2f-finray", "gripper-2f-rigid-a"):
+        scene = build_studio_scene(Setup.single(preset("catalog_gripper", model), spec.step_ids), spec, 0)
+        centres[model] = footprint(scene, 0.0).grip_centre(0.004)
+    assert centres["gripper-2f-finray"] > 0.010  # its pads span 0.6 to 26 mm along the tool's x
+    assert centres["gripper-2f-rigid-a"] == 0.0  # its pads cover the plug on the axis
+
+
+def _lip_task(lid_depth_mm: int, tote_width_mm: int | None) -> TaskSpec:
+    lid = ObjectInstance.of(
+        "lid",
+        "hinged_lid",
+        "Tote lid",
+        ObjectPose(0.0, 0.0, 0.0),
+        depth_mm=lid_depth_mm,
+        width_mm=lid_depth_mm + 100,
+        thickness_mm=5,
+        feature="lip",
+        feature_mm=15,
+        max_angle_deg=110,
+        open_torque_nm=0.3,
+        damping_nms=0.05,
+    )
+    objects: tuple[ObjectInstance, ...] = (lid,)
+    if tote_width_mm is not None:
+        tote = ObjectInstance.of(
+            "tote",
+            "bin",
+            "Tote",
+            ObjectPose(0.0, 0.0, 0.0),
+            fixed=True,
+            width_mm=tote_width_mm,
+            height_mm=120,
+            wall_mm=5,
+            length_mm=400,
+        )
+        objects = (tote, lid)
+    step = Step.of(
+        "open_lid",
+        "hook_pull",
+        "lid",
+        "handle",
+        "Hook the lip and open the lid",
+        [SuccessCriterion("angle_deg", at_least=90, at_most=110), SuccessCriterion("force_n", at_most=20)],
+        constraints=StepConstraints(max_force_n=20),
+        params={"approach": "top", "speed_mm_s": 50},
+    )
+    return TaskSpec("lid lip", "", objects, (step,), source="test")
+
+
+@pytest.mark.parametrize("tote_width_mm", [None, 260])
+def test_a_soft_arm_hooks_under_a_lid_lip_and_opens_it(tote_width_mm: int | None) -> None:
+    """The soft arm's horizontal arm goes under the lip (a free lid, or one overhanging its
+    tote) and carries it along the arc to its stop."""
+    out = run_task(job(_lip_task(280, tote_width_mm), ("soft_arm", "tentacle-12", None))).steps[0]
+    assert out.success, (tote_width_mm, out.failure_mode, dict(out.quantities))
+    assert out.quantities["slip_mm"] <= 10.0
+    assert out.quantities["penetration_mm"] <= HELD_PENETRATION_MAX_MM
+
+
+@pytest.mark.parametrize(
+    ("key", "tote_width_mm"),
+    [
+        (("catalog_gripper", "adaptive-2f", "pinch"), None),  # straight fingers: no hook
+        (("soft_arm", "tentacle-12", None), 300),  # the lid inset in the rim: no gap to hook into
+    ],
+)
+def test_a_lip_without_a_hook_or_without_room_under_it_stays_shut(
+    key: tuple[str, str, str | None], tote_width_mm: int | None
+) -> None:
+    out = run_task(job(_lip_task(280, tote_width_mm), key)).steps[0]
+    assert not out.success and out.failure_mode == "slip", (out.failure_mode, dict(out.quantities))
+    assert out.quantities["angle_deg"] < 5.0
+
+
+def test_a_door_pulled_by_its_handle_stays_within_1_mm_of_penetration() -> None:
+    """The equipment-cabinet door with nothing else in its footprint and clear of the wrist's home
+    pose (a door under the home pose has the tool start inside it)."""
+    door = ObjectInstance.of(
+        "door",
+        "hinged_lid",
+        "Cabinet door",
+        ObjectPose(0.0, 150.0, 0.0),
+        orientation="door",
+        width_mm=400,
+        depth_mm=300,
+        thickness_mm=10,
+        max_angle_deg=110,
+        open_torque_nm=0.3,
+        damping_nms=0.05,
+        feature="handle",
+        feature_mm=20,
+    )
+    step = Step.of(
+        "open_door",
+        "hook_pull",
+        "door",
+        "handle",
+        "Hook the handle and pull the door open",
+        [SuccessCriterion("angle_deg", at_least=80.0), SuccessCriterion("force_n", at_most=30.0)],
+        constraints=StepConstraints(max_force_n=30.0),
+        params={"speed_mm_s": 80, "approach": "front"},
+    )
+    spec = TaskSpec("door", "", (door,), (step,), source="test")
+    out = run_task(job(spec, ("catalog_gripper", "adaptive-2f", "pinch"))).steps[0]
+    assert out.success, (out.failure_mode, dict(out.quantities))
+    assert out.quantities["penetration_mm"] <= HELD_PENETRATION_MAX_MM
+
+
+def _candidate(name: str) -> EffectorSpec:
+    from rtt.studio.search import default_candidates
+
+    return next(c.spec for c in default_candidates() if c.name.startswith(name))
+
+
+def _twist_task(obj: ObjectInstance, handle: str, lo: float, hi: float) -> TaskSpec:
+    step = Step.of(
+        "turn",
+        "twist",
+        obj.name,
+        handle,
+        "Turn it open",
+        [SuccessCriterion("angle_deg", at_least=lo, at_most=hi)],
+        constraints=StepConstraints(max_force_n=10.0, max_torque_nm=5.0),
+        params={"direction": "ccw", "speed_deg_s": 60},
+    )
+    return TaskSpec("twist under a force limit", "", (obj,), (step,), source="test")
+
+
+def test_a_wing_latch_is_turned_within_the_step_force_limit() -> None:
+    """The equipment-cabinet latch (0.8 N m detent on a 25 mm wing, 10 N limit): a linkage
+    gripper's tips swing down as it closes, so it is lowered for its lowest closing point and does
+    not land on the panel; its wing grip turns the latch open."""
+    latch = ObjectInstance.of(
+        "latch",
+        "quarter_turn_latch",
+        "Latch",
+        ObjectPose(-200.0, 0.0, 0.0),
+        detent=True,
+        head="wing",
+        head_diameter_mm=25,
+        head_height_mm=12,
+        torque_nm=0.8,
+        turn_deg=90,
+    )
+    spec = _twist_task(latch, "head", 85.0, 95.0)
+    eff = _candidate("Two-finger adaptive linkage gripper")
+    out = run_task(StudioJob(Setup.single(eff, spec.step_ids), spec, StudioCondition("seed0", 0))).steps[0]
+    assert out.success, (out.failure_mode, dict(out.quantities))
+    assert out.quantities["force_n"] <= 10.0
+
+
+def test_a_spoked_valve_is_left_without_lifting_a_spoke() -> None:
+    """After the turn, fingers in the spoke gaps turn back by their free play before they rise,
+    so a hooked finger does not lift the wheel on the way out (10 N limit)."""
+    valve = ObjectInstance.of(
+        "valve",
+        "handwheel_valve",
+        "Valve",
+        ObjectPose(200.0, 0.0, 0.0),
+        rim_diameter_mm=120,
+        rim_section_mm=12,
+        spokes=3,
+        torque_nm=3,
+        travel_deg=90,
+    )
+    spec = _twist_task(valve, "wheel", 80.0, 100.0)
+    eff = _candidate("Designed three-finger sliding hook gripper")
+    out = run_task(StudioJob(Setup.single(eff, spec.step_ids), spec, StudioCondition("seed0", 0))).steps[0]
+    assert out.success, (out.failure_mode, dict(out.quantities))
+    assert out.quantities["force_n"] <= 10.0
+
+
+def test_a_closing_linkage_finger_reaches_below_its_open_tip() -> None:
+    from rtt.studio.scene import build_studio_scene
+
+    spec = _plug_task(8)
+    scene = build_studio_scene(
+        Setup.single(_candidate("Two-finger adaptive linkage gripper"), spec.step_ids), spec, 0
+    )
+    from rtt.studio.primitives._common import footprint
+
+    assert footprint(scene, 1.0).tip_z < footprint(scene, 0.0).tip_z - 0.010

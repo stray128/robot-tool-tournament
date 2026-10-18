@@ -24,21 +24,27 @@ object's sense meets its stop and stalls.
      around the head.
 
    The fingers are pre-shaped to the feature (6 mm clear each side) and lowered with a guarded
-   move (it stops on contact above 5 N).
+   move (it stops on contact above 5 N) to where their lowest point while closing
+   (``Tool.closing_tip``: a linkage finger's tip swings down as it closes) is at the tip height.
 2. **Engage**: the head's own v1 primitive closes on the shared ramp (1.0 s plus 0.3 s);
    spoke engagement keeps the fingers at their pre-shape.
 3. **Turn** (closed loop, force feedback through the wrist only): the roll target advances in
    the step's direction at ``speed_deg_s`` (capped at the wrist's roll speed limit, ramped over
    0.2 s). It stops advancing while the roll torque is at the limit (90 % of the step's
-   ``max_torque_nm``, else 95 % of the wrist's); it stops when the observed object has turned
+   ``max_torque_nm``, else 95 % of the wrist's) or, under a step ``max_force_n``, while the
+   tool's contact force on the object is over :data:`FORCE_HOLD` of it; while it presses down
+   harder than that the wrist eases up (:data:`Z_RELIEF_SPEED`, at most :data:`Z_RELIEF_MAX`).
+   It stops when the observed object has turned
    the goal (the criterion on ``angle_deg``, ``turns`` or ``depth_mm`` plus 3 deg; without one,
    the object's whole travel, or to seated for a thread), when a ``torque_nm`` criterion's torque
    is reached, when it stalls (0.3 s at the torque limit without progress), or when the tool has
    turned 90 deg more than the goal (slipping). A thread is fed: the wrist descends with the
    member, one pitch per turn, plus 1.5 mm of push. Budget: the nominal turn time x 1.3 plus
    :data:`~._common.BUDGET_S` ``twist_slack``, the same rule for every candidate.
-4. **Release**: the roll target backs off to the measured roll (at the speed cap), the head
-   opens over 0.4 s and the wrist rises 50 mm (``hold_after`` keeps the grip).
+4. **Release**: the roll target backs off to the measured roll (at the speed cap); fingers in a
+   wheel's spoke gaps then turn back by their free play, to the middle of the gaps, so none lifts
+   a spoke on the way out; the wrist holds where it is and lifts :data:`RELEASE_LIFT` while the
+   head opens over 0.4 s, then rises to 50 mm (``hold_after`` keeps the grip).
 
 **Predicate** (:class:`TwistPredicate`): the template state at the end (``angle_deg``, and
 ``turns`` and ``depth_mm`` for a thread), ``torque_nm`` (the peak roll torque),
@@ -106,6 +112,10 @@ RELEASE_S = 0.4
 RETRACT = 0.050
 SLIP_FAIL_DEG = 15.0
 SPOKE_CLEAR = 0.002  # m
+FORCE_HOLD = 0.9  # of a step's max_force_n: the contact force the turn holds at
+Z_RELIEF_SPEED = 0.010  # m/s: the wrist eases up while it presses down over the limit
+Z_RELIEF_MAX = 0.004  # m [assumed]
+RELEASE_LIFT = 0.003  # m: the wrist lifts this much while the fingers open
 
 
 def _observed_angle(ctx: StepContext, data: mujoco.MjData) -> float:
@@ -184,10 +194,20 @@ class TwistController:
         start = np.asarray(ctx.wrist_start, dtype=np.float64)
         roll = float(start[4])
         current = float(start[3] + roll)
-        mode, heading, pre, tip_z = self._engagement(ctx, tool, axis_pt, mark_angle, sign, current, info)
+        mode, heading, pre, tip_z, free = self._engagement(
+            ctx, tool, axis_pt, mark_angle, sign, current, info
+        )
         yaw = heading - roll
         point = np.array([axis_pt[0], axis_pt[1], tip_z])
-        engage = wrist_target(point, tool.tip, yaw, roll)
+        # fingers: the planned tip height holds for the lowest point they reach while closing
+        # (in the spoke gaps they stay at the pre-shape)
+        if mode == "grip":
+            low = tool.closing_tip(pre)
+        elif mode == "spokes":
+            low = np.array([tool.tip[0], tool.tip[1], min(float(tool.tip[2]), tool.footprint(pre).tip_z)])
+        else:
+            low = tool.tip
+        engage = wrist_target(point, low, yaw, roll)
         path = Path.start(start)
         above = engage + np.array([0.0, 0.0, 0.06, 0.0, 0.0])
         transit(path, above, max(above[2], safe_palm_z(ctx, model, data, tool)))
@@ -224,6 +244,15 @@ class TwistController:
             "feed": obj.kind is TemplateKind.THREADED_JOINT,
             "pitch": info.get("pitch_m", 0.0),
             "hold": step.hold_after,
+            # spoke engagement: after the turn the fingers turn back by their free play, to the
+            # middle of the gaps, before they rise (so none lifts a spoke on the way out)
+            "unwind": free if mode == "spokes" else 0.0,
+            # a step force limit holds against the measured contact force (module docstring)
+            "force_cap": FORCE_HOLD * step.constraints.max_force_n
+            if step.constraints.max_force_n
+            else math.inf,
+            "z_relief": 0.0,
+            "z_hold": None,
         }
         return StepPlan(
             duration_s=duration,
@@ -242,37 +271,38 @@ class TwistController:
         sign: float,
         current: float,
         info: Mapping[str, float],
-    ) -> tuple[str, float, float, float]:
-        """(mode, heading, pre-shape closure, tip height) of the engagement."""
+    ) -> tuple[str, float, float, float, float]:
+        """(mode, heading, pre-shape closure, tip height, free turn before a finger meets a
+        spoke) of the engagement."""
         kind = ctx.obj.kind
         u = np.array([math.cos(mark_angle), math.sin(mark_angle), 0.0])
         across = rot_z(0.5 * math.pi) @ u
         if tool.mechanism == "suction":  # the lip pressed 4 mm into the top face (the bellows takes it)
-            return "seal", current, 0.0, float(axis_pt[2]) - 0.004
+            return "seal", current, 0.0, float(axis_pt[2]) - 0.004, 0.0
         if kind is TemplateKind.QUARTER_TURN_LATCH:
             width = info["fin_m"] if info["head"] == 1.0 else info["diameter_m"]
             tip = info["base_z"] + 0.002
             head = heading_for_axis(across, 0.0, current)
-            return "grip", head, tool.preshape(width), tip
+            return "grip", head, tool.preshape(width), tip, 0.0
         if kind is TemplateKind.THREADED_JOINT:
             width = 2.0 * info["flat_m"]
             tip = float(axis_pt[2]) - info["length_m"] + 0.003
             head = heading_for_axis(u, 0.0, current)
-            return "grip", head, tool.preshape(width), tip
+            return "grip", head, tool.preshape(width), tip, 0.0
         # handwheel
         tip = info["wheel_z"] - info["spoke_m"] - 0.004
         if info["spokes"] > 0 and tool.mechanism == "fingers":
             found = spoke_heading(tool, mark_angle, info, sign)
             if found is not None:
-                closure, psi, _ = found
+                closure, psi, free = found
                 psi = psi + 2.0 * math.pi * round((current - psi) / (2.0 * math.pi))
-                return "spokes", psi, closure, tip
+                return "spokes", psi, closure, tip, free
         if info["spokes"] == 0 and tool.mechanism == "fingers":
             ap = tool.footprint(0.0).aperture()
             if ap is not None and ap >= 2.0 * info["rim_m"] + 0.004:  # the fingers open past the disc
                 pre = tool.preshape(2.0 * info["rim_m"], 0.002)
-                return "grip", current, pre, info["wheel_z"] - 0.5 * info["section_m"] + 0.001
-        return "press", current, 0.0, float(axis_pt[2]) - 0.003  # the guarded move stops on contact
+                return "grip", current, pre, info["wheel_z"] - 0.5 * info["section_m"] + 0.001, 0.0
+        return "press", current, 0.0, float(axis_pt[2]) - 0.003, 0.0  # the guarded move stops on contact
 
     def _goal(
         self, ctx: StepContext, data: mujoco.MjData, sign: float, w: float, info: Mapping[str, float]
@@ -320,18 +350,33 @@ class TwistController:
         if t < guard.t0:
             wrist = run["path"].at(t)
         elif t < run["t_turn"]:
-            pressing = contacts(model, data, tool_geoms(ctx.scene), ctx.obj.geom_ids).normal
+            pressing = contacts(model, data, tool_geoms(ctx.scene), ctx.scene.ids.object_geoms).normal
             wrist = guard.at(min(t, guard.end), pressing) if t <= guard.end else guard.at(guard.end, 1e9)
         else:
             wrist = self._turn(t, ctx, run, model, data, guard, v)
+        if t > guard.end:  # engaged: pressing down harder than the step's limit eases the wrist up
+            if (
+                -float(contacts(model, data, tool_geoms(ctx.scene), ctx.obj.geom_ids).net[2])
+                > run["force_cap"]
+            ):
+                dt = ctx.task.controller.control_period
+                run["z_relief"] = min(Z_RELIEF_MAX, run["z_relief"] + Z_RELIEF_SPEED * dt)
+            wrist = wrist + np.array([0.0, 0.0, run["z_relief"], 0.0, 0.0])
         closure = pre
         if mode != "spokes":
             closure = pre + (1.0 - pre) * min(max((t - v["t_close"]) / 1.0, 0.0), 1.0)
         release = run.get("release_at")
         if release is not None and not run["hold"] and t >= release:
+            if run["z_hold"] is None:  # stop pressing: hold the wrist where it is
+                run["z_hold"] = float(data.qpos[ctx.scene.ids.palm_qpos[2]])
+            wrist = wrist.copy()
+            wrist[2] = run["z_hold"]
             closure = closure * max(0.0, 1.0 - (t - release) / RELEASE_S) if mode != "spokes" else 0.0
+            # lift clear of the panel while the fingers open (an opening finger can swing down),
+            # then retract
+            lift = RELEASE_LIFT * min_jerk(min(1.0, (t - release) / RELEASE_S))
             up = min_jerk(min(1.0, max(0.0, (t - release - RELEASE_S) / 0.6)))
-            wrist = wrist + np.array([0.0, 0.0, RETRACT * up, 0.0, 0.0])
+            wrist = wrist + np.array([0.0, 0.0, lift + (RETRACT - RELEASE_LIFT) * up, 0.0, 0.0])
         phase = Phase.HOLD if t >= v["t_close"] else Phase.DESCEND
         return PrimitiveCommand(wrist, tool.controls(t, closure, model, data, phase))
 
@@ -360,10 +405,12 @@ class TwistController:
             run["obs0"] = obs
         progress = sign * (obs - run["obs0"])  # object rotation in the commanded direction
         cap = math.radians(ctx.scene.wrist.roll_speed_max_deg_s) * dt * 0.98
+        con = contacts(model, data, tool_geoms(ctx.scene), ctx.obj.geom_ids)
         if run["done_at"] is None:
             ramp = min(1.0, (t - run["t_turn"]) / 0.2)
             step = run["omega"] * dt * ramp
-            limited = torque >= run["torque_limit"]
+            # the roll holds while the torque or the contact force is at its limit
+            limited = torque >= run["torque_limit"] or float(np.linalg.norm(con.net)) > run["force_cap"]
             stop_torque = run["torque_stop"] is not None and torque >= run["torque_stop"]
             if limited and progress <= run["progress"] + math.radians(0.05):
                 run["stall"] += dt
@@ -382,10 +429,17 @@ class TwistController:
                 schedule(ctx).values["turn_end"] = t
             elif not limited:
                 run["roll_cmd"] += sign * step
-        else:  # back the target off toward the measured roll, then release
+        else:  # back the target off toward the measured roll (and unwind the free play), then release
             gap = roll_meas - run["roll_cmd"]
             run["roll_cmd"] += max(-cap, min(cap, gap))
-            if run.get("release_at") is None and (abs(gap) <= cap or t >= run["done_at"] + 0.4):
+            if abs(gap) <= cap and run["unwind"] > 0.0:
+                back = min(cap - abs(gap), run["unwind"])  # within the roll speed cap, with the step above
+                run["roll_cmd"] -= sign * back
+                run["unwind"] -= back
+                gap = 0.0
+            if run.get("release_at") is None and (
+                (abs(gap) <= cap and run["unwind"] <= 0.0) or t >= run["done_at"] + 0.4
+            ):
                 run["release_at"] = t + 0.05
                 sch = schedule(ctx)
                 sch.values["released_at"] = run["release_at"]

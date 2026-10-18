@@ -28,7 +28,7 @@ Sites: ``head`` (the top centre of the head) and the auxiliary ``mark`` (on the 
 ``+x`` at its rim and top: the fin's end or the slot's end, so a controller sees the head's
 rotation). ``info``: the head code (0 slot, 1 wing), sizes, ``turn_rad`` and the panel top.
 
-State: ``angle_deg``, the head's turn from locked (counter-clockwise positive).
+State: ``angle_deg``, the head's turn from locked (counter-clockwise positive), within its stops.
 """
 
 from __future__ import annotations
@@ -175,7 +175,8 @@ class QuarterTurnLatchBuilder(TemplateBuilder):
         )
 
     def state(self, obj: ResolvedHandles, model: mujoco.MjModel, data: mujoco.MjData) -> dict[str, float]:
-        return {"angle_deg": math.degrees(float(data.qpos[obj.joint_qpos["hinge"]]))}
+        angle = float(data.qpos[obj.joint_qpos["hinge"]])  # within the joint's own stops
+        return {"angle_deg": math.degrees(min(max(angle, 0.0), obj.handles.info["turn_rad"]))}
 
     def passive(self, obj: ResolvedHandles, model: mujoco.MjModel, data: mujoco.MjData) -> np.ndarray:
         detent = obj.handles.info["detent_nm"]

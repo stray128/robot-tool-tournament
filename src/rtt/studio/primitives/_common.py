@@ -100,6 +100,45 @@ class Footprint:
     tip_z: float  # lowest point of the active collision geoms
     boxes: np.ndarray  # (n, 4): x_lo, x_hi, y_lo, y_hi of each geom whose bottom is near the tip
     centres: np.ndarray  # (n, 2)
+    solids: np.ndarray = field(
+        default_factory=lambda: np.zeros((0, 6))
+    )  # (m, 6): lo xyz, hi xyz of every geom
+
+    def hook(self, band: float = 0.015) -> tuple[np.ndarray, float, float, float]:
+        """The tool's best sideways hook: the horizontal wrist-frame direction ``d`` in which the
+        geoms lying wholly within ``band`` of the tip reach furthest beyond the rest of the tool,
+        how far they reach beyond it (m; 0 for a straight tool), how far they reach from the axis,
+        and the top of that protrusion (wrist z). A soft arm's horizontal arm is such a hook; so
+        would be any L-shaped finger."""
+        best = (np.array([1.0, 0.0, 0.0]), 0.0, 0.0, self.tip_z)
+        if not len(self.solids):
+            return best
+        low = self.solids[self.solids[:, 5] <= self.tip_z + band]
+        body = self.solids[self.solids[:, 5] > self.tip_z + band]
+        if not len(low):
+            return best
+
+        def reach(boxes: np.ndarray, d: np.ndarray) -> float:
+            if not len(boxes):
+                return 0.0
+            xs = np.where(d[0] >= 0, boxes[:, 3], boxes[:, 0])
+            ys = np.where(d[1] >= 0, boxes[:, 4], boxes[:, 1])
+            return float(np.max(xs * d[0] + ys * d[1]))
+
+        for k in range(72):
+            a = 2.0 * math.pi * k / 72
+            d = np.array([math.cos(a), math.sin(a), 0.0])
+            far, near = reach(low, d), reach(body, d)
+            if far - near > best[1] + 1e-6:
+                out = low[
+                    (
+                        np.where(d[0] >= 0, low[:, 3], low[:, 0]) * d[0]
+                        + np.where(d[1] >= 0, low[:, 4], low[:, 1]) * d[1]
+                    )
+                    > near
+                ]
+                best = (d, far - near, far, float(out[:, 5].max()) if len(out) else self.tip_z)
+        return best
 
     def aperture(self) -> float | None:
         """The gap between the tip geoms on either side of the wrist axis along the tool's y (the
@@ -111,6 +150,32 @@ class Footprint:
         if not pos or not neg:
             return None
         return float(min(pos) - max(neg))
+
+    def front(self, direction: np.ndarray) -> float:
+        """How far the whole tool (every active geom) reaches along a horizontal wrist-frame
+        ``direction`` from its axis (m)."""
+        if not len(self.solids):
+            return self.half_extent(direction)
+        d = np.asarray(direction[:2], dtype=np.float64)
+        d = d / max(1e-12, float(np.linalg.norm(d)))
+        xs = np.where(d[0] >= 0, self.solids[:, 3], self.solids[:, 0])
+        ys = np.where(d[1] >= 0, self.solids[:, 4], self.solids[:, 1])
+        return float(np.max(xs * d[0] + ys * d[1]))
+
+    def grip_centre(self, radius: float) -> float:
+        """Where along the tool's x (across the closing axis) a round part ``radius`` m across
+        should sit between the fingers: on the axis (0) when the tip geoms on both sides of the
+        closing axis cover it there, else at the middle of the x span they share (a head whose
+        pads are mounted off its TCP). 0 for a head without such a pair."""
+        pos = [b for b in self.boxes if 0.5 * (b[2] + b[3]) > 0.002]
+        neg = [b for b in self.boxes if 0.5 * (b[2] + b[3]) < -0.002]
+        if not pos or not neg:
+            return 0.0
+        lo = max(min(b[0] for b in pos), min(b[0] for b in neg))
+        hi = min(max(b[1] for b in pos), max(b[1] for b in neg))
+        if hi <= lo or lo + radius <= 0.0 <= hi - radius:
+            return 0.0
+        return float(0.5 * (lo + hi))
 
     def half_extent(self, direction: np.ndarray) -> float:
         """How far the tip region reaches along a horizontal wrist-frame ``direction``."""
@@ -195,6 +260,17 @@ class Tool:
     def footprint(self, closure: float) -> Footprint:
         return footprint(self.scene, closure)
 
+    def closing_tip(self, pre: float) -> np.ndarray:
+        """The tool's tip as it closes from the pre-shape ``pre`` (wrist frame, roll 0): on the
+        axis, at the lowest point its geoms reach over the calibrated closures from ``pre`` to 1
+        (a linkage finger's tip swings down as it closes), so a tip height planned for it holds
+        through the whole close. Fingers only (else :attr:`tip`)."""
+        if self.mechanism != "fingers":
+            return self.tip
+        closures = [c for c in (*PRESHAPE_CLOSURES, 0.8, 1.0) if c >= pre - 1e-9]
+        low = min(self.footprint(c).tip_z for c in closures)
+        return np.array([self.tip[0], self.tip[1], min(float(self.tip[2]), low)])
+
     def preshape(self, width: float, clearance: float = PRESHAPE_CLEARANCE) -> float:
         """The largest calibrated closure whose aperture along the closing axis still clears a
         feature ``width`` m across by ``clearance`` m on each side (0: fully open). Fingers only."""
@@ -267,7 +343,7 @@ def footprint(scene: StudioScene, closure: float) -> Footprint:
         mujoco.mj_step(model, data, nstep=2)
     palm = data.xpos[ids.palm_body].copy()
     r_palm = data.xmat[ids.palm_body].reshape(3, 3)
-    lows, boxes, centres = [], [], []
+    lows, boxes, centres, solids = [], [], [], []
     for g in ids.active_geoms:
         c = data.geom_xpos[g] + data.geom_xmat[g].reshape(3, 3) @ model.geom_aabb[g][:3]
         ext = np.abs(data.geom_xmat[g].reshape(3, 3)) @ model.geom_aabb[g][3:]
@@ -275,6 +351,7 @@ def footprint(scene: StudioScene, closure: float) -> Footprint:
         hi = r_palm.T @ (c + ext - palm)
         lo, hi = np.minimum(lo, hi), np.maximum(lo, hi)
         lows.append(lo[2])
+        solids.append((*lo, *hi))
         boxes.append((lo[0], hi[0], lo[1], hi[1]))
         centres.append((0.5 * (lo[0] + hi[0]), 0.5 * (lo[1] + hi[1])))
     tip = float(min(lows)) if lows else 0.0
@@ -283,6 +360,7 @@ def footprint(scene: StudioScene, closure: float) -> Footprint:
         tip_z=tip,
         boxes=np.array([boxes[i] for i in near], dtype=np.float64).reshape(-1, 4),
         centres=np.array([centres[i] for i in near], dtype=np.float64).reshape(-1, 2),
+        solids=np.array(solids, dtype=np.float64).reshape(-1, 6),
     )
     _FOOTPRINTS[key] = fp
     while len(_FOOTPRINTS) > 64:
@@ -364,8 +442,8 @@ class Path:
 @dataclass
 class Guarded:
     """A straight move from ``a`` to ``b`` over ``duration`` s that stops advancing while the
-    tool presses on the object harder than :data:`GUARD_FORCE_N` (force feedback); it keeps its
-    progress, so a blocked move ends where it was stopped."""
+    tool presses on an object (any object in the scene) harder than :data:`GUARD_FORCE_N` (force
+    feedback); it keeps its progress, so a blocked move ends where it was stopped."""
 
     a: np.ndarray
     b: np.ndarray

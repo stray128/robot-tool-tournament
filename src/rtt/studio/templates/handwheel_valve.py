@@ -22,7 +22,7 @@ Sites: ``wheel`` (the top centre of the hub) and the auxiliary ``spoke0`` (on sp
 centre line, in the wheel's mid-plane: a controller sees the wheel's rotation). ``info``: the rim
 radius and section, hub radius and height, spoke count and radius, ``wheel_z``, ``travel_rad``.
 
-State: ``angle_deg``, how far it is open (counter-clockwise positive).
+State: ``angle_deg``, how far it is open (counter-clockwise positive), within its stops.
 """
 
 from __future__ import annotations
@@ -180,7 +180,8 @@ class HandwheelValveBuilder(TemplateBuilder):
         )
 
     def state(self, obj: ResolvedHandles, model: mujoco.MjModel, data: mujoco.MjData) -> dict[str, float]:
-        return {"angle_deg": math.degrees(float(data.qpos[obj.joint_qpos["hinge"]]))}
+        angle = float(data.qpos[obj.joint_qpos["hinge"]])  # within the joint's own stops
+        return {"angle_deg": math.degrees(min(max(angle, 0.0), obj.handles.info["travel_rad"]))}
 
     def passive(self, obj: ResolvedHandles, model: mujoco.MjModel, data: mujoco.MjData) -> np.ndarray:
         info = obj.handles.info

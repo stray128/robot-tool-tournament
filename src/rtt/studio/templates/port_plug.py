@@ -25,7 +25,9 @@ mouth centre, static) and the auxiliary ``plug_tip`` (the plug's bottom centre).
 bore, depths and heights, the plug's size and start position.
 
 State: ``depth_mm``, how deep the plug's tip is below the socket mouth while it is in the bore
-(0 outside).
+(0 outside); within :data:`SEAT_TOL` of the floor it reads as seated (``depth_mm`` exactly), so
+the floor contact's compliance (a few hundredths of a millimetre of springback when a press lets
+go) does not decide whether a seated plug passes a full-depth criterion.
 """
 
 from __future__ import annotations
@@ -60,6 +62,7 @@ PAD_PRELOAD: Final = 0.002  # m: the spring's rest is this far past the pad's in
 PAD_SQUEEZE: Final = 0.0004  # m: a centred plug pushes each pad out this far
 GROOVE_DEPTH: Final = 0.0008  # m
 TIP_CHAMFER: Final = 0.0006  # m, the plug's own tip chamfer [assumed]
+SEAT_TOL: Final = 0.0001  # m: a plug this close to the floor reads as seated (full depth)
 FRAME_RGBA: Final = (0.55, 0.58, 0.62, 1.0)
 
 
@@ -237,7 +240,11 @@ class PortPlugBuilder(TemplateBuilder):
         return (max(0.0, float(mouth[2] - tip[2])) if inside else 0.0), radial
 
     def state(self, obj: ResolvedHandles, model: mujoco.MjModel, data: mujoco.MjData) -> dict[str, float]:
-        return {"depth_mm": 1000.0 * self._depth(obj, data)[0]}
+        depth = self._depth(obj, data)[0]
+        full = obj.handles.info["depth_m"]
+        if depth >= full - SEAT_TOL:  # on the floor: contact compliance does not decide seating
+            depth = full
+        return {"depth_mm": 1000.0 * depth}
 
 
 register_template_builder(PortPlugBuilder())

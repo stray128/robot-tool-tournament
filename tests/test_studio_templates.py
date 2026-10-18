@@ -316,6 +316,40 @@ def test_port_socket_pads_and_latch_groove(task: Any) -> None:
     assert radii == [pytest.approx(0.006 - 0.0008), pytest.approx(0.006)]  # the groove
 
 
+def test_states_read_within_the_joints_own_limits(task: Any) -> None:
+    """The solver's soft limits let a joint resting on its stop lean a hair past it, and a plug
+    pressed onto the socket floor spring back a few hundredths of a millimetre: the states read
+    within the limits, so a step that drives an object onto its stop meets a criterion at the stop."""
+    lid_spec = one_object_task("lid", kind="hinged_lid", max_angle_deg=110)
+    scene = scene_of(lid_spec, task)
+    m, obj = scene.model, scene.objects["lid"]
+    d = mujoco.MjData(m)
+    d.qpos[obj.joint_qpos["hinge"]] = math.radians(110.0017)
+    mujoco.mj_forward(m, d)
+    assert scene.builders["lid"].state(obj, m, d)["angle_deg"] == pytest.approx(110.0, abs=1e-9)
+    dr_spec = one_object_task("dr", kind="drawer", travel_mm=180)
+    dr_scene = scene_of(dr_spec, task)
+    dr, dd = dr_scene.objects["dr"], mujoco.MjData(dr_scene.model)
+    dd.qpos[dr.joint_qpos["slide"]] = 0.1802
+    assert dr_scene.builders["dr"].state(dr, dr_scene.model, dd)["travel_mm"] == pytest.approx(180.0)
+    po_spec = one_object_task("po", kind="port_plug", depth_mm=15)
+    po_scene = scene_of(po_spec, task)
+    po, pm = po_scene.objects["po"], po_scene.model
+    info = po.handles.info
+    pd = mujoco.MjData(pm)
+    adr = po.joint_qpos["free"]
+    for below_floor, want in ((-0.00005, 15.0), (0.00005, 15.0), (0.0005, 14.5)):
+        pd.qpos[adr : adr + 3] = [
+            info["socket_x"],
+            info["socket_y"],
+            info["socket_top_z"] + 0.5 * info["plug_len_m"] - (info["depth_m"] - below_floor),
+        ]
+        mujoco.mj_forward(pm, pd)
+        assert po_scene.builders["po"].state(po, pm, pd)["depth_mm"] == pytest.approx(want, abs=1e-6), (
+            below_floor
+        )
+
+
 # --------------------------------------------------------------------------- the controllers' view
 
 

@@ -29,7 +29,7 @@ the drawer's centre, static). ``info``: the pull direction in the world (``pull_
 travel, the handle code (0 bar, 1 knob, 2 lip), ``grip_m`` (the grip's thickness across a
 gripper's closing axis) and geometry.
 
-State: ``travel_mm``, how far the drawer is out (0 closed).
+State: ``travel_mm``, how far the drawer is out (0 closed), within the slide's stops.
 """
 
 from __future__ import annotations
@@ -210,7 +210,8 @@ class DrawerBuilder(TemplateBuilder):
         )
 
     def state(self, obj: ResolvedHandles, model: mujoco.MjModel, data: mujoco.MjData) -> dict[str, float]:
-        return {"travel_mm": 1000.0 * float(data.qpos[obj.joint_qpos["slide"]])}
+        travel = float(data.qpos[obj.joint_qpos["slide"]])  # within the slide's own stops
+        return {"travel_mm": 1000.0 * min(max(travel, 0.0), obj.handles.info["travel_m"])}
 
 
 register_template_builder(DrawerBuilder())
