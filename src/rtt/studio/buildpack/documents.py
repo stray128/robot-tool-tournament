@@ -263,6 +263,7 @@ def readme_text(report: Mapping[str, Any], finalist: Mapping[str, Any], files: S
         DISCLAIMER,
         "",
         f"Setup: {setup.get('label') or setup['kind']} ({setup['kind']}).",
+        _status(report, setup),
         f"Task id: {report['task_id']}",
         f"Setup id: {setup['setup_id']}",
         "",
@@ -276,6 +277,22 @@ def readme_text(report: Mapping[str, Any], finalist: Mapping[str, Any], files: S
         "",
     ]
     return "\n".join(out)
+
+
+def _status(report: Mapping[str, Any], setup: Mapping[str, Any]) -> str:
+    rec = report.get("recommendation") or {}
+    if rec.get("evidence") != "accepted":
+        return "Not evidence: " + str(rec.get("reason") or "reference controllers")
+    pick = rec.get("recommendation") or {}
+    if pick.get("setup_id") == setup["setup_id"]:
+        return "This is the Studio's recommendation for the task."
+    if pick:
+        return f"Not the recommendation (the Studio recommends {pick.get('label')}); a tested finalist."
+    return (
+        "Not a recommendation: "
+        + str((rec.get("no_winner") or {}).get("reason") or "no setup qualified")
+        + "."
+    )
 
 
 def credits_text(records: Sequence[Mapping[str, Any]]) -> str:
@@ -378,6 +395,16 @@ def certificate_html(
     ]
     if rec.get("evidence") != "accepted":
         parts.append(f"<p><b>Not evidence:</b> {_e(rec.get('reason') or '')}</p>")
+    elif not recommended:
+        other = (rec.get("recommendation") or {}).get("label")
+        why = (
+            f"the Studio recommends {other} instead"
+            if other
+            else (rec.get("no_winner") or {}).get("reason") or "there is no recommendation"
+        )
+        parts.append(
+            f"<p><b>Not the recommendation:</b> {_e(why)}. This pack documents a tested finalist.</p>"
+        )
     # headline
     weakest = result["weakest_step"]
     parts.append("<h2>Result</h2>")
