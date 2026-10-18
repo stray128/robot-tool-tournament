@@ -29,6 +29,7 @@ import argparse
 import hashlib
 import json
 import math
+import os
 import statistics
 import subprocess
 import sys
@@ -360,6 +361,66 @@ def primary_rule(arms: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
     return {"tested": True, "reason": None}
 
 
+POOLS: Final = {"b": "full", "c": "library"}
+
+
+def check_reused_report(report: Mapping[str, Any], spec: Any, pool: str, cfg: Mapping[str, Any]) -> list[str]:
+    """Why an existing tournament report cannot stand for tournament b or c (empty: it can): the
+    task, the controllers, the development conditions and the candidate pool must be this protocol's."""
+    from rtt.studio.runner import condition_dict
+
+    dev = cfg["development"]
+    grid = [condition_dict(c) for c in dev_conditions(spec, cfg)]
+    problems = []
+    if report.get("task_id") != spec.task_id:
+        problems.append("another task")
+    if report.get("controllers") != dev["controllers"] or not report.get("evidence"):
+        problems.append("not the default controllers")
+    if report.get("conditions") != grid:
+        problems.append("not the development conditions")
+    if report["screen"]["conditions"] != grid[: int(dev["screen"])]:
+        problems.append("not the screen conditions")
+    if len(report.get("finalists") or ()) > int(dev["finalists"]):
+        problems.append("more finalists than the protocol's")
+    want = sorted(c.effector_id for c in _candidates(spec, pool))
+    if sorted(c["effector_id"] for c in report["screen"]["candidates"]) != want:
+        problems.append(f"its candidate pool is not the {pool} pool of this code")
+    return problems
+
+
+def verify_arms(
+    heroes: Mapping[str, Mapping[str, Any]],
+    specs: Mapping[str, Any],
+    cfg: Mapping[str, Any],
+    n: int,
+    pool: Any,
+) -> dict[str, Any]:
+    """Re-run every frozen arm on its first ``n`` development conditions with this code and compare
+    each ``traj_sha`` with the frozen one (a reused report must be this code's)."""
+    from rtt.sim.task import default_task_v2
+    from rtt.studio.episode import StudioJob, run_task
+
+    task = default_task_v2()
+    items: list[Any] = []
+    want: list[tuple[str, str, str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for case, h in heroes.items():
+        spec = specs[case]
+        conds = {c.condition_id: c for c in dev_conditions(spec, cfg)}
+        for arm in ARMS:
+            a = h["arms"][arm]
+            if not a.get("setup_id") or (case, a["setup_id"]) in seen:
+                continue  # arms that share a setup are checked once
+            seen.add((case, a["setup_id"]))
+            setup = _setup(a)
+            for run in a["dev"]["runs"][:n]:
+                items.append(StudioJob(setup, spec, conds[run["condition_id"]], task=task))
+                want.append((case, arm, run["condition_id"], run["traj_sha"]))
+    got = [r.traj_sha for r in pool.map(run_task, items)] if items else []
+    bad = [f"{c}/{a}/{k}" for (c, a, k, sha), g in zip(want, got, strict=True) if sha != g]
+    return {"conditions": n, "runs": len(items), "equal": len(items) - len(bad), "unequal": bad}
+
+
 def freeze_arms(
     config: Path,
     *,
@@ -368,15 +429,32 @@ def freeze_arms(
     parallel: int = 4,
     allow_dirty: bool = False,
     heroes: Sequence[str] | None = None,
+    reuse: Mapping[str, Path] | None = None,
+    refreeze: bool = False,
+    verify: int = 2,
 ) -> dict[str, Any]:
+    """The development search (module docstring), written into the frozen block.
+
+    ``reuse``: ``{"b": DIR}`` and/or ``{"c": DIR}`` takes that tournament from ``DIR/<case>/report.json``
+    (an S5 hero-gate report, say) instead of running it, after :func:`check_reused_report`; the report
+    is copied next to the others. ``verify``: re-run each arm's first ``verify`` development
+    conditions and refuse unless every ``traj_sha`` matches (:func:`verify_arms`). ``refreeze``:
+    replace a frozen block, allowed only while no secret has been committed.
+    """
     from rtt.store.vault import VaultGuard
 
     cfg = load_config(config)
-    if cfg.get("frozen"):
-        raise ValueError(f"{config} already holds a frozen block; arms are frozen once")
+    old = cfg.get("frozen")
+    if old and old.get("commitment"):
+        raise ValueError(f"{config}: a secret is committed; the arms can no longer change")
+    if old and not refreeze:
+        raise ValueError(f"{config} already holds a frozen block; pass refreeze to regenerate it")
     git = git_state()
     if git["git_dirty"] and not allow_dirty:
         raise ValueError("freeze on a clean commit (the arms must be reproducible from it)")
+    reuse = {k: Path(v) for k, v in (reuse or {}).items()}
+    if set(reuse) - set(POOLS):
+        raise ValueError(f"reuse names tournaments {sorted(POOLS)} only")
     specs = hero_specs(cfg)
     secret_dir = resolve(cfg["heldout"]["secret_file"]).parent
     neb = nebius_executor(cfg, out / "staging") if executor == "nebius" else None
@@ -393,10 +471,24 @@ def freeze_arms(
         for case, spec in specs.items():
             if heroes and case not in heroes:
                 continue
-            reports = {}
-            for arm, pool_kind in (("b", "full"), ("c", "library")):
-                t0 = time.perf_counter()
+            reports: dict[str, Any] = {}
+            sources: dict[str, str] = {}
+            for arm, pool_kind in POOLS.items():
                 session = out / case / arm
+                if arm in reuse:
+                    src = reuse[arm] / case / "report.json"
+                    rep = json.loads(src.read_text(encoding="utf-8"))
+                    problems = check_reused_report(rep, spec, pool_kind, cfg)
+                    if problems:
+                        raise ValueError(
+                            f"{case}: the reused tournament {arm} report: " + "; ".join(problems)
+                        )
+                    session.mkdir(parents=True, exist_ok=True)
+                    (session / "report.json").write_bytes(src.read_bytes())
+                    reports[arm], sources[arm] = rep, "reused"
+                    print(f"{case} {arm}: reused", flush=True)
+                    continue
+                t0 = time.perf_counter()
                 run_id = f"usecase-dev-{case.replace('_', '-')}-{arm}-{stamp}"
                 pool = make_pool(executor, run_id, session, parallel=parallel, nebius=neb)
                 with pool:
@@ -404,7 +496,7 @@ def freeze_arms(
                 timings[f"{case}/{arm}"] = round(time.perf_counter() - t0, 1)
                 if rep is not None:
                     _write_json(session / "report.json", rep)
-                reports[arm] = rep
+                reports[arm], sources[arm] = rep, f"run here ({executor})"
                 print(f"{case} {arm}: {timings[f'{case}/{arm}']} s", flush=True)
             arms = {
                 "a": arm_from_report(reports["b"], "best_single"),
@@ -418,18 +510,56 @@ def freeze_arms(
                         {
                             "sha256": _sha256_file(out / case / arm / "report.json"),
                             "path": f"{case}/{arm}/report.json",
+                            "source": sources[arm],
                         }
                         if reports[arm] is not None
                         else None
                     )
-                    for arm in ("b", "c")
+                    for arm in POOLS
                 },
                 "arms": arms,
                 "primary": primary_rule(arms),
             }
+        if verify > 0:
+            t0 = time.perf_counter()
+            run_id = f"usecase-dev-verify-{stamp}"
+            pool = make_pool(executor, run_id, out / "verify", parallel=parallel, nebius=neb)
+            with pool:
+                check = verify_arms(frozen["heroes"], specs, cfg, verify, pool)
+            timings["verify"] = round(time.perf_counter() - t0, 1)
+            if check["unequal"]:
+                raise ValueError(f"frozen arms do not reproduce on this code: {check['unequal'][:6]}")
+            frozen["code"]["verified"] = check
     frozen["timings_s"] = timings
     write_frozen(config, frozen)
     return frozen
+
+
+def frozen_problems(cfg: Mapping[str, Any]) -> list[str]:
+    """What is missing or inconsistent in the frozen block (empty: complete). The secret is not checked."""
+    frozen = cfg.get("frozen") or {}
+    problems = []
+    for case, task_id in cfg["heroes"]["cases"].items():
+        h = (frozen.get("heroes") or {}).get(case)
+        if h is None or h.get("task_id") != task_id:
+            problems.append(f"{case}: not frozen")
+            continue
+        n_dev = int(cfg["development"]["conditions"])
+        for arm in ARMS:
+            a = h["arms"].get(arm) or {}
+            if a.get("status") not in ("tested", "descriptive", "missing"):
+                problems.append(f"{case}/{arm}: no status")
+            if not a.get("setup_id"):
+                continue
+            if _setup(a).setup_id != a["setup_id"]:
+                problems.append(f"{case}/{arm}: the setup does not hash to its id")
+            if len(a["dev"]["runs"]) != n_dev:
+                problems.append(f"{case}/{arm}: {len(a['dev']['runs'])} development runs, not {n_dev}")
+        if h.get("primary") != primary_rule(h["arms"]):
+            problems.append(f"{case}: the primary rule does not follow from the arms")
+    if not (frozen.get("code") or {}).get("verified"):
+        problems.append("the arms were not verified on the code")
+    return problems
 
 
 def _image_ref() -> dict[str, Any] | None:
@@ -467,18 +597,7 @@ def finalize(config: Path, *, secret_file: Path | None = None) -> None:
 
     cfg = load_config(config)
     frozen = cfg.get("frozen") or {}
-    problems = []
-    for case, task_id in cfg["heroes"]["cases"].items():
-        h = (frozen.get("heroes") or {}).get(case)
-        if h is None or h.get("task_id") != task_id:
-            problems.append(f"{case}: not frozen")
-            continue
-        for arm in ARMS:
-            a = h["arms"].get(arm) or {}
-            if a.get("status") not in ("tested", "descriptive", "missing"):
-                problems.append(f"{case}/{arm}: no status")
-            if a.get("setup_id") and a.get("setup", {}).get("setup_id") != a["setup_id"]:
-                problems.append(f"{case}/{arm}: the setup does not match its id")
+    problems = frozen_problems(cfg)
     if not frozen.get("commitment"):
         problems.append("no commitment")
     else:
@@ -496,6 +615,20 @@ def _setup(arm: Mapping[str, Any]) -> Any:
     from rtt.studio.buildpack import setup_from_dict
 
     return setup_from_dict(arm["setup"])
+
+
+#: What a job runs: a commit's code for the job is these paths (the protocol's config aside).
+JOB_CODE_PATHS: Final = ("src/", "configs/", "assets/", "docker/", "uv.lock", "pyproject.toml")
+PROTOCOL_CONFIG: Final = "configs/usecase_v1.yaml"
+
+
+def same_code(a: str, b: str) -> bool:
+    """Whether commits ``a`` and ``b`` hold the same job code (they may differ in the docs, tests,
+    scripts, the site and this protocol's config, which no job reads)."""
+    diff = _git("diff", "--name-only", a, b)
+    if diff.returncode != 0:
+        return False
+    return not [f for f in diff.stdout.split() if f.startswith(JOB_CODE_PATHS) and f != PROTOCOL_CONFIG]
 
 
 def check_tagged(config: Path, tag: str) -> str:
@@ -573,6 +706,12 @@ def evaluate(
                     )
     image = None
     if executor == "nebius":
+        built = os.environ.get(
+            "RTT_IMAGE_GIT_SHA"
+        )  # written by push_image.sh, exported by jobs/nebius/env.sh
+        frozen_sha = (frozen.get("code") or {}).get("git_sha")
+        if built and frozen_sha and not same_code(frozen_sha, built):
+            raise ValueError("the image was built from code that differs from the frozen arms' code")
         image = _image_ref()
         frozen_image = (frozen.get("code") or {}).get("image")
         if frozen_image and image and frozen_image["digest"] != image["digest"]:
@@ -997,26 +1136,36 @@ def compare_reports(a: Mapping[str, Any], b: Mapping[str, Any]) -> dict[str, Any
     }
 
 
+def _jsonl(paths: Iterable[Path]) -> list[dict[str, Any]]:
+    out = []
+    for p in sorted(paths):
+        out += [json.loads(line) for line in p.read_text(encoding="utf-8").splitlines() if line]
+    return out
+
+
 def dry_run(
     *,
-    hero: str,
+    heroes: Sequence[str],
     n_conditions: int,
     out: Path,
     parallel: int = 4,
     reference: Path | None = None,
+    reuse: Mapping[str, Path] | None = None,
     config: Path = DEFAULT_CONFIG,
 ) -> dict[str, Any]:
-    """The whole pipeline on one hero and ``n_conditions`` held-out conditions, with a throwaway
-    secret and the local fake cloud, in ``out`` (outside the repository)."""
+    """The whole pipeline on ``heroes`` and ``n_conditions`` held-out conditions, with a throwaway
+    secret and the local fake cloud, in ``out`` (outside the repository). ``reuse`` as in
+    :func:`freeze_arms`; ``reference``: ``DIR/<case>/report.json`` to compare a tournament b run here with."""
     if out.resolve().is_relative_to(REPO):
         raise ValueError("a dry run writes outside the repository")
     out.mkdir(parents=True, exist_ok=True)
     cfg_path = out / "config.yaml"
     text = config.read_text(encoding="utf-8").split(FROZEN_MARKER)[0]
     cfg = yaml.safe_load(text)
-    if hero not in cfg["heroes"]["cases"]:
-        raise ValueError(f"unknown hero {hero}")
-    cfg["heroes"]["cases"] = {hero: cfg["heroes"]["cases"][hero]}
+    unknown = set(heroes) - set(cfg["heroes"]["cases"])
+    if unknown:
+        raise ValueError(f"unknown heroes {sorted(unknown)}")
+    cfg["heroes"]["cases"] = {h: cfg["heroes"]["cases"][h] for h in heroes}
     cfg["heroes"]["plans"] = str(resolve(cfg["heroes"]["plans"]))
     cfg["heldout"]["conditions"] = int(n_conditions)
     cfg["heldout"]["secret_file"] = str(out / "secrets" / "usecase_v1_seed.txt")
@@ -1031,7 +1180,7 @@ def dry_run(
     )
     timings = {}
     t = time.perf_counter()
-    freeze_arms(cfg_path, executor="fake", out=out / "dev", parallel=parallel, allow_dirty=True)
+    freeze_arms(cfg_path, executor="fake", out=out / "dev", parallel=parallel, allow_dirty=True, reuse=reuse)
     timings["freeze_s"] = round(time.perf_counter() - t, 1)
     commit_secret(cfg_path)
     t = time.perf_counter()
@@ -1039,28 +1188,29 @@ def dry_run(
     timings["evaluate_s"] = round(time.perf_counter() - t, 1)
     from rtt.studio.cloud import cost_per_run
 
-    fan_rows = []
-    for p in sorted(out.glob("dev/*/*/rows.jsonl")) + sorted(out.glob("results/fanout/rows.jsonl")):
-        fan_rows += [json.loads(line) for line in p.read_text(encoding="utf-8").splitlines() if line]
-    jobs = []
-    for p in sorted(out.glob("dev/*/*/jobs.jsonl")) + sorted(out.glob("results/fanout/jobs.jsonl")):
-        jobs += [json.loads(line) for line in p.read_text(encoding="utf-8").splitlines() if line]
+    jobs = _jsonl(out.rglob("jobs.jsonl"))
     summary = {
         "label": _label(),
         "note": DRY_RUN_NOTE,
-        "hero": hero,
+        "heroes": list(heroes),
         "heldout_conditions": n_conditions,
+        "reused": sorted(reuse or {}),
         "timings_s": timings,
-        "per_run_s": cost_per_run(fan_rows),
+        "per_run_s": cost_per_run(_jsonl(out.rglob("rows.jsonl"))),
         "jobs": len(jobs),
         "job_cpu_s": round(sum(j["cpu_s"] or 0 for j in jobs), 1),
         "job_wall_s": round(sum(j["spend"]["wall_s"] for j in jobs), 1),
+        "verified": yaml.safe_load(cfg_path.read_text(encoding="utf-8"))["frozen"]["code"].get("verified"),
         "analysis": {k: res["analysis"][k] for k in ("family", "excluded", "holm", "problems", "spend")},
     }
-    if reference is not None:
-        ref = json.loads(reference.read_text(encoding="utf-8"))
-        mine = json.loads((out / "dev" / hero / "b" / "report.json").read_text(encoding="utf-8"))
-        summary["versus_reference"] = compare_reports(ref, mine)
+    if reference is not None and "b" not in (reuse or {}):
+        summary["versus_reference"] = {
+            h: compare_reports(
+                json.loads((reference / h / "report.json").read_text(encoding="utf-8")),
+                json.loads((out / "dev" / h / "b" / "report.json").read_text(encoding="utf-8")),
+            )
+            for h in heroes
+        }
     _write_json(out / "dry_run.json", summary)
     return summary
 
@@ -1088,14 +1238,16 @@ def job_cost(runs: int, s_per_run: float, longest_s: float, vcpus: int) -> dict[
 
 
 def estimate(
-    *, dry: Path, counts: Mapping[str, Any], vcpus: int = 32, heldout: int = 32, n_dev: int = 8
+    *, measured: Sequence[Path], counts: Mapping[str, Any], vcpus: int = 32, heldout: int = 32, n_dev: int = 8
 ) -> dict[str, Any]:
-    """The cost table of the real run from the dry run's measured seconds per run (``dry``) and the
+    """The cost table of the real run from measured seconds per run (the fan-out rows under
+    ``measured``) and the
     run counts per hero and pool (``counts``: ``{hero: {pool: {"screen": [runs per chain], "finalists": k}}}``)."""
     from rtt.cloud.cost import hourly_usd
     from rtt.cloud.nebius_jobs import cpu_preset
+    from rtt.studio.cloud import cost_per_run
 
-    meas = json.loads((dry / "dry_run.json").read_text(encoding="utf-8"))["per_run_s"]
+    meas = cost_per_run(_jsonl(p for d in measured for p in Path(d).rglob("rows.jsonl")))
     s_screen = float(meas["screen"]["mean_s"])
     s_run = float(meas["run"]["mean_s"])
     longest = 15.0  # the slowest single full-task run seen on the heroes is about 10 s [measured]
@@ -1176,6 +1328,7 @@ def estimate(
         "label": _label(),
         "preset": f"cpu-d3 {cpu_preset(vcpus)} at ${rate:.3f}/h [sourced]",
         "measured_s_per_run": {"screen": s_screen, "full_run": s_run},
+        "measured_runs": {k: v["runs"] for k, v in meas.items()},
         "assumptions": {
             "provisioning_s": PROVISION_S,
             "container_overhead_s": CONTAINER_OVERHEAD_S,
@@ -1246,6 +1399,10 @@ def fetch(run_id: str, out: Path, *, region: str = "uk-south2") -> list[Path]:
 # --------------------------------------------------------------------------- command line
 
 
+def _reuse(a: argparse.Namespace) -> dict[str, Path]:
+    return {k: v for k, v in (("b", a.reuse_b), ("c", a.reuse_c)) if v is not None}
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="scripts/studio_usecase_v1.py", description=__doc__.split("\n\n")[0])
     ap.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
@@ -1255,6 +1412,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     fz.add_argument("--out", type=Path, default=DEFAULT_DEV)
     fz.add_argument("--parallel", type=int, default=4)
     fz.add_argument("--allow-dirty", action="store_true")
+    fz.add_argument("--refreeze", action="store_true", help="replace the frozen block (before any secret)")
+    fz.add_argument("--verify", type=int, default=2, help="development conditions re-run per arm (0: none)")
+    for p in (fz,):
+        p.add_argument("--reuse-b", type=Path, default=None, help="tournament b from DIR/<case>/report.json")
+        p.add_argument("--reuse-c", type=Path, default=None, help="tournament c from DIR/<case>/report.json")
     cs = sub.add_parser("commit-secret", help="draw the held-out secret and commit its SHA-256")
     cs.add_argument("--secret-file", type=Path, default=None)
     fn = sub.add_parser("finalize", help="check everything, then set status: frozen")
@@ -1267,56 +1429,60 @@ def main(argv: Sequence[str] | None = None) -> int:
     an = sub.add_parser("analyse", help="analyse a results folder")
     an.add_argument("--results", type=Path, default=DEFAULT_RESULTS)
     dr = sub.add_parser("dry-run", help="the whole pipeline on a reduced set with a throwaway secret")
-    dr.add_argument("--hero", default="h1_tote")
+    dr.add_argument("--heroes", default="h1_tote", help="comma-separated hero ids, or all")
     dr.add_argument("--conditions", type=int, default=2)
     dr.add_argument("--out", type=Path, required=True)
     dr.add_argument("--parallel", type=int, default=4)
-    dr.add_argument("--reference", type=Path, default=None, help="an S5 report of the hero to compare with")
+    dr.add_argument(
+        "--reference", type=Path, default=None, help="S5 reports DIR/<case>/report.json to compare with"
+    )
+    dr.add_argument("--reuse-b", type=Path, default=None)
+    dr.add_argument("--reuse-c", type=Path, default=None)
     fe = sub.add_parser("fetch", help="download a fan-out run's bucket prefix (recovery)")
     fe.add_argument("--run-id", required=True)
     fe.add_argument("--out", type=Path, required=True)
     fe.add_argument("--region", default="uk-south2")
-    es = sub.add_parser("estimate", help="the cost table from a dry run")
-    es.add_argument("--dry", type=Path, required=True)
+    es = sub.add_parser("estimate", help="the cost table from measured fan-out runs")
+    es.add_argument("--measured", type=Path, nargs="+", required=True, help="folders holding rows.jsonl")
     es.add_argument("--vcpus", type=int, default=32)
     es.add_argument("--out", type=Path, default=None)
     a = ap.parse_args(argv)
     if a.cmd == "freeze-arms":
         frozen = freeze_arms(
-            a.config, executor=a.executor, out=a.out, parallel=a.parallel, allow_dirty=a.allow_dirty
+            a.config,
+            executor=a.executor,
+            out=a.out,
+            parallel=a.parallel,
+            allow_dirty=a.allow_dirty,
+            reuse=_reuse(a),
+            refreeze=a.refreeze,
+            verify=a.verify,
         )
-        print(
-            json.dumps(
-                {
-                    k: {
-                        arm: (v["arms"][arm]["status"], (v["arms"][arm]["setup_id"] or "")[:12])
-                        for arm in ARMS
-                    }
-                    for k, v in frozen["heroes"].items()
-                }
-            )
-        )
+        arms = {
+            k: {arm: (v["arms"][arm]["status"], (v["arms"][arm]["setup_id"] or "")[:12]) for arm in ARMS}
+            for k, v in frozen["heroes"].items()
+        }
+        print(json.dumps({"arms": arms, "verified": frozen["code"].get("verified")}))
     elif a.cmd == "commit-secret":
         print("commitment", commit_secret(a.config, secret_file=a.secret_file))
     elif a.cmd == "finalize":
         finalize(a.config, secret_file=a.secret_file)
         print("status: frozen")
     elif a.cmd == "evaluate":
-        res = evaluate(
-            a.config, executor=a.executor, out=a.out, secret_file=a.secret_file, parallel=a.parallel
-        )
+        evaluate(a.config, executor=a.executor, out=a.out, secret_file=a.secret_file, parallel=a.parallel)
         print((a.out / "summary.txt").read_text(encoding="utf-8"))
-        del res
     elif a.cmd == "analyse":
         analyse_results(a.config, a.results)
         print((a.results / "summary.txt").read_text(encoding="utf-8"))
     elif a.cmd == "dry-run":
+        cases = list(load_config(a.config)["heroes"]["cases"]) if a.heroes == "all" else a.heroes.split(",")
         s = dry_run(
-            hero=a.hero,
+            heroes=cases,
             n_conditions=a.conditions,
             out=a.out,
             parallel=a.parallel,
             reference=a.reference,
+            reuse=_reuse(a),
             config=a.config,
         )
         print(json.dumps(s, indent=1))
@@ -1326,7 +1492,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     elif a.cmd == "estimate":
         cfg = load_config(a.config)
         counts = count_runs(cfg)
-        est = estimate(dry=a.dry, counts=counts, vcpus=a.vcpus, heldout=int(cfg["heldout"]["conditions"]))
+        est = estimate(
+            measured=a.measured, counts=counts, vcpus=a.vcpus, heldout=int(cfg["heldout"]["conditions"])
+        )
         est["counts"] = counts
         if a.out:
             _write_json(a.out, est)
