@@ -256,11 +256,19 @@ def candidate_of(
     tags: Iterable[str] | None = None,
     item: str | None = None,
 ) -> Candidate:
-    """A candidate from a spec: capabilities from library ``tags`` when given, else its mechanism."""
+    """A candidate from a spec: capabilities from its mechanism, or from library ``tags`` when given.
+
+    A library item tagged with a grip (pinch, power, suction, wrap) is a gripper, hand or cup: its
+    tags add to its mechanism's capabilities. An item without one is a tool (a hook, a pusher, a
+    driver): its tags are all it serves."""
+    mech = set(MECHANISM_CAPABILITIES[mechanism_of(spec)])
     if tags is not None:
+        tags = tuple(tags)
         caps = {_LIBRARY_TAGS[t] for t in tags if t in _LIBRARY_TAGS}
+        if any(t in ("pinch", "power", "suction", "wrap") for t in tags):
+            caps |= mech
     else:
-        caps = set(MECHANISM_CAPABILITIES[mechanism_of(spec)])
+        caps = mech
     if caps & ACQUIRE:
         caps |= ACQUIRE  # ruling 6: one acquire class
     designed = spec.origin in ("nemotron", "random") or spec.family is EffectorFamily.DESIGNED
@@ -397,10 +405,15 @@ def _probe_task(obj: ObjectInstance) -> TaskSpec:
     return TaskSpec("Probe", "", (obj,), (step,), source="test")
 
 
+#: What the scene builds a tool against when it picks nothing (contract CR-S5-1): a 10 mm cube.
+_PICKS_NOTHING: Final = _probe_object(
+    "probe", "part", shape="box", size_x_mm=10, size_y_mm=10, size_z_mm=10, mass_g=5
+)
 #: Probe parts a tool is measured on, in order (the first it can be built for): a 20 mm cube, the
-#: library block (what a tool that picks nothing is built against), a 50 mm cube.
+#: 10 mm cube, the library block, a 50 mm cube.
 _PROBE_PARTS: Final = (
     _probe_object("probe", "part", shape="box", size_x_mm=20, size_y_mm=20, size_z_mm=20, mass_g=50),
+    _PICKS_NOTHING,
     ObjectInstance.of("probe", "part", "Probe part", ref="library:block", shape="mesh"),
     _probe_object("probe", "part", shape="box", size_x_mm=50, size_y_mm=50, size_z_mm=50, mass_g=200),
 )
@@ -654,10 +667,12 @@ def prune(
         for j, chain in enumerate(chains):
             ok = True
             if not any(task_spec.step(sid).primitive in ACQUIRE for sid in chain):
-                reason = _fits_part(cand.spec, _PROBE_PARTS[1], task)
-                if reason is not None:  # a tool that picks nothing is built against the block
+                reason = _fits_part(cand.spec, _PICKS_NOTHING, task)
+                if reason is not None:  # a tool that picks nothing is built against a 10 mm probe
                     pruned.append(
-                        Pruned(cand.effector_id, cand.name, chain[0], f"built against the block: {reason}")
+                        Pruned(
+                            cand.effector_id, cand.name, chain[0], f"built against the 10 mm probe: {reason}"
+                        )
                     )
                     continue
             for sid in chain:
