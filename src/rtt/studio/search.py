@@ -5,7 +5,10 @@
 
 1. **Candidates** (:func:`default_candidates`): every preset of every effector family that loads,
    plus the open library's entrants when the library package is installed, plus any
-   caller-supplied effectors. Each carries capability tags (the primitives it can serve).
+   caller-supplied effectors. Each carries capability tags (the primitives it can serve). For a
+   task, the parallel-jaw family's pre-registered entrants (frozen v2 episode only) give way to
+   part-shaped jaws built for each object the task touches (:func:`part_jaw_candidates`,
+   :mod:`rtt.effectors.part_jaw`).
 2. **Capability pruning** (:func:`prune`), each with a reason: a family that cannot build into the
    Studio scene; a tool heavier than the arm payload limit (:data:`ARM_PAYLOAD_KG`, [assumed]);
    a step whose primitive the tool's mechanism cannot serve; a tool whose opening, cup or reach
@@ -54,6 +57,7 @@ from typing import Any, Final, Literal
 import mujoco
 import numpy as np
 
+from rtt.effectors import part_jaw
 from rtt.effectors.registry import available_families, get_family
 from rtt.effectors.types import (
     PRODUCT_MODE_LABEL,
@@ -117,6 +121,8 @@ __all__ = [
     "hold_chains",
     "last_link_intrusion",
     "mechanism_of",
+    "part_jaw_candidates",
+    "part_jaw_problem",
     "probe_tool",
     "prune",
     "run_task_tournament",
@@ -245,8 +251,19 @@ class Candidate:
             "mechanism": self.mechanism,
             "capabilities": sorted(k.value for k in self.capabilities),
             "acquire_primitive": acquire_primitive(self.spec).value,
-            "fidelity": self.spec.fidelity.value,
+            "fidelity": _shown_fidelity(self.spec),
+            **(
+                {"built_for": part_jaw.jaw_target(self.spec)["object"]}
+                if part_jaw.is_part_jaw(self.spec)
+                else {}
+            ),
         }
+
+
+def _shown_fidelity(spec: EffectorSpec) -> str:
+    """A candidate's fidelity as the Studio shows it: a part-shaped jaw is a Studio build of the v2
+    fingers (the family's ``core`` maps to the Studio's ``rigid`` tier), never the experiment's scene."""
+    return "rigid" if part_jaw.is_part_jaw(spec) else spec.fidelity.value
 
 
 def candidate_of(
@@ -336,9 +353,27 @@ def designed_candidates(*, recorded: bool = True) -> list[Candidate]:
     return out
 
 
-def default_candidates(*, library: bool = True, designed: bool = True) -> tuple[Candidate, ...]:
+def part_jaw_candidates(task_spec: TaskSpec) -> list[Candidate]:
+    """The part-shaped parallel jaws of a task (:func:`rtt.effectors.part_jaw.part_jaw_specs`): for
+    every object a step touches that has a gripped feature (a part, a threaded member, a plug, a
+    latch head), the configurator imprint (deterministic, the default) and the flat-pad and
+    stock-blade baselines, each built against that object. The imprint is shaped for its object,
+    so it is not "off the shelf"; the flat pad and the stock blade are."""
+    out = []
+    for spec in part_jaw.part_jaw_specs(task_spec):
+        imprint = part_jaw.jaw_target(spec)["entrant"] == "imprint_configurator"
+        c = candidate_of(spec, "designed" if imprint else "preset")
+        out.append(replace(c, off_the_shelf=not imprint))
+    return out
+
+
+def default_candidates(
+    *, library: bool = True, designed: bool = True, task_spec: TaskSpec | None = None
+) -> tuple[Candidate, ...]:
     """Every family preset (in family order), then the library's entrants, then the designed
-    effectors (:func:`designed_candidates`), deduplicated by effector id."""
+    effectors (:func:`designed_candidates`), deduplicated by effector id. With ``task_spec``, the
+    parallel-jaw presets (the pre-registered entrants, which run only in the frozen v2 episode)
+    are replaced by that task's part-shaped jaws (:func:`part_jaw_candidates`)."""
     out: list[Candidate] = []
     seen: set[str] = set()
 
@@ -348,6 +383,10 @@ def default_candidates(*, library: bool = True, designed: bool = True) -> tuple[
             out.append(c)
 
     for fam in available_families():
+        if task_spec is not None and fam is EffectorFamily.PARALLEL_JAW:
+            for c in part_jaw_candidates(task_spec):
+                add(c)
+            continue
         for spec in get_family(fam).presets():
             add(candidate_of(spec, "preset"))
     if library:
@@ -575,6 +614,17 @@ def capability_problem(cand: Candidate, step: Step) -> str | None:
     )
 
 
+def part_jaw_problem(cand: Candidate, step: Step) -> str | None:
+    """A part-shaped jaw is built for one object: it serves only the steps on that object (every
+    other object gets jaws of its own). ``None`` for any other candidate."""
+    if not part_jaw.is_part_jaw(cand.spec):
+        return None
+    target = part_jaw.jaw_target(cand.spec)["object"]
+    if step.object == target:
+        return None
+    return f"its jaws are shaped and sized for {target}; {step.object} gets part-shaped jaws of its own"
+
+
 def _cup_mm(spec: EffectorSpec) -> float | None:
     if mechanism_of(spec) != "suction":
         return None
@@ -694,7 +744,11 @@ def prune(
                     continue
             for sid in chain:
                 step = task_spec.step(sid)
-                reason = capability_problem(cand, step) or fit_problem(cand, info, step, task_spec, task)
+                reason = (
+                    part_jaw_problem(cand, step)
+                    or capability_problem(cand, step)
+                    or fit_problem(cand, info, step, task_spec, task)
+                )
                 if reason is not None:
                     pruned.append(Pruned(cand.effector_id, cand.name, sid, reason))
                     ok = False
@@ -1704,7 +1758,7 @@ def run_task_tournament(
     cands = (
         [c if isinstance(c, Candidate) else candidate_of(c) for c in candidates]
         if candidates
-        else list(default_candidates(library=library))
+        else list(default_candidates(library=library, task_spec=task_spec))
     )
     grid = condition_grid(task_spec, n_conditions)
     own = pool is None
