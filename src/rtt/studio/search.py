@@ -1734,6 +1734,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--finalists", type=int, default=N_FINALISTS)
     ap.add_argument("--no-library", action="store_true")
     ap.add_argument("--pack", action="store_true")
+    ap.add_argument("--controllers", choices=("default", "reference"), default="default")
     a = ap.parse_args(argv)
     task = json.loads(a.task.read_text(encoding="utf-8"))
     rep = run_task_tournament(
@@ -1743,6 +1744,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         n_screen=a.screen,
         n_finalists=a.finalists,
         library=not a.no_library,
+        controllers=a.controllers,
     )
     a.out.mkdir(parents=True, exist_ok=True)
     data = rep.to_dict()
