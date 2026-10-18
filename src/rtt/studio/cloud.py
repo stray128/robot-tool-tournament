@@ -1092,6 +1092,8 @@ def cost_per_run(rows: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
     times (one process per run, so close to CPU seconds), from ``rows.jsonl``."""
     out: dict[str, Any] = {}
     for r in rows:
+        if "phase" not in r or "wall_time_s" not in r:
+            continue  # not a fan-out row (an evaluation row, say)
         kind = "screen" if "-screen-c" in r["phase"] else "run"
         d = out.setdefault(kind, {"runs": 0, "wall_s": 0.0})
         d["runs"] += 1

@@ -8,7 +8,10 @@
   tournament (b) on the full candidate pool and tournament (c) on the library entrants only; arm
   (a) is (b)'s best single off-the-shelf effector. Writes the frozen block of the config (setup ids,
   the setups themselves, the development runs and their trajectory hashes, which heroes are tested).
-  Runs inside the vault guard, before any secret exists.
+  Either tournament can be reused from an existing report (``--reuse-b``, ``--reuse-c``), checked
+  against the protocol and this code's candidate pool; every frozen arm is then re-run on its first
+  development conditions and must reproduce its trajectory hashes. Runs inside the vault guard,
+  before any secret exists; ``--refreeze`` regenerates the block until a secret is committed.
 * ``commit-secret``: draws the held-out secret (``secrets/``, git-ignored) and writes its SHA-256
   into the frozen block. Refuses before the arms are frozen.
 * ``finalize``: checks the frozen block and the secret, then sets ``status: frozen``. The founder
@@ -18,9 +21,10 @@
   conditions) through the fan-out, writes the rows, the conditions and the revealed secret, then
   the analysis.
 * ``analyse``: the primary test (exact one-sided paired test, Holm) and the descriptive tables.
-* ``dry-run``: all of the above on a reduced set (one hero, a few held-out conditions) with a
+* ``dry-run``: all of the above on a reduced set (some heroes, a few held-out conditions) with a
   throwaway secret and the local fake cloud. Never reads the real secret.
-* ``estimate``: the cost table from the dry run's measured seconds per run.
+* ``estimate``: the cost table from measured seconds per run (any fan-out rows).
+* ``fetch``: download a fan-out run's bucket prefix (recovery).
 """
 
 from __future__ import annotations
@@ -435,8 +439,9 @@ def freeze_arms(
 ) -> dict[str, Any]:
     """The development search (module docstring), written into the frozen block.
 
-    ``reuse``: ``{"b": DIR}`` and/or ``{"c": DIR}`` takes that tournament from ``DIR/<case>/report.json``
-    (an S5 hero-gate report, say) instead of running it, after :func:`check_reused_report`; the report
+    ``reuse``: ``{"b": DIR}`` and/or ``{"c": DIR}`` takes that tournament from
+    ``DIR/<case>/<arm>/report.json`` (an earlier freeze) or ``DIR/<case>/report.json`` (an S5 hero
+    gate) instead of running it, after :func:`check_reused_report`; the report
     is copied next to the others. ``verify``: re-run each arm's first ``verify`` development
     conditions and refuse unless every ``traj_sha`` matches (:func:`verify_arms`). ``refreeze``:
     replace a frozen block, allowed only while no secret has been committed.
@@ -476,7 +481,9 @@ def freeze_arms(
             for arm, pool_kind in POOLS.items():
                 session = out / case / arm
                 if arm in reuse:
-                    src = reuse[arm] / case / "report.json"
+                    src = reuse[arm] / case / arm / "report.json"  # a freeze's own layout
+                    if not src.is_file():
+                        src = reuse[arm] / case / "report.json"  # an S5 hero-gate layout
                     rep = json.loads(src.read_text(encoding="utf-8"))
                     problems = check_reused_report(rep, spec, pool_kind, cfg)
                     if problems:
