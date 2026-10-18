@@ -871,3 +871,41 @@ def test_a_gate_task_on_a_tool_changer_ends_as_on_the_flange(
         for q in ("angle_deg", "travel_mm", "depth_mm", "lift_mm"):
             if q in flange.quantities:
                 assert out.quantities[q] == pytest.approx(flange.quantities[q], abs=3.0), (name, key, q)
+
+
+def test_a_thread_twist_is_deterministic_in_process_and_in_a_spawned_worker() -> None:
+    """S2c: the thread's friction anchor keeps its state in the actuator's control (MjData), so a
+    run does not depend on what ran before it in the process."""
+    nut = ObjectInstance.of(
+        "nut",
+        "threaded_joint",
+        "Nut",
+        ObjectPose(0.0, 80.0, 0.0),
+        member="nut",
+        start_torque_nm=0.05,
+        final_torque_nm=0.3,
+    )
+    steps = (
+        Step.of(
+            "start", "insert", "nut", "member", "Push it on", [SuccessCriterion("depth_mm", at_least=3.5)]
+        ),
+        Step.of(
+            "tighten",
+            "twist",
+            "nut",
+            "member",
+            "Run it down",
+            [SuccessCriterion("turns", at_least=2.5)],
+            params={"direction": "cw", "speed_deg_s": 120},
+        ),
+    )
+    spec = TaskSpec("thread", "", (nut,), steps, source="test")
+    j = StudioJob(
+        Setup.single(preset("catalog_gripper", "adaptive-2f", "pinch"), spec.step_ids),
+        spec,
+        StudioCondition("c", 0),
+    )
+    first, second = run_task(j), run_task(j)
+    workers = run_task_jobs([j, j], workers=2)  # two spawned processes
+    assert first.traj_sha == second.traj_sha == workers[0].traj_sha == workers[1].traj_sha
+    assert first.completed

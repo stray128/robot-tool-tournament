@@ -19,11 +19,16 @@ flanks, cross-threading or galling).
     turn. It is one-sided (the load flank): unscrewing lifts the member, lifting it off the flank
     is free [approximation].
   * **Seated** after ``engage_turns`` turns from the thread start: the slide's end stop.
-  * **Friction torque ramp**: engaged, the torque that resists tightening rises linearly from
+  * **Friction torque ramp**: engaged, the torque that resists turning rises linearly from
     ``start_torque_nm`` at the thread start to ``final_torque_nm`` when seated, and stays at
-    ``final_torque_nm`` beyond (so a tightening step stops on torque), applied by the
-    template's own motor actuator as a velocity-saturated friction (:data:`OMEGA_S`); a small
-    dry friction loss holds it at rest. On the lead-in only that dry friction acts.
+    ``final_torque_nm`` beyond (so a tightening step stops on torque). It is a Coulomb friction
+    that holds the member until the applied torque exceeds it and then lets it slide at that
+    torque (S2c; it was an explicit velocity-saturated motor that flipped sign every tick and let
+    1 N m turn a 4 N m ramp 380 deg in 2 s): the template's own actuator is a stiff torsion
+    spring (:data:`FRICTION_KP`, damped) to an anchor angle, and :func:`friction_anchor` moves
+    the anchor each control tick only as far as keeps the spring's torque within the ramp. Below
+    the ramp the member stays put (the spring's twist is under a degree per N m); above it, it
+    turns. A small dry friction loss (:data:`HOLD_NM`) acts always; on the lead-in only that.
 
   Shapes (outer diameter ``diameter_mm``, length ``length_mm``, wall
   ``max(1.5 mm, 15 % of the diameter)`` [assumed]): ``coupling`` a 12-sided tube, ``cap`` the
@@ -57,17 +62,57 @@ from rtt.studio.templates import (
 )
 from rtt.studio.types import TemplateKind
 
-__all__ = ["BASE_H", "BORE_CLEARANCE", "OMEGA_S", "ThreadedJointBuilder", "lead_of"]
+__all__ = [
+    "BASE_H",
+    "BORE_CLEARANCE",
+    "FRICTION_KP",
+    "ThreadedJointBuilder",
+    "add_friction_anchor",
+    "friction_anchor",
+    "lead_of",
+]
 
 BASE_H: Final = 0.020  # m [assumed]
 BORE_CLEARANCE: Final = 0.0005  # m, radial, member bore to stub [assumed]
 SEAT_GAP: Final = 0.001  # m, member bottom above the base when seated
 DENSITY: Final = 2000.0  # kg/m^3 [assumed]
-OMEGA_S: Final = 0.3  # rad/s: the ramp's friction saturates above this speed [assumed]
 HOLD_NM: Final = 0.02  # N m of dry friction always on the hinge [assumed]
+FRICTION_KP: Final = 100.0  # N m/rad: the friction anchor's torsion spring [assumed]
+FRICTION_KV: Final = 0.05  # N m s/rad: its damping (0.05 N m at a 57 deg/s turn) [assumed]
 MEMBER_CODES: Final = {"cap": 0.0, "coupling": 1.0, "nut": 2.0}
 FRAME_RGBA: Final = (0.55, 0.58, 0.62, 1.0)
 FRICTION_SOLIMP: Final = (0.999, 0.9999, 0.0001, 0.5, 2.0)  # a near-hard dry friction (no creep)
+
+
+def add_friction_anchor(spec: mujoco.MjSpec, name: str, joint: str, limit_nm: float) -> None:
+    """A position actuator on ``joint`` whose control is the friction anchor: torque
+    ``FRICTION_KP x (anchor - angle) - FRICTION_KV x velocity`` (the velocity term implicit in the
+    integrator), at most ``limit_nm`` plus a margin."""
+    act = spec.add_actuator(name=name, target=joint, trntype=mujoco.mjtTrn.mjTRN_JOINT)
+    act.gaintype = mujoco.mjtGain.mjGAIN_FIXED
+    act.gainprm[0] = FRICTION_KP
+    act.biastype = mujoco.mjtBias.mjBIAS_AFFINE
+    act.biasprm[0] = 0.0
+    act.biasprm[1] = -FRICTION_KP
+    act.biasprm[2] = -FRICTION_KV
+    act.ctrllimited = mujoco.mjtLimited.mjLIMITED_FALSE
+    act.forcelimited = mujoco.mjtLimited.mjLIMITED_TRUE
+    act.forcerange = [-limit_nm - 0.5, limit_nm + 0.5]
+
+
+def friction_anchor(
+    obj: ResolvedHandles, data: mujoco.MjData, joint: str, limit_nm: float, period_s: float
+) -> float:
+    """The friction anchor for this control tick: where it was (the actuator's last control; at
+    the segment's first tick, the joint's own angle), moved only as far as keeps the spring's
+    torque within ``limit_nm`` at the middle of the coming tick (a stick-slip Coulomb friction)."""
+    q = float(data.qpos[obj.joint_qpos[joint]])
+    w = float(data.qvel[obj.joint_dof[joint]])
+    act = int(obj.actuator_ids[0])
+    anchor = q if data.time <= 0.0 else float(data.ctrl[act])
+    mid = q + 0.5 * w * period_s
+    reach = max(0.0, limit_nm) / FRICTION_KP
+    return min(max(anchor, mid - reach), mid + reach)
 
 
 def lead_of(chamfer_mm: float) -> float:
@@ -227,9 +272,7 @@ class ThreadedJointBuilder(TemplateBuilder):
         tendon.solimp_limit = list(FRICTION_SOLIMP)  # a near-hard flank
         ctx.spec.add_exclude(bodyname1=f"{p}seat", bodyname2=f"{p}member")
         final = float(prm["final_torque_nm"])
-        act = ctx.spec.add_actuator(name=f"{p}ramp", target=f"{p}hinge", trntype=mujoco.mjtTrn.mjTRN_JOINT)
-        act.ctrllimited = mujoco.mjtLimited.mjLIMITED_TRUE
-        act.ctrlrange = [-final - 0.1, final + 0.1]
+        add_friction_anchor(ctx.spec, f"{p}ramp", f"{p}hinge", final)
         return TemplateHandles(
             instance=ctx.instance.name,
             kind=self.kind,
@@ -254,6 +297,7 @@ class ThreadedJointBuilder(TemplateBuilder):
                 "z_start": float(ctx.table_top_z + z_start),
                 "base_z": float(ctx.table_top_z + BASE_H),
                 "mass_kg": mass,
+                "period_s": float(ctx.task.controller.control_period),
             },
         )
 
@@ -275,12 +319,11 @@ class ThreadedJointBuilder(TemplateBuilder):
     def passive(self, obj: ResolvedHandles, model: mujoco.MjModel, data: mujoco.MjData) -> np.ndarray:
         info = obj.handles.info
         depth = float(data.qpos[obj.joint_qpos["slide"]])
-        if depth < info["lead_m"] - 0.0003:  # on the lead-in: only the dry friction loss
-            return np.zeros(1)
-        s = min(1.0, max(0.0, (depth - info["lead_m"]) / max(info["seat_m"], 1e-6)))
-        torque = info["start_nm"] + (info["final_nm"] - info["start_nm"]) * s - info["hold_nm"]
-        omega = float(data.qvel[obj.joint_dof["hinge"]])
-        return np.array([-max(0.0, torque) * math.tanh(omega / OMEGA_S)])
+        torque = 0.0  # on the lead-in: only the dry friction loss
+        if depth >= info["lead_m"] - 0.0003:
+            s = min(1.0, max(0.0, (depth - info["lead_m"]) / max(info["seat_m"], 1e-6)))
+            torque = info["start_nm"] + (info["final_nm"] - info["start_nm"]) * s - info["hold_nm"]
+        return np.array([friction_anchor(obj, data, "hinge", torque, info["period_s"])])
 
 
 register_template_builder(ThreadedJointBuilder())

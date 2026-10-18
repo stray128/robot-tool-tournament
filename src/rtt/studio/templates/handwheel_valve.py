@@ -15,8 +15,10 @@ joint; no packing or seat dynamics).
 * **Resistive torque curve** (``torque_nm`` = the breakaway): ``c(angle) x torque_nm`` with
   ``c`` = 1.0 at closed, falling linearly to 0.6 over the first 20 % of the travel (running),
   rising to 0.8 over the last 10 % (backseat) [assumed shape]. Half of the torque is the joint's
-  dry friction loss (it holds the wheel at rest); the rest of the curve is the template's own
-  motor actuator, a velocity-saturated friction (:data:`OMEGA_S`).
+  dry friction loss; the rest of the curve is a Coulomb friction on the template's own actuator,
+  the friction anchor of :mod:`.threaded_joint` (S2c: it was a velocity-saturated motor, so a
+  torque between the dry half and the curve crept the wheel open, 86 deg in 1 s at 1.6 of
+  1.8 N m). Below the curve the wheel stays put; above it, it turns.
 
 Sites: ``wheel`` (the top centre of the hub) and the auxiliary ``spoke0`` (on spoke 0 at the rim
 centre line, in the wheel's mid-plane: a controller sees the wheel's rotation). ``info``: the rim
@@ -41,14 +43,14 @@ from rtt.studio.templates import (
     TemplateHandles,
     register_template_builder,
 )
+from rtt.studio.templates.threaded_joint import add_friction_anchor, friction_anchor
 from rtt.studio.types import TemplateKind
 
-__all__ = ["OMEGA_S", "WHEEL_Z", "HandwheelValveBuilder", "torque_curve"]
+__all__ = ["WHEEL_Z", "HandwheelValveBuilder", "torque_curve"]
 
 WHEEL_Z: Final = 0.110  # m, wheel mid-plane above the table [assumed]
 RIM_SEGMENTS: Final = 24
 DENSITY: Final = 2700.0  # kg/m^3, a cast aluminium wheel [assumed]
-OMEGA_S: Final = 0.1  # rad/s [assumed]
 STATIC_FRACTION: Final = 0.5
 FRAME_RGBA: Final = (0.55, 0.58, 0.62, 1.0)
 FRICTION_SOLIMP: Final = (0.999, 0.9999, 0.0001, 0.5, 2.0)  # a near-hard dry friction (no creep)
@@ -154,9 +156,7 @@ class HandwheelValveBuilder(TemplateBuilder):
                 )
         wheel.add_site(name=f"{p}wheel", pos=[0.0, 0.0, 0.5 * hub_h], size=[0.003, 0.0, 0.0])
         wheel.add_site(name=f"{p}spoke0", pos=[rc, 0.0, 0.0], size=[0.003, 0.0, 0.0])
-        act = ctx.spec.add_actuator(name=f"{p}curve", target=f"{p}hinge", trntype=mujoco.mjtTrn.mjTRN_JOINT)
-        act.ctrllimited = mujoco.mjtLimited.mjLIMITED_TRUE
-        act.ctrlrange = [-torque - 0.01, torque + 0.01]
+        add_friction_anchor(ctx.spec, f"{p}curve", f"{p}hinge", torque)
         return TemplateHandles(
             instance=ctx.instance.name,
             kind=self.kind,
@@ -175,6 +175,7 @@ class HandwheelValveBuilder(TemplateBuilder):
                 "spoke_m": spoke_r,
                 "wheel_z": float(ctx.table_top_z + WHEEL_Z),
                 "travel_rad": travel,
+                "period_s": float(ctx.task.controller.control_period),
                 "torque_nm": torque,
             },
         )
@@ -186,9 +187,8 @@ class HandwheelValveBuilder(TemplateBuilder):
     def passive(self, obj: ResolvedHandles, model: mujoco.MjModel, data: mujoco.MjData) -> np.ndarray:
         info = obj.handles.info
         angle = float(data.qpos[obj.joint_qpos["hinge"]])
-        omega = float(data.qvel[obj.joint_dof["hinge"]])
         extra = (torque_curve(angle, info["travel_rad"]) - STATIC_FRACTION) * info["torque_nm"]
-        return np.array([-max(0.0, extra) * math.tanh(omega / OMEGA_S)])
+        return np.array([friction_anchor(obj, data, "hinge", extra, info["period_s"])])
 
 
 register_template_builder(HandwheelValveBuilder())
