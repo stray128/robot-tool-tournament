@@ -1,0 +1,1134 @@
+# Use-case benchmark v1 of the Effector Lab Studio: pre-registration (DRAFT, not yet approved).
+#
+# Product mode: not part of the pre-registered experiment (prereg-v1 is unchanged).
+# Protocol and rationale: docs/USECASE_V1.md. Driver: scripts/studio_usecase_v1.py.
+#
+# The founder rules on this draft before the tag `usecase-v1`. Until then nothing below runs on
+# Nebius. Order after the go (docs/USECASE_V1.md section 11): freeze-arms (writes the frozen block
+# at the end of this file), commit-secret (draws the secret, writes its SHA-256), finalize
+# (status: frozen), commit, tag usecase-v1, evaluate, analyse, publish whatever it shows.
+
+format: rtt-usecase-benchmark/1
+label: "Product mode: not part of the pre-registered experiment"
+status: draft # draft until `finalize`; evaluate refuses anything but frozen
+tag: usecase-v1
+contract: rtt-effectors/2
+
+heroes:
+  # The three frozen hero plans (tests/test_studio_engineer.py pins these task ids).
+  plans: src/rtt/studio/engineer/recorded/gate-2026-10-18-s4e
+  cases:
+    h1_tote: e4586f3612e11b0eb490349c52a109bec75f43fdb0bcf9f1d91127f9e01a4ad5
+    h2_coupling: 33599e99ac277cf20e73d6acd349b9422330a255b3fe5ea48c6442a26c3decd6
+    h3_cabinet: 3297a111d7c61392e9a99a08d3a80a8e14c7046b80d277925ed3a78788ff651d
+
+development:
+  # Search and selection use only these conditions (S5's defaults, docs/STUDIO_SEARCH.md):
+  # rtt.studio.runner.condition_grid(task, 8): `nominal` (seed 0, no offset) and place01..place07
+  # (seeds 1..7, per-object aim offsets uniform in +-2 mm); the first 3 screen the steps.
+  conditions: 8
+  placement_mm: 2.0
+  screen: 3
+  finalists: 4
+  top_k: 3
+  multi_head_pairs: 6
+  payload_kg: 3.0
+  controllers: default
+
+arms:
+  # Every arm is frozen as a setup id (and the setup itself) in the frozen block before the tag.
+  a:
+    name: best single off-the-shelf effector
+    rule: S5's best single off-the-shelf effector (`best_single`) of tournament b, on the development conditions
+  b:
+    name: Studio recommendation, full pool
+    pool: [preset, library, designed, part_jaw] # every family preset, library entrant, designed effector, part-shaped jaw
+    rule: S5's recommendation of tournament b
+  c:
+    name: Studio recommendation, library items only
+    pool: [library] # the same search with the candidate pool limited to the library entrants
+    rule: S5's recommendation of tournament c
+  no_recommendation: >-
+    A hero whose arm has no recommendation is reported descriptively with its closest setup
+    (S5's no_winner.closest[0]) and excluded from the test. A hero whose arm b is arm a's setup,
+    or that has no arm a, is excluded from the test too (declared at freeze, before any held-out run).
+
+heldout:
+  # 32 conditions per hero, generated from a secret seed (commit-reveal, docs/USECASE_V1.md section 6).
+  conditions: 32
+  placement_mm: 2.0 # per-object hidden aim offset, uniform in +-2 mm on x and y
+  friction_jitter: 0.10 # drawn from each condition's seed: task_v2 jitter (mu +-10 %, aim +-0.5 mm)
+  seed_floor: 1000000 # held-out seeds are at least this (the development seeds are 0..7)
+  domain: rtt-usecase-v1 # sha256("rtt-usecase-v1|<task_id>|<secret>") seeds each hero's draw
+  secret_file: secrets/usecase_v1_seed.txt # git-ignored; revealed with the results
+
+analysis:
+  primary: per tested hero, full-task completion rate of arm b against arm a on its 32 held-out conditions
+  test: exact one-sided paired sign-flip permutation test (exact McNemar), b > a
+  alpha: 0.05
+  multiplicity: holm # across the tested heroes
+  secondary:
+    - arm b against arm c (descriptive)
+    - per-step success with fidelity tiers and failure modes, per arm
+    - cycle time (median of completed runs, and of all runs)
+    - tool count, actuators, carried and total mass
+    - parity of every arm's development runs between the laptop and the job (descriptive)
+  publish: results are published whatever they show
+
+executor:
+  # Serverless Jobs through rtt.studio.cloud.NebiusExecutor on the rtt.cloud machinery.
+  target: uks2-cpu # cpu-d3, uk-south2
+  vcpus: 32
+  fallback: true # eun1-gpu (H100) only when uk-south2 cannot start a job
+  max_concurrent_jobs: 3
+  expected_run_s: 900
+  cap_usd: 10.0 # the benchmark's own capped ledger, over every benchmark job
+  token_factory_usd: 0.0 # no job attaches the Token Factory key
+  ledger: runs/cloud/usecase-v1-spend.jsonl
+
+# ---- frozen block: written by scripts/studio_usecase_v1.py, never edited by hand ----
+frozen:
+  label: 'Product mode: not part of the pre-registered experiment'
+  frozen_at: '2026-10-18T21:46:53Z'
+  code:
+    git_sha: aa8ac03f7cf0ac4bc28adc5f8284f7e4445f1f03
+    git_dirty: false
+    executor: fake
+    image: null
+    verified:
+      conditions: 2
+      runs: 16
+      equal: 16
+      unequal: []
+  heroes:
+    h1_tote:
+      task_id: e4586f3612e11b0eb490349c52a109bec75f43fdb0bcf9f1d91127f9e01a4ad5
+      dev_reports:
+        b:
+          sha256: eee2800a8bfda94752122945ce5e6d2a428ead97b439e2056aef85295b681237
+          path: h1_tote/b/report.json
+          source: reused
+        c:
+          sha256: de356b47d1683b97e41e5eda433b51beeb081ca92dbebfea3198866838df9601
+          path: h1_tote/c/report.json
+          source: run here (fake)
+      arms:
+        a:
+          setup_id: d136ab4824c1bad26b5ac84b7a481c14bedee5790c495f0eb8c1c9369bb11a57
+          status: tested
+          basis: S5's best single off-the-shelf effector of tournament b
+          kind: single
+          label: Industrial servo parallel gripper, 110 mm stroke
+          tools:
+          - Industrial servo parallel gripper, 110 mm stroke
+          complexity:
+            n_tools: 1
+            n_actuators: 1
+            tool_mass_kg: 1.08888
+            total_mass_kg: 1.08888
+            n_changes: 0
+            bracket: false
+          fidelity: rigid
+          dev:
+            completion_rate: 0.0
+            runs:
+            - condition_id: nominal
+              seed: 0
+              completed: false
+              traj_sha: fcef030e32a2508c6cb211991d75649b3a3eb872a07f9565c84fdd50074a9f8c
+            - condition_id: place01
+              seed: 1
+              completed: false
+              traj_sha: 0762010857bbec3cee5d23c923738ccc4d6783739a35cb16847a7bc55ac9debe
+            - condition_id: place02
+              seed: 2
+              completed: false
+              traj_sha: 07e877c117e72e592328d56c5cad2ea1f34434a61a4604f96ce243f5270d5f50
+            - condition_id: place03
+              seed: 3
+              completed: false
+              traj_sha: fb0629db582b2d75c14be25cb22e36c823f552e9cb93744198d02c33cbc2d957
+            - condition_id: place04
+              seed: 4
+              completed: false
+              traj_sha: d7f72b40d1787471b579ff57b0d189e1e10da2082dc5fb7d8655cd85367dd15b
+            - condition_id: place05
+              seed: 5
+              completed: false
+              traj_sha: 1d02de33d5d965f8605cdcc97d38d384f16ab7a90e2de9ecba4c82567b99e648
+            - condition_id: place06
+              seed: 6
+              completed: false
+              traj_sha: 2d6093a544eaef94d2c56aa1660326642dd91389327ca55a5b876b0c70e33c74
+            - condition_id: place07
+              seed: 7
+              completed: false
+              traj_sha: 89aad10c3e317daeb5cc6d7b91f863f43feae7c41359c493364085a921b32296
+          setup:
+            contract: rtt-effectors/2
+            kind: single
+            tools:
+            - contract: rtt-effectors/1
+              family: catalog_gripper
+              model: gripper-2f-servo-110
+              primitive: pinch
+              params:
+                closed:
+                  fingers: 0
+                grip_height_frac: 0.3
+                open:
+                  fingers: -0.055
+                rest: 0
+                source: vendored
+                tip_offset: 0
+                via: []
+              recipe: null
+              origin: catalog
+              effector_id: f2ea72dff094ac3680a7b59e05a96a2e9bc4d8191c7bfee56d30f1755987dff2
+              display_name: Industrial servo parallel gripper, 110 mm stroke
+              fidelity: rigid
+              group: catalog
+              label: 'Product mode: not part of the pre-registered experiment'
+            assignment:
+              close_lid: 0
+              open_lid: 0
+              pick_carton: 0
+              pick_pack: 0
+            mounts: []
+            bracket: null
+            changer: null
+            present_s: null
+            setup_id: d136ab4824c1bad26b5ac84b7a481c14bedee5790c495f0eb8c1c9369bb11a57
+            label: Industrial servo parallel gripper, 110 mm stroke
+            product_label: 'Product mode: not part of the pre-registered experiment'
+        b:
+          setup_id: 9d7829e0d8861c572779cefc3cfce3110b92c0150e87f45e6fa82785e7f26f3f
+          status: tested
+          basis: S5's recommendation
+          kind: multi_head
+          label: 'Two-tool head: Soft arm + Suction cup'
+          tools:
+          - Soft arm, 12 segments, 140 mm
+          - Suction cup, 16 mm bellows
+          complexity:
+            n_tools: 2
+            n_actuators: 2
+            tool_mass_kg: 0.32007
+            total_mass_kg: 0.32007
+            n_changes: 1
+            bracket: true
+          fidelity: approximation
+          dev:
+            completion_rate: 1.0
+            runs:
+            - condition_id: nominal
+              seed: 0
+              completed: true
+              traj_sha: d635201dfc052d0a6f194bcc1fd1b93c1a95efc299630d2f63a7f4a1ec1a2c96
+            - condition_id: place01
+              seed: 1
+              completed: true
+              traj_sha: d12d7ea50622dc20f6210118176631a46942e28b5b7127ceb5ef330632d8d25e
+            - condition_id: place02
+              seed: 2
+              completed: true
+              traj_sha: bb604d3c7d0400da2487b0efaa3e604e9422a8d5b748b86228134aae29f86df4
+            - condition_id: place03
+              seed: 3
+              completed: true
+              traj_sha: 1b38c7b4a64edf17f59754613618d3874a962a4bc6fd8aff728ffccf2c4e82dd
+            - condition_id: place04
+              seed: 4
+              completed: true
+              traj_sha: 51049c629979da261993671ca7fe26994439e4b883839cb3a392f2da2b0c83be
+            - condition_id: place05
+              seed: 5
+              completed: true
+              traj_sha: 1a2ae93c97297dfc87137342013892e384f671ef952b8f6ef0a215195a3e119b
+            - condition_id: place06
+              seed: 6
+              completed: true
+              traj_sha: a6e2323abe00a72d725576201211565f704f62a0d0a9bab3e5ec29f7fa0b8b92
+            - condition_id: place07
+              seed: 7
+              completed: true
+              traj_sha: 18906f5ac403240819f099daff8cec0be8eddeb9a38a185d7dc0907957d6f8b0
+          setup:
+            contract: rtt-effectors/2
+            kind: multi_head
+            tools:
+            - contract: rtt-effectors/1
+              family: soft_arm
+              model: tentacle-12
+              primitive: wrap
+              params:
+                cable_offset_frac: 0.7
+                grasp_height_frac: 0.45
+                length_mm: 140
+                max_tension_n: 50
+                n_segments: 12
+                root_radius_mm: 6
+                stem_offset_mm: 32
+                stiffness_nm_per_rad: 0.3
+                taper: 0.5
+              recipe: null
+              origin: preset
+              effector_id: e754a0d67325f2100c98c2f9af46bb60c49421f256a2026895fb59bcf82e547d
+              display_name: Soft arm, 12 segments, 140 mm
+              fidelity: approximation
+              group: soft_arm
+              label: 'Product mode: not part of the pre-registered experiment'
+            - contract: rtt-effectors/1
+              family: suction
+              model: cup-16mm
+              primitive: seal
+              params:
+                bellows_stiffness_n_per_mm: 1
+                diameter_mm: 16
+                lip_segments: 12
+                max_tilt_deg: 10
+                vacuum_kpa: 60
+              recipe: null
+              origin: preset
+              effector_id: 3907bc284d9e2c3399ddb8b45b1bf94dbb3b0ef0672705c6d90724839ecf7186
+              display_name: Suction cup, 16 mm bellows
+              fidelity: approximation
+              group: suction
+              label: 'Product mode: not part of the pre-registered experiment'
+            assignment:
+              close_lid: 1
+              open_lid: 0
+              pick_carton: 1
+              pick_pack: 1
+            mounts:
+            - angle_deg: 0.0
+              lateral_mm: 0.0
+              spin_deg: 0.0
+              standoff_mm: 50.0
+            - angle_deg: 75.0
+              lateral_mm: 0.0
+              spin_deg: 0.0
+              standoff_mm: 50.0
+            bracket:
+              hub_thickness_mm: 10.0
+              arm_width_mm: 24.0
+              arm_thickness_mm: 8.0
+              adapter_thickness_mm: 8.0
+              density_kg_m3: 1300.0
+            changer: null
+            present_s: 1.5
+            setup_id: 9d7829e0d8861c572779cefc3cfce3110b92c0150e87f45e6fa82785e7f26f3f
+            label: 'Two-tool head: Soft arm + Suction cup'
+            product_label: 'Product mode: not part of the pre-registered experiment'
+        c:
+          setup_id: d136ab4824c1bad26b5ac84b7a481c14bedee5790c495f0eb8c1c9369bb11a57
+          status: descriptive
+          basis: 'no recommendation: S5''s closest setup, reported descriptively'
+          kind: single
+          label: Industrial servo parallel gripper, 110 mm stroke
+          tools:
+          - Industrial servo parallel gripper, 110 mm stroke
+          complexity:
+            n_tools: 1
+            n_actuators: 1
+            tool_mass_kg: 1.08888
+            total_mass_kg: 1.08888
+            n_changes: 0
+            bracket: false
+          fidelity: rigid
+          dev:
+            completion_rate: 0.0
+            runs:
+            - condition_id: nominal
+              seed: 0
+              completed: false
+              traj_sha: fcef030e32a2508c6cb211991d75649b3a3eb872a07f9565c84fdd50074a9f8c
+            - condition_id: place01
+              seed: 1
+              completed: false
+              traj_sha: 0762010857bbec3cee5d23c923738ccc4d6783739a35cb16847a7bc55ac9debe
+            - condition_id: place02
+              seed: 2
+              completed: false
+              traj_sha: 07e877c117e72e592328d56c5cad2ea1f34434a61a4604f96ce243f5270d5f50
+            - condition_id: place03
+              seed: 3
+              completed: false
+              traj_sha: fb0629db582b2d75c14be25cb22e36c823f552e9cb93744198d02c33cbc2d957
+            - condition_id: place04
+              seed: 4
+              completed: false
+              traj_sha: d7f72b40d1787471b579ff57b0d189e1e10da2082dc5fb7d8655cd85367dd15b
+            - condition_id: place05
+              seed: 5
+              completed: false
+              traj_sha: 1d02de33d5d965f8605cdcc97d38d384f16ab7a90e2de9ecba4c82567b99e648
+            - condition_id: place06
+              seed: 6
+              completed: false
+              traj_sha: 2d6093a544eaef94d2c56aa1660326642dd91389327ca55a5b876b0c70e33c74
+            - condition_id: place07
+              seed: 7
+              completed: false
+              traj_sha: 89aad10c3e317daeb5cc6d7b91f863f43feae7c41359c493364085a921b32296
+          setup:
+            contract: rtt-effectors/2
+            kind: single
+            tools:
+            - contract: rtt-effectors/1
+              family: catalog_gripper
+              model: gripper-2f-servo-110
+              primitive: pinch
+              params:
+                closed:
+                  fingers: 0
+                grip_height_frac: 0.3
+                open:
+                  fingers: -0.055
+                rest: 0
+                source: vendored
+                tip_offset: 0
+                via: []
+              recipe: null
+              origin: catalog
+              effector_id: f2ea72dff094ac3680a7b59e05a96a2e9bc4d8191c7bfee56d30f1755987dff2
+              display_name: Industrial servo parallel gripper, 110 mm stroke
+              fidelity: rigid
+              group: catalog
+              label: 'Product mode: not part of the pre-registered experiment'
+            assignment:
+              close_lid: 0
+              open_lid: 0
+              pick_carton: 0
+              pick_pack: 0
+            mounts: []
+            bracket: null
+            changer: null
+            present_s: null
+            setup_id: d136ab4824c1bad26b5ac84b7a481c14bedee5790c495f0eb8c1c9369bb11a57
+            label: Industrial servo parallel gripper, 110 mm stroke
+            product_label: 'Product mode: not part of the pre-registered experiment'
+      primary:
+        tested: true
+        reason: null
+    h2_coupling:
+      task_id: 33599e99ac277cf20e73d6acd349b9422330a255b3fe5ea48c6442a26c3decd6
+      dev_reports:
+        b:
+          sha256: e4a8e1f01859b6ddef640664c95d308dbc72d7141036ef74544bf188c85e5a57
+          path: h2_coupling/b/report.json
+          source: reused
+        c:
+          sha256: c0eabc71614c3fff50fad769810e872956fb8ea07a7dcb11a5131a64a393b780
+          path: h2_coupling/c/report.json
+          source: run here (fake)
+      arms:
+        a:
+          setup_id: 5367b08cfd9757334f9c396a60276bfa411aa86283cd970d44f8c87fcd63ba09
+          status: tested
+          basis: S5's best single off-the-shelf effector of tournament b
+          kind: single
+          label: 'Parallel jaw, stock blade: Pipe coupling'
+          tools:
+          - 'Parallel jaw, stock blade: Pipe coupling'
+          complexity:
+            n_tools: 1
+            n_actuators: 1
+            tool_mass_kg: 0.41398
+            total_mass_kg: 0.41398
+            n_changes: 0
+            bracket: false
+          fidelity: approximation
+          dev:
+            completion_rate: 0.0
+            runs:
+            - condition_id: nominal
+              seed: 0
+              completed: false
+              traj_sha: a73d7612dbe204a816b0190e5d5a5dd1127c47fed871e95c42aacc160ba06f60
+            - condition_id: place01
+              seed: 1
+              completed: false
+              traj_sha: c08c46a002dde73d401b8e17fd0c8fd6d6fe3695728519709c7c7b67b1b1a15a
+            - condition_id: place02
+              seed: 2
+              completed: false
+              traj_sha: 65732c67152907320d2a4564deab5d1d018fcbf0afdf8f7a4a930fd2239f52f2
+            - condition_id: place03
+              seed: 3
+              completed: false
+              traj_sha: 8015ed6f6570e3dd68fdad8256228871a2fd957f99cd5d144dd37d7a88180ed2
+            - condition_id: place04
+              seed: 4
+              completed: false
+              traj_sha: 3f5a2265c20cb126480ea8e709a6bd9d0d59784970dd3d87f99d571db7f7a00c
+            - condition_id: place05
+              seed: 5
+              completed: false
+              traj_sha: 6904be0642fc588c4e04ed0d16ec5bd3c48f03ad31521ec24eb834b11bd52767
+            - condition_id: place06
+              seed: 6
+              completed: false
+              traj_sha: 898f26fd011d02a605d0bba8530228e87289f567ef2ba37b72fd2d5d44b97f8c
+            - condition_id: place07
+              seed: 7
+              completed: false
+              traj_sha: 4105f86ce6dd93c64e17e6c3e3f681e8027378466736706657de8496db1f2c3d
+          setup:
+            contract: rtt-effectors/2
+            kind: single
+            tools:
+            - contract: rtt-effectors/1
+              family: parallel_jaw
+              model: studio-stock
+              primitive: jaw
+              params:
+                studio_part_jaw:
+                  entrant: stock
+                  handle: member
+                  kind: threaded_joint
+                  object: pipe_coupling
+                  params:
+                    chamfer_mm: 1
+                    diameter_mm: 40
+                    engage_turns: 2
+                    final_torque_nm: 8
+                    length_mm: 45
+                    member: coupling
+                    pitch_mm: 1.5
+                    start_torque_nm: 0.2
+                  ref: null
+              recipe: null
+              origin: manual
+              effector_id: b8534fd47e34620160e172f1831f7d0d12b3bb3434e578e6231c52b79635d66b
+              display_name: 'Parallel jaw, stock blade: Pipe coupling'
+              fidelity: core
+              group: reference
+              label: 'Product mode: not part of the pre-registered experiment'
+            assignment:
+              insert_coupling: 0
+              tighten_coupling: 0
+            mounts: []
+            bracket: null
+            changer: null
+            present_s: null
+            setup_id: 5367b08cfd9757334f9c396a60276bfa411aa86283cd970d44f8c87fcd63ba09
+            label: 'Parallel jaw, stock blade: Pipe coupling'
+            product_label: 'Product mode: not part of the pre-registered experiment'
+        b:
+          setup_id: 48274cb2290cdf2e9ec0ba57d02a4a3d10e580eecbd471cfa4a455f4a327b7a0
+          status: tested
+          basis: S5's recommendation
+          kind: multi_head
+          label: 'Two-tool head: Two-finger parallel + Two-finger linkage'
+          tools:
+          - Two-finger parallel gripper, fin-ray pads
+          - Two-finger linkage gripper of a cobot arm
+          complexity:
+            n_tools: 2
+            n_actuators: 2
+            tool_mass_kg: 2.66883
+            total_mass_kg: 2.66883
+            n_changes: 1
+            bracket: true
+          fidelity: approximation
+          dev:
+            completion_rate: 1.0
+            runs:
+            - condition_id: nominal
+              seed: 0
+              completed: true
+              traj_sha: beb66c073b257f054517b1c456b28c9539e830b86f1c7653ff8b3a45893c2559
+            - condition_id: place01
+              seed: 1
+              completed: true
+              traj_sha: 9a2f5d8329607f9369a10b33892774363046a0f4372a43680ad69626ab4d9330
+            - condition_id: place02
+              seed: 2
+              completed: true
+              traj_sha: 0e4147bc4459135ca1a0e75d5da2cc8a37b617daed279ee429f8b73d497914e3
+            - condition_id: place03
+              seed: 3
+              completed: true
+              traj_sha: 6b4155e46bdf8119abda97dc329853b5af08b3feb3f26c25f1e439331bbe8660
+            - condition_id: place04
+              seed: 4
+              completed: true
+              traj_sha: f6a5e238589f7dbefb9f31302fb2e41eeeee2b07cefd61a0fd8dd51cf0eb3139
+            - condition_id: place05
+              seed: 5
+              completed: true
+              traj_sha: 87932febd5d0ec46d92f12698806d5bb023b37ab6799b7aba1721911d808e334
+            - condition_id: place06
+              seed: 6
+              completed: true
+              traj_sha: 1ab18e83e7c79cce387eb5a4531b98b11e3cd3cd13919549f4bfb36a148b9ac0
+            - condition_id: place07
+              seed: 7
+              completed: true
+              traj_sha: 2697c7d8194db31d6962e586d58f92b4fecc0305970bde07d693e70d4f2cc196
+          setup:
+            contract: rtt-effectors/2
+            kind: multi_head
+            tools:
+            - contract: rtt-effectors/1
+              family: catalog_gripper
+              model: gripper-2f-finray
+              primitive: pinch
+              params:
+                closed:
+                  fingers_actuator: 0.05
+                grip_height_frac: 0.5
+                open:
+                  fingers_actuator: 0
+                rest: 0
+                source: vendored
+                tip_offset: 0
+                via: []
+              recipe: null
+              origin: catalog
+              effector_id: 79372f1ed2ab4e3a5467c38ed239aa0795a8df3e5ce6af900af10a5a3e252050
+              display_name: Two-finger parallel gripper, fin-ray pads
+              fidelity: rigid
+              group: catalog
+              label: 'Product mode: not part of the pre-registered experiment'
+            - contract: rtt-effectors/1
+              family: catalog_gripper
+              model: gripper-2f-linkage-cobot
+              primitive: pinch
+              params:
+                closed:
+                  fingers_actuator: 255
+                grip_height_frac: 0.3
+                open:
+                  fingers_actuator: 0
+                rest: 0
+                source: vendored
+                tip_offset: 0
+                via: []
+              recipe: null
+              origin: catalog
+              effector_id: 02405ccb8d6393b7ca149262b1d03aad7a153238ce0bc32ea1d3eacad7657d39
+              display_name: Two-finger linkage gripper of a cobot arm
+              fidelity: rigid
+              group: catalog
+              label: 'Product mode: not part of the pre-registered experiment'
+            assignment:
+              insert_coupling: 0
+              tighten_coupling: 1
+            mounts:
+            - angle_deg: -60.0
+              lateral_mm: 0.0
+              spin_deg: 0.0
+              standoff_mm: 70.0
+            - angle_deg: 60.0
+              lateral_mm: 0.0
+              spin_deg: 0.0
+              standoff_mm: 70.0
+            bracket:
+              hub_thickness_mm: 10.0
+              arm_width_mm: 24.0
+              arm_thickness_mm: 8.0
+              adapter_thickness_mm: 8.0
+              density_kg_m3: 1300.0
+            changer: null
+            present_s: 1.5
+            setup_id: 48274cb2290cdf2e9ec0ba57d02a4a3d10e580eecbd471cfa4a455f4a327b7a0
+            label: 'Two-tool head: Two-finger parallel + Two-finger linkage'
+            product_label: 'Product mode: not part of the pre-registered experiment'
+        c:
+          setup_id: 5a40796666921e7c3b3a958662cac93f0c03f7bafd661cfaca9a30f8153eb0d2
+          status: tested
+          basis: S5's recommendation
+          kind: tool_change
+          label: 'Tool change: Force-controlled parallel > Two-finger linkage'
+          tools:
+          - Force-controlled parallel gripper, 48 mm stroke
+          - Two-finger linkage gripper of a cobot arm
+          complexity:
+            n_tools: 2
+            n_actuators: 2
+            tool_mass_kg: 1.10143
+            total_mass_kg: 1.61543
+            n_changes: 1
+            bracket: false
+          fidelity: approximation
+          dev:
+            completion_rate: 0.375
+            runs:
+            - condition_id: nominal
+              seed: 0
+              completed: true
+              traj_sha: bd48547d6a70110649d1f6bbd776725c81beae7dc1582262f1ebda9d7c4a3699
+            - condition_id: place01
+              seed: 1
+              completed: false
+              traj_sha: 16077f3945ab7fdb78fd92e999ffa00666ecda89877a43f3b53fca7f0021b9fb
+            - condition_id: place02
+              seed: 2
+              completed: false
+              traj_sha: a9c04175795a941be8515b9b25883d80ff89e2ba17c70b1f0e3278461c606686
+            - condition_id: place03
+              seed: 3
+              completed: true
+              traj_sha: d012dd10f8db1a50dad5f1fa0c406e6374c05ed63a8c8aa5dfe29b5297f95718
+            - condition_id: place04
+              seed: 4
+              completed: false
+              traj_sha: 35ea3f269e237c810da0fa9f2cb03e36bb6dc280d15ec4ed1da7093aa276ce35
+            - condition_id: place05
+              seed: 5
+              completed: true
+              traj_sha: e4a7ee35fdb933640e51092a8d41c3880c08218ae54e6072f6147698afdc9240
+            - condition_id: place06
+              seed: 6
+              completed: false
+              traj_sha: 5a8fee7a843a3f28d99265df48c76b7fa6a9d6302712356eb4b1936440ff4654
+            - condition_id: place07
+              seed: 7
+              completed: false
+              traj_sha: 9568a3c2e66b4a01e398da5b79ece23adbc9b1a004386550ef92591b455a30c7
+          setup:
+            contract: rtt-effectors/2
+            kind: tool_change
+            tools:
+            - contract: rtt-effectors/1
+              family: catalog_gripper
+              model: gripper-2f-force-48
+              primitive: pinch
+              params:
+                closed:
+                  actuator_jaw: -0.0235
+                grip_height_frac: 0.3
+                open:
+                  actuator_jaw: 0
+                rest: 0
+                source: vendored
+                tip_offset: 0
+                via: []
+              recipe: null
+              origin: catalog
+              effector_id: 6d286bacbd7431187a1a4bd5a48d194ea5e59399afb0a9e2227332f4fe006cf7
+              display_name: Force-controlled parallel gripper, 48 mm stroke
+              fidelity: rigid
+              group: catalog
+              label: 'Product mode: not part of the pre-registered experiment'
+            - contract: rtt-effectors/1
+              family: catalog_gripper
+              model: gripper-2f-linkage-cobot
+              primitive: pinch
+              params:
+                closed:
+                  fingers_actuator: 255
+                grip_height_frac: 0.3
+                open:
+                  fingers_actuator: 0
+                rest: 0
+                source: vendored
+                tip_offset: 0
+                via: []
+              recipe: null
+              origin: catalog
+              effector_id: 02405ccb8d6393b7ca149262b1d03aad7a153238ce0bc32ea1d3eacad7657d39
+              display_name: Two-finger linkage gripper of a cobot arm
+              fidelity: rigid
+              group: catalog
+              label: 'Product mode: not part of the pre-registered experiment'
+            assignment:
+              insert_coupling: 0
+              tighten_coupling: 1
+            mounts: []
+            bracket: null
+            changer:
+              changeover_s: 6.0
+              master_mass_kg: 0.25
+              stack_mm: 25.0
+              tool_plate_mass_kg: 0.1
+            present_s: null
+            setup_id: 5a40796666921e7c3b3a958662cac93f0c03f7bafd661cfaca9a30f8153eb0d2
+            label: 'Tool change: Force-controlled parallel > Two-finger linkage'
+            product_label: 'Product mode: not part of the pre-registered experiment'
+      primary:
+        tested: true
+        reason: null
+    h3_cabinet:
+      task_id: 3297a111d7c61392e9a99a08d3a80a8e14c7046b80d277925ed3a78788ff651d
+      dev_reports:
+        b:
+          sha256: 2a096bb15c219ad9f2751502928d1dbe37c7f1c49f6538a9c163f738428212fe
+          path: h3_cabinet/b/report.json
+          source: reused
+        c:
+          sha256: e8b4f309972acb76b88eba4647c81c1f4b13a98a01482522c7b60aa26c2cb6e1
+          path: h3_cabinet/c/report.json
+          source: run here (fake)
+      arms:
+        a:
+          setup_id: 69a55b715795559ec0d142e71384940c96f8d9b9cf2d33bd199a4f8a5c2257ba
+          status: tested
+          basis: S5's best single off-the-shelf effector of tournament b
+          kind: single
+          label: Two-finger linkage gripper of a cobot arm
+          tools:
+          - Two-finger linkage gripper of a cobot arm
+          complexity:
+            n_tools: 1
+            n_actuators: 1
+            tool_mass_kg: 0.75143
+            total_mass_kg: 0.75143
+            n_changes: 0
+            bracket: false
+          fidelity: approximation
+          dev:
+            completion_rate: 0.0
+            runs:
+            - condition_id: nominal
+              seed: 0
+              completed: false
+              traj_sha: e01bddf6db6b960507be90b2ceb45d3072b037d806d33d3b44778adfa4ebf73e
+            - condition_id: place01
+              seed: 1
+              completed: false
+              traj_sha: 1ee974bdf25b6723c8004021636e3c5681076cefd603b9eaa076bf82c7496f57
+            - condition_id: place02
+              seed: 2
+              completed: false
+              traj_sha: f8331b5f05387bccff5731d11c33fd38c3936486a631bea78f900dc2ff3773ab
+            - condition_id: place03
+              seed: 3
+              completed: false
+              traj_sha: 25872d913343fb7a9d06004322f017f730720e38940fb0c5952141dfea8ccbdd
+            - condition_id: place04
+              seed: 4
+              completed: false
+              traj_sha: 0260dc48abae5920399cc86a97fc8d8eeae39b0ad0d54b676c8c8b856daff983
+            - condition_id: place05
+              seed: 5
+              completed: false
+              traj_sha: 2974698e7f769e41387b716c82f9925d6465f2c265d7d6528406277e5e504f58
+            - condition_id: place06
+              seed: 6
+              completed: false
+              traj_sha: f773fe75d8d6152ada2dc060fae3637f60d6f8fa8fd86f302e7fbd3e17c9018a
+            - condition_id: place07
+              seed: 7
+              completed: false
+              traj_sha: 6e8c9bda760235da9fc271aa56a063a6f61757af27571925be08500890ac233e
+          setup:
+            contract: rtt-effectors/2
+            kind: single
+            tools:
+            - contract: rtt-effectors/1
+              family: catalog_gripper
+              model: gripper-2f-linkage-cobot
+              primitive: pinch
+              params:
+                closed:
+                  fingers_actuator: 255
+                grip_height_frac: 0.3
+                open:
+                  fingers_actuator: 0
+                rest: 0
+                source: vendored
+                tip_offset: 0
+                via: []
+              recipe: null
+              origin: catalog
+              effector_id: 02405ccb8d6393b7ca149262b1d03aad7a153238ce0bc32ea1d3eacad7657d39
+              display_name: Two-finger linkage gripper of a cobot arm
+              fidelity: rigid
+              group: catalog
+              label: 'Product mode: not part of the pre-registered experiment'
+            assignment:
+              open_door: 0
+              open_valve: 0
+              plug_connector: 0
+              unlock_latch: 0
+            mounts: []
+            bracket: null
+            changer: null
+            present_s: null
+            setup_id: 69a55b715795559ec0d142e71384940c96f8d9b9cf2d33bd199a4f8a5c2257ba
+            label: Two-finger linkage gripper of a cobot arm
+            product_label: 'Product mode: not part of the pre-registered experiment'
+        b:
+          setup_id: 4a5ca67a8577219bf4f87501e90e8e532276f839b488a9b86dfc6a86a472700c
+          status: tested
+          basis: S5's recommendation
+          kind: tool_change
+          label: 'Tool change: Two-finger > Force-controlled > Two-finger'
+          tools:
+          - Two-finger adaptive linkage gripper, 85 mm
+          - Force-controlled parallel gripper, 48 mm stroke
+          - Two-finger parallel cobot hand, 80 mm
+          complexity:
+            n_tools: 3
+            n_actuators: 3
+            tool_mass_kg: 1.25
+            total_mass_kg: 2.624
+            n_changes: 3
+            bracket: false
+          fidelity: approximation
+          dev:
+            completion_rate: 0.5
+            runs:
+            - condition_id: nominal
+              seed: 0
+              completed: true
+              traj_sha: c9c07bb4a6aa2ede73aaeeba35e7200574668dc4570e692a5df49a25686e75a1
+            - condition_id: place01
+              seed: 1
+              completed: false
+              traj_sha: 4065f360ed1fdb7e39d76bde930a8fdd73c750bedcbc2dc682cf5017758000ec
+            - condition_id: place02
+              seed: 2
+              completed: true
+              traj_sha: 90771dd0c39e42248dfa8ad89250f5d8ea6d36bca2685551716b0a9d0845b54b
+            - condition_id: place03
+              seed: 3
+              completed: false
+              traj_sha: 3d7c215051f90e9af5570531ddaccddbac9f56c61fc0d37c4f77c7b7ab355fd6
+            - condition_id: place04
+              seed: 4
+              completed: true
+              traj_sha: 1165d54c49bccea6073efc02901665af0a35566e9f204ae89e3de4e859b840af
+            - condition_id: place05
+              seed: 5
+              completed: false
+              traj_sha: 6bea9e567f3334582e109e80b0eb9d8a1c34e20c7b55266aba0b1b8df6bd8e29
+            - condition_id: place06
+              seed: 6
+              completed: true
+              traj_sha: 288b47de89d595229be2625fe93467198cf2485c4ab439d8a09c86b23c8ac638
+            - condition_id: place07
+              seed: 7
+              completed: false
+              traj_sha: 1434e5b62895327b5e857d758e8702027cc2708e35609ba078de4f1f42d8ad3c
+          setup:
+            contract: rtt-effectors/2
+            kind: tool_change
+            tools:
+            - contract: rtt-effectors/1
+              family: catalog_gripper
+              model: gripper-2f-adaptive-85
+              primitive: pinch
+              params:
+                closed:
+                  fingers_actuator: 255
+                grip_height_frac: 0.3
+                open:
+                  fingers_actuator: 0
+                rest: 0
+                source: vendored
+                tip_offset: 0
+                via: []
+              recipe: null
+              origin: catalog
+              effector_id: f7faa3ddd45fee96149330bbf1bc6cd179305044806e9f178ed0735f6f184b80
+              display_name: Two-finger adaptive linkage gripper, 85 mm
+              fidelity: rigid
+              group: catalog
+              label: 'Product mode: not part of the pre-registered experiment'
+            - contract: rtt-effectors/1
+              family: catalog_gripper
+              model: gripper-2f-force-48
+              primitive: pinch
+              params:
+                closed:
+                  actuator_jaw: -0.0235
+                grip_height_frac: 0.3
+                open:
+                  actuator_jaw: 0
+                rest: 0
+                source: vendored
+                tip_offset: 0
+                via: []
+              recipe: null
+              origin: catalog
+              effector_id: 6d286bacbd7431187a1a4bd5a48d194ea5e59399afb0a9e2227332f4fe006cf7
+              display_name: Force-controlled parallel gripper, 48 mm stroke
+              fidelity: rigid
+              group: catalog
+              label: 'Product mode: not part of the pre-registered experiment'
+            - contract: rtt-effectors/1
+              family: catalog_gripper
+              model: gripper-2f-cobot-hand-80
+              primitive: pinch
+              params:
+                closed:
+                  actuator8: 0
+                grip_height_frac: 0.3
+                open:
+                  actuator8: 255
+                rest: 0
+                source: vendored
+                tip_offset: 0
+                via: []
+              recipe: null
+              origin: catalog
+              effector_id: 9aff5d8ef53e119ab1943eef6d8ba55af4795f806c1a2e111b89c7c0444c770b
+              display_name: Two-finger parallel cobot hand, 80 mm
+              fidelity: rigid
+              group: catalog
+              label: 'Product mode: not part of the pre-registered experiment'
+            assignment:
+              open_door: 1
+              open_valve: 2
+              plug_connector: 1
+              unlock_latch: 0
+            mounts: []
+            bracket: null
+            changer:
+              changeover_s: 6.0
+              master_mass_kg: 0.25
+              stack_mm: 25.0
+              tool_plate_mass_kg: 0.1
+            present_s: null
+            setup_id: 4a5ca67a8577219bf4f87501e90e8e532276f839b488a9b86dfc6a86a472700c
+            label: 'Tool change: Two-finger > Force-controlled > Two-finger'
+            product_label: 'Product mode: not part of the pre-registered experiment'
+        c:
+          setup_id: 04b397942e5efe7074495a7d3ab2fc82c6d8f932747fefd3bbef07f4ec61584d
+          status: tested
+          basis: S5's recommendation
+          kind: tool_change
+          label: 'Tool change: Two-finger > Two-finger > Force-controlled'
+          tools:
+          - Two-finger adaptive linkage gripper, 85 mm
+          - Two-finger parallel cobot hand, 80 mm
+          - Force-controlled parallel gripper, 48 mm stroke
+          complexity:
+            n_tools: 3
+            n_actuators: 3
+            tool_mass_kg: 1.25
+            total_mass_kg: 2.624
+            n_changes: 2
+            bracket: false
+          fidelity: approximation
+          dev:
+            completion_rate: 0.375
+            runs:
+            - condition_id: nominal
+              seed: 0
+              completed: false
+              traj_sha: d3c59bc18adb218d028f216e0fcfcdc1e25958766bcdb4f996ffff126a604a75
+            - condition_id: place01
+              seed: 1
+              completed: false
+              traj_sha: df5cfd90cc4828fb816e3508b266e1b89a57f677aa6e6555200c98bc13d0d64e
+            - condition_id: place02
+              seed: 2
+              completed: true
+              traj_sha: 2b010d71cff8780b04c4c10ac11c169a039a9c81d9088202d1ce025b68c796d7
+            - condition_id: place03
+              seed: 3
+              completed: false
+              traj_sha: 9e0a91dbad4ccc92a0f1673f1a831986be28829d6027c27b7a497418b7f3da4d
+            - condition_id: place04
+              seed: 4
+              completed: true
+              traj_sha: 59e5b101999f536e2d2c5a51d942f4b7de8a47961f3ebeddd18d004ceb5475ba
+            - condition_id: place05
+              seed: 5
+              completed: false
+              traj_sha: e709d6c089189bde2e9f607a4b9c26b6ad4d6c5fa9647f774d26c41cc6450e46
+            - condition_id: place06
+              seed: 6
+              completed: true
+              traj_sha: f8d129df6ce2e9760ca2aa21f9fdc2ec42dadc37f736983c4eb27d22ed78a352
+            - condition_id: place07
+              seed: 7
+              completed: false
+              traj_sha: b3aacf0761f893912ead2160dd56abf87069db69c38a8d2e366da6dfe7c39cb0
+          setup:
+            contract: rtt-effectors/2
+            kind: tool_change
+            tools:
+            - contract: rtt-effectors/1
+              family: catalog_gripper
+              model: gripper-2f-adaptive-85
+              primitive: pinch
+              params:
+                closed:
+                  fingers_actuator: 255
+                grip_height_frac: 0.3
+                open:
+                  fingers_actuator: 0
+                rest: 0
+                source: vendored
+                tip_offset: 0
+                via: []
+              recipe: null
+              origin: catalog
+              effector_id: f7faa3ddd45fee96149330bbf1bc6cd179305044806e9f178ed0735f6f184b80
+              display_name: Two-finger adaptive linkage gripper, 85 mm
+              fidelity: rigid
+              group: catalog
+              label: 'Product mode: not part of the pre-registered experiment'
+            - contract: rtt-effectors/1
+              family: catalog_gripper
+              model: gripper-2f-cobot-hand-80
+              primitive: pinch
+              params:
+                closed:
+                  actuator8: 0
+                grip_height_frac: 0.3
+                open:
+                  actuator8: 255
+                rest: 0
+                source: vendored
+                tip_offset: 0
+                via: []
+              recipe: null
+              origin: catalog
+              effector_id: 9aff5d8ef53e119ab1943eef6d8ba55af4795f806c1a2e111b89c7c0444c770b
+              display_name: Two-finger parallel cobot hand, 80 mm
+              fidelity: rigid
+              group: catalog
+              label: 'Product mode: not part of the pre-registered experiment'
+            - contract: rtt-effectors/1
+              family: catalog_gripper
+              model: gripper-2f-force-48
+              primitive: pinch
+              params:
+                closed:
+                  actuator_jaw: -0.0235
+                grip_height_frac: 0.3
+                open:
+                  actuator_jaw: 0
+                rest: 0
+                source: vendored
+                tip_offset: 0
+                via: []
+              recipe: null
+              origin: catalog
+              effector_id: 6d286bacbd7431187a1a4bd5a48d194ea5e59399afb0a9e2227332f4fe006cf7
+              display_name: Force-controlled parallel gripper, 48 mm stroke
+              fidelity: rigid
+              group: catalog
+              label: 'Product mode: not part of the pre-registered experiment'
+            assignment:
+              open_door: 0
+              open_valve: 1
+              plug_connector: 2
+              unlock_latch: 0
+            mounts: []
+            bracket: null
+            changer:
+              changeover_s: 6.0
+              master_mass_kg: 0.25
+              stack_mm: 25.0
+              tool_plate_mass_kg: 0.1
+            present_s: null
+            setup_id: 04b397942e5efe7074495a7d3ab2fc82c6d8f932747fefd3bbef07f4ec61584d
+            label: 'Tool change: Two-finger > Two-finger > Force-controlled'
+            product_label: 'Product mode: not part of the pre-registered experiment'
+      primary:
+        tested: true
+        reason: null
+  commitment: null
+  timings_s:
+    h1_tote/c: 151.5
+    h2_coupling/c: 135.2
+    h3_cabinet/c: 351.4
+    verify: 60.2
