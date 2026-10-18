@@ -93,8 +93,9 @@ approximation with the suction family's caveat.
 Fit checks (ruling 4): a pick of a part runs the family's own build against that part; a pick of
 a plug or threaded member runs it against a cylinder of the member's size (what S2's pick plans
 with); a cup must be no wider than the face it seals on (part top, plug top, a cap; a coupling or
-nut has an open top; a slot head breaks the seal); a gripper must open 5 mm wider than the
-threaded member it turns; a pre-shaped gripper needs the handle plus 6 mm each side.
+nut has an open top; a slot head breaks the seal); an insert of a port plug picks the plug, so it
+gets the same checks as a pick of it; a gripper must open 5 mm wider than the threaded member it
+turns or holds in place for an insert; a pre-shaped gripper needs the handle plus 6 mm each side.
 
 ## 3. Per-step screen and the success matrix
 

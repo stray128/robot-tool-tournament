@@ -166,11 +166,20 @@ def test_hook_pull_prunes_a_cup_and_a_too_wide_cup_is_pruned_from_a_narrow_face(
         Step.of("pick", "grasp", "pin", "part", "Pick the pin", [SuccessCriterion("lift_mm", at_least=5)]),
     )
     task = TaskSpec("Lid and pin", "", (lid, narrow), steps, source="test")
+    port = ObjectInstance.of("port", "port_plug", "Port", ObjectPose(-150.0, 0.0, 0.0), plug_diameter_mm=8)
+    steps = (
+        *steps,
+        Step.of("plug", "insert", "port", "plug", "Plug in", [SuccessCriterion("depth_mm", at_least=10)]),
+    )
+    task = TaskSpec("Lid, pin and port", "", (lid, narrow, port), steps, source="test")
     big = preset("suction", "cup-25mm", "seal")
     _, pruned, _ = prune(task, [candidate_of(cup(), "preset"), candidate_of(big, "preset")])
     reasons = {(p.display_name, p.step_id): p.reason for p in pruned}
     assert "no hook" in reasons[(cup().display_name, "open")]
     assert "25 mm cup is wider than the 12 mm" in reasons[(big.display_name, "pick")]
+    assert (
+        "wider than the 8 mm top of the plug" in reasons[(cup().display_name, "plug")]
+    )  # an insert picks it
 
 
 @dataclass(frozen=True)

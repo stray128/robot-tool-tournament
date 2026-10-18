@@ -555,7 +555,13 @@ def fit_problem(cand: Candidate, info: ToolInfo, step: Step, task_spec: TaskSpec
     cup = _cup_mm(cand.spec)
     opening = info.max_opening_mm
     kind = obj.kind
-    if step.primitive in ACQUIRE:
+    picks_plug = step.primitive is PrimitiveKind.INSERT and kind is TemplateKind.PORT_PLUG
+    if step.primitive is PrimitiveKind.INSERT and kind is TemplateKind.THREADED_JOINT:
+        d = float(p["diameter_mm"])  # fingers grip a member in place across its flats; cups press its top
+        if opening is not None and opening - OPENING_MARGIN_MM < d:
+            return f"it opens {opening:.0f} mm; the {p['member']} {obj.name} is {d:g} mm across"
+        return None
+    if step.primitive in ACQUIRE or picks_plug:  # an insert picks its plug off the table
         if kind is TemplateKind.PART:
             if cup is not None and p["shape"] in ("box", "cylinder"):
                 face = (
