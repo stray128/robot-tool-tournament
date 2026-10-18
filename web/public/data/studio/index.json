@@ -1,0 +1,208 @@
+{
+ "schema": "rtt-web-studio",
+ "version": 1,
+ "label": "Product mode: not part of the pre-registered experiment",
+ "contract": "rtt-effectors/2",
+ "code_version": "591648aa39d3",
+ "heroes": [
+  {
+   "hero": "h1",
+   "case_id": "h1_tote",
+   "title": "Returns tote",
+   "setting": "warehouse",
+   "use_case": "Warehouse returns: a plastic tote on the packing bench has a hinged lid. Open the lid, put a small rigid carton (about 120 x 80 x 60 mm, 300 g) and a flat shrink-wrapped pack (about 150 x 100 x 20 mm, 150 g) from the bench into the tote, then close the lid.",
+   "page": "studio/h1.json",
+   "task_id": "e4586f3612e11b0eb490349c52a109bec75f43fdb0bcf9f1d91127f9e01a4ad5",
+   "n_steps": 4,
+   "n_candidates": 52,
+   "outcome": "recommended",
+   "headline": "A two-tool head completes the task in 8 of 8 runs; the best single off-the-shelf tool in 0 of 8 runs.",
+   "recommended": {
+    "setup_id": "9d7829e0d8861c572779cefc3cfce3110b92c0150e87f45e6fa82785e7f26f3f",
+    "kind": "multi_head",
+    "kind_title": "Two-tool head",
+    "label": "Two-tool head: Soft arm + Suction cup",
+    "tools": [
+     {
+      "index": 0,
+      "effector_id": "e754a0d67325f2100c98c2f9af46bb60c49421f256a2026895fb59bcf82e547d",
+      "display_name": "Soft arm, 12 segments, 140 mm",
+      "family": "soft_arm",
+      "family_title": "Soft arm",
+      "fidelity": "approximation",
+      "off_the_shelf": true,
+      "caveat": "Soft arm (approximation, octopus-inspired): a chain of rigid tapered capsule segments on spring-damper hinges, curled by a cable (a spatial tendon through sites) with a tension limit of at most 50 N. It bends in one plane (horizontal) and is rigid out of it; its segments do not collide with each other; a rigid post carries its root beside the part and the arm pulls the part against it, so the post takes part of the grip. Not modelled: continuum mechanics, material non-linearity, suckers, hydrostatic stiffening. Segment count sets how smooth the wrap is."
+     },
+     {
+      "index": 1,
+      "effector_id": "3907bc284d9e2c3399ddb8b45b1bf94dbb3b0ef0672705c6d90724839ecf7186",
+      "display_name": "Suction cup, 16 mm bellows",
+      "family": "suction",
+      "family_title": "Suction cup",
+      "fidelity": "approximation",
+      "off_the_shelf": true,
+      "caveat": "Suction cup (approximation): a compliant lip of rigid segments on a bellows spring with a limited tilt; the seal is a geometric test (every lip segment touching the face, part material under 13 rays inside the lip) gating a MuJoCo adhesion actuator capped at vacuum x lip area (at most 60 kPa). The lip must touch the face: no pull across a gap. Not modelled: air flow, leak rate, porosity, vacuum build-up time (the vacuum follows the shared close ramp and is cut the control tick the seal is lost), lip material hysteresis, peel dynamics beyond the contact distribution. The lip's friction is the part's. Treat suction results as a screen, then verify on hardware."
+     }
+    ],
+    "completion_rate": 1.0,
+    "completed_runs": 8,
+    "n_runs": 8,
+    "fidelity": "approximation",
+    "stops_at": null,
+    "cycle_time_s": 58.1
+   },
+   "best_single": {
+    "setup_id": "d136ab4824c1bad26b5ac84b7a481c14bedee5790c495f0eb8c1c9369bb11a57",
+    "kind": "single",
+    "kind_title": "Single tool",
+    "label": "Industrial servo parallel gripper, 110 mm stroke",
+    "tools": [
+     "Industrial servo parallel gripper, 110 mm stroke"
+    ],
+    "completion_rate": 0.0,
+    "completed_runs": 0,
+    "n_runs": 8,
+    "fidelity": "rigid",
+    "stops_at": "open_lid",
+    "cycle_time_s": null
+   },
+   "closest": null
+  },
+  {
+   "hero": "h2",
+   "case_id": "h2_coupling",
+   "title": "Pipe coupling",
+   "setting": "construction",
+   "use_case": "Pipe prefabrication: a threaded steel coupling (1 inch pipe size, about 40 mm across and 45 mm long) sits loosely on the threaded stub of a pipe spool that stands upright. Push it onto the thread start and turn it on until it is hand-tight (about 3 N m), never over 8 N m.",
+   "page": "studio/h2.json",
+   "task_id": "33599e99ac277cf20e73d6acd349b9422330a255b3fe5ea48c6442a26c3decd6",
+   "n_steps": 2,
+   "n_candidates": 49,
+   "outcome": "recommended",
+   "headline": "A two-tool head completes the task in 8 of 8 runs; the best single off-the-shelf tool in 0 of 8 runs.",
+   "recommended": {
+    "setup_id": "48274cb2290cdf2e9ec0ba57d02a4a3d10e580eecbd471cfa4a455f4a327b7a0",
+    "kind": "multi_head",
+    "kind_title": "Two-tool head",
+    "label": "Two-tool head: Two-finger parallel + Two-finger linkage",
+    "tools": [
+     {
+      "index": 0,
+      "effector_id": "79372f1ed2ab4e3a5467c38ed239aa0795a8df3e5ce6af900af10a5a3e252050",
+      "display_name": "Two-finger parallel gripper, fin-ray pads",
+      "family": "catalog_gripper",
+      "family_title": "Industrial gripper",
+      "fidelity": "rigid",
+      "off_the_shelf": true,
+      "caveat": null
+     },
+     {
+      "index": 1,
+      "effector_id": "02405ccb8d6393b7ca149262b1d03aad7a153238ce0bc32ea1d3eacad7657d39",
+      "display_name": "Two-finger linkage gripper of a cobot arm",
+      "family": "catalog_gripper",
+      "family_title": "Industrial gripper",
+      "fidelity": "rigid",
+      "off_the_shelf": true,
+      "caveat": null
+     }
+    ],
+    "completion_rate": 1.0,
+    "completed_runs": 8,
+    "n_runs": 8,
+    "fidelity": "approximation",
+    "stops_at": null,
+    "cycle_time_s": 33.86
+   },
+   "best_single": {
+    "setup_id": "5367b08cfd9757334f9c396a60276bfa411aa86283cd970d44f8c87fcd63ba09",
+    "kind": "single",
+    "kind_title": "Single tool",
+    "label": "Parallel jaw, stock blade: Pipe coupling",
+    "tools": [
+     "Parallel jaw, stock blade: Pipe coupling"
+    ],
+    "completion_rate": 0.0,
+    "completed_runs": 0,
+    "n_runs": 8,
+    "fidelity": "approximation",
+    "stops_at": "tighten_coupling",
+    "cycle_time_s": null
+   },
+   "closest": null
+  },
+  {
+   "hero": "h3",
+   "case_id": "h3_cabinet",
+   "title": "Equipment cabinet",
+   "setting": "maintenance",
+   "use_case": "Field maintenance on an equipment cabinet: turn the quarter-turn latch to unlock the door, swing the door open, turn the valve handwheel inside a quarter turn (90 degrees) to open it, then plug the 8 mm round test connector into the service port.",
+   "page": "studio/h3.json",
+   "task_id": "3297a111d7c61392e9a99a08d3a80a8e14c7046b80d277925ed3a78788ff651d",
+   "n_steps": 4,
+   "n_candidates": 52,
+   "outcome": "recommended",
+   "headline": "A tool-change sequence completes the task in 4 of 8 runs; the best single off-the-shelf tool in 0 of 8 runs.",
+   "recommended": {
+    "setup_id": "4a5ca67a8577219bf4f87501e90e8e532276f839b488a9b86dfc6a86a472700c",
+    "kind": "tool_change",
+    "kind_title": "Tool change",
+    "label": "Tool change: Two-finger > Force-controlled > Two-finger",
+    "tools": [
+     {
+      "index": 0,
+      "effector_id": "f7faa3ddd45fee96149330bbf1bc6cd179305044806e9f178ed0735f6f184b80",
+      "display_name": "Two-finger adaptive linkage gripper, 85 mm",
+      "family": "catalog_gripper",
+      "family_title": "Industrial gripper",
+      "fidelity": "rigid",
+      "off_the_shelf": true,
+      "caveat": null
+     },
+     {
+      "index": 1,
+      "effector_id": "6d286bacbd7431187a1a4bd5a48d194ea5e59399afb0a9e2227332f4fe006cf7",
+      "display_name": "Force-controlled parallel gripper, 48 mm stroke",
+      "family": "catalog_gripper",
+      "family_title": "Industrial gripper",
+      "fidelity": "rigid",
+      "off_the_shelf": true,
+      "caveat": null
+     },
+     {
+      "index": 2,
+      "effector_id": "9aff5d8ef53e119ab1943eef6d8ba55af4795f806c1a2e111b89c7c0444c770b",
+      "display_name": "Two-finger parallel cobot hand, 80 mm",
+      "family": "catalog_gripper",
+      "family_title": "Industrial gripper",
+      "fidelity": "rigid",
+      "off_the_shelf": true,
+      "caveat": null
+     }
+    ],
+    "completion_rate": 0.5,
+    "completed_runs": 4,
+    "n_runs": 8,
+    "fidelity": "approximation",
+    "stops_at": null,
+    "cycle_time_s": 71.72
+   },
+   "best_single": {
+    "setup_id": "69a55b715795559ec0d142e71384940c96f8d9b9cf2d33bd199a4f8a5c2257ba",
+    "kind": "single",
+    "kind_title": "Single tool",
+    "label": "Two-finger linkage gripper of a cobot arm",
+    "tools": [
+     "Two-finger linkage gripper of a cobot arm"
+    ],
+    "completion_rate": 0.0,
+    "completed_runs": 0,
+    "n_runs": 8,
+    "fidelity": "approximation",
+    "stops_at": "open_valve",
+    "cycle_time_s": null
+   },
+   "closest": null
+  }
+ ]
+}

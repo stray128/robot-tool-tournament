@@ -1,0 +1,4713 @@
+{
+ "schema": "rtt-web-studio-hero",
+ "version": 1,
+ "label": "Product mode: not part of the pre-registered experiment",
+ "contract": "rtt-effectors/2",
+ "hero": "h3",
+ "case_id": "h3_cabinet",
+ "title": "Equipment cabinet",
+ "setting": "maintenance",
+ "use_case": "Field maintenance on an equipment cabinet: turn the quarter-turn latch to unlock the door, swing the door open, turn the valve handwheel inside a quarter turn (90 degrees) to open it, then plug the 8 mm round test connector into the service port.",
+ "outcome": "recommended",
+ "headline": "A tool-change sequence completes the task in 4 of 8 runs; the best single off-the-shelf tool in 0 of 8 runs.",
+ "plan": {
+  "task_id": "3297a111d7c61392e9a99a08d3a80a8e14c7046b80d277925ed3a78788ff651d",
+  "title": "Cabinet maintenance",
+  "description": "Unlock a quarter-turn latch, swing open a cabinet door, open a handwheel valve by a quarter turn, and insert an 8 mm test connector into a service port.",
+  "source": "recorded",
+  "result": "valid_after_layout_fix",
+  "calls": 2,
+  "model": "nvidia/nemotron-3-super-120b-a12b",
+  "layout_moves": [
+   "Moved test_port from (0, -150) to (0, -240) mm to clear the swing of cabinet_door"
+  ],
+  "assumptions": [
+   "The latch requires about 0.5 N·m to turn and has a wing head 20 mm diameter.",
+   "The cabinet door is 400 mm tall, 200 mm deep, hinged on the left edge with a handle 20 mm from the front.",
+   "The service valve needs roughly 2 N·m to turn and has a 100 mm rim handwheel.",
+   "The test port socket accepts an 8 mm plug with 0.2 mm clearance and 1 mm chamfer.",
+   "Moved test_port from (0, -150) to (0, -240) mm to clear the swing of cabinet_door"
+  ],
+  "clarifications": [],
+  "unsupported": [],
+  "objects": [
+   {
+    "name": "qt_latch",
+    "kind": "quarter_turn_latch",
+    "kind_title": "Quarter-turn latch",
+    "label": "Quarter-turn latch",
+    "params": {
+     "detent": true,
+     "head": "wing",
+     "head_diameter_mm": 20,
+     "head_height_mm": 10,
+     "torque_nm": 0.5,
+     "turn_deg": 90
+    },
+    "pose": {
+     "x_mm": -100.0,
+     "y_mm": 0.0,
+     "yaw_deg": 0.0
+    },
+    "ref": null
+   },
+   {
+    "name": "cabinet_door",
+    "kind": "hinged_lid",
+    "kind_title": "Hinged lid or door",
+    "label": "Cabinet door",
+    "params": {
+     "damping_nms": 0.05,
+     "depth_mm": 200,
+     "feature": "handle",
+     "feature_mm": 20,
+     "max_angle_deg": 120,
+     "open_torque_nm": 0.2,
+     "orientation": "door",
+     "thickness_mm": 5,
+     "width_mm": 400
+    },
+    "pose": {
+     "x_mm": 100.0,
+     "y_mm": 0.0,
+     "yaw_deg": 0.0
+    },
+    "ref": null
+   },
+   {
+    "name": "service_valve",
+    "kind": "handwheel_valve",
+    "kind_title": "Handwheel valve",
+    "label": "Service valve",
+    "params": {
+     "rim_diameter_mm": 100,
+     "rim_section_mm": 10,
+     "spokes": 3,
+     "torque_nm": 2,
+     "travel_deg": 90
+    },
+    "pose": {
+     "x_mm": 0.0,
+     "y_mm": 150.0,
+     "yaw_deg": 0.0
+    },
+    "ref": null
+   },
+   {
+    "name": "test_port",
+    "kind": "port_plug",
+    "kind_title": "Port and plug",
+    "label": "Test port",
+    "params": {
+     "chamfer_mm": 1,
+     "clearance_mm": 0.2,
+     "depth_mm": 15,
+     "insert_force_n": 5,
+     "latch": false,
+     "plug_diameter_mm": 8,
+     "plug_length_mm": 30
+    },
+    "pose": {
+     "x_mm": 0.0,
+     "y_mm": -240.0,
+     "yaw_deg": 0.0
+    },
+    "ref": null
+   }
+  ],
+  "steps": [
+   {
+    "id": "unlock_latch",
+    "primitive": "twist",
+    "primitive_title": "Twist",
+    "object": "qt_latch",
+    "handle": "head",
+    "target": null,
+    "params": {
+     "direction": "ccw",
+     "speed_deg_s": 60
+    },
+    "constraints": {
+     "max_force_n": null,
+     "max_torque_nm": 5.0,
+     "precision_mm": null,
+     "precision_deg": null
+    },
+    "success": [
+     {
+      "quantity": "angle_deg",
+      "unit": "deg",
+      "at_least": 80.0,
+      "at_most": 100.0,
+      "text": "angle 80 to 100 deg"
+     }
+    ],
+    "after": [],
+    "hold_after": false,
+    "description": "Turn the quarter-turn latch counter‑clockwise to unlock the door.",
+    "fidelity": "approximation",
+    "caveats": [
+     "Latches are an approximation: a detent torque on a revolute joint; no cam or spring geometry."
+    ]
+   },
+   {
+    "id": "open_door",
+    "primitive": "hook_pull",
+    "primitive_title": "Hook pull",
+    "object": "cabinet_door",
+    "handle": "handle",
+    "target": null,
+    "params": {
+     "approach": "front",
+     "speed_mm_s": 100
+    },
+    "constraints": {
+     "max_force_n": 20.0,
+     "max_torque_nm": null,
+     "precision_mm": null,
+     "precision_deg": null
+    },
+    "success": [
+     {
+      "quantity": "angle_deg",
+      "unit": "deg",
+      "at_least": 100.0,
+      "at_most": 130.0,
+      "text": "angle 100 to 130 deg"
+     }
+    ],
+    "after": [
+     "unlock_latch"
+    ],
+    "hold_after": false,
+    "description": "Hook the door handle and pull the door open.",
+    "fidelity": "rigid",
+    "caveats": []
+   },
+   {
+    "id": "open_valve",
+    "primitive": "twist",
+    "primitive_title": "Twist",
+    "object": "service_valve",
+    "handle": "wheel",
+    "target": null,
+    "params": {
+     "direction": "ccw",
+     "speed_deg_s": 60
+    },
+    "constraints": {
+     "max_force_n": null,
+     "max_torque_nm": 5.0,
+     "precision_mm": null,
+     "precision_deg": null
+    },
+    "success": [
+     {
+      "quantity": "angle_deg",
+      "unit": "deg",
+      "at_least": 80.0,
+      "at_most": 100.0,
+      "text": "angle 80 to 100 deg"
+     }
+    ],
+    "after": [
+     "open_door"
+    ],
+    "hold_after": false,
+    "description": "Turn the handwheel valve counter‑clockwise a quarter turn to open it.",
+    "fidelity": "approximation",
+    "caveats": [
+     "Valves are an approximation: a resistive torque curve on a revolute joint; no packing or seat dynamics."
+    ]
+   },
+   {
+    "id": "plug_connector",
+    "primitive": "insert",
+    "primitive_title": "Insert",
+    "object": "test_port",
+    "handle": "plug",
+    "target": null,
+    "params": {
+     "speed_mm_s": 10,
+     "standoff_mm": 5
+    },
+    "constraints": {
+     "max_force_n": 30.0,
+     "max_torque_nm": null,
+     "precision_mm": null,
+     "precision_deg": null
+    },
+    "success": [
+     {
+      "quantity": "depth_mm",
+      "unit": "mm",
+      "at_least": 12.0,
+      "at_most": 18.0,
+      "text": "depth 12 to 18 mm"
+     }
+    ],
+    "after": [
+     "open_valve"
+    ],
+    "hold_after": false,
+    "description": "Insert the 8 mm test connector into the service port.",
+    "fidelity": "rigid",
+    "caveats": []
+   }
+  ]
+ },
+ "screen": {
+  "n_candidates": 52,
+  "n_screened": 46,
+  "n_conditions": 3,
+  "runs": 438,
+  "wall_s": 333.6,
+  "candidates": [
+   {
+    "effector_id": "50ce8d036dc831932b04f19f353a71d3a4b02a45794bbcb1b7437c9747bb128a",
+    "display_name": "Parallel jaw, configurator imprint: Quarter-turn latch",
+    "family": "parallel_jaw",
+    "family_title": "Parallel jaw",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": "qt_latch",
+    "status": "pruned",
+    "pruned_reason": "cannot be built: Parallel jaw, configurator imprint for qt_latch: q_seat_range: part 'studio_qt_latch_head': seat closure 41.40 mm is outside [2.00 mm, 40.00 mm]: the pads reach too far in (reduce pad_depth_mm, tip_size_mm, or raise wall_draft_deg)",
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "68cbcc4e69ac2bbc4c00d3648fcbe9409fa59a4bd32c2e4874c4f184b2df31d8",
+    "display_name": "Parallel jaw, flat pad: Quarter-turn latch",
+    "family": "parallel_jaw",
+    "family_title": "Parallel jaw",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": "qt_latch",
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "open_door",
+      "reason": "its jaws are shaped and sized for qt_latch; cabinet_door gets part-shaped jaws of its own"
+     },
+     {
+      "step_id": "open_valve",
+      "reason": "its jaws are shaped and sized for qt_latch; service_valve gets part-shaped jaws of its own"
+     },
+     {
+      "step_id": "plug_connector",
+      "reason": "its jaws are shaped and sized for qt_latch; test_port gets part-shaped jaws of its own"
+     }
+    ]
+   },
+   {
+    "effector_id": "76ef8e4564fb109115fe65128f05043ce887969c48741d2a2f5672f612bf9eea",
+    "display_name": "Parallel jaw, stock blade: Quarter-turn latch",
+    "family": "parallel_jaw",
+    "family_title": "Parallel jaw",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": "qt_latch",
+    "status": "pruned",
+    "pruned_reason": "cannot be built: Parallel jaw, stock blade for qt_latch: q_seat_range: part 'studio_qt_latch_head': seat closure 40.40 mm is outside [2.00 mm, 40.00 mm]: the pads reach too far in (reduce pad_depth_mm, tip_size_mm, or raise wall_draft_deg)",
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "85b8957343b0e0d6351a773110de26e614bdb9447b9bc81b57ca33183a7d0de3",
+    "display_name": "Parallel jaw, configurator imprint: Test port",
+    "family": "parallel_jaw",
+    "family_title": "Parallel jaw",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": "test_port",
+    "status": "pruned",
+    "pruned_reason": "cannot be built: Parallel jaw, configurator imprint for test_port: q_seat_range: part 'studio_test_port_plug': seat closure 42.44 mm is outside [2.00 mm, 40.00 mm]: the pads reach too far in (reduce pad_depth_mm, tip_size_mm, or raise wall_draft_deg)",
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "ff982b92e1d44bfdb08bf10430b601ff3150b4642a488a64779d0dc0ce022d4e",
+    "display_name": "Parallel jaw, flat pad: Test port",
+    "family": "parallel_jaw",
+    "family_title": "Parallel jaw",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": "test_port",
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "unlock_latch",
+      "reason": "its jaws are shaped and sized for test_port; qt_latch gets part-shaped jaws of its own"
+     },
+     {
+      "step_id": "open_door",
+      "reason": "its jaws are shaped and sized for test_port; cabinet_door gets part-shaped jaws of its own"
+     },
+     {
+      "step_id": "open_valve",
+      "reason": "its jaws are shaped and sized for test_port; service_valve gets part-shaped jaws of its own"
+     }
+    ]
+   },
+   {
+    "effector_id": "c8fa4ecfd7775fed742a180ae47a835e757fd114318c2430d645661117a958bc",
+    "display_name": "Parallel jaw, stock blade: Test port",
+    "family": "parallel_jaw",
+    "family_title": "Parallel jaw",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": "test_port",
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "unlock_latch",
+      "reason": "its jaws are shaped and sized for test_port; qt_latch gets part-shaped jaws of its own"
+     },
+     {
+      "step_id": "open_door",
+      "reason": "its jaws are shaped and sized for test_port; cabinet_door gets part-shaped jaws of its own"
+     },
+     {
+      "step_id": "open_valve",
+      "reason": "its jaws are shaped and sized for test_port; service_valve gets part-shaped jaws of its own"
+     }
+    ]
+   },
+   {
+    "effector_id": "e0152a5f29e1756ccd2ed7b3602b13ce3a4d3a80d1fe1709d383db30284f82b7",
+    "display_name": "Four-finger 16-joint hand, power grasp",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "f4363e74967e4429fc2203073f9a2f6e8eed447a156149eaf424544d589cef8d",
+    "display_name": "Four-finger 16-joint hand, pinch",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "bc347dd620c711c06e02bbf5b6c610413ae5b0ac8b182fdbb98f5ae997e177af",
+    "display_name": "Five-finger 18-actuator hand, power grasp",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "300d169b6786c96007dbe4ce8c0fea66549c0e081cfcfe3f3fe07d6e46ec6a3f",
+    "display_name": "Five-finger 18-actuator hand, pinch",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "a0fc12482a70670906acabab94f5bc4b91ebbbff57fe669e9725afd57c80c75e",
+    "display_name": "Five-finger 22-joint hand, power grasp",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "594c4f4d5088689c599fdd9884d2675a7a3d69f8f7df8489ef57b6484db711f0",
+    "display_name": "Five-finger 22-joint hand, pinch",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "79372f1ed2ab4e3a5467c38ed239aa0795a8df3e5ce6af900af10a5a3e252050",
+    "display_name": "Two-finger parallel gripper, fin-ray pads",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "a03002d6c5e1107f0bef73bc8cf24cd90b390550654aaa5d9e8899933971f6d7",
+    "display_name": "Two-finger parallel gripper, rigid pads A",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "bbb8214caaf4a70aac3e2c08331f0166c12470bf97db57db00dc834a77ff4dd1",
+    "display_name": "Two-finger adaptive gripper, power grasp",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "52613f2b72143b61b490ddfc05c4e3ed38c49de7005b77f07a5ccbfada0ab476",
+    "display_name": "Two-finger adaptive gripper, pinch",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "730fd283dd6b7dd046711dfef0b73a64f6a577e2cc7a643ee6affb86f74ed0aa",
+    "display_name": "Three-finger adaptive gripper, power grasp",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "9dbe8879e66bd4a935e6db502db88cdb0ce74390f469ada567cc93eb165b5b58",
+    "display_name": "Three-finger adaptive gripper, pinch",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "e754a0d67325f2100c98c2f9af46bb60c49421f256a2026895fb59bcf82e547d",
+    "display_name": "Soft arm, 12 segments, 140 mm",
+    "family": "soft_arm",
+    "family_title": "Soft arm",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "soft_arm",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "plug_connector",
+      "reason": "a soft arm cannot hold a member stiffly along the seat axis"
+     }
+    ]
+   },
+   {
+    "effector_id": "743fc0bc1efc93c288065cff91b147fd993ad974831e50b7617f7f15a0ab66fc",
+    "display_name": "Soft arm, 16 segments, 160 mm",
+    "family": "soft_arm",
+    "family_title": "Soft arm",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "soft_arm",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "plug_connector",
+      "reason": "a soft arm cannot hold a member stiffly along the seat axis"
+     }
+    ]
+   },
+   {
+    "effector_id": "2f5e4f974b13a6445127a6afead695a9e58a54cdeb12a3101724db21f6b368e9",
+    "display_name": "Soft arm, 20 soft segments, 180 mm",
+    "family": "soft_arm",
+    "family_title": "Soft arm",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "soft_arm",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "plug_connector",
+      "reason": "a soft arm cannot hold a member stiffly along the seat axis"
+     }
+    ]
+   },
+   {
+    "effector_id": "f0b6543ba012ad8f54c8860c61407708f1bdfaf1d1b395d00a64ada8e883d6de",
+    "display_name": "Suction cup, 10 mm bellows",
+    "family": "suction",
+    "family_title": "Suction cup",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "suction",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "unlock_latch",
+      "reason": "its 10 mm cup is wider than the 4 mm wing of qt_latch"
+     },
+     {
+      "step_id": "open_door",
+      "reason": "a suction cup has no hook or fingers to engage a handle or lip"
+     },
+     {
+      "step_id": "plug_connector",
+      "reason": "its 10 mm cup is wider than the 8 mm top of the plug test_port"
+     }
+    ]
+   },
+   {
+    "effector_id": "3907bc284d9e2c3399ddb8b45b1bf94dbb3b0ef0672705c6d90724839ecf7186",
+    "display_name": "Suction cup, 16 mm bellows",
+    "family": "suction",
+    "family_title": "Suction cup",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "suction",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "unlock_latch",
+      "reason": "its 16 mm cup is wider than the 4 mm wing of qt_latch"
+     },
+     {
+      "step_id": "open_door",
+      "reason": "a suction cup has no hook or fingers to engage a handle or lip"
+     },
+     {
+      "step_id": "plug_connector",
+      "reason": "its 16 mm cup is wider than the 8 mm top of the plug test_port"
+     }
+    ]
+   },
+   {
+    "effector_id": "e72e88518c0ebe7a74ec5db104b671180e9dbb5b51d0b11045814506657f31bf",
+    "display_name": "Suction cup, 25 mm bellows",
+    "family": "suction",
+    "family_title": "Suction cup",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "suction",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "unlock_latch",
+      "reason": "its 25 mm cup is wider than the 4 mm wing of qt_latch"
+     },
+     {
+      "step_id": "open_door",
+      "reason": "a suction cup has no hook or fingers to engage a handle or lip"
+     },
+     {
+      "step_id": "plug_connector",
+      "reason": "its 25 mm cup is wider than the 8 mm top of the plug test_port"
+     }
+    ]
+   },
+   {
+    "effector_id": "f7faa3ddd45fee96149330bbf1bc6cd179305044806e9f178ed0735f6f184b80",
+    "display_name": "Two-finger adaptive linkage gripper, 85 mm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "762b2cf206e7b33c97e3e70157492630c91ae3d28b3dae35580e25bfbbee9319",
+    "display_name": "Air-actuated mini parallel gripper",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "open_door",
+      "reason": "it opens 18 mm; pre-shaping around the 10 mm feature needs 22 mm"
+     }
+    ]
+   },
+   {
+    "effector_id": "9aff5d8ef53e119ab1943eef6d8ba55af4795f806c1a2e111b89c7c0444c770b",
+    "display_name": "Two-finger parallel cobot hand, 80 mm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "6d286bacbd7431187a1a4bd5a48d194ea5e59399afb0a9e2227332f4fe006cf7",
+    "display_name": "Force-controlled parallel gripper, 48 mm stroke",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "5f28e092f268ff12c38c8c8a9da33cf6520bc235ddf0f15eef85705bf5abaa0d",
+    "display_name": "Rack-and-pinion parallel gripper for an open hobby arm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "02405ccb8d6393b7ca149262b1d03aad7a153238ce0bc32ea1d3eacad7657d39",
+    "display_name": "Two-finger linkage gripper of a cobot arm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "f2ea72dff094ac3680a7b59e05a96a2e9bc4d8191c7bfee56d30f1755987dff2",
+    "display_name": "Industrial servo parallel gripper, 110 mm stroke",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "19349473603b229ce8676b46cd97598dc1cd5b463f8f801d4455e1a7b01ba3e2",
+    "display_name": "Two-finger parallel gripper, teleop-arm fingers",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "7d8ca167a7b3a93e3461ebca357e274ec9c9ca4fa9c2f4e50daa4c0a5e027724",
+    "display_name": "Angular-jaw gripper of an open hobby arm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "5c8f1c25a0a4eb30f7b91746a547c19ff95ec2889aad7a739126582805adb41b",
+    "display_name": "Three-finger 12-joint industrial hand",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": "it weighs 4.14 kg; the arm carries at most 3 kg [assumed]",
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "2f59fe9db92cd4baa4bcc418531f685100bc2ce00459fe887fe591b7f4d5fd65",
+    "display_name": "Servo-driven four-finger hand, 13 actuators, power grasp",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "7f12d546e0d7714e3d2aae831d9ea52eb2494283c1ccd5487920ac69fa27a720",
+    "display_name": "Servo-driven four-finger hand, 13 actuators, pinch",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "d702e265cd1c213b47f352e50c6c3d54ec8b736f9da8714cfdf936bece063264",
+    "display_name": "Tendon-driven five-finger hand, 16 joints, power grasp",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "ba4075426cf13421509805b4367919c507f396904da831894f373d928292dd01",
+    "display_name": "Tendon-driven five-finger hand, 16 joints, pinch",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "a5d7b1667b4f0d6582a36df49b9e600eeedc31f54dc883ddf7803fe113091f1d",
+    "display_name": "Suction cup, 40 mm bellows",
+    "family": "suction",
+    "family_title": "Suction cup",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "suction",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "unlock_latch",
+      "reason": "its 40 mm cup is wider than the 4 mm wing of qt_latch"
+     },
+     {
+      "step_id": "open_door",
+      "reason": "a suction cup has no hook or fingers to engage a handle or lip"
+     },
+     {
+      "step_id": "plug_connector",
+      "reason": "its 40 mm cup is wider than the 8 mm top of the plug test_port"
+     }
+    ]
+   },
+   {
+    "effector_id": "ec23d0f17374171b7fa9c62da8dd8d680df2e2c98a747068750a83777cfa38a3",
+    "display_name": "Button-pusher tool",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "unlock_latch",
+      "reason": "its capability tags do not include twist"
+     },
+     {
+      "step_id": "open_door",
+      "reason": "its capability tags do not include hook_pull"
+     },
+     {
+      "step_id": "open_valve",
+      "reason": "its capability tags do not include twist"
+     },
+     {
+      "step_id": "plug_connector",
+      "reason": "its capability tags do not include insert"
+     }
+    ]
+   },
+   {
+    "effector_id": "38850807f92bc307da9f0519004f6c9a30606ed04934014a6791ad01acf0c88b",
+    "display_name": "Drawer-pull hook tool",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "unlock_latch",
+      "reason": "its capability tags do not include twist"
+     },
+     {
+      "step_id": "open_valve",
+      "reason": "its capability tags do not include twist"
+     },
+     {
+      "step_id": "plug_connector",
+      "reason": "its capability tags do not include insert"
+     }
+    ]
+   },
+   {
+    "effector_id": "51bbed694beba24d5ba4332ad204033431cb1611ea4a4d092cc511f2bb3b9750",
+    "display_name": "Spring-loaded marker holder tool",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "unlock_latch",
+      "reason": "its capability tags do not include twist"
+     },
+     {
+      "step_id": "open_door",
+      "reason": "its capability tags do not include hook_pull"
+     },
+     {
+      "step_id": "open_valve",
+      "reason": "its capability tags do not include twist"
+     },
+     {
+      "step_id": "plug_connector",
+      "reason": "its capability tags do not include insert"
+     }
+    ]
+   },
+   {
+    "effector_id": "1c0215479859373feed025f8c8e3697830191fbbcded36d2720c98cf3f59c352",
+    "display_name": "Servo screwdriver attachment for a hobby arm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "open_door",
+      "reason": "its capability tags do not include hook_pull"
+     },
+     {
+      "step_id": "plug_connector",
+      "reason": "its capability tags do not include insert"
+     }
+    ]
+   },
+   {
+    "effector_id": "d4997bd4b38665bca7af77aeef09cc396279ecd231787f9df5fa34aa37fb5996",
+    "display_name": "Designed three-finger hand, 2 joints per finger d55e",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "plug_connector",
+      "reason": "test_port: digit_collision: closing over studio_probe, digits 1 and 2 run into each other at 57 % closure before both reach the part (spread them, narrow them or grip a wider section)"
+     }
+    ]
+   },
+   {
+    "effector_id": "ba0cc54331ca68ed6118c26302dc007b446c213c1d258f36631047ac5a2f05c8",
+    "display_name": "Designed four-finger hand, 3 joints per finger b56a",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "plug_connector",
+      "reason": "test_port: digit_collision: closing over studio_probe, digits 2 and 3 run into each other at 10 % closure before both reach the part (spread them, narrow them or grip a wider section)"
+     }
+    ]
+   },
+   {
+    "effector_id": "6148cfd23eae2b2e8959cc78a8c2b6ef324c0878a66bd0eee45e4a4105e20cb7",
+    "display_name": "Designed three-finger sliding hook gripper da49",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "plug_connector",
+      "reason": "test_port: digit_collision: closing over studio_probe, digits 1 and 2 run into each other at 95 % closure before both reach the part (spread them, narrow them or grip a wider section)"
+     }
+    ]
+   },
+   {
+    "effector_id": "d3b2b71d424b8c16205262a466257f916bc6e5e18f6b5873b0045f5632db2fe1",
+    "display_name": "Designed three-digit segmented tentacle f293",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "a4b30af09ff1818c87fcc9683805da8354923ecb0f35a77b14165fa5851bc3fa",
+    "display_name": "Designed three-finger hand, 2 joints per finger 3e58",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "plug_connector",
+      "reason": "test_port: digit_collision: closing over studio_probe, digits 2 and 3 run into each other at 28 % closure before both reach the part (spread them, narrow them or grip a wider section)"
+     }
+    ]
+   },
+   {
+    "effector_id": "25bb68ef395b04b7dddcb8a3adcae328743627edf36160b0ac26e75050f0dc27",
+    "display_name": "Designed four-finger hand, 1 joint per finger e352",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "plug_connector",
+      "reason": "test_port: digit_collision: closing over studio_probe, digits 1 and 2 run into each other at 25 % closure before both reach the part (spread them, narrow them or grip a wider section)"
+     }
+    ]
+   },
+   {
+    "effector_id": "890c6cb500dacbda950e3a31a2b543d39b89da3c2dfa1a61e7ae5c17cb25f65e",
+    "display_name": "Designed three-finger hand, 1 joint per finger ca8b",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "plug_connector",
+      "reason": "test_port: digit_collision: closing over studio_probe, digits 1 and 2 run into each other at 28 % closure before both reach the part (spread them, narrow them or grip a wider section)"
+     }
+    ]
+   },
+   {
+    "effector_id": "d6e87ec5705a8c93944dfc2db4945e98e2499a9aa761b0cc801420e51d5ec0ad",
+    "display_name": "Designed four-finger swinging hook gripper 052c",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "plug_connector",
+      "reason": "test_port: digit_collision: closing over studio_probe, digits 1 and 2 run into each other at 22 % closure before both reach the part (spread them, narrow them or grip a wider section)"
+     }
+    ]
+   },
+   {
+    "effector_id": "251cbe9cc23c1ea18d77c6143d68090fce2a1837927f826a7bcc9bd430de8a81",
+    "display_name": "Designed three-digit segmented tentacle 90e8",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "plug_connector",
+      "reason": "test_port: digit_collision: closing over studio_probe, digits 2 and 3 run into each other at 10 % closure before both reach the part (spread them, narrow them or grip a wider section)"
+     }
+    ]
+   }
+  ],
+  "pruned_reasons": [
+   {
+    "reason": "Its capability tags do not include the step's primitive",
+    "count": 13
+   },
+   {
+    "reason": "Part-shaped jaws serve only the object they are shaped for",
+    "count": 9
+   },
+   {
+    "reason": "Its cup is wider than the face it must seal on",
+    "count": 8
+   },
+   {
+    "reason": "Its digits collide when they close on the probe part",
+    "count": 8
+   },
+   {
+    "reason": "A suction cup has no hook or fingers to engage a handle or lip",
+    "count": 4
+   },
+   {
+    "reason": "A soft arm cannot hold a member stiffly along the seat axis",
+    "count": 3
+   },
+   {
+    "reason": "Cannot be built for this object (the family's own checks)",
+    "count": 3
+   },
+   {
+    "reason": "Heavier than the arm payload limit [assumed]",
+    "count": 1
+   },
+   {
+    "reason": "Opens too little to pre-shape around the feature",
+    "count": 1
+   }
+  ]
+ },
+ "matrix": {
+  "steps": [
+   "unlock_latch",
+   "open_door",
+   "open_valve",
+   "plug_connector"
+  ],
+  "rows": [
+   {
+    "effector_id": "02405ccb8d6393b7ca149262b1d03aad7a153238ce0bc32ea1d3eacad7657d39",
+    "display_name": "Two-finger linkage gripper of a cobot arm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "twist",
+      "failure_modes": {},
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "hook_pull",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "6d286bacbd7431187a1a4bd5a48d194ea5e59399afb0a9e2227332f4fe006cf7",
+    "display_name": "Force-controlled parallel gripper, 48 mm stroke",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "hook_pull",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "f2ea72dff094ac3680a7b59e05a96a2e9bc4d8191c7bfee56d30f1755987dff2",
+    "display_name": "Industrial servo parallel gripper, 110 mm stroke",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "hook_pull",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "9dbe8879e66bd4a935e6db502db88cdb0ce74390f469ada567cc93eb165b5b58",
+    "display_name": "Three-finger adaptive gripper, pinch",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "twist",
+      "failure_modes": {},
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "hook_pull",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "physics_unreliable": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "730fd283dd6b7dd046711dfef0b73a64f6a577e2cc7a643ee6affb86f74ed0aa",
+    "display_name": "Three-finger adaptive gripper, power grasp",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "twist",
+      "failure_modes": {},
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "hook_pull",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "physics_unreliable": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "f7faa3ddd45fee96149330bbf1bc6cd179305044806e9f178ed0735f6f184b80",
+    "display_name": "Two-finger adaptive linkage gripper, 85 mm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "twist",
+      "failure_modes": {},
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "hook_pull",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "physics_unreliable": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "physics_unreliable": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "e0152a5f29e1756ccd2ed7b3602b13ce3a4d3a80d1fe1709d383db30284f82b7",
+    "display_name": "Four-finger 16-joint hand, power grasp",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "hook_pull",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "68cbcc4e69ac2bbc4c00d3648fcbe9409fa59a4bd32c2e4874c4f184b2df31d8",
+    "display_name": "Parallel jaw, flat pad: Quarter-turn latch",
+    "family_title": "Parallel jaw",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "twist",
+      "failure_modes": {},
+      "context": "start"
+     },
+     "open_door": {
+      "state": "pruned",
+      "reason": "its jaws are shaped and sized for qt_latch; cabinet_door gets part-shaped jaws of its own"
+     },
+     "open_valve": {
+      "state": "pruned",
+      "reason": "its jaws are shaped and sized for qt_latch; service_valve gets part-shaped jaws of its own"
+     },
+     "plug_connector": {
+      "state": "pruned",
+      "reason": "its jaws are shaped and sized for qt_latch; test_port gets part-shaped jaws of its own"
+     }
+    }
+   },
+   {
+    "effector_id": "ff982b92e1d44bfdb08bf10430b601ff3150b4642a488a64779d0dc0ce022d4e",
+    "display_name": "Parallel jaw, flat pad: Test port",
+    "family_title": "Parallel jaw",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "pruned",
+      "reason": "its jaws are shaped and sized for test_port; qt_latch gets part-shaped jaws of its own"
+     },
+     "open_door": {
+      "state": "pruned",
+      "reason": "its jaws are shaped and sized for test_port; cabinet_door gets part-shaped jaws of its own"
+     },
+     "open_valve": {
+      "state": "pruned",
+      "reason": "its jaws are shaped and sized for test_port; service_valve gets part-shaped jaws of its own"
+     },
+     "plug_connector": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "c8fa4ecfd7775fed742a180ae47a835e757fd114318c2430d645661117a958bc",
+    "display_name": "Parallel jaw, stock blade: Test port",
+    "family_title": "Parallel jaw",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "pruned",
+      "reason": "its jaws are shaped and sized for test_port; qt_latch gets part-shaped jaws of its own"
+     },
+     "open_door": {
+      "state": "pruned",
+      "reason": "its jaws are shaped and sized for test_port; cabinet_door gets part-shaped jaws of its own"
+     },
+     "open_valve": {
+      "state": "pruned",
+      "reason": "its jaws are shaped and sized for test_port; service_valve gets part-shaped jaws of its own"
+     },
+     "plug_connector": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "e754a0d67325f2100c98c2f9af46bb60c49421f256a2026895fb59bcf82e547d",
+    "display_name": "Soft arm, 12 segments, 140 mm",
+    "family_title": "Soft arm",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "hook_pull",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "physics_unreliable": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "pruned",
+      "reason": "a soft arm cannot hold a member stiffly along the seat axis"
+     }
+    }
+   },
+   {
+    "effector_id": "743fc0bc1efc93c288065cff91b147fd993ad974831e50b7617f7f15a0ab66fc",
+    "display_name": "Soft arm, 16 segments, 160 mm",
+    "family_title": "Soft arm",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "physics_unreliable": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "hook_pull",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "pruned",
+      "reason": "a soft arm cannot hold a member stiffly along the seat axis"
+     }
+    }
+   },
+   {
+    "effector_id": "d702e265cd1c213b47f352e50c6c3d54ec8b736f9da8714cfdf936bece063264",
+    "display_name": "Tendon-driven five-finger hand, 16 joints, power grasp",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "hook_pull",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "52613f2b72143b61b490ddfc05c4e3ed38c49de7005b77f07a5ccbfada0ab476",
+    "display_name": "Two-finger adaptive gripper, pinch",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "hook_pull",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "physics_unreliable": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "bbb8214caaf4a70aac3e2c08331f0166c12470bf97db57db00dc834a77ff4dd1",
+    "display_name": "Two-finger adaptive gripper, power grasp",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "hook_pull",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "physics_unreliable": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "9aff5d8ef53e119ab1943eef6d8ba55af4795f806c1a2e111b89c7c0444c770b",
+    "display_name": "Two-finger parallel cobot hand, 80 mm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "twist",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "762b2cf206e7b33c97e3e70157492630c91ae3d28b3dae35580e25bfbbee9319",
+    "display_name": "Air-actuated mini parallel gripper",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "pruned",
+      "reason": "it opens 18 mm; pre-shaping around the 10 mm feature needs 22 mm"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "run",
+      "rate": 0.6667,
+      "n": 3,
+      "successes": 2,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 1
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "25bb68ef395b04b7dddcb8a3adcae328743627edf36160b0ac26e75050f0dc27",
+    "display_name": "Designed four-finger hand, 1 joint per finger e352",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.6667,
+      "n": 3,
+      "successes": 2,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "slip": 1
+      },
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "pruned",
+      "reason": "test_port: digit_collision: closing over studio_probe, digits 1 and 2 run into each other at 25 % closure before both reach the part (spread them, narrow them or grip a wider section)"
+     }
+    }
+   },
+   {
+    "effector_id": "a03002d6c5e1107f0bef73bc8cf24cd90b390550654aaa5d9e8899933971f6d7",
+    "display_name": "Two-finger parallel gripper, rigid pads A",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "run",
+      "rate": 0.6667,
+      "n": 3,
+      "successes": 2,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "physics_unreliable": 1
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "300d169b6786c96007dbe4ce8c0fea66549c0e081cfcfe3f3fe07d6e46ec6a3f",
+    "display_name": "Five-finger 18-actuator hand, pinch",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.3333,
+      "n": 3,
+      "successes": 1,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "slip": 2
+      },
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "79372f1ed2ab4e3a5467c38ed239aa0795a8df3e5ce6af900af10a5a3e252050",
+    "display_name": "Two-finger parallel gripper, fin-ray pads",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.3333,
+      "n": 3,
+      "successes": 1,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "slip": 2
+      },
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "physics_unreliable": 1,
+       "slip": 2
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "7d8ca167a7b3a93e3461ebca357e274ec9c9ca4fa9c2f4e50daa4c0a5e027724",
+    "display_name": "Angular-jaw gripper of an open hobby arm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "constraint_exceeded": 3
+      },
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "constraint_exceeded": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "ba0cc54331ca68ed6118c26302dc007b446c213c1d258f36631047ac5a2f05c8",
+    "display_name": "Designed four-finger hand, 3 joints per finger b56a",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "pruned",
+      "reason": "test_port: digit_collision: closing over studio_probe, digits 2 and 3 run into each other at 10 % closure before both reach the part (spread them, narrow them or grip a wider section)"
+     }
+    }
+   },
+   {
+    "effector_id": "d6e87ec5705a8c93944dfc2db4945e98e2499a9aa761b0cc801420e51d5ec0ad",
+    "display_name": "Designed four-finger swinging hook gripper 052c",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "pruned",
+      "reason": "test_port: digit_collision: closing over studio_probe, digits 1 and 2 run into each other at 22 % closure before both reach the part (spread them, narrow them or grip a wider section)"
+     }
+    }
+   },
+   {
+    "effector_id": "251cbe9cc23c1ea18d77c6143d68090fce2a1837927f826a7bcc9bd430de8a81",
+    "display_name": "Designed three-digit segmented tentacle 90e8",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "constraint_exceeded": 2,
+       "slip": 1
+      },
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "pruned",
+      "reason": "test_port: digit_collision: closing over studio_probe, digits 2 and 3 run into each other at 10 % closure before both reach the part (spread them, narrow them or grip a wider section)"
+     }
+    }
+   },
+   {
+    "effector_id": "d3b2b71d424b8c16205262a466257f916bc6e5e18f6b5873b0045f5632db2fe1",
+    "display_name": "Designed three-digit segmented tentacle f293",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 1,
+       "physics_unreliable": 2
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "890c6cb500dacbda950e3a31a2b543d39b89da3c2dfa1a61e7ae5c17cb25f65e",
+    "display_name": "Designed three-finger hand, 1 joint per finger ca8b",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "constraint_exceeded": 3
+      },
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "pruned",
+      "reason": "test_port: digit_collision: closing over studio_probe, digits 1 and 2 run into each other at 28 % closure before both reach the part (spread them, narrow them or grip a wider section)"
+     }
+    }
+   },
+   {
+    "effector_id": "a4b30af09ff1818c87fcc9683805da8354923ecb0f35a77b14165fa5851bc3fa",
+    "display_name": "Designed three-finger hand, 2 joints per finger 3e58",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "pruned",
+      "reason": "test_port: digit_collision: closing over studio_probe, digits 2 and 3 run into each other at 28 % closure before both reach the part (spread them, narrow them or grip a wider section)"
+     }
+    }
+   },
+   {
+    "effector_id": "d4997bd4b38665bca7af77aeef09cc396279ecd231787f9df5fa34aa37fb5996",
+    "display_name": "Designed three-finger hand, 2 joints per finger d55e",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "pruned",
+      "reason": "test_port: digit_collision: closing over studio_probe, digits 1 and 2 run into each other at 57 % closure before both reach the part (spread them, narrow them or grip a wider section)"
+     }
+    }
+   },
+   {
+    "effector_id": "6148cfd23eae2b2e8959cc78a8c2b6ef324c0878a66bd0eee45e4a4105e20cb7",
+    "display_name": "Designed three-finger sliding hook gripper da49",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "constraint_exceeded": 3
+      },
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "pruned",
+      "reason": "test_port: digit_collision: closing over studio_probe, digits 1 and 2 run into each other at 95 % closure before both reach the part (spread them, narrow them or grip a wider section)"
+     }
+    }
+   },
+   {
+    "effector_id": "38850807f92bc307da9f0519004f6c9a30606ed04934014a6791ad01acf0c88b",
+    "display_name": "Drawer-pull hook tool",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "pruned",
+      "reason": "its capability tags do not include twist"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "constraint_exceeded": 3
+      },
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "pruned",
+      "reason": "its capability tags do not include twist"
+     },
+     "plug_connector": {
+      "state": "pruned",
+      "reason": "its capability tags do not include insert"
+     }
+    }
+   },
+   {
+    "effector_id": "bc347dd620c711c06e02bbf5b6c610413ae5b0ac8b182fdbb98f5ae997e177af",
+    "display_name": "Five-finger 18-actuator hand, power grasp",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "constraint_exceeded": 3
+      },
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "594c4f4d5088689c599fdd9884d2675a7a3d69f8f7df8489ef57b6484db711f0",
+    "display_name": "Five-finger 22-joint hand, pinch",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "physics_unreliable": 3
+      },
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "a0fc12482a70670906acabab94f5bc4b91ebbbff57fe669e9725afd57c80c75e",
+    "display_name": "Five-finger 22-joint hand, power grasp",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "physics_unreliable": 3
+      },
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "f4363e74967e4429fc2203073f9a2f6e8eed447a156149eaf424544d589cef8d",
+    "display_name": "Four-finger 16-joint hand, pinch",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "criterion_not_met": 2,
+       "slip": 1
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "5f28e092f268ff12c38c8c8a9da33cf6520bc235ddf0f15eef85705bf5abaa0d",
+    "display_name": "Rack-and-pinion parallel gripper for an open hobby arm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "1c0215479859373feed025f8c8e3697830191fbbcded36d2720c98cf3f59c352",
+    "display_name": "Servo screwdriver attachment for a hobby arm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "pruned",
+      "reason": "its capability tags do not include hook_pull"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "pruned",
+      "reason": "its capability tags do not include insert"
+     }
+    }
+   },
+   {
+    "effector_id": "7f12d546e0d7714e3d2aae831d9ea52eb2494283c1ccd5487920ac69fa27a720",
+    "display_name": "Servo-driven four-finger hand, 13 actuators, pinch",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "2f59fe9db92cd4baa4bcc418531f685100bc2ce00459fe887fe591b7f4d5fd65",
+    "display_name": "Servo-driven four-finger hand, 13 actuators, power grasp",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "physics_unreliable": 3
+      },
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "2f5e4f974b13a6445127a6afead695a9e58a54cdeb12a3101724db21f6b368e9",
+    "display_name": "Soft arm, 20 soft segments, 180 mm",
+    "family_title": "Soft arm",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "physics_unreliable": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "physics_unreliable": 2,
+       "slip": 1
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "pruned",
+      "reason": "a soft arm cannot hold a member stiffly along the seat axis"
+     }
+    }
+   },
+   {
+    "effector_id": "f0b6543ba012ad8f54c8860c61407708f1bdfaf1d1b395d00a64ada8e883d6de",
+    "display_name": "Suction cup, 10 mm bellows",
+    "family_title": "Suction cup",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "pruned",
+      "reason": "its 10 mm cup is wider than the 4 mm wing of qt_latch"
+     },
+     "open_door": {
+      "state": "pruned",
+      "reason": "a suction cup has no hook or fingers to engage a handle or lip"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "pruned",
+      "reason": "its 10 mm cup is wider than the 8 mm top of the plug test_port"
+     }
+    }
+   },
+   {
+    "effector_id": "3907bc284d9e2c3399ddb8b45b1bf94dbb3b0ef0672705c6d90724839ecf7186",
+    "display_name": "Suction cup, 16 mm bellows",
+    "family_title": "Suction cup",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "pruned",
+      "reason": "its 16 mm cup is wider than the 4 mm wing of qt_latch"
+     },
+     "open_door": {
+      "state": "pruned",
+      "reason": "a suction cup has no hook or fingers to engage a handle or lip"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "pruned",
+      "reason": "its 16 mm cup is wider than the 8 mm top of the plug test_port"
+     }
+    }
+   },
+   {
+    "effector_id": "e72e88518c0ebe7a74ec5db104b671180e9dbb5b51d0b11045814506657f31bf",
+    "display_name": "Suction cup, 25 mm bellows",
+    "family_title": "Suction cup",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "pruned",
+      "reason": "its 25 mm cup is wider than the 4 mm wing of qt_latch"
+     },
+     "open_door": {
+      "state": "pruned",
+      "reason": "a suction cup has no hook or fingers to engage a handle or lip"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "pruned",
+      "reason": "its 25 mm cup is wider than the 8 mm top of the plug test_port"
+     }
+    }
+   },
+   {
+    "effector_id": "a5d7b1667b4f0d6582a36df49b9e600eeedc31f54dc883ddf7803fe113091f1d",
+    "display_name": "Suction cup, 40 mm bellows",
+    "family_title": "Suction cup",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "pruned",
+      "reason": "its 40 mm cup is wider than the 4 mm wing of qt_latch"
+     },
+     "open_door": {
+      "state": "pruned",
+      "reason": "a suction cup has no hook or fingers to engage a handle or lip"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "pruned",
+      "reason": "its 40 mm cup is wider than the 8 mm top of the plug test_port"
+     }
+    }
+   },
+   {
+    "effector_id": "ba4075426cf13421509805b4367919c507f396904da831894f373d928292dd01",
+    "display_name": "Tendon-driven five-finger hand, 16 joints, pinch",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "constraint_exceeded": 3
+      },
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "19349473603b229ce8676b46cd97598dc1cd5b463f8f801d4455e1a7b01ba3e2",
+    "display_name": "Two-finger parallel gripper, teleop-arm fingers",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "unlock_latch": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "constraint_exceeded": 3
+      },
+      "context": "carried"
+     },
+     "open_valve": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     },
+     "plug_connector": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "constraint_exceeded": 3
+      },
+      "context": "carried"
+     }
+    }
+   }
+  ]
+ },
+ "combinations": {
+  "counts": {
+   "single": 25,
+   "tool_change": 81,
+   "multi_head": 0,
+   "multi_head_geometry_searched": 6
+  },
+  "rejected": [
+   {
+    "label": "",
+    "reason": "no bracket layout clears: the two heads overlap on the bracket (14 of 24 layouts); during unlock_latch the idle head 1 or the bracket comes within 5 mm of cabinet_door (9 of 24 layouts); a head or an adapter reaches 68 mm above the flange's mounting face within the arm's last link (1 of 24 layouts)"
+   },
+   {
+    "label": "",
+    "reason": "no bracket layout clears: during unlock_latch the idle head 1 or the bracket comes within 5 mm of cabinet_door (15 of 24 layouts); the two heads overlap on the bracket (7 of 24 layouts); a head or an adapter reaches 40 mm above the flange's mounting face within the arm's last link (1 of 24 layouts)"
+   },
+   {
+    "label": "",
+    "reason": "no bracket layout clears: during unlock_latch the idle head 1 or the bracket comes within 5 mm of cabinet_door (13 of 24 layouts); the two heads overlap on the bracket (9 of 24 layouts); a head or an adapter reaches 40 mm above the flange's mounting face within the arm's last link (1 of 24 layouts)"
+   },
+   {
+    "label": "",
+    "reason": "no bracket layout clears: the two heads overlap on the bracket (11 of 24 layouts); during unlock_latch the idle head 1 or the bracket comes within 5 mm of cabinet_door (11 of 24 layouts); a head or an adapter reaches 40 mm above the flange's mounting face within the arm's last link (1 of 24 layouts)"
+   },
+   {
+    "label": "",
+    "reason": "no bracket layout clears: during unlock_latch the idle head 1 or the bracket comes within 5 mm of cabinet_door (13 of 24 layouts); the two heads overlap on the bracket (9 of 24 layouts); a head or an adapter reaches 40 mm above the flange's mounting face within the arm's last link (1 of 24 layouts)"
+   },
+   {
+    "label": "",
+    "reason": "no bracket layout clears: switching to head 1 at the home pose swings the heads through cabinet_door (15 of 24 layouts); the two heads overlap on the bracket (9 of 24 layouts)"
+   }
+  ]
+ },
+ "finalists": [
+  {
+   "setup_id": "4a5ca67a8577219bf4f87501e90e8e532276f839b488a9b86dfc6a86a472700c",
+   "kind": "tool_change",
+   "kind_title": "Tool change",
+   "label": "Tool change: Two-finger > Force-controlled > Two-finger",
+   "tools": [
+    "Two-finger adaptive linkage gripper, 85 mm",
+    "Force-controlled parallel gripper, 48 mm stroke",
+    "Two-finger parallel cobot hand, 80 mm"
+   ],
+   "completion_rate": 0.5,
+   "completed_runs": 4,
+   "n_runs": 8,
+   "fidelity": "approximation",
+   "stops_at": "open_valve",
+   "cycle_time_s": 71.72,
+   "roles": [
+    "recommended"
+   ],
+   "eligible": true,
+   "reason": null,
+   "tool_details": [
+    {
+     "index": 0,
+     "effector_id": "f7faa3ddd45fee96149330bbf1bc6cd179305044806e9f178ed0735f6f184b80",
+     "display_name": "Two-finger adaptive linkage gripper, 85 mm",
+     "family": "catalog_gripper",
+     "family_title": "Industrial gripper",
+     "fidelity": "rigid",
+     "off_the_shelf": true
+    },
+    {
+     "index": 1,
+     "effector_id": "6d286bacbd7431187a1a4bd5a48d194ea5e59399afb0a9e2227332f4fe006cf7",
+     "display_name": "Force-controlled parallel gripper, 48 mm stroke",
+     "family": "catalog_gripper",
+     "family_title": "Industrial gripper",
+     "fidelity": "rigid",
+     "off_the_shelf": true
+    },
+    {
+     "index": 2,
+     "effector_id": "9aff5d8ef53e119ab1943eef6d8ba55af4795f806c1a2e111b89c7c0444c770b",
+     "display_name": "Two-finger parallel cobot hand, 80 mm",
+     "family": "catalog_gripper",
+     "family_title": "Industrial gripper",
+     "fidelity": "rigid",
+     "off_the_shelf": true
+    }
+   ],
+   "step_success": {
+    "unlock_latch": 1.0,
+    "open_door": 0.875,
+    "open_valve": 0.625,
+    "plug_connector": 0.5
+   },
+   "weakest_step": {
+    "step_id": "plug_connector",
+    "success_rate": 0.5
+   },
+   "complexity": {
+    "n_tools": 3,
+    "n_actuators": 3,
+    "total_mass_kg": 2.624,
+    "n_changes": 3,
+    "bracket": false
+   },
+   "payload_kg": 1.25,
+   "failure_modes": {
+    "not_reached": 4,
+    "physics_unreliable": 2,
+    "jam": 1,
+    "slip": 1
+   },
+   "stops_at_detail": {
+    "open_valve": {
+     "runs": 2,
+     "failure_modes": {
+      "physics_unreliable": 2
+     }
+    },
+    "open_door": {
+     "runs": 1,
+     "failure_modes": {
+      "slip": 1
+     }
+    },
+    "plug_connector": {
+     "runs": 1,
+     "failure_modes": {
+      "jam": 1
+     }
+    }
+   }
+  },
+  {
+   "setup_id": "42444e8f1a64ca571f84165059e0e3e12164d584a0b39c469df3a74ba55f9313",
+   "kind": "tool_change",
+   "kind_title": "Tool change",
+   "label": "Tool change: 4 tools",
+   "tools": [
+    "Two-finger adaptive linkage gripper, 85 mm",
+    "Soft arm, 12 segments, 140 mm",
+    "Two-finger parallel cobot hand, 80 mm",
+    "Force-controlled parallel gripper, 48 mm stroke"
+   ],
+   "completion_rate": 0.375,
+   "completed_runs": 3,
+   "n_runs": 8,
+   "fidelity": "approximation",
+   "stops_at": "open_valve",
+   "cycle_time_s": 71.72,
+   "roles": [
+    "finalist"
+   ],
+   "eligible": true,
+   "reason": null,
+   "tool_details": [
+    {
+     "index": 0,
+     "effector_id": "f7faa3ddd45fee96149330bbf1bc6cd179305044806e9f178ed0735f6f184b80",
+     "display_name": "Two-finger adaptive linkage gripper, 85 mm",
+     "family": "catalog_gripper",
+     "family_title": "Industrial gripper",
+     "fidelity": "rigid",
+     "off_the_shelf": true
+    },
+    {
+     "index": 1,
+     "effector_id": "e754a0d67325f2100c98c2f9af46bb60c49421f256a2026895fb59bcf82e547d",
+     "display_name": "Soft arm, 12 segments, 140 mm",
+     "family": "soft_arm",
+     "family_title": "Soft arm",
+     "fidelity": "approximation",
+     "off_the_shelf": true
+    },
+    {
+     "index": 2,
+     "effector_id": "9aff5d8ef53e119ab1943eef6d8ba55af4795f806c1a2e111b89c7c0444c770b",
+     "display_name": "Two-finger parallel cobot hand, 80 mm",
+     "family": "catalog_gripper",
+     "family_title": "Industrial gripper",
+     "fidelity": "rigid",
+     "off_the_shelf": true
+    },
+    {
+     "index": 3,
+     "effector_id": "6d286bacbd7431187a1a4bd5a48d194ea5e59399afb0a9e2227332f4fe006cf7",
+     "display_name": "Force-controlled parallel gripper, 48 mm stroke",
+     "family": "catalog_gripper",
+     "family_title": "Industrial gripper",
+     "fidelity": "rigid",
+     "off_the_shelf": true
+    }
+   ],
+   "step_success": {
+    "unlock_latch": 1.0,
+    "open_door": 1.0,
+    "open_valve": 0.625,
+    "plug_connector": 0.375
+   },
+   "weakest_step": {
+    "step_id": "plug_connector",
+    "success_rate": 0.375
+   },
+   "complexity": {
+    "n_tools": 4,
+    "n_actuators": 4,
+    "total_mass_kg": 2.82,
+    "n_changes": 3,
+    "bracket": false
+   },
+   "payload_kg": 1.25,
+   "failure_modes": {
+    "physics_unreliable": 3,
+    "not_reached": 3,
+    "jam": 2
+   },
+   "stops_at_detail": {
+    "open_valve": {
+     "runs": 3,
+     "failure_modes": {
+      "physics_unreliable": 3
+     }
+    },
+    "plug_connector": {
+     "runs": 2,
+     "failure_modes": {
+      "jam": 2
+     }
+    }
+   }
+  },
+  {
+   "setup_id": "42bbf664d55c71e14e4745b3e44a160ec220bebe1f796b3017b586c03a6ac823",
+   "kind": "tool_change",
+   "kind_title": "Tool change",
+   "label": "Tool change: 4 tools",
+   "tools": [
+    "Two-finger adaptive linkage gripper, 85 mm",
+    "Soft arm, 16 segments, 160 mm",
+    "Two-finger parallel cobot hand, 80 mm",
+    "Force-controlled parallel gripper, 48 mm stroke"
+   ],
+   "completion_rate": 0.375,
+   "completed_runs": 3,
+   "n_runs": 8,
+   "fidelity": "approximation",
+   "stops_at": "open_valve",
+   "cycle_time_s": 71.72,
+   "roles": [
+    "finalist"
+   ],
+   "eligible": true,
+   "reason": null,
+   "tool_details": [
+    {
+     "index": 0,
+     "effector_id": "f7faa3ddd45fee96149330bbf1bc6cd179305044806e9f178ed0735f6f184b80",
+     "display_name": "Two-finger adaptive linkage gripper, 85 mm",
+     "family": "catalog_gripper",
+     "family_title": "Industrial gripper",
+     "fidelity": "rigid",
+     "off_the_shelf": true
+    },
+    {
+     "index": 1,
+     "effector_id": "743fc0bc1efc93c288065cff91b147fd993ad974831e50b7617f7f15a0ab66fc",
+     "display_name": "Soft arm, 16 segments, 160 mm",
+     "family": "soft_arm",
+     "family_title": "Soft arm",
+     "fidelity": "approximation",
+     "off_the_shelf": true
+    },
+    {
+     "index": 2,
+     "effector_id": "9aff5d8ef53e119ab1943eef6d8ba55af4795f806c1a2e111b89c7c0444c770b",
+     "display_name": "Two-finger parallel cobot hand, 80 mm",
+     "family": "catalog_gripper",
+     "family_title": "Industrial gripper",
+     "fidelity": "rigid",
+     "off_the_shelf": true
+    },
+    {
+     "index": 3,
+     "effector_id": "6d286bacbd7431187a1a4bd5a48d194ea5e59399afb0a9e2227332f4fe006cf7",
+     "display_name": "Force-controlled parallel gripper, 48 mm stroke",
+     "family": "catalog_gripper",
+     "family_title": "Industrial gripper",
+     "fidelity": "rigid",
+     "off_the_shelf": true
+    }
+   ],
+   "step_success": {
+    "unlock_latch": 1.0,
+    "open_door": 1.0,
+    "open_valve": 0.625,
+    "plug_connector": 0.375
+   },
+   "weakest_step": {
+    "step_id": "plug_connector",
+    "success_rate": 0.375
+   },
+   "complexity": {
+    "n_tools": 4,
+    "n_actuators": 4,
+    "total_mass_kg": 2.823,
+    "n_changes": 3,
+    "bracket": false
+   },
+   "payload_kg": 1.25,
+   "failure_modes": {
+    "physics_unreliable": 3,
+    "not_reached": 3,
+    "jam": 2
+   },
+   "stops_at_detail": {
+    "open_valve": {
+     "runs": 3,
+     "failure_modes": {
+      "physics_unreliable": 3
+     }
+    },
+    "plug_connector": {
+     "runs": 2,
+     "failure_modes": {
+      "jam": 2
+     }
+    }
+   }
+  },
+  {
+   "setup_id": "69a55b715795559ec0d142e71384940c96f8d9b9cf2d33bd199a4f8a5c2257ba",
+   "kind": "single",
+   "kind_title": "Single tool",
+   "label": "Two-finger linkage gripper of a cobot arm",
+   "tools": [
+    "Two-finger linkage gripper of a cobot arm"
+   ],
+   "completion_rate": 0.0,
+   "completed_runs": 0,
+   "n_runs": 8,
+   "fidelity": "approximation",
+   "stops_at": "open_valve",
+   "cycle_time_s": null,
+   "roles": [
+    "best_single"
+   ],
+   "eligible": false,
+   "reason": "never completed the task (stops at open_valve in 8/8 runs: slip 8x)",
+   "tool_details": [
+    {
+     "index": 0,
+     "effector_id": "02405ccb8d6393b7ca149262b1d03aad7a153238ce0bc32ea1d3eacad7657d39",
+     "display_name": "Two-finger linkage gripper of a cobot arm",
+     "family": "catalog_gripper",
+     "family_title": "Industrial gripper",
+     "fidelity": "rigid",
+     "off_the_shelf": true
+    }
+   ],
+   "step_success": {
+    "unlock_latch": 1.0,
+    "open_door": 1.0,
+    "open_valve": 0.0,
+    "plug_connector": 0.0
+   },
+   "weakest_step": {
+    "step_id": "open_valve",
+    "success_rate": 0.0
+   },
+   "complexity": {
+    "n_tools": 1,
+    "n_actuators": 1,
+    "total_mass_kg": 0.751,
+    "n_changes": 0,
+    "bracket": false
+   },
+   "payload_kg": 0.751,
+   "failure_modes": {
+    "slip": 8,
+    "not_reached": 8
+   },
+   "stops_at_detail": {
+    "open_valve": {
+     "runs": 8,
+     "failure_modes": {
+      "slip": 8
+     }
+    }
+   }
+  }
+ ],
+ "recommendation": {
+  "setup_id": "4a5ca67a8577219bf4f87501e90e8e532276f839b488a9b86dfc6a86a472700c",
+  "kind": "tool_change",
+  "kind_title": "Tool change",
+  "label": "Tool change: Two-finger > Force-controlled > Two-finger",
+  "tools": [
+   {
+    "index": 0,
+    "effector_id": "f7faa3ddd45fee96149330bbf1bc6cd179305044806e9f178ed0735f6f184b80",
+    "display_name": "Two-finger adaptive linkage gripper, 85 mm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "caveat": null
+   },
+   {
+    "index": 1,
+    "effector_id": "6d286bacbd7431187a1a4bd5a48d194ea5e59399afb0a9e2227332f4fe006cf7",
+    "display_name": "Force-controlled parallel gripper, 48 mm stroke",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "caveat": null
+   },
+   {
+    "index": 2,
+    "effector_id": "9aff5d8ef53e119ab1943eef6d8ba55af4795f806c1a2e111b89c7c0444c770b",
+    "display_name": "Two-finger parallel cobot hand, 80 mm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "caveat": null
+   }
+  ],
+  "completion_rate": 0.5,
+  "completed_runs": 4,
+  "n_runs": 8,
+  "fidelity": "approximation",
+  "stops_at": null,
+  "cycle_time_s": 71.72,
+  "why": "Highest full-task completion of the 3 eligible setups (50%, next 38%).",
+  "caveat": "approximation: verify on hardware",
+  "verify_on_hardware": true,
+  "geometry": {
+   "changer": {
+    "changeover_s": 6.0,
+    "master_mass_kg": 0.25,
+    "stack_mm": 25.0,
+    "tool_plate_mass_kg": 0.1
+   }
+  },
+  "steps": [
+   {
+    "step_id": "unlock_latch",
+    "primitive": "twist",
+    "primitive_used": "twist",
+    "tool": 0,
+    "tool_label": "Two-finger adaptive linkage gripper, 85 mm",
+    "success_rate": 1.0,
+    "fidelity": "approximation",
+    "caveats": [
+     "Latches are an approximation: a detent torque on a revolute joint; no cam or spring geometry."
+    ],
+    "verify_on_hardware": true
+   },
+   {
+    "step_id": "open_door",
+    "primitive": "hook_pull",
+    "primitive_used": "hook_pull",
+    "tool": 1,
+    "tool_label": "Force-controlled parallel gripper, 48 mm stroke",
+    "success_rate": 0.875,
+    "fidelity": "rigid",
+    "caveats": [],
+    "verify_on_hardware": false
+   },
+   {
+    "step_id": "open_valve",
+    "primitive": "twist",
+    "primitive_used": "twist",
+    "tool": 2,
+    "tool_label": "Two-finger parallel cobot hand, 80 mm",
+    "success_rate": 0.625,
+    "fidelity": "approximation",
+    "caveats": [
+     "Valves are an approximation: a resistive torque curve on a revolute joint; no packing or seat dynamics."
+    ],
+    "verify_on_hardware": true
+   },
+   {
+    "step_id": "plug_connector",
+    "primitive": "insert",
+    "primitive_used": "insert",
+    "tool": 1,
+    "tool_label": "Force-controlled parallel gripper, 48 mm stroke",
+    "success_rate": 0.5,
+    "fidelity": "rigid",
+    "caveats": [],
+    "verify_on_hardware": false
+   }
+  ],
+  "runner_up_rigid": {
+   "label": null,
+   "basis": "no rigid-tier setup is eligible"
+  },
+  "versus_best_single": {
+   "same_setup": false,
+   "completion_delta": 0.5,
+   "cycle_delta_s": 34.961,
+   "extra_tools": 2
+  }
+ },
+ "best_single": {
+  "setup_id": "69a55b715795559ec0d142e71384940c96f8d9b9cf2d33bd199a4f8a5c2257ba",
+  "kind": "single",
+  "kind_title": "Single tool",
+  "label": "Two-finger linkage gripper of a cobot arm",
+  "tools": [
+   "Two-finger linkage gripper of a cobot arm"
+  ],
+  "completion_rate": 0.0,
+  "completed_runs": 0,
+  "n_runs": 8,
+  "fidelity": "approximation",
+  "stops_at": "open_valve",
+  "cycle_time_s": null,
+  "roles": [
+   "best_single"
+  ],
+  "eligible": false,
+  "reason": "never completed the task (stops at open_valve in 8/8 runs: slip 8x)",
+  "tool_details": [
+   {
+    "index": 0,
+    "effector_id": "02405ccb8d6393b7ca149262b1d03aad7a153238ce0bc32ea1d3eacad7657d39",
+    "display_name": "Two-finger linkage gripper of a cobot arm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true
+   }
+  ],
+  "step_success": {
+   "unlock_latch": 1.0,
+   "open_door": 1.0,
+   "open_valve": 0.0,
+   "plug_connector": 0.0
+  },
+  "weakest_step": {
+   "step_id": "open_valve",
+   "success_rate": 0.0
+  },
+  "complexity": {
+   "n_tools": 1,
+   "n_actuators": 1,
+   "total_mass_kg": 0.751,
+   "n_changes": 0,
+   "bracket": false
+  },
+  "payload_kg": 0.751,
+  "failure_modes": {
+   "slip": 8,
+   "not_reached": 8
+  },
+  "stops_at_detail": {
+   "open_valve": {
+    "runs": 8,
+    "failure_modes": {
+     "slip": 8
+    }
+   }
+  }
+ },
+ "no_winner": null,
+ "sensitivity": {
+  "recommendation_changes": false,
+  "order_changes": 0,
+  "n_pairs": 9,
+  "tool_change_s": [
+   3.0,
+   6.0,
+   12.0
+  ],
+  "present_s": [
+   0.75,
+   1.5,
+   3.0
+  ],
+  "note": "change times are a fixed clock advance, so cycle times are recomputed exactly from the same runs"
+ },
+ "constants": [
+  {
+   "key": "roll_torque_nm",
+   "value": 15.0,
+   "unit": "N m",
+   "note": "wrist roll torque limit",
+   "tag": "assumed"
+  },
+  {
+   "key": "roll_speed_max_deg_s",
+   "value": 180.0,
+   "unit": "deg/s",
+   "note": "wrist roll speed cap",
+   "tag": "assumed"
+  },
+  {
+   "key": "tool_change_s",
+   "value": 6.0,
+   "unit": "s",
+   "note": "automatic tool change time (a fixed clock advance)",
+   "tag": "assumed"
+  },
+  {
+   "key": "present_s",
+   "value": 1.5,
+   "unit": "s",
+   "note": "multi-tool head switch time (a fixed tilt, not simulated)",
+   "tag": "assumed"
+  },
+  {
+   "key": "changer_master_kg",
+   "value": 0.25,
+   "unit": "kg",
+   "note": "tool changer master plate (stays on the wrist)",
+   "tag": "assumed"
+  },
+  {
+   "key": "changer_tool_plate_kg",
+   "value": 0.1,
+   "unit": "kg",
+   "note": "tool changer plate on every tool",
+   "tag": "assumed"
+  },
+  {
+   "key": "changer_stack_mm",
+   "value": 25.0,
+   "unit": "mm",
+   "note": "tool changer stack height",
+   "tag": "assumed"
+  },
+  {
+   "key": "arm_payload_kg",
+   "value": 3.0,
+   "unit": "kg",
+   "note": "largest tool stack the arm may carry; heavier setups are refused",
+   "tag": "assumed"
+  },
+  {
+   "key": "bracket_density_kg_m3",
+   "value": 1300.0,
+   "unit": "kg/m^3",
+   "note": "printed carbon-filled polymer bracket",
+   "tag": "assumed"
+  },
+  {
+   "key": "placement_error_mm",
+   "value": 2.0,
+   "unit": "mm",
+   "note": "per-object placement error of the condition grid (uniform)",
+   "tag": "assumed"
+  },
+  {
+   "key": "simplicity_margin",
+   "value": 0.05,
+   "unit": "rate",
+   "note": "completion-rate tie for the simplicity rule",
+   "tag": "assumed"
+  },
+  {
+   "key": "cycle_margin",
+   "value": 0.1,
+   "unit": "fraction",
+   "note": "a simpler setup may be this much slower",
+   "tag": "assumed"
+  },
+  {
+   "key": "sweep_clearance_mm",
+   "value": 5.0,
+   "unit": "mm",
+   "note": "multi-tool head swept-volume clearance",
+   "tag": "assumed"
+  }
+ ],
+ "fixed_caveats": [
+  "The floating wrist abstracts the arm: there is no arm reach or arm collision model.",
+  "Presenting a multi-tool head is a fixed tilt per segment plus a fixed time, not a simulated motion.",
+  "A tool change is a fixed time, not a simulated docking.",
+  "Controllers are scripted and open-loop on the placement error.",
+  "A recommendation is a simulation ranking under the stated conditions, not a hardware guarantee."
+ ],
+ "lanes": [
+  {
+   "id": "recommended",
+   "title": "Recommended",
+   "setup_id": "4a5ca67a8577219bf4f87501e90e8e532276f839b488a9b86dfc6a86a472700c",
+   "kind": "tool_change",
+   "label": "Tool change: Two-finger > Force-controlled > Two-finger",
+   "replay": "studio/replays/h3/recommended",
+   "condition_id": "nominal",
+   "seed": 0,
+   "condition_text": "nominal placement, seed 0",
+   "traj_sha": "c9c07bb4a6aa2ede73aaeeba35e7200574668dc4570e692a5df49a25686e75a1",
+   "completed": true,
+   "cycle_time_s": 71.714,
+   "fps": 10,
+   "n_frames": 718,
+   "duration_s": 71.7,
+   "bytes": 461710,
+   "asset_bytes": 306500,
+   "segments": [
+    {
+     "index": 0,
+     "tool": 0,
+     "tool_label": "Two-finger adaptive linkage gripper, 85 mm",
+     "start_s": 0.0,
+     "end_s": 10.108,
+     "change": "none",
+     "change_s": 0.0,
+     "change_start_s": 0.0,
+     "steps": [
+      "unlock_latch"
+     ]
+    },
+    {
+     "index": 1,
+     "tool": 1,
+     "tool_label": "Force-controlled parallel gripper, 48 mm stroke",
+     "start_s": 16.108,
+     "end_s": 29.44,
+     "change": "tool_change",
+     "change_s": 6.0,
+     "change_start_s": 10.108,
+     "steps": [
+      "open_door"
+     ]
+    },
+    {
+     "index": 2,
+     "tool": 2,
+     "tool_label": "Two-finger parallel cobot hand, 80 mm",
+     "start_s": 35.44,
+     "end_s": 45.384,
+     "change": "tool_change",
+     "change_s": 6.0,
+     "change_start_s": 29.44,
+     "steps": [
+      "open_valve"
+     ]
+    },
+    {
+     "index": 3,
+     "tool": 1,
+     "tool_label": "Force-controlled parallel gripper, 48 mm stroke",
+     "start_s": 51.384,
+     "end_s": 71.714,
+     "change": "tool_change",
+     "change_s": 6.0,
+     "change_start_s": 45.384,
+     "steps": [
+      "plug_connector"
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "step_id": "unlock_latch",
+     "primitive": "twist",
+     "tool": 0,
+     "start_s": 0.0,
+     "duration_s": 10.108,
+     "success": true,
+     "failure_mode": null,
+     "fidelity": "approximation",
+     "quantities": {
+      "angle_deg": 83.576,
+      "force_n": 3.055,
+      "penetration_mm": 0.114,
+      "slip_deg": 1.832,
+      "torque_nm": 0.511
+     }
+    },
+    {
+     "step_id": "open_door",
+     "primitive": "hook_pull",
+     "tool": 1,
+     "start_s": 16.108,
+     "duration_s": 13.332,
+     "success": true,
+     "failure_mode": null,
+     "fidelity": "rigid",
+     "quantities": {
+      "angle_deg": 103.117,
+      "force_n": 5.136,
+      "penetration_mm": 0.288,
+      "slip_mm": 18.071
+     }
+    },
+    {
+     "step_id": "open_valve",
+     "primitive": "twist",
+     "tool": 2,
+     "start_s": 35.44,
+     "duration_s": 9.944,
+     "success": true,
+     "failure_mode": null,
+     "fidelity": "approximation",
+     "quantities": {
+      "angle_deg": 83.587,
+      "force_n": 54.981,
+      "penetration_mm": 0.147,
+      "slip_deg": 0.931,
+      "torque_nm": 2.012
+     }
+    },
+    {
+     "step_id": "plug_connector",
+     "primitive": "insert",
+     "tool": 1,
+     "start_s": 51.384,
+     "duration_s": 20.33,
+     "success": true,
+     "failure_mode": null,
+     "fidelity": "rigid",
+     "quantities": {
+      "depth_mm": 15.0,
+      "force_n": 12.845,
+      "jam": 0.0,
+      "lateral_force_n": 1.163,
+      "penetration_mm": 0.518
+     }
+    }
+   ],
+   "credits": [
+    {
+     "text": "Simulation model of an open-source industrial gripper, BSD-2-Clause, modified",
+     "anchor": "library"
+    },
+    {
+     "text": "Simulation model of an open-source industrial gripper, Apache-2.0, modified",
+     "anchor": "library"
+    }
+   ]
+  },
+  {
+   "id": "best_single",
+   "title": "Best single off-the-shelf",
+   "setup_id": "69a55b715795559ec0d142e71384940c96f8d9b9cf2d33bd199a4f8a5c2257ba",
+   "kind": "single",
+   "label": "Two-finger linkage gripper of a cobot arm",
+   "replay": "studio/replays/h3/best_single",
+   "condition_id": "nominal",
+   "seed": 0,
+   "condition_text": "nominal placement, seed 0",
+   "traj_sha": "e01bddf6db6b960507be90b2ceb45d3072b037d806d33d3b44778adfa4ebf73e",
+   "completed": false,
+   "cycle_time_s": 36.756,
+   "fps": 30,
+   "n_frames": 1103,
+   "duration_s": 36.733,
+   "bytes": 414651,
+   "asset_bytes": 139172,
+   "segments": [
+    {
+     "index": 0,
+     "tool": 0,
+     "tool_label": "Two-finger linkage gripper of a cobot arm",
+     "start_s": 0.0,
+     "end_s": 36.756,
+     "change": "none",
+     "change_s": 0.0,
+     "change_start_s": 0.0,
+     "steps": [
+      "unlock_latch",
+      "open_door",
+      "open_valve"
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "step_id": "unlock_latch",
+     "primitive": "twist",
+     "tool": 0,
+     "start_s": 0.0,
+     "duration_s": 10.126,
+     "success": true,
+     "failure_mode": null,
+     "fidelity": "approximation",
+     "quantities": {
+      "angle_deg": 83.597,
+      "force_n": 6.863,
+      "penetration_mm": 0.052,
+      "slip_deg": 0.573,
+      "torque_nm": 0.512
+     }
+    },
+    {
+     "step_id": "open_door",
+     "primitive": "hook_pull",
+     "tool": 0,
+     "start_s": 10.126,
+     "duration_s": 15.494,
+     "success": true,
+     "failure_mode": null,
+     "fidelity": "rigid",
+     "quantities": {
+      "angle_deg": 107.83,
+      "force_n": 4.091,
+      "penetration_mm": 0.113,
+      "slip_mm": 0.225
+     }
+    },
+    {
+     "step_id": "open_valve",
+     "primitive": "twist",
+     "tool": 0,
+     "start_s": 25.62,
+     "duration_s": 11.136,
+     "success": false,
+     "failure_mode": "slip",
+     "fidelity": "approximation",
+     "quantities": {
+      "angle_deg": 0.008,
+      "force_n": 39.559,
+      "penetration_mm": 0.103,
+      "slip_deg": 169.612,
+      "torque_nm": 0.104
+     }
+    }
+   ],
+   "credits": [
+    {
+     "text": "Simulation model of an open-source industrial gripper, BSD-3-Clause, modified",
+     "anchor": "library"
+    }
+   ]
+  }
+ ],
+ "build_pack": {
+  "zip": "studio/h3/build_pack.zip",
+  "bytes": 797029,
+  "sha256": "9988ba14ee881ec21be2d717b058aef11f206bc945e4702b961df7850517ecb9",
+  "setup_id": "4a5ca67a8577219bf4f87501e90e8e532276f839b488a9b86dfc6a86a472700c",
+  "label": "Tool change: Two-finger > Force-controlled > Two-finger",
+  "for": "recommended",
+  "files": [
+   {
+    "path": "ASSEMBLY.md",
+    "kind": "notes",
+    "format": "md",
+    "license": "CC0-1.0",
+    "bytes": 2496
+   },
+   {
+    "path": "CREDITS.txt",
+    "kind": "licence",
+    "format": "txt",
+    "license": "CC0-1.0",
+    "bytes": 1695
+   },
+   {
+    "path": "README.txt",
+    "kind": "notes",
+    "format": "txt",
+    "license": "CC0-1.0",
+    "bytes": 1636
+   },
+   {
+    "path": "bom.csv",
+    "kind": "bom",
+    "format": "csv",
+    "license": "CC0-1.0",
+    "bytes": 1245
+   },
+   {
+    "path": "certificate.html",
+    "kind": "certificate",
+    "format": "html",
+    "license": "CC0-1.0",
+    "bytes": 10827
+   },
+   {
+    "path": "changer_plate_tool0.stl",
+    "kind": "changer_plate",
+    "format": "stl",
+    "license": "CC0-1.0",
+    "bytes": 75284
+   },
+   {
+    "path": "changer_plate_tool1.stl",
+    "kind": "changer_plate",
+    "format": "stl",
+    "license": "CC0-1.0",
+    "bytes": 75284
+   },
+   {
+    "path": "changer_plate_tool2.stl",
+    "kind": "changer_plate",
+    "format": "stl",
+    "license": "CC0-1.0",
+    "bytes": 75284
+   },
+   {
+    "path": "licences/tool0_LICENSE.txt",
+    "kind": "licence",
+    "format": "txt",
+    "license": "BSD-2-Clause",
+    "bytes": 1297
+   },
+   {
+    "path": "licences/tool1_LICENSE.txt",
+    "kind": "licence",
+    "format": "txt",
+    "license": "Apache-2.0",
+    "bytes": 11357
+   },
+   {
+    "path": "licences/tool2_LICENSE.txt",
+    "kind": "licence",
+    "format": "txt",
+    "license": "Apache-2.0",
+    "bytes": 10173
+   },
+   {
+    "path": "mjcf/meshes/tool0_3d49ad2f1e5f.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "BSD-2-Clause",
+    "bytes": 204084
+   },
+   {
+    "path": "mjcf/meshes/tool0_550554299ed7.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "BSD-2-Clause",
+    "bytes": 292884
+   },
+   {
+    "path": "mjcf/meshes/tool0_6639c2189c8b.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "BSD-2-Clause",
+    "bytes": 448084
+   },
+   {
+    "path": "mjcf/meshes/tool0_90a6b59d8b50.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "BSD-2-Clause",
+    "bytes": 159384
+   },
+   {
+    "path": "mjcf/meshes/tool0_ce995a164450.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "BSD-2-Clause",
+    "bytes": 125484
+   },
+   {
+    "path": "mjcf/meshes/tool0_ef7396ba3930.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "BSD-2-Clause",
+    "bytes": 275884
+   },
+   {
+    "path": "mjcf/meshes/tool1_21f41404f0c6.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "Apache-2.0",
+    "bytes": 63484
+   },
+   {
+    "path": "mjcf/meshes/tool1_883c98ad0465.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "Apache-2.0",
+    "bytes": 4984
+   },
+   {
+    "path": "mjcf/meshes/tool1_e658e950bc54.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "Apache-2.0",
+    "bytes": 4984
+   },
+   {
+    "path": "mjcf/meshes/tool2_26b3c0a30980.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "Apache-2.0",
+    "bytes": 4784
+   },
+   {
+    "path": "mjcf/meshes/tool2_2bad15dcee9d.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "Apache-2.0",
+    "bytes": 10084
+   },
+   {
+    "path": "mjcf/setup_tool0.xml",
+    "kind": "mjcf",
+    "format": "xml",
+    "license": "BSD-2-Clause",
+    "bytes": 33846
+   },
+   {
+    "path": "mjcf/setup_tool1.xml",
+    "kind": "mjcf",
+    "format": "xml",
+    "license": "Apache-2.0",
+    "bytes": 25825
+   },
+   {
+    "path": "mjcf/setup_tool2.xml",
+    "kind": "mjcf",
+    "format": "xml",
+    "license": "Apache-2.0",
+    "bytes": 28392
+   }
+  ],
+  "links": [
+   {
+    "name": "Tool 0: Two-finger adaptive linkage gripper, 85 mm",
+    "url": "https://github.com/google-deepmind/mujoco_menagerie",
+    "license": "BSD-2-Clause",
+    "reason": "the tool's own CAD and documentation are upstream; the pack carries its simulation meshes"
+   },
+   {
+    "name": "Tool 1: Force-controlled parallel gripper, 48 mm stroke",
+    "url": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper",
+    "license": "Apache-2.0",
+    "reason": "the tool's own CAD and documentation are upstream; the pack carries its simulation meshes"
+   },
+   {
+    "name": "Tool 2: Two-finger parallel cobot hand, 80 mm",
+    "url": "https://github.com/google-deepmind/mujoco_menagerie",
+    "license": "Apache-2.0",
+    "reason": "the tool's own CAD and documentation are upstream; the pack carries its simulation meshes"
+   }
+  ],
+  "caveats": [
+   "Latches are an approximation: a detent torque on a revolute joint; no cam or spring geometry.",
+   "Valves are an approximation: a resistive torque curve on a revolute joint; no packing or seat dynamics.",
+   "The floating wrist abstracts the arm: there is no arm reach or arm collision model.",
+   "Presenting a multi-tool head is a fixed tilt per segment plus a fixed time, not a simulated motion.",
+   "A tool change is a fixed time, not a simulated docking.",
+   "Controllers are scripted and open-loop on the placement error.",
+   "A recommendation is a simulation ranking under the stated conditions, not a hardware guarantee."
+  ]
+ },
+ "build_pack_note": null,
+ "session": null,
+ "provenance": {
+  "code_version": "591648aa39d3",
+  "report_sha256": "2a096bb15c219ad9f2751502928d1dbe37c7f1c49f6538a9c163f738428212fe",
+  "task_id": "3297a111d7c61392e9a99a08d3a80a8e14c7046b80d277925ed3a78788ff651d",
+  "controllers": "default",
+  "evidence": "accepted",
+  "conditions": [
+   {
+    "condition_id": "nominal",
+    "seed": 0,
+    "aim_offsets_mm": {}
+   },
+   {
+    "condition_id": "place01",
+    "seed": 1,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      0.542,
+      1.44
+     ],
+     "qt_latch": [
+      0.306,
+      -0.193
+     ],
+     "service_valve": [
+      1.727,
+      0.13
+     ],
+     "test_port": [
+      -0.98,
+      -0.174
+     ]
+    }
+   },
+   {
+    "condition_id": "place02",
+    "seed": 2,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      0.415,
+      -0.251
+     ],
+     "qt_latch": [
+      0.089,
+      0.245
+     ],
+     "service_valve": [
+      1.043,
+      -0.225
+     ],
+     "test_port": [
+      0.771,
+      -1.924
+     ]
+    }
+   },
+   {
+    "condition_id": "place03",
+    "seed": 3,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      0.904,
+      1.979
+     ],
+     "qt_latch": [
+      -1.497,
+      -1.834
+     ],
+     "service_valve": [
+      1.81,
+      -0.551
+     ],
+     "test_port": [
+      0.485,
+      -1.966
+     ]
+    }
+   },
+   {
+    "condition_id": "place04",
+    "seed": 4,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      -0.785,
+      -1.133
+     ],
+     "qt_latch": [
+      -0.003,
+      1.467
+     ],
+     "service_valve": [
+      0.181,
+      0.812
+     ],
+     "test_port": [
+      1.768,
+      -1.513
+     ]
+    }
+   },
+   {
+    "condition_id": "place05",
+    "seed": 5,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      1.406,
+      -1.587
+     ],
+     "qt_latch": [
+      -1.633,
+      -1.202
+     ],
+     "service_valve": [
+      -1.073,
+      0.451
+     ],
+     "test_port": [
+      -0.752,
+      1.153
+     ]
+    }
+   },
+   {
+    "condition_id": "place06",
+    "seed": 6,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      0.659,
+      -0.034
+     ],
+     "qt_latch": [
+      -0.225,
+      0.272
+     ],
+     "service_valve": [
+      -0.529,
+      0.317
+     ],
+     "test_port": [
+      -1.476,
+      -1.311
+     ]
+    }
+   },
+   {
+    "condition_id": "place07",
+    "seed": 7,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      -0.578,
+      1.722
+     ],
+     "qt_latch": [
+      -1.498,
+      1.477
+     ],
+     "service_valve": [
+      -0.89,
+      1.968
+     ],
+     "test_port": [
+      0.238,
+      1.083
+     ]
+    }
+   }
+  ],
+  "fairness_sha": "50b63720fa729dd50092c1e915aa839aada2f0d1013083e93d57c6b8a91480b6",
+  "workers": 4,
+  "timings": {
+   "screen_s": 333.6,
+   "combine_s": 7.7,
+   "finalists_s": 74.9,
+   "total_s": 416.7
+  },
+  "determinism": [
+   {
+    "condition": "nominal",
+    "same": true
+   },
+   {
+    "condition": "place01",
+    "same": true
+   }
+  ]
+ }
+}

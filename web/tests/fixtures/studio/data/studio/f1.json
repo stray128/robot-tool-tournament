@@ -1,0 +1,817 @@
+{
+ "schema": "rtt-web-studio-hero",
+ "version": 1,
+ "label": "Product mode: not part of the pre-registered experiment",
+ "contract": "rtt-effectors/2",
+ "hero": "f1",
+ "case_id": "f1_jar",
+ "title": "Jar cap",
+ "setting": "lab",
+ "use_case": "Pick a jar from the bench and twist its cap a quarter turn.",
+ "outcome": "recommended",
+ "headline": "A tool-change sequence completes the task in 6 of 8 runs; the best single off-the-shelf tool in 0 of 8 runs.",
+ "plan": {
+  "task_id": "2befd3fb567fbbd2a8d5b2d17ea1a6d02b8420bfcac2406cf73822a087033266",
+  "title": "Jar cap quarter turn",
+  "description": "Pick a jar from the bench and twist its cap a quarter turn.",
+  "source": "recorded",
+  "result": "valid_first_call",
+  "calls": 1,
+  "model": "fixture-model",
+  "layout_moves": [],
+  "assumptions": [
+   "The jar is rigid."
+  ],
+  "clarifications": [
+   {
+    "question": "How tight is the cap?",
+    "assumed": "0.5 N m"
+   }
+  ],
+  "unsupported": [],
+  "objects": [
+   {
+    "name": "jar",
+    "kind": "part",
+    "kind_title": "Rigid part",
+    "label": "Jar",
+    "params": {
+     "width_mm": 60,
+     "shape": "cylinder",
+     "fixed": false
+    },
+    "pose": {
+     "x_mm": 0,
+     "y_mm": 0,
+     "yaw_deg": 0
+    },
+    "ref": null
+   },
+   {
+    "name": "cap",
+    "kind": "threaded_joint",
+    "kind_title": "Threaded joint",
+    "label": "Cap",
+    "params": {
+     "turns": 0.25
+    },
+    "pose": {
+     "x_mm": 0,
+     "y_mm": 0,
+     "yaw_deg": 0
+    },
+    "ref": "jar"
+   }
+  ],
+  "steps": [
+   {
+    "id": "pick_part",
+    "primitive": "grasp",
+    "primitive_title": "Grasp",
+    "object": "jar",
+    "handle": "part",
+    "target": null,
+    "params": {
+     "lift_mm": 50,
+     "speed_mm_s": 80
+    },
+    "constraints": {
+     "max_force_n": 20,
+     "max_torque_nm": null,
+     "precision_mm": null,
+     "precision_deg": null
+    },
+    "success": [
+     {
+      "quantity": "lift_mm",
+      "unit": "mm",
+      "at_least": 40,
+      "at_most": null,
+      "text": "lift at least 40 mm"
+     }
+    ],
+    "after": [],
+    "hold_after": true,
+    "description": "Pick the jar.",
+    "fidelity": "rigid",
+    "caveats": []
+   },
+   {
+    "id": "twist_cap",
+    "primitive": "twist",
+    "primitive_title": "Twist",
+    "object": "cap",
+    "handle": "head",
+    "target": null,
+    "params": {
+     "turns": 0.25
+    },
+    "constraints": {
+     "max_force_n": null,
+     "max_torque_nm": 2,
+     "precision_mm": null,
+     "precision_deg": null
+    },
+    "success": [
+     {
+      "quantity": "torque_nm",
+      "unit": "N m",
+      "at_least": 0.5,
+      "at_most": 2,
+      "text": "torque 0.5 to 2 N m"
+     }
+    ],
+    "after": [
+     "pick_part"
+    ],
+    "hold_after": false,
+    "description": "Twist the cap a quarter turn.",
+    "fidelity": "approximation",
+    "caveats": [
+     "Threads are an approximation: a helical joint with a torque ramp."
+    ]
+   }
+  ]
+ },
+ "screen": {
+  "n_candidates": 3,
+  "n_screened": 2,
+  "n_conditions": 3,
+  "runs": 12,
+  "wall_s": 4.2,
+  "candidates": [
+   {
+    "effector_id": "72b3a9dfa0deabd3cef3f96a4c826b56d260a02e5809267fc8875c525169ba93",
+    "display_name": "Two-finger parallel gripper, flat pads",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "e2034acd1aaef51ad0b561edf8c4f27ce41bcfb58fd5e45b5ff9a08e2c2d9ef9",
+    "display_name": "Suction cup, 25 mm bellows",
+    "family": "suction",
+    "family_title": "Suction cup",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "suction",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "pick_part",
+      "reason": "the jar is narrower than the cup"
+     }
+    ]
+   },
+   {
+    "effector_id": "b82011fc8e17eab39ac4dbf3d5b7e57ea41ea6b29485b2dc74b74480bcbcf29a",
+    "display_name": "Soft arm, 12 segments, 140 mm",
+    "family": "soft_arm",
+    "family_title": "Soft arm",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "soft_arm",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "pick_part",
+      "reason": "the part is wider than the soft arm reaches around"
+     },
+     {
+      "step_id": "twist_cap",
+      "reason": "a slack soft arm cannot twist"
+     }
+    ]
+   }
+  ],
+  "pruned_reasons": [
+   {
+    "reason": "The part is wider than the soft arm reaches around",
+    "count": 1
+   },
+   {
+    "reason": "A slack soft arm cannot twist",
+    "count": 1
+   },
+   {
+    "reason": "The jar is narrower than the cup",
+    "count": 1
+   }
+  ]
+ },
+ "matrix": {
+  "steps": [
+   "pick_part",
+   "twist_cap"
+  ],
+  "rows": [
+   {
+    "effector_id": "e2034acd1aaef51ad0b561edf8c4f27ce41bcfb58fd5e45b5ff9a08e2c2d9ef9",
+    "display_name": "Suction cup, 25 mm bellows",
+    "family_title": "Suction cup",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "pick_part": {
+      "state": "pruned",
+      "reason": "the jar is narrower than the cup"
+     },
+     "twist_cap": {
+      "state": "run",
+      "rate": 1,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "twist",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "72b3a9dfa0deabd3cef3f96a4c826b56d260a02e5809267fc8875c525169ba93",
+    "display_name": "Two-finger parallel gripper, flat pads",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "pick_part": {
+      "state": "run",
+      "rate": 1,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "grasp",
+      "failure_modes": {},
+      "context": "start"
+     },
+     "twist_cap": {
+      "state": "run",
+      "rate": 0.333,
+      "n": 3,
+      "successes": 1,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 2
+      },
+      "context": "carried"
+     }
+    }
+   }
+  ]
+ },
+ "combinations": {
+  "counts": {
+   "single": 2,
+   "tool_change": 2,
+   "multi_head": 0,
+   "multi_head_geometry_searched": 1
+  },
+  "rejected": [
+   {
+    "label": "",
+    "reason": "no bracket layout clears"
+   }
+  ]
+ },
+ "finalists": [
+  {
+   "setup_id": "fde114df3ffebae73e8944ab8eb636c0e48e1cf366ce542ea0170514bf2f98eb",
+   "kind": "tool_change",
+   "kind_title": "Tool change",
+   "label": "Tool change: Two-finger > Suction cup",
+   "tools": [
+    "Two-finger parallel gripper, flat pads",
+    "Suction cup, 25 mm bellows"
+   ],
+   "completion_rate": 0.75,
+   "completed_runs": 6,
+   "n_runs": 8,
+   "fidelity": "approximation",
+   "stops_at": null,
+   "cycle_time_s": 6.03,
+   "eligible": true,
+   "reason": null,
+   "roles": [
+    "recommended"
+   ],
+   "tool_details": [
+    {
+     "index": 0,
+     "effector_id": "72b3a9dfa0deabd3cef3f96a4c826b56d260a02e5809267fc8875c525169ba93",
+     "display_name": "Two-finger parallel gripper, flat pads",
+     "family": "catalog_gripper",
+     "family_title": "Industrial gripper",
+     "fidelity": "rigid",
+     "off_the_shelf": true
+    },
+    {
+     "index": 1,
+     "effector_id": "e2034acd1aaef51ad0b561edf8c4f27ce41bcfb58fd5e45b5ff9a08e2c2d9ef9",
+     "display_name": "Suction cup, 25 mm bellows",
+     "family": "suction",
+     "family_title": "Suction cup",
+     "fidelity": "approximation",
+     "off_the_shelf": true
+    }
+   ],
+   "step_success": {
+    "pick_part": 1,
+    "twist_cap": 0.75
+   },
+   "weakest_step": {
+    "step_id": "twist_cap",
+    "success_rate": 0.75
+   },
+   "complexity": {
+    "n_tools": 2,
+    "n_actuators": 2,
+    "total_mass_kg": 0.71,
+    "n_changes": 1,
+    "bracket": false
+   },
+   "payload_kg": 0.71,
+   "failure_modes": {
+    "slip": 2
+   },
+   "stops_at_detail": {
+    "twist_cap": {
+     "runs": 2,
+     "failure_modes": {
+      "slip": 2
+     }
+    }
+   }
+  },
+  {
+   "setup_id": "3735acedc16656f2ecefa897bee16966a6e56c87fb5c3d4ece401bdfac052f6b",
+   "kind": "single",
+   "kind_title": "Single tool",
+   "label": "Two-finger parallel gripper, flat pads",
+   "tools": [
+    "Two-finger parallel gripper, flat pads"
+   ],
+   "completion_rate": 0,
+   "completed_runs": 0,
+   "n_runs": 8,
+   "fidelity": "approximation",
+   "stops_at": "twist_cap",
+   "cycle_time_s": null,
+   "eligible": false,
+   "reason": "never completed the task (stops at twist_cap in 8/8 runs: slip 8x)",
+   "roles": [
+    "best_single"
+   ],
+   "tool_details": [
+    {
+     "index": 0,
+     "effector_id": "72b3a9dfa0deabd3cef3f96a4c826b56d260a02e5809267fc8875c525169ba93",
+     "display_name": "Two-finger parallel gripper, flat pads",
+     "family": "catalog_gripper",
+     "family_title": "Industrial gripper",
+     "fidelity": "core",
+     "off_the_shelf": true
+    }
+   ],
+   "step_success": {
+    "pick_part": 1,
+    "twist_cap": 0
+   },
+   "weakest_step": {
+    "step_id": "twist_cap",
+    "success_rate": 0
+   },
+   "complexity": {
+    "n_tools": 1,
+    "n_actuators": 1,
+    "total_mass_kg": 0.41,
+    "n_changes": 0,
+    "bracket": false
+   },
+   "payload_kg": 0.41,
+   "failure_modes": {
+    "slip": 8
+   },
+   "stops_at_detail": {
+    "twist_cap": {
+     "runs": 8,
+     "failure_modes": {
+      "slip": 8
+     }
+    }
+   }
+  }
+ ],
+ "recommendation": {
+  "setup_id": "fde114df3ffebae73e8944ab8eb636c0e48e1cf366ce542ea0170514bf2f98eb",
+  "kind": "tool_change",
+  "kind_title": "Tool change",
+  "label": "Tool change: Two-finger > Suction cup",
+  "tools": [
+   {
+    "index": 0,
+    "effector_id": "72b3a9dfa0deabd3cef3f96a4c826b56d260a02e5809267fc8875c525169ba93",
+    "display_name": "Two-finger parallel gripper, flat pads",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "caveat": null
+   },
+   {
+    "index": 1,
+    "effector_id": "e2034acd1aaef51ad0b561edf8c4f27ce41bcfb58fd5e45b5ff9a08e2c2d9ef9",
+    "display_name": "Suction cup, 25 mm bellows",
+    "family": "suction",
+    "family_title": "Suction cup",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "caveat": "Suction cup (approximation): the seal is a geometric test. Treat suction results as a screen, then verify on hardware."
+   }
+  ],
+  "completion_rate": 0.75,
+  "completed_runs": 6,
+  "n_runs": 8,
+  "fidelity": "approximation",
+  "stops_at": null,
+  "cycle_time_s": 6.03,
+  "why": "Highest full-task completion of the 1 eligible setup (75%).",
+  "caveat": "approximation: verify on hardware",
+  "verify_on_hardware": true,
+  "geometry": {
+   "changer": {
+    "stack_mm": 25,
+    "changeover_s": 6
+   }
+  },
+  "steps": [
+   {
+    "step_id": "pick_part",
+    "primitive": "grasp",
+    "primitive_used": "grasp",
+    "tool": 0,
+    "tool_label": "Two-finger parallel gripper, flat pads",
+    "success_rate": 1,
+    "fidelity": "rigid",
+    "caveats": [],
+    "verify_on_hardware": false
+   },
+   {
+    "step_id": "twist_cap",
+    "primitive": "twist",
+    "primitive_used": "twist",
+    "tool": 1,
+    "tool_label": "Suction cup, 25 mm bellows",
+    "success_rate": 0.75,
+    "fidelity": "approximation",
+    "caveats": [
+     "Threads are an approximation: a helical joint with a torque ramp.",
+     "Suction cup (approximation): the seal is a geometric test. Treat suction results as a screen, then verify on hardware."
+    ],
+    "verify_on_hardware": true
+   }
+  ],
+  "runner_up_rigid": {
+   "label": null,
+   "basis": "no rigid-tier setup is eligible"
+  },
+  "versus_best_single": {
+   "same_setup": false,
+   "completion_delta": 0.75,
+   "cycle_delta_s": null,
+   "extra_tools": 1
+  }
+ },
+ "best_single": {
+  "setup_id": "3735acedc16656f2ecefa897bee16966a6e56c87fb5c3d4ece401bdfac052f6b",
+  "kind": "single",
+  "kind_title": "Single tool",
+  "label": "Two-finger parallel gripper, flat pads",
+  "tools": [
+   "Two-finger parallel gripper, flat pads"
+  ],
+  "completion_rate": 0,
+  "completed_runs": 0,
+  "n_runs": 8,
+  "fidelity": "approximation",
+  "stops_at": "twist_cap",
+  "cycle_time_s": null,
+  "eligible": false,
+  "reason": "never completed the task (stops at twist_cap in 8/8 runs: slip 8x)",
+  "roles": [
+   "best_single"
+  ],
+  "tool_details": [
+   {
+    "index": 0,
+    "effector_id": "72b3a9dfa0deabd3cef3f96a4c826b56d260a02e5809267fc8875c525169ba93",
+    "display_name": "Two-finger parallel gripper, flat pads",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "fidelity": "core",
+    "off_the_shelf": true
+   }
+  ],
+  "step_success": {
+   "pick_part": 1,
+   "twist_cap": 0
+  },
+  "weakest_step": {
+   "step_id": "twist_cap",
+   "success_rate": 0
+  },
+  "complexity": {
+   "n_tools": 1,
+   "n_actuators": 1,
+   "total_mass_kg": 0.41,
+   "n_changes": 0,
+   "bracket": false
+  },
+  "payload_kg": 0.41,
+  "failure_modes": {
+   "slip": 8
+  },
+  "stops_at_detail": {
+   "twist_cap": {
+    "runs": 8,
+    "failure_modes": {
+     "slip": 8
+    }
+   }
+  }
+ },
+ "no_winner": null,
+ "sensitivity": {
+  "recommendation_changes": false,
+  "order_changes": 0,
+  "n_pairs": 9,
+  "tool_change_s": [
+   3,
+   6,
+   12
+  ],
+  "present_s": [
+   0.75,
+   1.5,
+   3
+  ],
+  "note": "change times are a fixed clock advance"
+ },
+ "constants": [
+  {
+   "key": "tool_change_s",
+   "value": 6,
+   "unit": "s",
+   "note": "automatic tool change time",
+   "tag": "assumed"
+  },
+  {
+   "key": "cycle_margin",
+   "value": 0.1,
+   "unit": "fraction",
+   "note": "a simpler setup may be this much slower",
+   "tag": "assumed"
+  }
+ ],
+ "fixed_caveats": [
+  "A tool change is a fixed time, not a simulated docking."
+ ],
+ "lanes": [
+  {
+   "id": "recommended",
+   "title": "Recommended",
+   "setup_id": "fde114df3ffebae73e8944ab8eb636c0e48e1cf366ce542ea0170514bf2f98eb",
+   "kind": "tool_change",
+   "label": "Tool change: Two-finger > Suction cup",
+   "replay": "studio/replays/f1/recommended",
+   "condition_id": "nominal",
+   "seed": 0,
+   "condition_text": "nominal placement, seed 0",
+   "traj_sha": "a6284ce7218c54f6234f8a33c32f43e2b10267b5a29e200450e55fd92b726293",
+   "completed": true,
+   "cycle_time_s": 6.03,
+   "fps": 30,
+   "n_frames": 182,
+   "duration_s": 6.033,
+   "bytes": 24962,
+   "asset_bytes": 11364,
+   "segments": [
+    {
+     "index": 0,
+     "tool": 0,
+     "tool_label": "Two-finger parallel gripper, flat pads",
+     "start_s": 0,
+     "end_s": 2.5,
+     "change": "none",
+     "change_s": 0,
+     "change_start_s": 0,
+     "steps": [
+      "pick_part"
+     ]
+    },
+    {
+     "index": 1,
+     "tool": 1,
+     "tool_label": "Suction cup, 25 mm bellows",
+     "start_s": 3.5,
+     "end_s": 6.03,
+     "change": "tool_change",
+     "change_s": 1,
+     "change_start_s": 2.5,
+     "steps": [
+      "twist_cap"
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "step_id": "pick_part",
+     "primitive": "grasp",
+     "tool": 0,
+     "start_s": 0,
+     "duration_s": 2.5,
+     "success": true,
+     "failure_mode": null,
+     "fidelity": "rigid",
+     "quantities": {
+      "lift_mm": 52
+     }
+    },
+    {
+     "step_id": "twist_cap",
+     "primitive": "twist",
+     "tool": 1,
+     "start_s": 3.5,
+     "duration_s": 2.5,
+     "success": true,
+     "failure_mode": null,
+     "fidelity": "approximation",
+     "quantities": {
+      "torque_nm": 0.8
+     }
+    }
+   ],
+   "credits": [
+    {
+     "text": "Simulation model of an open-source industrial gripper, BSD-3-Clause, modified",
+     "anchor": "library"
+    }
+   ]
+  },
+  {
+   "id": "best_single",
+   "title": "Best single off-the-shelf",
+   "setup_id": "3735acedc16656f2ecefa897bee16966a6e56c87fb5c3d4ece401bdfac052f6b",
+   "kind": "single",
+   "label": "Two-finger parallel gripper, flat pads",
+   "replay": "studio/replays/f1/best_single",
+   "condition_id": "nominal",
+   "seed": 0,
+   "condition_text": "nominal placement, seed 0",
+   "traj_sha": "f8990536a95e30d633964bb76bfd13b2a23658c6bc52011b54a948f68b3c73c0",
+   "completed": false,
+   "cycle_time_s": 5.9,
+   "fps": 30,
+   "n_frames": 182,
+   "duration_s": 6.033,
+   "bytes": 24957,
+   "asset_bytes": 11364,
+   "segments": [
+    {
+     "index": 0,
+     "tool": 0,
+     "tool_label": "Two-finger parallel gripper, flat pads",
+     "start_s": 0,
+     "end_s": 5.9,
+     "change": "none",
+     "change_s": 0,
+     "change_start_s": 0,
+     "steps": [
+      "pick_part",
+      "twist_cap"
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "step_id": "pick_part",
+     "primitive": "grasp",
+     "tool": 0,
+     "start_s": 0,
+     "duration_s": 2.5,
+     "success": true,
+     "failure_mode": null,
+     "fidelity": "rigid",
+     "quantities": {}
+    },
+    {
+     "step_id": "twist_cap",
+     "primitive": "twist",
+     "tool": 0,
+     "start_s": 2.5,
+     "duration_s": 3.4,
+     "success": false,
+     "failure_mode": "slip",
+     "fidelity": "approximation",
+     "quantities": {
+      "torque_nm": 0.2
+     }
+    }
+   ],
+   "credits": []
+  }
+ ],
+ "build_pack": {
+  "zip": "studio/f1/build_pack.zip",
+  "bytes": 274,
+  "sha256": "86101c0d7b26114f799fbf0deb11a073e8f3797cdcc4169278bf630c4b597377",
+  "setup_id": "fde114df3ffebae73e8944ab8eb636c0e48e1cf366ce542ea0170514bf2f98eb",
+  "label": "Tool change: Two-finger > Suction cup",
+  "for": "recommended",
+  "files": [
+   {
+    "path": "README.txt",
+    "kind": "notes",
+    "format": "txt",
+    "license": "CC0-1.0",
+    "bytes": 41
+   },
+   {
+    "path": "bom.csv",
+    "kind": "bom",
+    "format": "csv",
+    "license": "CC0-1.0",
+    "bytes": 25
+   }
+  ],
+  "links": [
+   {
+    "name": "Tool 0: Two-finger parallel gripper, flat pads",
+    "url": "https://example.org/upstream/gripper",
+    "license": "MIT",
+    "reason": "the tool's own CAD is upstream"
+   }
+  ],
+  "caveats": [
+   "Suction cup (approximation): the seal is a geometric test. Treat suction results as a screen, then verify on hardware."
+  ]
+ },
+ "build_pack_note": null,
+ "session": {
+  "file": "studio/sessions/f1.json",
+  "session_id": "studio-f1-fixture",
+  "status": "completed",
+  "model": "fixture-model",
+  "turns": 3,
+  "tool_calls": 2,
+  "spend_usd": 0.004,
+  "answer": "Use the tool change: 6 of 8 runs."
+ },
+ "provenance": {
+  "code_version": "ee0fdec3a1b2",
+  "report_sha256": "6da5969894e8177c33e64e74bbe6311acdedbb735d630cf90a51175b633dd31b",
+  "task_id": "2befd3fb567fbbd2a8d5b2d17ea1a6d02b8420bfcac2406cf73822a087033266",
+  "controllers": "default",
+  "evidence": "accepted",
+  "conditions": [
+   {
+    "condition_id": "nominal",
+    "seed": 0,
+    "aim_offsets_mm": {}
+   },
+   {
+    "condition_id": "place01",
+    "seed": 1,
+    "aim_offsets_mm": {
+     "jar": [
+      1.2,
+      -0.4
+     ]
+    }
+   }
+  ],
+  "fairness_sha": "70a9d49cb625b8fa42c2bc69c2e1063d5f10f5692b5e49b4e874e88e94f1ff4a",
+  "workers": 2,
+  "timings": {
+   "screen_s": 4.2,
+   "total_s": 9.8
+  },
+  "determinism": [
+   {
+    "condition": "nominal",
+    "same": true
+   }
+  ]
+ }
+}

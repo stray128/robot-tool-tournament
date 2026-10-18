@@ -1,0 +1,3254 @@
+{
+ "schema": "rtt-web-studio-hero",
+ "version": 1,
+ "label": "Product mode: not part of the pre-registered experiment",
+ "contract": "rtt-effectors/2",
+ "hero": "h2",
+ "case_id": "h2_coupling",
+ "title": "Pipe coupling",
+ "setting": "construction",
+ "use_case": "Pipe prefabrication: a threaded steel coupling (1 inch pipe size, about 40 mm across and 45 mm long) sits loosely on the threaded stub of a pipe spool that stands upright. Push it onto the thread start and turn it on until it is hand-tight (about 3 N m), never over 8 N m.",
+ "outcome": "recommended",
+ "headline": "A two-tool head completes the task in 8 of 8 runs; the best single off-the-shelf tool in 0 of 8 runs.",
+ "plan": {
+  "task_id": "33599e99ac277cf20e73d6acd349b9422330a255b3fe5ea48c6442a26c3decd6",
+  "title": "Pipe coupling tightening",
+  "description": "A threaded coupling sits on a pipe stub; insert it to the thread start then tighten clockwise to hand‑tight torque.",
+  "source": "recorded",
+  "result": "valid_after_repair",
+  "calls": 2,
+  "model": "nvidia/nemotron-3-super-120b-a12b",
+  "layout_moves": [],
+  "assumptions": [
+   "The coupling outer diameter is about 40 mm and length 45 mm.",
+   "Thread pitch is 1.5 mm, typical for 1‑inch pipe threads.",
+   "Seating depth is chamfer plus 3 mm."
+  ],
+  "clarifications": [],
+  "unsupported": [],
+  "objects": [
+   {
+    "name": "pipe_coupling",
+    "kind": "threaded_joint",
+    "kind_title": "Threaded joint",
+    "label": "Pipe coupling",
+    "params": {
+     "chamfer_mm": 1,
+     "diameter_mm": 40,
+     "engage_turns": 2,
+     "final_torque_nm": 8,
+     "length_mm": 45,
+     "member": "coupling",
+     "pitch_mm": 1.5,
+     "start_torque_nm": 0.2
+    },
+    "pose": {
+     "x_mm": 0.0,
+     "y_mm": 0.0,
+     "yaw_deg": 0.0
+    },
+    "ref": null
+   }
+  ],
+  "steps": [
+   {
+    "id": "insert_coupling",
+    "primitive": "insert",
+    "primitive_title": "Insert",
+    "object": "pipe_coupling",
+    "handle": "member",
+    "target": null,
+    "params": {
+     "speed_mm_s": 10,
+     "standoff_mm": 5
+    },
+    "constraints": {
+     "max_force_n": 30.0,
+     "max_torque_nm": null,
+     "precision_mm": 1.0,
+     "precision_deg": null
+    },
+    "success": [
+     {
+      "quantity": "depth_mm",
+      "unit": "mm",
+      "at_least": null,
+      "at_most": 4.0,
+      "text": "depth at most 4 mm"
+     },
+     {
+      "quantity": "jam",
+      "unit": "flag",
+      "at_least": null,
+      "at_most": 0.0,
+      "text": "no jam"
+     }
+    ],
+    "after": [],
+    "hold_after": false,
+    "description": "Push the coupling onto the thread start until it seats on the chamfer.",
+    "fidelity": "approximation",
+    "caveats": [
+     "Threads are an approximation: a helical joint with a torque ramp; no thread flanks, cross-threading or galling. A screen, not a promise."
+    ]
+   },
+   {
+    "id": "tighten_coupling",
+    "primitive": "twist",
+    "primitive_title": "Twist",
+    "object": "pipe_coupling",
+    "handle": "member",
+    "target": null,
+    "params": {
+     "direction": "cw",
+     "speed_deg_s": 60
+    },
+    "constraints": {
+     "max_force_n": null,
+     "max_torque_nm": 10.0,
+     "precision_mm": null,
+     "precision_deg": null
+    },
+    "success": [
+     {
+      "quantity": "torque_nm",
+      "unit": "N m",
+      "at_least": 3.0,
+      "at_most": 8.0,
+      "text": "torque 3 to 8 N m"
+     },
+     {
+      "quantity": "turns",
+      "unit": "turn",
+      "at_least": 0.25,
+      "at_most": null,
+      "text": "turns at least 0.25 turns"
+     }
+    ],
+    "after": [
+     "insert_coupling"
+    ],
+    "hold_after": false,
+    "description": "Turn the coupling clockwise to hand‑tight torque.",
+    "fidelity": "approximation",
+    "caveats": [
+     "Threads are an approximation: a helical joint with a torque ramp; no thread flanks, cross-threading or galling. A screen, not a promise."
+    ]
+   }
+  ]
+ },
+ "screen": {
+  "n_candidates": 49,
+  "n_screened": 44,
+  "n_conditions": 3,
+  "runs": 240,
+  "wall_s": 260.8,
+  "candidates": [
+   {
+    "effector_id": "4a4d47cd94ec8da2baa50caf43de98b4bf19a2f33b5ee5032c093fd8fadcbe41",
+    "display_name": "Parallel jaw, configurator imprint: Pipe coupling",
+    "family": "parallel_jaw",
+    "family_title": "Parallel jaw",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": "pipe_coupling",
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "68909f7b5f9b84a49d1f8b6cb353f67ddba7b396484768e6f2bef30ab362b005",
+    "display_name": "Parallel jaw, flat pad: Pipe coupling",
+    "family": "parallel_jaw",
+    "family_title": "Parallel jaw",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": "pipe_coupling",
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "b8534fd47e34620160e172f1831f7d0d12b3bb3434e578e6231c52b79635d66b",
+    "display_name": "Parallel jaw, stock blade: Pipe coupling",
+    "family": "parallel_jaw",
+    "family_title": "Parallel jaw",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": "pipe_coupling",
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "e0152a5f29e1756ccd2ed7b3602b13ce3a4d3a80d1fe1709d383db30284f82b7",
+    "display_name": "Four-finger 16-joint hand, power grasp",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "f4363e74967e4429fc2203073f9a2f6e8eed447a156149eaf424544d589cef8d",
+    "display_name": "Four-finger 16-joint hand, pinch",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "bc347dd620c711c06e02bbf5b6c610413ae5b0ac8b182fdbb98f5ae997e177af",
+    "display_name": "Five-finger 18-actuator hand, power grasp",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "300d169b6786c96007dbe4ce8c0fea66549c0e081cfcfe3f3fe07d6e46ec6a3f",
+    "display_name": "Five-finger 18-actuator hand, pinch",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "a0fc12482a70670906acabab94f5bc4b91ebbbff57fe669e9725afd57c80c75e",
+    "display_name": "Five-finger 22-joint hand, power grasp",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "594c4f4d5088689c599fdd9884d2675a7a3d69f8f7df8489ef57b6484db711f0",
+    "display_name": "Five-finger 22-joint hand, pinch",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "79372f1ed2ab4e3a5467c38ed239aa0795a8df3e5ce6af900af10a5a3e252050",
+    "display_name": "Two-finger parallel gripper, fin-ray pads",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "a03002d6c5e1107f0bef73bc8cf24cd90b390550654aaa5d9e8899933971f6d7",
+    "display_name": "Two-finger parallel gripper, rigid pads A",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "bbb8214caaf4a70aac3e2c08331f0166c12470bf97db57db00dc834a77ff4dd1",
+    "display_name": "Two-finger adaptive gripper, power grasp",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "52613f2b72143b61b490ddfc05c4e3ed38c49de7005b77f07a5ccbfada0ab476",
+    "display_name": "Two-finger adaptive gripper, pinch",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "730fd283dd6b7dd046711dfef0b73a64f6a577e2cc7a643ee6affb86f74ed0aa",
+    "display_name": "Three-finger adaptive gripper, power grasp",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "9dbe8879e66bd4a935e6db502db88cdb0ce74390f469ada567cc93eb165b5b58",
+    "display_name": "Three-finger adaptive gripper, pinch",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "e754a0d67325f2100c98c2f9af46bb60c49421f256a2026895fb59bcf82e547d",
+    "display_name": "Soft arm, 12 segments, 140 mm",
+    "family": "soft_arm",
+    "family_title": "Soft arm",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "soft_arm",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "insert_coupling",
+      "reason": "a soft arm cannot hold a member stiffly along the seat axis"
+     }
+    ]
+   },
+   {
+    "effector_id": "743fc0bc1efc93c288065cff91b147fd993ad974831e50b7617f7f15a0ab66fc",
+    "display_name": "Soft arm, 16 segments, 160 mm",
+    "family": "soft_arm",
+    "family_title": "Soft arm",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "soft_arm",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "insert_coupling",
+      "reason": "a soft arm cannot hold a member stiffly along the seat axis"
+     }
+    ]
+   },
+   {
+    "effector_id": "2f5e4f974b13a6445127a6afead695a9e58a54cdeb12a3101724db21f6b368e9",
+    "display_name": "Soft arm, 20 soft segments, 180 mm",
+    "family": "soft_arm",
+    "family_title": "Soft arm",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "soft_arm",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "insert_coupling",
+      "reason": "a soft arm cannot hold a member stiffly along the seat axis"
+     }
+    ]
+   },
+   {
+    "effector_id": "f0b6543ba012ad8f54c8860c61407708f1bdfaf1d1b395d00a64ada8e883d6de",
+    "display_name": "Suction cup, 10 mm bellows",
+    "family": "suction",
+    "family_title": "Suction cup",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "suction",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_coupling",
+      "reason": "pipe_coupling (a coupling) has an open top; a cup cannot seal on it"
+     }
+    ]
+   },
+   {
+    "effector_id": "3907bc284d9e2c3399ddb8b45b1bf94dbb3b0ef0672705c6d90724839ecf7186",
+    "display_name": "Suction cup, 16 mm bellows",
+    "family": "suction",
+    "family_title": "Suction cup",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "suction",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_coupling",
+      "reason": "pipe_coupling (a coupling) has an open top; a cup cannot seal on it"
+     }
+    ]
+   },
+   {
+    "effector_id": "e72e88518c0ebe7a74ec5db104b671180e9dbb5b51d0b11045814506657f31bf",
+    "display_name": "Suction cup, 25 mm bellows",
+    "family": "suction",
+    "family_title": "Suction cup",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "suction",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_coupling",
+      "reason": "pipe_coupling (a coupling) has an open top; a cup cannot seal on it"
+     }
+    ]
+   },
+   {
+    "effector_id": "f7faa3ddd45fee96149330bbf1bc6cd179305044806e9f178ed0735f6f184b80",
+    "display_name": "Two-finger adaptive linkage gripper, 85 mm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "762b2cf206e7b33c97e3e70157492630c91ae3d28b3dae35580e25bfbbee9319",
+    "display_name": "Air-actuated mini parallel gripper",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "insert_coupling",
+      "reason": "it opens 18 mm; the coupling pipe_coupling is 40 mm across"
+     },
+     {
+      "step_id": "tighten_coupling",
+      "reason": "it opens 18 mm; the coupling pipe_coupling is 40 mm across"
+     }
+    ]
+   },
+   {
+    "effector_id": "9aff5d8ef53e119ab1943eef6d8ba55af4795f806c1a2e111b89c7c0444c770b",
+    "display_name": "Two-finger parallel cobot hand, 80 mm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "6d286bacbd7431187a1a4bd5a48d194ea5e59399afb0a9e2227332f4fe006cf7",
+    "display_name": "Force-controlled parallel gripper, 48 mm stroke",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "5f28e092f268ff12c38c8c8a9da33cf6520bc235ddf0f15eef85705bf5abaa0d",
+    "display_name": "Rack-and-pinion parallel gripper for an open hobby arm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "02405ccb8d6393b7ca149262b1d03aad7a153238ce0bc32ea1d3eacad7657d39",
+    "display_name": "Two-finger linkage gripper of a cobot arm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "f2ea72dff094ac3680a7b59e05a96a2e9bc4d8191c7bfee56d30f1755987dff2",
+    "display_name": "Industrial servo parallel gripper, 110 mm stroke",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "19349473603b229ce8676b46cd97598dc1cd5b463f8f801d4455e1a7b01ba3e2",
+    "display_name": "Two-finger parallel gripper, teleop-arm fingers",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "7d8ca167a7b3a93e3461ebca357e274ec9c9ca4fa9c2f4e50daa4c0a5e027724",
+    "display_name": "Angular-jaw gripper of an open hobby arm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "5c8f1c25a0a4eb30f7b91746a547c19ff95ec2889aad7a739126582805adb41b",
+    "display_name": "Three-finger 12-joint industrial hand",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": "it weighs 4.14 kg; the arm carries at most 3 kg [assumed]",
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "2f59fe9db92cd4baa4bcc418531f685100bc2ce00459fe887fe591b7f4d5fd65",
+    "display_name": "Servo-driven four-finger hand, 13 actuators, power grasp",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "7f12d546e0d7714e3d2aae831d9ea52eb2494283c1ccd5487920ac69fa27a720",
+    "display_name": "Servo-driven four-finger hand, 13 actuators, pinch",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "d702e265cd1c213b47f352e50c6c3d54ec8b736f9da8714cfdf936bece063264",
+    "display_name": "Tendon-driven five-finger hand, 16 joints, power grasp",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "ba4075426cf13421509805b4367919c507f396904da831894f373d928292dd01",
+    "display_name": "Tendon-driven five-finger hand, 16 joints, pinch",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "a5d7b1667b4f0d6582a36df49b9e600eeedc31f54dc883ddf7803fe113091f1d",
+    "display_name": "Suction cup, 40 mm bellows",
+    "family": "suction",
+    "family_title": "Suction cup",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "suction",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_coupling",
+      "reason": "pipe_coupling (a coupling) has an open top; a cup cannot seal on it"
+     }
+    ]
+   },
+   {
+    "effector_id": "ec23d0f17374171b7fa9c62da8dd8d680df2e2c98a747068750a83777cfa38a3",
+    "display_name": "Button-pusher tool",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "insert_coupling",
+      "reason": "its capability tags do not include insert"
+     },
+     {
+      "step_id": "tighten_coupling",
+      "reason": "its capability tags do not include twist"
+     }
+    ]
+   },
+   {
+    "effector_id": "38850807f92bc307da9f0519004f6c9a30606ed04934014a6791ad01acf0c88b",
+    "display_name": "Drawer-pull hook tool",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "insert_coupling",
+      "reason": "its capability tags do not include insert"
+     },
+     {
+      "step_id": "tighten_coupling",
+      "reason": "its capability tags do not include twist"
+     }
+    ]
+   },
+   {
+    "effector_id": "51bbed694beba24d5ba4332ad204033431cb1611ea4a4d092cc511f2bb3b9750",
+    "display_name": "Spring-loaded marker holder tool",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "insert_coupling",
+      "reason": "its capability tags do not include insert"
+     },
+     {
+      "step_id": "tighten_coupling",
+      "reason": "its capability tags do not include twist"
+     }
+    ]
+   },
+   {
+    "effector_id": "1c0215479859373feed025f8c8e3697830191fbbcded36d2720c98cf3f59c352",
+    "display_name": "Servo screwdriver attachment for a hobby arm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "insert_coupling",
+      "reason": "its capability tags do not include insert"
+     }
+    ]
+   },
+   {
+    "effector_id": "d4997bd4b38665bca7af77aeef09cc396279ecd231787f9df5fa34aa37fb5996",
+    "display_name": "Designed three-finger hand, 2 joints per finger d55e",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "ba0cc54331ca68ed6118c26302dc007b446c213c1d258f36631047ac5a2f05c8",
+    "display_name": "Designed four-finger hand, 3 joints per finger b56a",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "6148cfd23eae2b2e8959cc78a8c2b6ef324c0878a66bd0eee45e4a4105e20cb7",
+    "display_name": "Designed three-finger sliding hook gripper da49",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "d3b2b71d424b8c16205262a466257f916bc6e5e18f6b5873b0045f5632db2fe1",
+    "display_name": "Designed three-digit segmented tentacle f293",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "a4b30af09ff1818c87fcc9683805da8354923ecb0f35a77b14165fa5851bc3fa",
+    "display_name": "Designed three-finger hand, 2 joints per finger 3e58",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "25bb68ef395b04b7dddcb8a3adcae328743627edf36160b0ac26e75050f0dc27",
+    "display_name": "Designed four-finger hand, 1 joint per finger e352",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "890c6cb500dacbda950e3a31a2b543d39b89da3c2dfa1a61e7ae5c17cb25f65e",
+    "display_name": "Designed three-finger hand, 1 joint per finger ca8b",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "d6e87ec5705a8c93944dfc2db4945e98e2499a9aa761b0cc801420e51d5ec0ad",
+    "display_name": "Designed four-finger swinging hook gripper 052c",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "251cbe9cc23c1ea18d77c6143d68090fce2a1837927f826a7bcc9bd430de8a81",
+    "display_name": "Designed three-digit segmented tentacle 90e8",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   }
+  ],
+  "pruned_reasons": [
+   {
+    "reason": "Its capability tags do not include the step's primitive",
+    "count": 7
+   },
+   {
+    "reason": "No closed top face for a cup to seal on",
+    "count": 4
+   },
+   {
+    "reason": "A soft arm cannot hold a member stiffly along the seat axis",
+    "count": 3
+   },
+   {
+    "reason": "Opens narrower than the object",
+    "count": 2
+   },
+   {
+    "reason": "Heavier than the arm payload limit [assumed]",
+    "count": 1
+   }
+  ]
+ },
+ "matrix": {
+  "steps": [
+   "insert_coupling",
+   "tighten_coupling"
+  ],
+  "rows": [
+   {
+    "effector_id": "ba0cc54331ca68ed6118c26302dc007b446c213c1d258f36631047ac5a2f05c8",
+    "display_name": "Designed four-finger hand, 3 joints per finger b56a",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "physics_unreliable": 1,
+       "slip": 2
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "a4b30af09ff1818c87fcc9683805da8354923ecb0f35a77b14165fa5851bc3fa",
+    "display_name": "Designed three-finger hand, 2 joints per finger 3e58",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "criterion_not_met": 1,
+       "slip": 2
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "f4363e74967e4429fc2203073f9a2f6e8eed447a156149eaf424544d589cef8d",
+    "display_name": "Four-finger 16-joint hand, pinch",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "criterion_not_met": 2,
+       "physics_unreliable": 1
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "e0152a5f29e1756ccd2ed7b3602b13ce3a4d3a80d1fe1709d383db30284f82b7",
+    "display_name": "Four-finger 16-joint hand, power grasp",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "physics_unreliable": 2,
+       "slip": 1
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "b8534fd47e34620160e172f1831f7d0d12b3bb3434e578e6231c52b79635d66b",
+    "display_name": "Parallel jaw, stock blade: Pipe coupling",
+    "family_title": "Parallel jaw",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "02405ccb8d6393b7ca149262b1d03aad7a153238ce0bc32ea1d3eacad7657d39",
+    "display_name": "Two-finger linkage gripper of a cobot arm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "twist",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "79372f1ed2ab4e3a5467c38ed239aa0795a8df3e5ce6af900af10a5a3e252050",
+    "display_name": "Two-finger parallel gripper, fin-ray pads",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "d6e87ec5705a8c93944dfc2db4945e98e2499a9aa761b0cc801420e51d5ec0ad",
+    "display_name": "Designed four-finger swinging hook gripper 052c",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.6667,
+      "n": 3,
+      "successes": 2,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "criterion_not_met": 1
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "251cbe9cc23c1ea18d77c6143d68090fce2a1837927f826a7bcc9bd430de8a81",
+    "display_name": "Designed three-digit segmented tentacle 90e8",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.6667,
+      "n": 3,
+      "successes": 2,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "criterion_not_met": 1
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "300d169b6786c96007dbe4ce8c0fea66549c0e081cfcfe3f3fe07d6e46ec6a3f",
+    "display_name": "Five-finger 18-actuator hand, pinch",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.6667,
+      "n": 3,
+      "successes": 2,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "criterion_not_met": 1
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "e72e88518c0ebe7a74ec5db104b671180e9dbb5b51d0b11045814506657f31bf",
+    "display_name": "Suction cup, 25 mm bellows",
+    "family_title": "Suction cup",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.6667,
+      "n": 3,
+      "successes": 2,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "criterion_not_met": 1
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "pruned",
+      "reason": "pipe_coupling (a coupling) has an open top; a cup cannot seal on it"
+     }
+    }
+   },
+   {
+    "effector_id": "f7faa3ddd45fee96149330bbf1bc6cd179305044806e9f178ed0735f6f184b80",
+    "display_name": "Two-finger adaptive linkage gripper, 85 mm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.6667,
+      "n": 3,
+      "successes": 2,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 1
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "d3b2b71d424b8c16205262a466257f916bc6e5e18f6b5873b0045f5632db2fe1",
+    "display_name": "Designed three-digit segmented tentacle f293",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.3333,
+      "n": 3,
+      "successes": 1,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "criterion_not_met": 2
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "890c6cb500dacbda950e3a31a2b543d39b89da3c2dfa1a61e7ae5c17cb25f65e",
+    "display_name": "Designed three-finger hand, 1 joint per finger ca8b",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.3333,
+      "n": 3,
+      "successes": 1,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "criterion_not_met": 2
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "6d286bacbd7431187a1a4bd5a48d194ea5e59399afb0a9e2227332f4fe006cf7",
+    "display_name": "Force-controlled parallel gripper, 48 mm stroke",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.3333,
+      "n": 3,
+      "successes": 1,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "criterion_not_met": 2
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "f2ea72dff094ac3680a7b59e05a96a2e9bc4d8191c7bfee56d30f1755987dff2",
+    "display_name": "Industrial servo parallel gripper, 110 mm stroke",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.3333,
+      "n": 3,
+      "successes": 1,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "criterion_not_met": 2
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "9dbe8879e66bd4a935e6db502db88cdb0ce74390f469ada567cc93eb165b5b58",
+    "display_name": "Three-finger adaptive gripper, pinch",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.3333,
+      "n": 3,
+      "successes": 1,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "criterion_not_met": 2
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "730fd283dd6b7dd046711dfef0b73a64f6a577e2cc7a643ee6affb86f74ed0aa",
+    "display_name": "Three-finger adaptive gripper, power grasp",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.3333,
+      "n": 3,
+      "successes": 1,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "criterion_not_met": 2
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "9aff5d8ef53e119ab1943eef6d8ba55af4795f806c1a2e111b89c7c0444c770b",
+    "display_name": "Two-finger parallel cobot hand, 80 mm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.3333,
+      "n": 3,
+      "successes": 1,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "criterion_not_met": 2
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "a03002d6c5e1107f0bef73bc8cf24cd90b390550654aaa5d9e8899933971f6d7",
+    "display_name": "Two-finger parallel gripper, rigid pads A",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.3333,
+      "n": 3,
+      "successes": 1,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "criterion_not_met": 2
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "7d8ca167a7b3a93e3461ebca357e274ec9c9ca4fa9c2f4e50daa4c0a5e027724",
+    "display_name": "Angular-jaw gripper of an open hobby arm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "constraint_exceeded": 3
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "25bb68ef395b04b7dddcb8a3adcae328743627edf36160b0ac26e75050f0dc27",
+    "display_name": "Designed four-finger hand, 1 joint per finger e352",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "d4997bd4b38665bca7af77aeef09cc396279ecd231787f9df5fa34aa37fb5996",
+    "display_name": "Designed three-finger hand, 2 joints per finger d55e",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "6148cfd23eae2b2e8959cc78a8c2b6ef324c0878a66bd0eee45e4a4105e20cb7",
+    "display_name": "Designed three-finger sliding hook gripper da49",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "bc347dd620c711c06e02bbf5b6c610413ae5b0ac8b182fdbb98f5ae997e177af",
+    "display_name": "Five-finger 18-actuator hand, power grasp",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "594c4f4d5088689c599fdd9884d2675a7a3d69f8f7df8489ef57b6484db711f0",
+    "display_name": "Five-finger 22-joint hand, pinch",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "physics_unreliable": 3
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "physics_unreliable": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "a0fc12482a70670906acabab94f5bc4b91ebbbff57fe669e9725afd57c80c75e",
+    "display_name": "Five-finger 22-joint hand, power grasp",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "constraint_exceeded": 2,
+       "criterion_not_met": 1
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "4a4d47cd94ec8da2baa50caf43de98b4bf19a2f33b5ee5032c093fd8fadcbe41",
+    "display_name": "Parallel jaw, configurator imprint: Pipe coupling",
+    "family_title": "Parallel jaw",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "68909f7b5f9b84a49d1f8b6cb353f67ddba7b396484768e6f2bef30ab362b005",
+    "display_name": "Parallel jaw, flat pad: Pipe coupling",
+    "family_title": "Parallel jaw",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "5f28e092f268ff12c38c8c8a9da33cf6520bc235ddf0f15eef85705bf5abaa0d",
+    "display_name": "Rack-and-pinion parallel gripper for an open hobby arm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "1c0215479859373feed025f8c8e3697830191fbbcded36d2720c98cf3f59c352",
+    "display_name": "Servo screwdriver attachment for a hobby arm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "pruned",
+      "reason": "its capability tags do not include insert"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "7f12d546e0d7714e3d2aae831d9ea52eb2494283c1ccd5487920ac69fa27a720",
+    "display_name": "Servo-driven four-finger hand, 13 actuators, pinch",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "physics_unreliable": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "2f59fe9db92cd4baa4bcc418531f685100bc2ce00459fe887fe591b7f4d5fd65",
+    "display_name": "Servo-driven four-finger hand, 13 actuators, power grasp",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "constraint_exceeded": 3
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "e754a0d67325f2100c98c2f9af46bb60c49421f256a2026895fb59bcf82e547d",
+    "display_name": "Soft arm, 12 segments, 140 mm",
+    "family_title": "Soft arm",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "pruned",
+      "reason": "a soft arm cannot hold a member stiffly along the seat axis"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "physics_unreliable": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "743fc0bc1efc93c288065cff91b147fd993ad974831e50b7617f7f15a0ab66fc",
+    "display_name": "Soft arm, 16 segments, 160 mm",
+    "family_title": "Soft arm",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "pruned",
+      "reason": "a soft arm cannot hold a member stiffly along the seat axis"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "physics_unreliable": 1,
+       "slip": 2
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "2f5e4f974b13a6445127a6afead695a9e58a54cdeb12a3101724db21f6b368e9",
+    "display_name": "Soft arm, 20 soft segments, 180 mm",
+    "family_title": "Soft arm",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "pruned",
+      "reason": "a soft arm cannot hold a member stiffly along the seat axis"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "physics_unreliable": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "f0b6543ba012ad8f54c8860c61407708f1bdfaf1d1b395d00a64ada8e883d6de",
+    "display_name": "Suction cup, 10 mm bellows",
+    "family_title": "Suction cup",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "pruned",
+      "reason": "pipe_coupling (a coupling) has an open top; a cup cannot seal on it"
+     }
+    }
+   },
+   {
+    "effector_id": "3907bc284d9e2c3399ddb8b45b1bf94dbb3b0ef0672705c6d90724839ecf7186",
+    "display_name": "Suction cup, 16 mm bellows",
+    "family_title": "Suction cup",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "pruned",
+      "reason": "pipe_coupling (a coupling) has an open top; a cup cannot seal on it"
+     }
+    }
+   },
+   {
+    "effector_id": "a5d7b1667b4f0d6582a36df49b9e600eeedc31f54dc883ddf7803fe113091f1d",
+    "display_name": "Suction cup, 40 mm bellows",
+    "family_title": "Suction cup",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "pruned",
+      "reason": "pipe_coupling (a coupling) has an open top; a cup cannot seal on it"
+     }
+    }
+   },
+   {
+    "effector_id": "ba4075426cf13421509805b4367919c507f396904da831894f373d928292dd01",
+    "display_name": "Tendon-driven five-finger hand, 16 joints, pinch",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "d702e265cd1c213b47f352e50c6c3d54ec8b736f9da8714cfdf936bece063264",
+    "display_name": "Tendon-driven five-finger hand, 16 joints, power grasp",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "constraint_exceeded": 1,
+       "criterion_not_met": 2
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "52613f2b72143b61b490ddfc05c4e3ed38c49de7005b77f07a5ccbfada0ab476",
+    "display_name": "Two-finger adaptive gripper, pinch",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "bbb8214caaf4a70aac3e2c08331f0166c12470bf97db57db00dc834a77ff4dd1",
+    "display_name": "Two-finger adaptive gripper, power grasp",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "19349473603b229ce8676b46cd97598dc1cd5b463f8f801d4455e1a7b01ba3e2",
+    "display_name": "Two-finger parallel gripper, teleop-arm fingers",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "insert_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tighten_coupling": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "twist",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "carried"
+     }
+    }
+   }
+  ]
+ },
+ "combinations": {
+  "counts": {
+   "single": 36,
+   "tool_change": 9,
+   "multi_head": 4,
+   "multi_head_geometry_searched": 6
+  },
+  "rejected": [
+   {
+    "label": "",
+    "reason": "no bracket layout clears: switching to head 1 at the home pose swings the heads through pipe_coupling (13 of 24 layouts); the two heads overlap on the bracket (9 of 24 layouts); a head or an adapter reaches 45 mm above the flange's mounting face within the arm's last link (1 of 24 layouts)"
+   },
+   {
+    "label": "",
+    "reason": "no bracket layout clears: switching to head 1 at the home pose swings the heads through pipe_coupling (16 of 24 layouts); the two heads overlap on the bracket (6 of 24 layouts); a head or an adapter reaches 45 mm above the flange's mounting face within the arm's last link (1 of 24 layouts)"
+   }
+  ]
+ },
+ "finalists": [
+  {
+   "setup_id": "48274cb2290cdf2e9ec0ba57d02a4a3d10e580eecbd471cfa4a455f4a327b7a0",
+   "kind": "multi_head",
+   "kind_title": "Two-tool head",
+   "label": "Two-tool head: Two-finger parallel + Two-finger linkage",
+   "tools": [
+    "Two-finger parallel gripper, fin-ray pads",
+    "Two-finger linkage gripper of a cobot arm"
+   ],
+   "completion_rate": 1.0,
+   "completed_runs": 8,
+   "n_runs": 8,
+   "fidelity": "approximation",
+   "stops_at": null,
+   "cycle_time_s": 33.86,
+   "roles": [
+    "recommended"
+   ],
+   "eligible": true,
+   "reason": null,
+   "tool_details": [
+    {
+     "index": 0,
+     "effector_id": "79372f1ed2ab4e3a5467c38ed239aa0795a8df3e5ce6af900af10a5a3e252050",
+     "display_name": "Two-finger parallel gripper, fin-ray pads",
+     "family": "catalog_gripper",
+     "family_title": "Industrial gripper",
+     "fidelity": "rigid",
+     "off_the_shelf": true
+    },
+    {
+     "index": 1,
+     "effector_id": "02405ccb8d6393b7ca149262b1d03aad7a153238ce0bc32ea1d3eacad7657d39",
+     "display_name": "Two-finger linkage gripper of a cobot arm",
+     "family": "catalog_gripper",
+     "family_title": "Industrial gripper",
+     "fidelity": "rigid",
+     "off_the_shelf": true
+    }
+   ],
+   "step_success": {
+    "insert_coupling": 1.0,
+    "tighten_coupling": 1.0
+   },
+   "weakest_step": {
+    "step_id": "insert_coupling",
+    "success_rate": 1.0
+   },
+   "complexity": {
+    "n_tools": 2,
+    "n_actuators": 2,
+    "total_mass_kg": 2.669,
+    "n_changes": 1,
+    "bracket": true
+   },
+   "payload_kg": 2.669,
+   "failure_modes": {},
+   "stops_at_detail": {}
+  },
+  {
+   "setup_id": "be1f80d0b0453ada3e03f2d09f674eb9f150dcba1afd17e049ea60b95ac99f48",
+   "kind": "tool_change",
+   "kind_title": "Tool change",
+   "label": "Tool change: Two-finger parallel > Two-finger linkage",
+   "tools": [
+    "Two-finger parallel gripper, fin-ray pads",
+    "Two-finger linkage gripper of a cobot arm"
+   ],
+   "completion_rate": 1.0,
+   "completed_runs": 8,
+   "n_runs": 8,
+   "fidelity": "approximation",
+   "stops_at": null,
+   "cycle_time_s": 38.36,
+   "roles": [
+    "finalist"
+   ],
+   "eligible": true,
+   "reason": null,
+   "tool_details": [
+    {
+     "index": 0,
+     "effector_id": "79372f1ed2ab4e3a5467c38ed239aa0795a8df3e5ce6af900af10a5a3e252050",
+     "display_name": "Two-finger parallel gripper, fin-ray pads",
+     "family": "catalog_gripper",
+     "family_title": "Industrial gripper",
+     "fidelity": "rigid",
+     "off_the_shelf": true
+    },
+    {
+     "index": 1,
+     "effector_id": "02405ccb8d6393b7ca149262b1d03aad7a153238ce0bc32ea1d3eacad7657d39",
+     "display_name": "Two-finger linkage gripper of a cobot arm",
+     "family": "catalog_gripper",
+     "family_title": "Industrial gripper",
+     "fidelity": "rigid",
+     "off_the_shelf": true
+    }
+   ],
+   "step_success": {
+    "insert_coupling": 1.0,
+    "tighten_coupling": 1.0
+   },
+   "weakest_step": {
+    "step_id": "insert_coupling",
+    "success_rate": 1.0
+   },
+   "complexity": {
+    "n_tools": 2,
+    "n_actuators": 2,
+    "total_mass_kg": 2.922,
+    "n_changes": 1,
+    "bracket": false
+   },
+   "payload_kg": 2.07,
+   "failure_modes": {},
+   "stops_at_detail": {}
+  },
+  {
+   "setup_id": "6ca596b8db6114728aa769892e4f41b8c265d38975e4007e94802d87ace1fdc4",
+   "kind": "tool_change",
+   "kind_title": "Tool change",
+   "label": "Tool change: Parallel jaw > Two-finger linkage gripper",
+   "tools": [
+    "Parallel jaw, stock blade: Pipe coupling",
+    "Two-finger linkage gripper of a cobot arm"
+   ],
+   "completion_rate": 0.625,
+   "completed_runs": 5,
+   "n_runs": 8,
+   "fidelity": "approximation",
+   "stops_at": "insert_coupling",
+   "cycle_time_s": 38.36,
+   "roles": [
+    "finalist"
+   ],
+   "eligible": true,
+   "reason": null,
+   "tool_details": [
+    {
+     "index": 0,
+     "effector_id": "b8534fd47e34620160e172f1831f7d0d12b3bb3434e578e6231c52b79635d66b",
+     "display_name": "Parallel jaw, stock blade: Pipe coupling",
+     "family": "parallel_jaw",
+     "family_title": "Parallel jaw",
+     "fidelity": "rigid",
+     "off_the_shelf": true
+    },
+    {
+     "index": 1,
+     "effector_id": "02405ccb8d6393b7ca149262b1d03aad7a153238ce0bc32ea1d3eacad7657d39",
+     "display_name": "Two-finger linkage gripper of a cobot arm",
+     "family": "catalog_gripper",
+     "family_title": "Industrial gripper",
+     "fidelity": "rigid",
+     "off_the_shelf": true
+    }
+   ],
+   "step_success": {
+    "insert_coupling": 0.625,
+    "tighten_coupling": 0.625
+   },
+   "weakest_step": {
+    "step_id": "insert_coupling",
+    "success_rate": 0.625
+   },
+   "complexity": {
+    "n_tools": 2,
+    "n_actuators": 2,
+    "total_mass_kg": 1.615,
+    "n_changes": 1,
+    "bracket": false
+   },
+   "payload_kg": 1.101,
+   "failure_modes": {
+    "criterion_not_met": 3,
+    "not_reached": 3
+   },
+   "stops_at_detail": {
+    "insert_coupling": {
+     "runs": 3,
+     "failure_modes": {
+      "criterion_not_met": 3
+     }
+    }
+   }
+  },
+  {
+   "setup_id": "5367b08cfd9757334f9c396a60276bfa411aa86283cd970d44f8c87fcd63ba09",
+   "kind": "single",
+   "kind_title": "Single tool",
+   "label": "Parallel jaw, stock blade: Pipe coupling",
+   "tools": [
+    "Parallel jaw, stock blade: Pipe coupling"
+   ],
+   "completion_rate": 0.0,
+   "completed_runs": 0,
+   "n_runs": 8,
+   "fidelity": "approximation",
+   "stops_at": "tighten_coupling",
+   "cycle_time_s": null,
+   "roles": [
+    "best_single"
+   ],
+   "eligible": false,
+   "reason": "never completed the task (stops at tighten_coupling in 5/8 runs: slip 5x)",
+   "tool_details": [
+    {
+     "index": 0,
+     "effector_id": "b8534fd47e34620160e172f1831f7d0d12b3bb3434e578e6231c52b79635d66b",
+     "display_name": "Parallel jaw, stock blade: Pipe coupling",
+     "family": "parallel_jaw",
+     "family_title": "Parallel jaw",
+     "fidelity": "rigid",
+     "off_the_shelf": true
+    }
+   ],
+   "step_success": {
+    "insert_coupling": 0.625,
+    "tighten_coupling": 0.0
+   },
+   "weakest_step": {
+    "step_id": "tighten_coupling",
+    "success_rate": 0.0
+   },
+   "complexity": {
+    "n_tools": 1,
+    "n_actuators": 1,
+    "total_mass_kg": 0.414,
+    "n_changes": 0,
+    "bracket": false
+   },
+   "payload_kg": 0.414,
+   "failure_modes": {
+    "slip": 5,
+    "criterion_not_met": 3,
+    "not_reached": 3
+   },
+   "stops_at_detail": {
+    "tighten_coupling": {
+     "runs": 5,
+     "failure_modes": {
+      "slip": 5
+     }
+    },
+    "insert_coupling": {
+     "runs": 3,
+     "failure_modes": {
+      "criterion_not_met": 3
+     }
+    }
+   }
+  }
+ ],
+ "recommendation": {
+  "setup_id": "48274cb2290cdf2e9ec0ba57d02a4a3d10e580eecbd471cfa4a455f4a327b7a0",
+  "kind": "multi_head",
+  "kind_title": "Two-tool head",
+  "label": "Two-tool head: Two-finger parallel + Two-finger linkage",
+  "tools": [
+   {
+    "index": 0,
+    "effector_id": "79372f1ed2ab4e3a5467c38ed239aa0795a8df3e5ce6af900af10a5a3e252050",
+    "display_name": "Two-finger parallel gripper, fin-ray pads",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "caveat": null
+   },
+   {
+    "index": 1,
+    "effector_id": "02405ccb8d6393b7ca149262b1d03aad7a153238ce0bc32ea1d3eacad7657d39",
+    "display_name": "Two-finger linkage gripper of a cobot arm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "caveat": null
+   }
+  ],
+  "completion_rate": 1.0,
+  "completed_runs": 8,
+  "n_runs": 8,
+  "fidelity": "approximation",
+  "stops_at": null,
+  "cycle_time_s": 33.86,
+  "why": "Ties on completion (100%) and the weakest step, with the shorter cycle (33.9 s against 38.4 s), and is simpler: 2669 g against 2922 g.",
+  "caveat": "approximation: verify on hardware",
+  "verify_on_hardware": true,
+  "geometry": {
+   "mounts": [
+    {
+     "angle_deg": -60.0,
+     "lateral_mm": 0.0,
+     "spin_deg": 0.0,
+     "standoff_mm": 70.0
+    },
+    {
+     "angle_deg": 60.0,
+     "lateral_mm": 0.0,
+     "spin_deg": 0.0,
+     "standoff_mm": 70.0
+    }
+   ],
+   "clearance_mm": 17.78,
+   "present_s": 1.5
+  },
+  "steps": [
+   {
+    "step_id": "insert_coupling",
+    "primitive": "insert",
+    "primitive_used": "insert",
+    "tool": 0,
+    "tool_label": "Two-finger parallel gripper, fin-ray pads",
+    "success_rate": 1.0,
+    "fidelity": "approximation",
+    "caveats": [
+     "Threads are an approximation: a helical joint with a torque ramp; no thread flanks, cross-threading or galling. A screen, not a promise."
+    ],
+    "verify_on_hardware": true
+   },
+   {
+    "step_id": "tighten_coupling",
+    "primitive": "twist",
+    "primitive_used": "twist",
+    "tool": 1,
+    "tool_label": "Two-finger linkage gripper of a cobot arm",
+    "success_rate": 1.0,
+    "fidelity": "approximation",
+    "caveats": [
+     "Threads are an approximation: a helical joint with a torque ramp; no thread flanks, cross-threading or galling. A screen, not a promise."
+    ],
+    "verify_on_hardware": true
+   }
+  ],
+  "runner_up_rigid": {
+   "label": null,
+   "basis": "no rigid-tier setup is eligible"
+  },
+  "versus_best_single": {
+   "same_setup": false,
+   "completion_delta": 1.0,
+   "cycle_delta_s": 1.97,
+   "extra_tools": 1
+  }
+ },
+ "best_single": {
+  "setup_id": "5367b08cfd9757334f9c396a60276bfa411aa86283cd970d44f8c87fcd63ba09",
+  "kind": "single",
+  "kind_title": "Single tool",
+  "label": "Parallel jaw, stock blade: Pipe coupling",
+  "tools": [
+   "Parallel jaw, stock blade: Pipe coupling"
+  ],
+  "completion_rate": 0.0,
+  "completed_runs": 0,
+  "n_runs": 8,
+  "fidelity": "approximation",
+  "stops_at": "tighten_coupling",
+  "cycle_time_s": null,
+  "roles": [
+   "best_single"
+  ],
+  "eligible": false,
+  "reason": "never completed the task (stops at tighten_coupling in 5/8 runs: slip 5x)",
+  "tool_details": [
+   {
+    "index": 0,
+    "effector_id": "b8534fd47e34620160e172f1831f7d0d12b3bb3434e578e6231c52b79635d66b",
+    "display_name": "Parallel jaw, stock blade: Pipe coupling",
+    "family": "parallel_jaw",
+    "family_title": "Parallel jaw",
+    "fidelity": "rigid",
+    "off_the_shelf": true
+   }
+  ],
+  "step_success": {
+   "insert_coupling": 0.625,
+   "tighten_coupling": 0.0
+  },
+  "weakest_step": {
+   "step_id": "tighten_coupling",
+   "success_rate": 0.0
+  },
+  "complexity": {
+   "n_tools": 1,
+   "n_actuators": 1,
+   "total_mass_kg": 0.414,
+   "n_changes": 0,
+   "bracket": false
+  },
+  "payload_kg": 0.414,
+  "failure_modes": {
+   "slip": 5,
+   "criterion_not_met": 3,
+   "not_reached": 3
+  },
+  "stops_at_detail": {
+   "tighten_coupling": {
+    "runs": 5,
+    "failure_modes": {
+     "slip": 5
+    }
+   },
+   "insert_coupling": {
+    "runs": 3,
+    "failure_modes": {
+     "criterion_not_met": 3
+    }
+   }
+  }
+ },
+ "no_winner": null,
+ "sensitivity": {
+  "recommendation_changes": false,
+  "order_changes": 0,
+  "n_pairs": 9,
+  "tool_change_s": [
+   3.0,
+   6.0,
+   12.0
+  ],
+  "present_s": [
+   0.75,
+   1.5,
+   3.0
+  ],
+  "note": "change times are a fixed clock advance, so cycle times are recomputed exactly from the same runs"
+ },
+ "constants": [
+  {
+   "key": "roll_torque_nm",
+   "value": 15.0,
+   "unit": "N m",
+   "note": "wrist roll torque limit",
+   "tag": "assumed"
+  },
+  {
+   "key": "roll_speed_max_deg_s",
+   "value": 180.0,
+   "unit": "deg/s",
+   "note": "wrist roll speed cap",
+   "tag": "assumed"
+  },
+  {
+   "key": "tool_change_s",
+   "value": 6.0,
+   "unit": "s",
+   "note": "automatic tool change time (a fixed clock advance)",
+   "tag": "assumed"
+  },
+  {
+   "key": "present_s",
+   "value": 1.5,
+   "unit": "s",
+   "note": "multi-tool head switch time (a fixed tilt, not simulated)",
+   "tag": "assumed"
+  },
+  {
+   "key": "changer_master_kg",
+   "value": 0.25,
+   "unit": "kg",
+   "note": "tool changer master plate (stays on the wrist)",
+   "tag": "assumed"
+  },
+  {
+   "key": "changer_tool_plate_kg",
+   "value": 0.1,
+   "unit": "kg",
+   "note": "tool changer plate on every tool",
+   "tag": "assumed"
+  },
+  {
+   "key": "changer_stack_mm",
+   "value": 25.0,
+   "unit": "mm",
+   "note": "tool changer stack height",
+   "tag": "assumed"
+  },
+  {
+   "key": "arm_payload_kg",
+   "value": 3.0,
+   "unit": "kg",
+   "note": "largest tool stack the arm may carry; heavier setups are refused",
+   "tag": "assumed"
+  },
+  {
+   "key": "bracket_density_kg_m3",
+   "value": 1300.0,
+   "unit": "kg/m^3",
+   "note": "printed carbon-filled polymer bracket",
+   "tag": "assumed"
+  },
+  {
+   "key": "placement_error_mm",
+   "value": 2.0,
+   "unit": "mm",
+   "note": "per-object placement error of the condition grid (uniform)",
+   "tag": "assumed"
+  },
+  {
+   "key": "simplicity_margin",
+   "value": 0.05,
+   "unit": "rate",
+   "note": "completion-rate tie for the simplicity rule",
+   "tag": "assumed"
+  },
+  {
+   "key": "cycle_margin",
+   "value": 0.1,
+   "unit": "fraction",
+   "note": "a simpler setup may be this much slower",
+   "tag": "assumed"
+  },
+  {
+   "key": "sweep_clearance_mm",
+   "value": 5.0,
+   "unit": "mm",
+   "note": "multi-tool head swept-volume clearance",
+   "tag": "assumed"
+  }
+ ],
+ "fixed_caveats": [
+  "The floating wrist abstracts the arm: there is no arm reach or arm collision model.",
+  "Presenting a multi-tool head is a fixed tilt per segment plus a fixed time, not a simulated motion.",
+  "A tool change is a fixed time, not a simulated docking.",
+  "Controllers are scripted and open-loop on the placement error.",
+  "A recommendation is a simulation ranking under the stated conditions, not a hardware guarantee."
+ ],
+ "lanes": [
+  {
+   "id": "recommended",
+   "title": "Recommended",
+   "setup_id": "48274cb2290cdf2e9ec0ba57d02a4a3d10e580eecbd471cfa4a455f4a327b7a0",
+   "kind": "multi_head",
+   "label": "Two-tool head: Two-finger parallel + Two-finger linkage",
+   "replay": "studio/replays/h2/recommended",
+   "condition_id": "nominal",
+   "seed": 0,
+   "condition_text": "nominal placement, seed 0",
+   "traj_sha": "beb66c073b257f054517b1c456b28c9539e830b86f1c7653ff8b3a45893c2559",
+   "completed": true,
+   "cycle_time_s": 33.864,
+   "fps": 30,
+   "n_frames": 1016,
+   "duration_s": 33.833,
+   "bytes": 382540,
+   "asset_bytes": 67580,
+   "segments": [
+    {
+     "index": 0,
+     "tool": 0,
+     "tool_label": "Two-finger parallel gripper, fin-ray pads",
+     "start_s": 0.0,
+     "end_s": 6.892,
+     "change": "none",
+     "change_s": 0.0,
+     "change_start_s": 0.0,
+     "steps": [
+      "insert_coupling"
+     ]
+    },
+    {
+     "index": 1,
+     "tool": 1,
+     "tool_label": "Two-finger linkage gripper of a cobot arm",
+     "start_s": 8.392,
+     "end_s": 33.864,
+     "change": "present",
+     "change_s": 1.5,
+     "change_start_s": 6.892,
+     "steps": [
+      "tighten_coupling"
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "step_id": "insert_coupling",
+     "primitive": "insert",
+     "tool": 0,
+     "start_s": 0.0,
+     "duration_s": 6.892,
+     "success": true,
+     "failure_mode": null,
+     "fidelity": "approximation",
+     "quantities": {
+      "angle_deg": -0.002,
+      "depth_mm": 4.0,
+      "force_n": 6.451,
+      "jam": 0.0,
+      "lateral_force_n": 0.625,
+      "penetration_mm": 0.093,
+      "turns": -0.0
+     }
+    },
+    {
+     "step_id": "tighten_coupling",
+     "primitive": "twist",
+     "tool": 1,
+     "start_s": 8.392,
+     "duration_s": 25.472,
+     "success": true,
+     "failure_mode": null,
+     "fidelity": "approximation",
+     "quantities": {
+      "angle_deg": 268.918,
+      "depth_mm": 3.774,
+      "force_n": 13.163,
+      "penetration_mm": 0.478,
+      "slip_deg": 2.147,
+      "torque_nm": 3.103,
+      "turns": 0.747
+     }
+    }
+   ],
+   "credits": [
+    {
+     "text": "Simulation model of an open-source industrial gripper, MIT, modified",
+     "anchor": "effectors"
+    },
+    {
+     "text": "Simulation model of an open-source industrial gripper, BSD-3-Clause, modified",
+     "anchor": "library"
+    }
+   ]
+  },
+  {
+   "id": "best_single",
+   "title": "Best single off-the-shelf",
+   "setup_id": "5367b08cfd9757334f9c396a60276bfa411aa86283cd970d44f8c87fcd63ba09",
+   "kind": "single",
+   "label": "Parallel jaw, stock blade: Pipe coupling",
+   "replay": "studio/replays/h2/best_single",
+   "condition_id": "nominal",
+   "seed": 0,
+   "condition_text": "nominal placement, seed 0",
+   "traj_sha": "a73d7612dbe204a816b0190e5d5a5dd1127c47fed871e95c42aacc160ba06f60",
+   "completed": false,
+   "cycle_time_s": 31.894,
+   "fps": 30,
+   "n_frames": 957,
+   "duration_s": 31.867,
+   "bytes": 139957,
+   "asset_bytes": 47432,
+   "segments": [
+    {
+     "index": 0,
+     "tool": 0,
+     "tool_label": "Parallel jaw, stock blade: Pipe coupling",
+     "start_s": 0.0,
+     "end_s": 31.894,
+     "change": "none",
+     "change_s": 0.0,
+     "change_start_s": 0.0,
+     "steps": [
+      "insert_coupling",
+      "tighten_coupling"
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "step_id": "insert_coupling",
+     "primitive": "insert",
+     "tool": 0,
+     "start_s": 0.0,
+     "duration_s": 6.892,
+     "success": true,
+     "failure_mode": null,
+     "fidelity": "approximation",
+     "quantities": {
+      "angle_deg": -0.001,
+      "depth_mm": 4.0,
+      "force_n": 4.449,
+      "jam": 0.0,
+      "lateral_force_n": 0.256,
+      "penetration_mm": 0.072,
+      "turns": -0.0
+     }
+    },
+    {
+     "step_id": "tighten_coupling",
+     "primitive": "twist",
+     "tool": 0,
+     "start_s": 6.892,
+     "duration_s": 25.002,
+     "success": false,
+     "failure_mode": "slip",
+     "fidelity": "approximation",
+     "quantities": {
+      "angle_deg": 42.437,
+      "depth_mm": 3.547,
+      "force_n": 13.539,
+      "penetration_mm": 0.314,
+      "slip_deg": 86.429,
+      "torque_nm": 0.651,
+      "turns": 0.118
+     }
+    }
+   ],
+   "credits": [
+    {
+     "text": "An open-source parallel gripper, CC BY 4.0, modified",
+     "anchor": "gripper"
+    }
+   ]
+  }
+ ],
+ "build_pack": {
+  "zip": "studio/h2/build_pack.zip",
+  "bytes": 156888,
+  "sha256": "5665a286080b42243c6ece488747e9a334480bbf491221fcf81b8b49b423d909",
+  "setup_id": "48274cb2290cdf2e9ec0ba57d02a4a3d10e580eecbd471cfa4a455f4a327b7a0",
+  "label": "Two-tool head: Two-finger parallel + Two-finger linkage",
+  "for": "recommended",
+  "files": [
+   {
+    "path": "ASSEMBLY.md",
+    "kind": "notes",
+    "format": "md",
+    "license": "CC0-1.0",
+    "bytes": 2587
+   },
+   {
+    "path": "CREDITS.txt",
+    "kind": "licence",
+    "format": "txt",
+    "license": "CC0-1.0",
+    "bytes": 1191
+   },
+   {
+    "path": "README.txt",
+    "kind": "notes",
+    "format": "txt",
+    "license": "CC0-1.0",
+    "bytes": 1524
+   },
+   {
+    "path": "bom.csv",
+    "kind": "bom",
+    "format": "csv",
+    "license": "CC0-1.0",
+    "bytes": 621
+   },
+   {
+    "path": "bracket.stl",
+    "kind": "bracket",
+    "format": "stl",
+    "license": "CC0-1.0",
+    "bytes": 168284
+   },
+   {
+    "path": "certificate.html",
+    "kind": "certificate",
+    "format": "html",
+    "license": "CC0-1.0",
+    "bytes": 9801
+   },
+   {
+    "path": "licences/tool0_LICENSE.txt",
+    "kind": "licence",
+    "format": "txt",
+    "license": "MIT",
+    "bytes": 1106
+   },
+   {
+    "path": "licences/tool1_LICENSE.txt",
+    "kind": "licence",
+    "format": "txt",
+    "license": "BSD-3-Clause",
+    "bytes": 1522
+   },
+   {
+    "path": "mjcf/meshes/tool0_06f366e008fc.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "MIT",
+    "bytes": 47884
+   },
+   {
+    "path": "mjcf/meshes/tool0_09e7a73e0d2e.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "MIT",
+    "bytes": 3984
+   },
+   {
+    "path": "mjcf/meshes/tool0_3c7632c7898b.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "MIT",
+    "bytes": 3684
+   },
+   {
+    "path": "mjcf/meshes/tool0_40ac89a5f09d.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "MIT",
+    "bytes": 3984
+   },
+   {
+    "path": "mjcf/meshes/tool0_81afb36d64fd.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "MIT",
+    "bytes": 17684
+   },
+   {
+    "path": "mjcf/meshes/tool0_84dea871450b.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "MIT",
+    "bytes": 3684
+   },
+   {
+    "path": "mjcf/meshes/tool1_8d7077d007c5.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "BSD-3-Clause",
+    "bytes": 5084
+   },
+   {
+    "path": "mjcf/meshes/tool1_8d9a1c8a1ef0.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "BSD-3-Clause",
+    "bytes": 8384
+   },
+   {
+    "path": "mjcf/meshes/tool1_924096430926.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "BSD-3-Clause",
+    "bytes": 5084
+   },
+   {
+    "path": "mjcf/meshes/tool1_a9f884861a3c.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "BSD-3-Clause",
+    "bytes": 8384
+   },
+   {
+    "path": "mjcf/meshes/tool1_d03a740e3af6.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "BSD-3-Clause",
+    "bytes": 105584
+   },
+   {
+    "path": "mjcf/setup_tool0.xml",
+    "kind": "mjcf",
+    "format": "xml",
+    "license": "BSD-3-Clause",
+    "bytes": 26204
+   },
+   {
+    "path": "mjcf/setup_tool1.xml",
+    "kind": "mjcf",
+    "format": "xml",
+    "license": "BSD-3-Clause",
+    "bytes": 25775
+   }
+  ],
+  "links": [
+   {
+    "name": "Tool 0: Two-finger parallel gripper, fin-ray pads",
+    "url": "https://github.com/google-deepmind/mujoco_menagerie",
+    "license": "MIT",
+    "reason": "the tool's own CAD and documentation are upstream; the pack carries its simulation meshes"
+   },
+   {
+    "name": "Tool 1: Two-finger linkage gripper of a cobot arm",
+    "url": "https://github.com/google-deepmind/mujoco_menagerie",
+    "license": "BSD-3-Clause",
+    "reason": "the tool's own CAD and documentation are upstream; the pack carries its simulation meshes"
+   }
+  ],
+  "caveats": [
+   "Threads are an approximation: a helical joint with a torque ramp; no thread flanks, cross-threading or galling. A screen, not a promise.",
+   "The floating wrist abstracts the arm: there is no arm reach or arm collision model.",
+   "Presenting a multi-tool head is a fixed tilt per segment plus a fixed time, not a simulated motion.",
+   "A tool change is a fixed time, not a simulated docking.",
+   "Controllers are scripted and open-loop on the placement error.",
+   "A recommendation is a simulation ranking under the stated conditions, not a hardware guarantee."
+  ]
+ },
+ "build_pack_note": null,
+ "session": null,
+ "provenance": {
+  "code_version": "591648aa39d3",
+  "report_sha256": "e4a8e1f01859b6ddef640664c95d308dbc72d7141036ef74544bf188c85e5a57",
+  "task_id": "33599e99ac277cf20e73d6acd349b9422330a255b3fe5ea48c6442a26c3decd6",
+  "controllers": "default",
+  "evidence": "accepted",
+  "conditions": [
+   {
+    "condition_id": "nominal",
+    "seed": 0,
+    "aim_offsets_mm": {}
+   },
+   {
+    "condition_id": "place01",
+    "seed": 1,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      0.306,
+      -0.193
+     ]
+    }
+   },
+   {
+    "condition_id": "place02",
+    "seed": 2,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      0.089,
+      0.245
+     ]
+    }
+   },
+   {
+    "condition_id": "place03",
+    "seed": 3,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      -1.497,
+      -1.834
+     ]
+    }
+   },
+   {
+    "condition_id": "place04",
+    "seed": 4,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      -0.003,
+      1.467
+     ]
+    }
+   },
+   {
+    "condition_id": "place05",
+    "seed": 5,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      -1.633,
+      -1.202
+     ]
+    }
+   },
+   {
+    "condition_id": "place06",
+    "seed": 6,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      -0.225,
+      0.272
+     ]
+    }
+   },
+   {
+    "condition_id": "place07",
+    "seed": 7,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      -1.498,
+      1.477
+     ]
+    }
+   }
+  ],
+  "fairness_sha": "50b63720fa729dd50092c1e915aa839aada2f0d1013083e93d57c6b8a91480b6",
+  "workers": 4,
+  "timings": {
+   "screen_s": 260.8,
+   "combine_s": 12.9,
+   "finalists_s": 50.9,
+   "total_s": 325.3
+  },
+  "determinism": [
+   {
+    "condition": "nominal",
+    "same": true
+   },
+   {
+    "condition": "place01",
+    "same": true
+   }
+  ]
+ }
+}

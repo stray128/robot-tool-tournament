@@ -1,0 +1,94 @@
+{
+ "format": "rtt-agent-session",
+ "version": 1,
+ "session_id": "studio-f1-fixture",
+ "label": "Product mode: not part of the pre-registered experiment",
+ "kind": "recorded",
+ "events": [
+  {
+   "seq": 1,
+   "ts": "2026-10-18T12:00:00.000Z",
+   "t_s": 0,
+   "type": "session.started",
+   "session_id": "studio-f1-fixture",
+   "models": {
+    "agent": "fixture-model"
+   }
+  },
+  {
+   "seq": 2,
+   "ts": "2026-10-18T12:00:01.000Z",
+   "t_s": 1,
+   "type": "agent.message",
+   "content": "I will plan the task, then run the tournament."
+  },
+  {
+   "seq": 3,
+   "ts": "2026-10-18T12:00:01.500Z",
+   "t_s": 1.5,
+   "type": "tool.call",
+   "call_id": "c1",
+   "name": "plan_task",
+   "args": {
+    "text": "Pick a jar and twist its cap.",
+    "task_id": "2befd3fb567fbbd2a8d5b2d17ea1a6d02b8420bfcac2406cf73822a087033266"
+   }
+  },
+  {
+   "seq": 4,
+   "ts": "2026-10-18T12:00:03.000Z",
+   "t_s": 3,
+   "type": "tool.result",
+   "call_id": "c1",
+   "name": "plan_task",
+   "ok": true,
+   "result": {
+    "steps": 2,
+    "result": "valid_first_call",
+    "url": "https://example.org/never-shown"
+   }
+  },
+  {
+   "seq": 5,
+   "ts": "2026-10-18T12:00:04.000Z",
+   "t_s": 4,
+   "type": "tool.call",
+   "call_id": "c2",
+   "name": "run_task_tournament",
+   "args": {
+    "task_id": "2befd3fb567fbbd2a8d5b2d17ea1a6d02b8420bfcac2406cf73822a087033266",
+    "conditions": 8
+   }
+  },
+  {
+   "seq": 6,
+   "ts": "2026-10-18T12:01:00.000Z",
+   "t_s": 60,
+   "type": "tool.result",
+   "call_id": "c2",
+   "name": "run_task_tournament",
+   "ok": true,
+   "result": {
+    "recommended": "Tool change: Two-finger > Suction cup",
+    "completion": 0.75,
+    "finalists": [
+     1,
+     2
+    ]
+   }
+  },
+  {
+   "seq": 7,
+   "ts": "2026-10-18T12:01:01.000Z",
+   "t_s": 61,
+   "type": "session.finished",
+   "status": "completed",
+   "answer": "Use the tool change: 6 of 8 runs.",
+   "turns": 3,
+   "tool_calls": 2,
+   "spend": {
+    "spent_usd": 0.004
+   }
+  }
+ ]
+}

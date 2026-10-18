@@ -1,0 +1,116 @@
+{
+ "schema": "rtt-web-studio",
+ "version": 1,
+ "label": "Product mode: not part of the pre-registered experiment",
+ "contract": "rtt-effectors/2",
+ "code_version": "ee0fdec3a1b2",
+ "heroes": [
+  {
+   "hero": "f1",
+   "case_id": "f1_jar",
+   "title": "Jar cap",
+   "setting": "lab",
+   "use_case": "Pick a jar from the bench and twist its cap a quarter turn.",
+   "page": "studio/f1.json",
+   "task_id": "2befd3fb567fbbd2a8d5b2d17ea1a6d02b8420bfcac2406cf73822a087033266",
+   "n_steps": 2,
+   "n_candidates": 3,
+   "outcome": "recommended",
+   "headline": "A tool-change sequence completes the task in 6 of 8 runs; the best single off-the-shelf tool in 0 of 8 runs.",
+   "recommended": {
+    "setup_id": "fde114df3ffebae73e8944ab8eb636c0e48e1cf366ce542ea0170514bf2f98eb",
+    "kind": "tool_change",
+    "kind_title": "Tool change",
+    "label": "Tool change: Two-finger > Suction cup",
+    "tools": [
+     {
+      "index": 0,
+      "effector_id": "72b3a9dfa0deabd3cef3f96a4c826b56d260a02e5809267fc8875c525169ba93",
+      "display_name": "Two-finger parallel gripper, flat pads",
+      "family": "catalog_gripper",
+      "family_title": "Industrial gripper",
+      "fidelity": "rigid",
+      "off_the_shelf": true,
+      "caveat": null
+     },
+     {
+      "index": 1,
+      "effector_id": "e2034acd1aaef51ad0b561edf8c4f27ce41bcfb58fd5e45b5ff9a08e2c2d9ef9",
+      "display_name": "Suction cup, 25 mm bellows",
+      "family": "suction",
+      "family_title": "Suction cup",
+      "fidelity": "approximation",
+      "off_the_shelf": true,
+      "caveat": "Suction cup (approximation): the seal is a geometric test. Treat suction results as a screen, then verify on hardware."
+     }
+    ],
+    "completion_rate": 0.75,
+    "completed_runs": 6,
+    "n_runs": 8,
+    "fidelity": "approximation",
+    "stops_at": null,
+    "cycle_time_s": 6.03
+   },
+   "best_single": {
+    "setup_id": "3735acedc16656f2ecefa897bee16966a6e56c87fb5c3d4ece401bdfac052f6b",
+    "kind": "single",
+    "kind_title": "Single tool",
+    "label": "Two-finger parallel gripper, flat pads",
+    "tools": [
+     "Two-finger parallel gripper, flat pads"
+    ],
+    "completion_rate": 0,
+    "completed_runs": 0,
+    "n_runs": 8,
+    "fidelity": "approximation",
+    "stops_at": "twist_cap",
+    "cycle_time_s": null
+   },
+   "closest": null
+  },
+  {
+   "hero": "f2",
+   "case_id": "f2_jar",
+   "title": "Tight jar cap",
+   "setting": "lab",
+   "use_case": "Pick a jar and turn its tight cap open.",
+   "page": "studio/f2.json",
+   "task_id": "ac9873afb18bf94d25a89cc1411a1908ae4cd4be9227e1bc95fc7d8ac948e9b0",
+   "n_steps": 2,
+   "n_candidates": 3,
+   "outcome": "no_recommendation",
+   "headline": "No setup completes the task; the closest setup stops at step 2, twist the cap.",
+   "recommended": null,
+   "best_single": {
+    "setup_id": "3735acedc16656f2ecefa897bee16966a6e56c87fb5c3d4ece401bdfac052f6b",
+    "kind": "single",
+    "kind_title": "Single tool",
+    "label": "Two-finger parallel gripper, flat pads",
+    "tools": [
+     "Two-finger parallel gripper, flat pads"
+    ],
+    "completion_rate": 0,
+    "completed_runs": 0,
+    "n_runs": 8,
+    "fidelity": "approximation",
+    "stops_at": "twist_cap",
+    "cycle_time_s": null
+   },
+   "closest": {
+    "setup_id": "9f07eafba9a69b77ab1a88e9198f1ad9b7edb90722f3cb0924770ad9ad3e2aeb",
+    "kind": "single",
+    "kind_title": "Single tool",
+    "label": "Suction cup, 25 mm bellows",
+    "tools": [
+     "Two-finger parallel gripper, flat pads"
+    ],
+    "completion_rate": 0,
+    "completed_runs": 0,
+    "n_runs": 8,
+    "fidelity": "approximation",
+    "stops_at": "twist_cap",
+    "cycle_time_s": null
+   }
+  }
+ ]
+}

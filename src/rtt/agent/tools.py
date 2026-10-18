@@ -24,6 +24,12 @@ starts an effector tournament (:mod:`rtt.agent.effector_tool`). It shares the ca
 counts toward the tool calls, its jobs count toward the jobs in flight, and ``design = true``
 (Nemotron morphologies) needs the passcode and reserves its worst case before it starts. Its
 ``verdict`` is ``recommended`` or ``no_winner``, computed by :mod:`rtt.effectors.recommend`.
+
+With Studio tools (``studio``, product mode, :mod:`rtt.agent.studio_tool`), three more tools are
+registered: ``plan_task``, ``run_task_tournament`` and ``export_build_pack``. Their arguments are
+validated by the Studio object's own schemas, the passcode rule is its ``may_spend`` (``plan_task``
+is free for a recorded description), and a Studio-only session refuses every other tool but
+``cost_ledger`` as not offered. Sessions without ``studio`` are unchanged.
 """
 
 from __future__ import annotations
@@ -33,7 +39,7 @@ import threading
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
-from typing import Any, Final
+from typing import TYPE_CHECKING, Any, Final
 
 from rtt.agent import effector_tool as et
 from rtt.agent.backends import PartBackend, PartNotFoundError
@@ -69,6 +75,9 @@ from rtt.design.validate import validate
 from rtt.llm.client import CallMeta
 from rtt.llm.ledger import Ledger
 from rtt.search.base import DesignScore
+
+if TYPE_CHECKING:  # the Studio module imports this one, so it is never imported here at run time
+    from rtt.agent.studio_tool import StudioTools
 
 __all__ = ["CERT_PASS_SCORE", "PASS_THRESHOLD", "DesignEntry", "ToolOutcome", "Toolbox"]
 
@@ -186,6 +195,8 @@ class Toolbox:
         effectors: Effector tournament jobs (enables ``recommend_effector``; ``None``: not offered).
         design_cap_usd: Nemotron design spend this session may commit over all its
             ``recommend_effector(design=true)`` jobs (reservations in flight plus charges).
+        studio: Studio tools (:class:`rtt.agent.studio_tool.StudioTools`; registers ``plan_task``,
+            ``run_task_tournament`` and ``export_build_pack``; ``None``: not offered).
     """
 
     def __init__(
@@ -208,9 +219,11 @@ class Toolbox:
         clock: Callable[[], float] = time.monotonic,
         effectors: et.EffectorJobRunner | None = None,
         design_cap_usd: float = et.DESIGN_SESSION_USD,
+        studio: StudioTools | None = None,
     ) -> None:
         self.offline = offline
         self.effectors = effectors
+        self.studio = studio
         self.design_cap_usd = float(design_cap_usd)
         self.session_id = session_id
         self.part_id = part_id
@@ -245,6 +258,8 @@ class Toolbox:
             "cost_ledger": self._cost_ledger,
             "recommend_effector": self._recommend_effector,
         }
+        if studio is not None:
+            self._handlers.update(studio.bind(self))
 
     # ------------------------------------------------------------------ dispatch
 
@@ -265,12 +280,21 @@ class Toolbox:
             self.calls_used += 1
         args_dict: dict[str, Any] | None = None
         try:
-            args = validate_args(name, raw_args)
+            studio = self.studio if self.studio is not None and self.studio.owns(name) else None
+            if self.studio is not None:
+                self.studio.check_offered(name)  # a Studio-only session refuses every other tool
+            args = studio.validate(name, raw_args) if studio is not None else validate_args(name, raw_args)
             args_dict = args.model_dump()
             self._check_part(name, args)
-            if tool_spec(name).may_spend and not self._spend_free(name, args) and not self.unlocked:
+            if studio is not None:
+                spends = studio.may_spend(name, args)
+            else:
+                spends = tool_spec(name).may_spend and not self._spend_free(name, args)
+            if spends and not self.unlocked:
                 raise PasscodeRequiredError(
-                    f"{name} costs money; this session was not unlocked with the passcode"
+                    studio.passcode_text(name)
+                    if studio is not None
+                    else f"{name} costs money; this session was not unlocked with the passcode"
                 )
             result = self._handlers[name](args)
         except ArgsError as exc:
@@ -427,6 +451,8 @@ class Toolbox:
                 row["certificate_verdict"] = entry.certificate.get("verdict")
             out.append(row)
         out += [dict(v) for v in self._effector_verdicts.values()]
+        if self.studio is not None:  # one row per Studio tournament, computed by code
+            out += self.studio.verdicts()
         return out
 
     def _verdict(self, score: DesignScore) -> str:
@@ -694,7 +720,7 @@ class Toolbox:
             }
             for e in self._jobs.values()
         ]
-        return {
+        out: dict[str, Any] = {
             "spend": self.guard.snapshot(),
             "llm_by_model": by_model,
             "jobs": jobs,
@@ -702,6 +728,9 @@ class Toolbox:
             "tool_calls_left": self.calls_left,
             "caps": self.caps.to_json(),
         }
+        if self.studio is not None:
+            out["studio_caps"] = self.studio.caps.to_json()
+        return out
 
     def _design_committed(self) -> float:
         """Nemotron design spend this session has committed: reservations of design jobs in
