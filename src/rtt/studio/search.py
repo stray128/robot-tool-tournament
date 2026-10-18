@@ -405,15 +405,12 @@ def _probe_task(obj: ObjectInstance) -> TaskSpec:
     return TaskSpec("Probe", "", (obj,), (step,), source="test")
 
 
-#: What the scene builds a tool against when it picks nothing (contract CR-S5-1): a 10 mm cube.
-_PICKS_NOTHING: Final = _probe_object(
-    "probe", "part", shape="box", size_x_mm=10, size_y_mm=10, size_z_mm=10, mass_g=5
-)
-#: Probe parts a tool is measured on, in order (the first it can be built for): a 20 mm cube, the
-#: 10 mm cube, the library block, a 50 mm cube.
+#: Probe parts a tool is measured on, in order (the first it can be built for): a 20 mm cube, a
+#: 10 mm cube, the library block, a 50 mm cube. (Pruning uses the scene's own rule instead:
+#: :func:`rtt.studio.scene.build_part_for`.)
 _PROBE_PARTS: Final = (
     _probe_object("probe", "part", shape="box", size_x_mm=20, size_y_mm=20, size_z_mm=20, mass_g=50),
-    _PICKS_NOTHING,
+    _probe_object("probe", "part", shape="box", size_x_mm=10, size_y_mm=10, size_z_mm=10, mass_g=5),
     ObjectInstance.of("probe", "part", "Probe part", ref="library:block", shape="mesh"),
     _probe_object("probe", "part", shape="box", size_x_mm=50, size_y_mm=50, size_z_mm=50, mass_g=200),
 )
@@ -493,6 +490,30 @@ def _fits_part(spec: EffectorSpec, obj: ObjectInstance, task: TaskV2) -> str | N
             _FITS[key] = str(exc)
         except TemplateUnavailable as exc:
             _FITS[key] = f"the part has no physics yet ({exc})"
+    return _FITS[key]
+
+
+def _picks_nothing_refusal(
+    spec: EffectorSpec, task_spec: TaskSpec, chain: Sequence[str], task: TaskV2
+) -> str | None:
+    """Why the scene cannot build ``spec`` for a chain in which it picks nothing (``None``: it can).
+
+    The part is the scene's own choice (:func:`rtt.studio.scene.build_part_for`: the 10 mm probe if
+    the family builds on it, else the library block), so the search and the scene never disagree.
+    """
+    from rtt.effectors.scene import MOUNT_Z
+    from rtt.studio.scene import _base_spec, _family_build, build_part_for
+
+    sub = sub_task(task_spec, chain)
+    part = build_part_for(Setup.single(spec, sub.step_ids), sub, 0, task=task)
+    key = (spec.effector_id, f"picks-nothing:{part.name}" + _task_key(task))
+    if key not in _FITS:
+        scratch, palm = _base_spec(task)
+        try:
+            _family_build(scratch, palm, MOUNT_Z, spec, part, task)
+            _FITS[key] = None
+        except InvalidEffector as exc:
+            _FITS[key] = f"built against the {part.name.replace('_', ' ')}: {exc}"
     return _FITS[key]
 
 
@@ -667,13 +688,9 @@ def prune(
         for j, chain in enumerate(chains):
             ok = True
             if not any(task_spec.step(sid).primitive in ACQUIRE for sid in chain):
-                reason = _fits_part(cand.spec, _PICKS_NOTHING, task)
-                if reason is not None:  # a tool that picks nothing is built against a 10 mm probe
-                    pruned.append(
-                        Pruned(
-                            cand.effector_id, cand.name, chain[0], f"built against the 10 mm probe: {reason}"
-                        )
-                    )
+                reason = _picks_nothing_refusal(cand.spec, task_spec, chain, task)
+                if reason is not None:  # the scene's own part for a tool that picks nothing refuses it
+                    pruned.append(Pruned(cand.effector_id, cand.name, chain[0], reason))
                     continue
             for sid in chain:
                 step = task_spec.step(sid)

@@ -500,15 +500,33 @@ def test_library_tags_add_to_a_grippers_mechanism_and_are_all_a_tool_serves() ->
     assert hook.capabilities == {PrimitiveKind.HOOK_PULL, PrimitiveKind.PUSH}
 
 
-def test_a_tool_that_picks_nothing_is_checked_against_the_10_mm_probe() -> None:
-    """Contract CR-S5-1: the designed sliding hook gripper competes on a hook pull."""
+def test_designed_effectors_are_not_pruned_for_their_build_on_steps_that_pick_nothing() -> None:
+    """Contracts CR-S5-1 and CR-S5-2: the search uses the scene's own part for a tool that picks
+    nothing (the 10 mm probe if its family builds on it, else the block), so every designed
+    reference recipe competes on hook pull, twist and push steps."""
     from rtt.effectors.designed import reference_recipes, spec_from_recipe
+    from rtt.studio.scene import build_part_for, build_studio_scene
 
-    hook = next(spec_from_recipe(r) for r in reference_recipes() if r.kind == "hook_gripper")
     lid = ObjectInstance.of("lid", "hinged_lid", "Lid", ObjectPose(0.0, 0.0, 0.0), width_mm=150, depth_mm=100)
-    step = Step.of(
-        "open", "hook_pull", "lid", "handle", "Open the lid", [SuccessCriterion("angle_deg", at_least=30)]
+    latch = ObjectInstance.of("latch", "quarter_turn_latch", "Latch", ObjectPose(-200.0, 0.0, 0.0))
+    box = ObjectInstance.of("box", "part", "Box", ObjectPose(200.0, 0.0, 0.0))
+    steps = (
+        Step.of(
+            "open", "hook_pull", "lid", "handle", "Open the lid", [SuccessCriterion("angle_deg", at_least=30)]
+        ),
+        Step.of(
+            "turn", "twist", "latch", "head", "Turn the latch", [SuccessCriterion("angle_deg", at_least=80)]
+        ),
+        Step.of("press", "push", "box", "part", "Press the box", UPRIGHT),
     )
-    task = TaskSpec("Lid", "", (lid,), (step,), source="test")
-    eligible, pruned, _ = prune(task, [candidate_of(hook, "designed")])
-    assert [c.effector_id for c in eligible[0]] == [hook.effector_id], [p.reason for p in pruned]
+    task = TaskSpec("Pull, twist, push", "", (lid, latch, box), steps, source="test")
+    designed = [candidate_of(spec_from_recipe(r), "designed") for r in reference_recipes()]
+    eligible, pruned, _ = prune(task, designed)
+    assert not [p.reason for p in pruned if "built against" in p.reason]
+    for j in range(3):
+        assert {c.effector_id for c in eligible[j]} == {c.effector_id for c in designed}
+    for c in designed:  # and the scene builds each of them for the chain, as the search said
+        sub = sub_task(task, ("open",))
+        setup = Setup.single(c.spec, sub.step_ids)
+        assert build_part_for(setup, sub, 0).name in ("probe_block_10mm", "block")
+        build_studio_scene(setup, sub, 0)

@@ -71,7 +71,7 @@ are never "off the shelf".
 | the tool alone is heavier than the arm payload limit (ruling 5) | "it weighs X kg; the arm carries at most 3 kg [assumed]" |
 | the mechanism cannot serve the step's primitive (table below) | e.g. "a suction cup has no hook or fingers to engage a handle or lip" |
 | the tool does not fit an object it touches (ruling 4, every object, not just the first part) | the family's own build refusal, or the cup, opening or feature check |
-| a tool that picks nothing in a chain is built against the 10 mm probe cube (contract CR-S5-1) and its build refuses it | "built against the 10 mm probe: ..." |
+| a tool that picks nothing in a chain cannot be built on the part the scene gives it (`scene.build_part_for`: the 10 mm probe cube if the family builds on it, else the library block; contracts CR-S5-1 and CR-S5-2) | "built against the block: ..." |
 
 Capabilities by mechanism [assumed]. A library item tagged with a grip (pinch, power, suction,
 wrap) adds its tags to its mechanism's; an item without one is a tool (hook, pusher, driver)
