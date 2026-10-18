@@ -281,9 +281,45 @@ python -m rtt.studio.search TASK.json --out DIR [--workers 6] [--conditions 8] [
 
 ## 11. Hero gate
 
-Pending the re-recorded hero plans (the recorded 2026-10-18 plans have planner mismatches that
-S4 is fixing: h3's latch and valve twisted clockwise, h2 lifting a threaded coupling off its
-stub). Results will be recorded here when the plans land.
+Run 2026-10-18 on the final S4b plans (`src/rtt/studio/engineer/recorded/gate-2026-10-18-s2/`,
+task ids checked against the manifest), S2's real primitives, every candidate (30: 21 family
+presets, 3 of them the parallel-jaw reference that cannot build here, and 9 designed
+effectors), 3 screen conditions, 8 full-run conditions, 4 finalists, 6 worker processes on a
+16-core host shared with two other jobs.
+
+| | H1 returns tote | H2 pipe coupling | H3 equipment cabinet |
+|---|---|---|---|
+| task id | `0bf0b255bbe7` | `c5bee032ddeb` | `67155d5f1d53` |
+| steps (chains) | 4 (4) | 2 (2) | 4 (4) |
+| screen runs; wall time | 192; 130 s | 138; 110 s | 255; 321 s |
+| total wall time (CPU use) | 192 s (4.4 cores) | 125 s (5.0 cores) | 372 s (4.6 cores) |
+| step with no passing candidate | open_lid 0/23 (slip, force over 20 N), close_lid 0/23 | insert_coupling 0/23 (depth 4.0002 mm against a [4.0, 4.0] mm window) | unlatch 0/23, open_door 0/23 (penetration), open_valve 0/26, plug_in 0/13 (jam) |
+| steps some candidate passes in the screen | pick_carton 9/9, pick_pack 9/9 (hands and cups) | tighten_coupling 6/23 (designed hands) | none |
+| setups scored (single, tool change, multi-head) | 6, 81, 0 of 6 geometry searches | 20, 9, 6 | 13, 81, 0 of 6 |
+| multi-head rejections | the idle head comes within 5 mm of the open lid during the picks; the switch swing at home | none needed (one accepted) | the switch swing at home goes through the door (at the table centre) |
+| finalists' completion | 0/8 each; all stop at open_lid | 0/8 each; all stop at insert_coupling | 0/8 each; all stop at unlatch |
+| recommendation | none (nothing completed) | none | none |
+| best single off-the-shelf | five-finger 22-joint hand, power grasp | two-finger gripper, rigid pads A | five-finger 18-actuator hand, power grasp |
+
+The top finalist's runs on two conditions reproduced their `traj_sha` twice in-process against
+the spawned pool. The packs of the closest finalists (and of every tool-change and multi-head finalist:
+changer plates and one bracket) are complete, every printed part is one watertight solid, every
+exported MJCF reloads as the tested scene, every licence is on the permissive list.
+
+What the failures are (no parameter was changed):
+
+* **H1.** A lid with a lip defeats every tool from the top (S2's known limit); the designed
+  sliding hook gripper is refused at build time against the library block (section 12), the
+  swinging one exceeds the 20 N limit. The parts start inside the tote's footprint, under the
+  closed lid (the layout). The push to close never reaches 10 deg in the screen's carried state.
+* **H2.** The insert's success window is zero wide (`depth_mm` at least 4.0 and at most 4.0);
+  every tool seats the coupling at the thread start, measured 4.0001 to 4.0002 mm, and fails by
+  0.2 micrometres. Six designed effectors (hands, tentacles, a hook gripper) then tighten it to 3
+turns in at least one screen condition, three of them in all three.
+* **H3.** The latch sits inside the door's footprint (latch x -120 to -80 mm, door x -165 to
+  150 mm, 410 mm tall), so the twist meets the door (roll torque at the 10 N m limit with no
+  force on the latch); the door pull penetrates more than 1 mm; the 8 mm connector jams (S2: the
+  12 mm default already does).
 
 ## 12. Open issues
 
