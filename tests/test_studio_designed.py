@@ -89,3 +89,24 @@ def test_a_tool_that_picks_still_sees_its_part() -> None:
 
     task = _pick_task()
     assert build_part_for(Setup.single(_upright_spec(), task.step_ids), task, 0).name != "probe_block_10mm"
+
+
+def test_every_designed_reference_tool_builds_for_a_task_it_picks_nothing_in() -> None:
+    from rtt.studio.scene import PROBE_PART_NAME, build_part_for
+
+    drawer = ObjectInstance.of("drawer", "drawer", "Drawer", ObjectPose(0.0, 0.0, 0.0))
+    pull = Step.of(
+        "pull",
+        "hook_pull",
+        "drawer",
+        "handle",
+        "Pull the drawer",
+        [SuccessCriterion("travel_mm", at_least=100)],
+    )
+    task = TaskSpec("pull only", "", (drawer,), (pull,), source="test")
+    seen = set()
+    for recipe in reference_recipes():
+        setup = Setup.single(spec_from_recipe(recipe), task.step_ids)
+        seen.add(build_part_for(setup, task, 0).name)
+        build_studio_scene(setup, task, 0)  # the probe if its family builds on it, else the block
+    assert seen == {PROBE_PART_NAME, "block"}  # the hook gripper needs the probe; the hands refuse it

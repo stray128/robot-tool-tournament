@@ -63,7 +63,14 @@ from rtt.effectors.scene import (
     _names,
     _settings,
 )
-from rtt.effectors.types import NAME_PREFIX, BuildContext, ContractError, EffectorBuild, EffectorSpec
+from rtt.effectors.types import (
+    NAME_PREFIX,
+    BuildContext,
+    ContractError,
+    EffectorBuild,
+    EffectorSpec,
+    InvalidEffector,
+)
 from rtt.sim.scene import (
     BODY_PALM,
     GROUP_ENV,
@@ -438,16 +445,32 @@ def _add_changer(spec: mujoco.MjSpec, flange: mujoco.MjsBody, setup: Setup) -> t
     return body, -stack
 
 
-#: What a tool that picks nothing is built against: a 10 mm cube, so a family's opening and
-#: reach checks (sized for a part to grip) cannot refuse a hook, pusher or twisting tool. Its fit
-#: on the objects it does touch is checked by the search (``rtt.studio.search``).
+#: What a tool that picks nothing is built against first: a 10 mm cube, so a family's opening and
+#: reach checks (sized for a part to grip) cannot refuse a hook, pusher or twisting tool. A family
+#: whose own validators refuse the cube (digits that collide on it) gets the library ``block``
+#: instead. Its fit on the objects it does touch is checked by the search (``rtt.studio.search``).
 PROBE_PART_NAME: Final = "probe_block_10mm"
+_PROBE_OK: dict[tuple[str, str, str], bool] = {}
 
 
-def build_part_for(setup: Setup, task_spec: TaskSpec, tool: int) -> PartSpec:
+def _builds_on(effector: EffectorSpec, part: PartSpec, task: TaskV2) -> bool:
+    """Whether the family builds ``effector`` for ``part``: a dry run in a scratch spec, cached."""
+    key = (effector.effector_id, part.name, task_digest(task))
+    if key not in _PROBE_OK:
+        spec, palm = _base_spec(task)
+        try:
+            _family_build(spec, palm, MOUNT_Z, effector, part, task)
+            _PROBE_OK[key] = True
+        except InvalidEffector:
+            _PROBE_OK[key] = False
+    return _PROBE_OK[key]
+
+
+def build_part_for(setup: Setup, task_spec: TaskSpec, tool: int, *, task: TaskV2 | None = None) -> PartSpec:
     """The part a family sees when it builds ``tool`` (its opening checks use it): the first part
-    that tool picks (grasp, suction, wrap), else the 10 mm probe block (:data:`PROBE_PART_NAME`)."""
-    from rtt.parts.library import build_part
+    that tool picks (grasp, suction, wrap); else the 10 mm probe block (:data:`PROBE_PART_NAME`)
+    if the family builds the tool on it, else the library ``block``."""
+    from rtt.parts.library import build_part, get_part
     from rtt.studio.templates.part import part_spec_of
 
     picks = (PrimitiveKind.GRASP, PrimitiveKind.SUCTION, PrimitiveKind.WRAP)
@@ -456,7 +479,10 @@ def build_part_for(setup: Setup, task_spec: TaskSpec, tool: int) -> PartSpec:
             obj = task_spec.object(s.object)
             if obj.kind is TemplateKind.PART:
                 return part_spec_of(obj)
-    return build_part(PROBE_PART_NAME, "block", {"x": 10.0, "y": 10.0, "z": 10.0})
+    probe = build_part(PROBE_PART_NAME, "block", {"x": 10.0, "y": 10.0, "z": 10.0})
+    if _builds_on(setup.tools[tool], probe, task or default_task_v2()):
+        return probe
+    return get_part("block")
 
 
 # --------------------------------------------------------------------------- compiled checks
@@ -639,7 +665,7 @@ def build_studio_scene(
     spec, palm = _base_spec(task)
     spec.modelname = "rtt_studio"
     flange = _add_studio_wrist(spec, palm, task, wrist, present_quat(setup, tool))
-    parts = {k: build_part_for(setup, task_spec, k) for k in range(len(setup.tools))}
+    parts = {k: build_part_for(setup, task_spec, k, task=task) for k in range(len(setup.tools))}
 
     heads_raw: dict[int, tuple[EffectorBuild, str, str]] = {}
     if setup.kind is SetupKind.SINGLE:
