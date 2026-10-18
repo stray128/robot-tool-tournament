@@ -35,7 +35,9 @@ Objects: ``port_plug`` (``plug``) and ``threaded_joint`` (``member``).
    budget :data:`~._common.BUDGET_S` ``insert_reseat`` plus the press from :data:`RESEAT_MIN`
    to the goal at ``speed_mm_s``, the same for every tool): let go (0.3 s), rise until the tip is :data:`RESEAT_CLEAR` over the plug's top,
    close into a fist and press the plug home from its top with the same force limit: a plug held
-   cocked in the grasp straightens once released.
+   cocked in the grasp straightens once released. A ``force_n`` at_least is a goal on top of the
+   depth: at the goal depth the push (or the press home) goes on pressing until the measured net
+   force is over it for :data:`~._common.FORCE_HOLD_S`, within the equal budget ``force_press``.
 4. **Release**: the z target comes back to the wrist (the push stops) before the fingers open
    over 0.4 s, then rise 50 mm (``hold_after`` keeps the grip and skips the recovery).
 
@@ -68,11 +70,13 @@ from rtt.studio.plan import (
 )
 from rtt.studio.primitives._common import (
     BUDGET_S,
+    FORCE_HOLD_S,
     Guarded,
     Path,
     contacts,
     criterion_bounds,
-    force_limit,
+    force_allowed,
+    force_goal,
     heading_for_axis,
     move_time,
     observed_state,
@@ -165,6 +169,21 @@ def _servo_z(z: float, palm_z: float, push: float, run: Mapping[str, Any], dt: f
     if push > run["force_cap"]:
         return z + run["speed"] * dt
     return max(z - run["speed"] * dt, palm_z - run["push_n"] / run["kz"])
+
+
+def _pressing(run: dict[str, Any], t: float, force: float, dt: float) -> bool:
+    """At the goal depth: whether the push goes on pressing to the step's force goal (the measured
+    net force over it for :data:`~._common.FORCE_HOLD_S`), within the equal budget
+    :data:`~._common.BUDGET_S` ``force_press`` from when the depth was reached. A step without a
+    force goal is done at the depth."""
+    goal = run["force_goal"]
+    if goal is None:
+        return False
+    if run["press_from"] is None:
+        run["press_from"] = t
+    if force >= goal:
+        run["force_held"] += dt
+    return run["force_held"] < FORCE_HOLD_S and t - run["press_from"] < BUDGET_S["force_press"]
 
 
 def _depth_observed(ctx: StepContext, data: mujoco.MjData, run: Mapping[str, Any]) -> float:
@@ -269,6 +288,9 @@ class InsertController:
             # tool gets the budget of the longest press, from the shallowest plug it recovers
             press_t = 1.3 * max(0.0, target - RESEAT_MIN) / speed
             push_t += BUDGET_S["insert_search"] + BUDGET_S["insert_reseat"] + press_t
+        f_goal = force_goal(ctx)
+        if f_goal is not None:  # pressing on at the goal depth to a force_n at_least
+            push_t += BUDGET_S["force_press"]
         t_end_push = t_push + push_t
         tail = 0.0 if step.hold_after else RELEASE_S + 0.6 + 0.2
         duration = min(30.0, t_end_push + 0.2 + tail)
@@ -287,7 +309,10 @@ class InsertController:
             "goal": target,
             "press_t": press_t,
             "speed": speed,
-            "push_n": force_limit(ctx, PUSH_N),
+            "push_n": force_allowed(ctx, PUSH_N),
+            "force_goal": f_goal,
+            "force_held": 0.0,
+            "press_from": None,
             # a step's force limit is also held against the measured push (the servo cap alone
             # lets a tool's weight or a stiff cup add to it); without one, the cap is the rule
             "force_cap": FORCE_HOLD * step.constraints.max_force_n
@@ -433,12 +458,19 @@ class InsertController:
                 run["best"], run["best_t"] = depth, t
             stalled = t - run["best_t"] >= STALL_S
             at_mouth = run["port"] and depth < 0.0005
-            if stalled and at_mouth and run["search_t"] < BUDGET_S["insert_search"]:
+            reached = depth >= run.get("grip_goal", run["goal"])
+            if (
+                reached
+                and depth >= run["goal"] - 0.0005
+                and _pressing(run, t, float(np.linalg.norm(con.net)), dt)
+            ):
+                pass  # at the goal depth, pressing on to the force goal
+            elif stalled and at_mouth and run["search_t"] < BUDGET_S["insert_search"]:
                 run["search_t"] += dt  # spiral at the mouth while pressing
                 phi = 2.0 * math.pi * run["search_t"] / SPIRAL_PERIOD
                 r = min(MAX_SHIFT, SPIRAL_PITCH * phi / (2.0 * math.pi))
                 run["spiral"] = np.array([r * math.cos(phi), r * math.sin(phi)])
-            elif depth >= run.get("grip_goal", run["goal"]) or stalled or t >= run["t_end_push"]:
+            elif reached or stalled or t >= run["t_end_push"]:
                 short = depth < run["goal"] - 0.0005
                 started = depth >= run.get("grip_goal", run["goal"])  # as far as the grip can take it
                 if (
@@ -507,7 +539,11 @@ class InsertController:
         run["press_z"] = _servo_z(run["press_z"], palm_z, push, run, dt)
         wrist[2] = run["press_z"]
         depth = _depth_observed(ctx, data, run)
-        if depth >= run["goal"] or u >= BUDGET_S["insert_reseat"] + run["press_t"]:
+        net = float(np.linalg.norm(contacts(model, data, tool_geoms(ctx.scene), ctx.obj.geom_ids).net))
+        home = depth >= run["goal"] and not _pressing(run, t, net, dt)
+        if home or u >= BUDGET_S["insert_reseat"] + run["press_t"] + (
+            BUDGET_S["force_press"] if run["force_goal"] is not None else 0.0
+        ):
             run["done_at"] = t
             run["release_at"] = t + 0.1
             run["last"] = wrist.copy()

@@ -909,3 +909,93 @@ def test_a_thread_twist_is_deterministic_in_process_and_in_a_spawned_worker() ->
     workers = run_task_jobs([j, j], workers=2)  # two spawned processes
     assert first.traj_sha == second.traj_sha == workers[0].traj_sha == workers[1].traj_sha
     assert first.completed
+
+
+# --------------------------------------------------------------------------- S2d: every goal of a step
+
+
+def _tighten(final_nm: float, torque_lo: float, torque_hi: float) -> TaskSpec:
+    nut = ObjectInstance.of(
+        "nut",
+        "threaded_joint",
+        "Nut",
+        ObjectPose(0.0, 80.0, 0.0),
+        member="nut",
+        start_torque_nm=0.05,
+        final_torque_nm=final_nm,
+    )
+    steps = (
+        Step.of(
+            "start", "insert", "nut", "member", "Push it on", [SuccessCriterion("depth_mm", at_least=3.5)]
+        ),
+        Step.of(
+            "tighten",
+            "twist",
+            "nut",
+            "member",
+            "Tighten it a quarter turn and to a torque",
+            [
+                SuccessCriterion("turns", at_least=0.25),
+                SuccessCriterion("torque_nm", at_least=torque_lo, at_most=torque_hi),
+                SuccessCriterion("slip_deg", at_most=15),
+            ],
+            params={"direction": "cw", "speed_deg_s": 120},
+        ),
+    )
+    return TaskSpec("tighten to turns and torque", "", (nut,), steps, source="test")
+
+
+def test_a_twist_with_turns_and_torque_goals_turns_until_both_are_met() -> None:
+    """S2d: a tightening step that asks for a quarter turn and a torque on the thread's ramp runs
+    past the quarter turn, up the ramp, until the torque is reached too; it used to stop at the
+    first goal met (0.26 turns, under half the torque). A torque the grip cannot hold ends it as
+    slip after it has turned well past the quarter turn, not as an early stop."""
+    key = ("catalog_gripper", "adaptive-2f", "pinch")
+    ok = run_task(job(_tighten(0.3, 0.2, 1.0), key)).steps[1]
+    assert ok.success, (ok.failure_mode, dict(ok.quantities))
+    assert ok.quantities["turns"] > 1.0 and 0.2 <= ok.quantities["torque_nm"] <= 1.0
+    over = run_task(job(_tighten(0.6, 0.5, 1.2), key)).steps[1]  # the pinch grip holds about 0.35 N m
+    assert over.failure_mode == "slip" and over.quantities["turns"] > 1.0, dict(over.quantities)
+
+
+def test_a_push_meets_its_force_goal_and_its_observed_travel_goal() -> None:
+    """S2d: a press asked for more than the default 10 N presses on to it, and a drawer pushed
+    shut ends when the observed drawer meets its travel criterion, not when the command arrives
+    (the wrist servo lags behind it under the drawer's friction)."""
+    box = ObjectInstance.of(
+        "box", "part", "Box", ObjectPose(0.0, 80.0, 0.0), size_x_mm=40, size_y_mm=40, size_z_mm=40
+    )
+    press = Step.of(
+        "press",
+        "push",
+        "box",
+        "part",
+        "Press the box down hard",
+        [SuccessCriterion("force_n", at_least=20), SuccessCriterion("tilt_deg", at_most=5)],
+        constraints=StepConstraints(max_force_n=40),
+    )
+    key = ("catalog_gripper", "adaptive-2f", "pinch")
+    out = run_task(job(_task((box,), press), key)).steps[0]
+    assert out.success and 20.0 <= out.quantities["force_n"] <= 40.0, (out.failure_mode, dict(out.quantities))
+    drawer = ObjectInstance.of("dr", "drawer", "Drawer", ObjectPose(0.0, 120.0, 0.0))
+    steps = (
+        Step.of(
+            "open",
+            "hook_pull",
+            "dr",
+            "handle",
+            "Pull the drawer open",
+            [SuccessCriterion("travel_mm", at_least=120), SuccessCriterion("slip_mm", at_most=15)],
+        ),
+        Step.of(
+            "close",
+            "push",
+            "dr",
+            "drawer",
+            "Push the drawer shut",
+            [SuccessCriterion("travel_mm", at_most=5)],
+            constraints=StepConstraints(max_force_n=40),
+        ),
+    )
+    r = run_task(job(TaskSpec("drawer shut", "", (drawer,), steps, source="test"), key))
+    assert r.completed, [(s.step_id, s.failure_mode, dict(s.quantities)) for s in r.steps]

@@ -56,6 +56,8 @@ __all__ = [
     "contacts",
     "criterion_bounds",
     "footprint",
+    "force_allowed",
+    "force_goal",
     "heading_for_axis",
     "observed_state",
     "obstacle_top",
@@ -79,7 +81,11 @@ BUDGET_S: Final[Mapping[str, float]] = {
     "twist_slack": 1.0,  # on top of the nominal turn time (x 1.3)
     "hook_slack": 0.5,
     "engage_slack": 0.4,  # compliant descent onto a feature
+    "force_press": 1.0,  # a push or an insert pressing on to a force_n at_least goal
 }
+#: Over a force or torque goal (as a rotation goal's 3 deg), held three check ticks [assumed].
+FORCE_MARGIN: Final = 0.03
+FORCE_HOLD_S: Final = 0.03
 TRANSIT_SPEED: Final = 0.40  # m/s peak of a min-jerk free-space move [assumed]
 CALIBRATION_Z: Final = 0.75  # m above the table: the head alone, clear of every object
 Mechanism = Literal["fingers", "suction", "soft_arm"]
@@ -641,12 +647,16 @@ def unwrap(previous: float, angle: float) -> float:
 
 
 def criterion_bounds(ctx: StepContext, quantity: str) -> tuple[float | None, float | None]:
-    """The step's ``(at_least, at_most)`` on ``quantity`` (``None`` where unset)."""
-    lo = hi = None
+    """The step's ``(at_least, at_most)`` on ``quantity`` (``None`` where unset); with several
+    criteria on it, every one must hold: the largest at_least and the smallest at_most."""
+    lo: float | None = None
+    hi: float | None = None
     for c in ctx.step.success:
         if c.quantity == quantity:
-            lo = c.at_least if c.at_least is not None else lo
-            hi = c.at_most if c.at_most is not None else hi
+            if c.at_least is not None:
+                lo = c.at_least if lo is None else max(lo, c.at_least)
+            if c.at_most is not None:
+                hi = c.at_most if hi is None else min(hi, c.at_most)
     return lo, hi
 
 
@@ -654,6 +664,29 @@ def force_limit(ctx: StepContext, default: float) -> float:
     """The push or pull force a controller allows itself: 80 % of the step's limit, else ``default``."""
     lim = ctx.step.constraints.max_force_n
     return 0.8 * lim if lim is not None else default
+
+
+def force_allowed(ctx: StepContext, default: float) -> float:
+    """:func:`force_limit`, and 80 % of a ``force_n`` at_most criterion when the step has one (an
+    upper bound on the force limits a push or a pull as the step's ``max_force_n`` does)."""
+    _, hi = criterion_bounds(ctx, "force_n")
+    out = force_limit(ctx, default)
+    return min(out, 0.8 * hi) if hi is not None else out
+
+
+def press_reach(ctx: StepContext, limit: float) -> float:
+    """How far past where it meets resistance a push or a pull may command the wrist (m) to press
+    with ``limit``: the force over the stiffer-axis servo's stiffness (the softer axis), plus 2 mm."""
+    g = ctx.task.gripper
+    return limit / min(g.xy_kp, g.z_kp) + 0.002
+
+
+def force_goal(ctx: StepContext) -> float | None:
+    """The force a push or an insert presses to when the step asks for a ``force_n`` at_least:
+    that force plus :data:`FORCE_MARGIN` (``None`` without one). The press ends once the measured
+    force has been over it for :data:`FORCE_HOLD_S`, so the predicate's check ticks see it."""
+    lo, _ = criterion_bounds(ctx, "force_n")
+    return None if lo is None else lo * (1.0 + FORCE_MARGIN)
 
 
 def torque_limit(ctx: StepContext) -> float:
