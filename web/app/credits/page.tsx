@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 import { EffectorCredits } from "@/components/effectors/EffectorCredits";
+import { LibraryCredits } from "@/components/library/LibraryCredits";
 import { PageHeader } from "@/components/PageHeader";
 import { TitleBlock } from "@/components/TitleBlock";
 import { creditGroups, parseAssetManifest, splitCredit, type AssetManifest } from "@/lib/assets";
@@ -246,6 +247,10 @@ export default function CreditsPage() {
 
       <Section id="effectors" title="Effector models (product mode)">
         <EffectorCredits />
+      </Section>
+
+      <Section id="library" title="Effector library (open hardware and simulation models)">
+        <LibraryCredits />
       </Section>
 
       <Section id="gso" title="Scanned objects">

@@ -58,7 +58,8 @@ export function effectorCredits(root: string = path.join(process.cwd(), "..", "a
   const walk = (dir: string, family: string) => {
     for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
       const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) walk(full, family || entry.name);
+      // The effector library (assets/effectors/library/) has its own credits section.
+      if (entry.isDirectory() && !(dir === root && entry.name === "library")) walk(full, family || entry.name);
       else if (entry.name === "SOURCE.json") {
         const records = asRecords(JSON.parse(readFileSync(full, "utf8")));
         if (records.length > 0) out.push({ model: path.basename(dir), family, records });
