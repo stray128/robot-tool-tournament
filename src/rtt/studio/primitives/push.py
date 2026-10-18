@@ -23,10 +23,17 @@ Objects and handles: ``hinged_lid`` (``lid``: close, or open further, a lid or a
 
 3. **Force-limited progress** (force feedback through the wrist only): the push advances at the
    step's ``speed_mm_s`` while the tool's net force on the object is under the limit (80 % of
-   ``max_force_n``, else :data:`PUSH_N`), and holds while it is over, within the equal budget
-   :data:`~._common.BUDGET_S` ``push_slack``. A press stops 0.5 s after reaching
-   :data:`PRESS_N` (or 60 % of the limit).
-4. **Retract**: hold 0.3 s, back off 30 mm along the face normal, rise 60 mm.
+   ``max_force_n``, else :data:`PUSH_N`; a ``force_n`` at_most limits it the same way), and holds
+   while it is over, within the equal budget :data:`~._common.BUDGET_S` ``push_slack``. A press
+   stops 0.5 s after reaching :data:`PRESS_N` (or 60 % of the limit).
+4. **Every goal** (``docs/STUDIO_PRIMITIVES.md`` section 10): a push to a criterion on the
+   object's state ends when the observed state meets it (:data:`MET_DEG`, :data:`MET_MM`,
+   :data:`MET_DEPTH_MM` inside its bounds), not when the command arrives (the wrist servo lags
+   under the object's resistance), going on up to :func:`~._common.press_reach` of the limit
+   past its path. A ``force_n`` at_least is a goal of the last push on top of its travel: it
+   presses on (within that reach, while the observed state still meets its criteria) until the
+   force is reached and held 0.5 s, within the equal budget ``force_press`` plus that travel.
+5. **Retract**: hold 0.3 s, back off 30 mm along the face normal, rise 60 mm.
 
 **Predicate** (:class:`PushPredicate`): the template state at the end (``angle_deg``,
 ``travel_mm``, ``depth_mm``, ``lift_mm``/``tilt_deg``), ``force_n`` (the peak net force of the
@@ -58,9 +65,11 @@ from rtt.studio.primitives._common import (
     Tool,
     contacts,
     criterion_bounds,
-    force_limit,
+    force_allowed,
+    force_goal,
     observed_state,
     panel_normal,
+    press_reach,
     rot_z,
     rotate,
     safe_palm_z,
@@ -82,6 +91,9 @@ EDGE_IN = 0.015  # m in from a panel's free edge
 GRAVITY_HANDOFF = math.radians(80.0)
 STANDOFF = 0.010  # m off the face before a push starts
 APPROACH = 0.030
+MET_DEG = 1.0  # the observed state inside a criterion's bound by this much meets it [assumed]
+MET_MM = 1.0
+MET_DEPTH_MM = 0.2
 BACK_OFF = 0.030
 RETRACT = 0.060
 _DOWN = np.array([0.0, 0.0, -1.0])
@@ -90,16 +102,48 @@ _DOWN = np.array([0.0, 0.0, -1.0])
 @dataclass
 class Segment:
     """One push: the push point ``point(u)`` and the face normal ``normal(u)`` for ``u`` in [0, 1],
-    ``length`` m of travel, and an optional press force to stop at."""
+    ``length`` m of travel, and an optional press force to reach and hold. ``reach``: the travel
+    is a goal (a press on a part only has room to press into); ``met``: whether the observed
+    object state meets the step's criteria on it (``None``: the travel alone is the goal)."""
 
     point: Callable[[float], np.ndarray]
     normal: Callable[[float], np.ndarray]
     length: float
     press: float | None = None
+    reach: bool = True
+    met: Callable[[mujoco.MjData], bool] | None = None
+    pressing_on: bool = False  # a force goal asks for more than the travel or the press alone
     state: dict[str, Any] = field(default_factory=dict)
 
 
+def _state_met(ctx: StepContext, quantity: str, margin: float) -> Callable[[mujoco.MjData], bool] | None:
+    """The step's criteria on the object's ``quantity`` as a test of the observed state, inside
+    each bound by ``margin`` (at most a quarter of a window); ``None`` without a criterion."""
+    lo, hi = criterion_bounds(ctx, quantity)
+    if lo is None and hi is None:
+        return None
+    m = margin if (lo is None or hi is None) else min(margin, 0.25 * (hi - lo))
+
+    def met(data: mujoco.MjData) -> bool:
+        v = observed_state(ctx, data)[quantity]
+        return (lo is None or v >= lo + m) and (hi is None or v <= hi - m)
+
+    return met
+
+
 def _segments(ctx: StepContext, data: mujoco.MjData) -> list[Segment]:
+    """The pushes; a ``force_n`` at_least is a goal of the last one on top of its travel goal
+    (module docstring): it never stops at the first goal it meets."""
+    segs = _pushes(ctx, data)
+    goal = force_goal(ctx)
+    last = segs[-1]
+    if goal is not None and (last.reach or goal > (last.press or 0.0)):
+        last.press = max(last.press or 0.0, goal)
+        last.pressing_on = True
+    return segs
+
+
+def _pushes(ctx: StepContext, data: mujoco.MjData) -> list[Segment]:
     obj, info, step = ctx.obj, ctx.obj.handles.info, ctx.step
     state = observed_state(ctx, data)
     press = min(PRESS_N, 0.6 * step.constraints.max_force_n) if step.constraints.max_force_n else PRESS_N
@@ -121,26 +165,28 @@ def _segments(ctx: StepContext, data: mujoco.MjData) -> list[Segment]:
         else:
             goal = 0.0
 
-        def arc(a: float, b: float) -> Segment:
+        def arc(a: float, b: float, met: Callable[[mujoco.MjData], bool] | None) -> Segment:
             return Segment(
                 point=lambda u: hinge + rotate(edge0, axis, a + u * (b - a)),
                 normal=lambda u: panel_normal(ctx, a + u * (b - a)),
                 length=abs(b - a) * radius,
+                met=met,
             )
 
         lid = info["orientation"] == 0.0
         if lid and theta > math.radians(92.0) and goal < GRAVITY_HANDOFF:
             closed = hinge + rotate(edge0, axis, max(0.0, goal))
             return [
-                arc(theta, GRAVITY_HANDOFF),
+                arc(theta, GRAVITY_HANDOFF, None),
                 Segment(
                     point=lambda u: closed + u * 0.010 * _DOWN,
                     normal=lambda u: out0,
                     length=0.010,
                     press=press,
+                    reach=False,
                 ),
             ]
-        return [arc(theta, goal)]
+        return [arc(theta, goal, _state_met(ctx, "angle_deg", MET_DEG))]
     if obj.kind is TemplateKind.DRAWER:
         pull = np.array([info["pull_x"], info["pull_y"], 0.0])
         p0 = ctx.observe_site(data, "handle") + info["push_out_m"] * pull
@@ -150,16 +196,38 @@ def _segments(ctx: StepContext, data: mujoco.MjData) -> list[Segment]:
         if hi is not None:
             goal = max(-TRAVEL_PAST, hi / 1000.0 - TRAVEL_PAST)
         span = goal - travel
-        return [Segment(point=lambda u: p0 + u * span * pull, normal=lambda u: pull, length=abs(span))]
+        return [
+            Segment(
+                point=lambda u: p0 + u * span * pull,
+                normal=lambda u: pull,
+                length=abs(span),
+                met=_state_met(ctx, "travel_mm", MET_MM),
+            )
+        ]
     up = np.array([0.0, 0.0, 1.0])
     if obj.kind is TemplateKind.PORT_PLUG:
         top = ctx.observe_site(data, "plug")
         lo, _ = criterion_bounds(ctx, "depth_mm")
         goal = (lo / 1000.0 + 0.0005) if lo is not None else info["depth_m"]
         span = max(0.0, goal - state["depth_mm"] / 1000.0)
-        return [Segment(point=lambda u: top + u * span * _DOWN, normal=lambda u: up, length=span)]
+        return [
+            Segment(
+                point=lambda u: top + u * span * _DOWN,
+                normal=lambda u: up,
+                length=span,
+                met=_state_met(ctx, "depth_mm", MET_DEPTH_MM),
+            )
+        ]
     top = ctx.observe_site(data, "part") + np.array([0.0, 0.0, 0.5 * info.get("height_m", 0.0)])
-    return [Segment(point=lambda u: top + u * 0.005 * _DOWN, normal=lambda u: up, length=0.005, press=press)]
+    return [
+        Segment(
+            point=lambda u: top + u * 0.005 * _DOWN,
+            normal=lambda u: up,
+            length=0.005,
+            press=press,
+            reach=False,
+        )
+    ]
 
 
 def _contact_point(tool: Tool, normal: np.ndarray, heading: float) -> np.ndarray:
@@ -191,6 +259,8 @@ class PushController:
         start = np.asarray(ctx.wrist_start, dtype=np.float64)
         yaw, roll = float(start[3]), float(start[4])
         speed = float(step.params["speed_mm_s"]) / 1000.0
+        limit = force_allowed(ctx, PUSH_N)
+        over = press_reach(ctx, limit)  # how far past the goal a push may go on (module docstring)
         safe = safe_palm_z(ctx, model, data, tool)
         t = 0.0
         here = start.copy()
@@ -206,6 +276,8 @@ class PushController:
             path.to(pre, 0.8)
             seg.state.update(path=path, t0=t, t_push=t + path.end)
             t = t + path.end + 1.3 * (seg.length + STANDOFF) / speed + 0.5 * BUDGET_S["push_slack"]
+            if seg.pressing_on:  # pressing on to the force goal
+                t += 1.3 * over / speed + BUDGET_S["force_press"]
             seg.state["t_end"] = t
             here = pre.copy()
             here[2] = max(here[2], safe)
@@ -215,7 +287,8 @@ class PushController:
             "segments": segments,
             "index": 0,
             "speed": speed,
-            "limit": force_limit(ctx, PUSH_N),
+            "limit": limit,
+            "over": over,
             "yaw": yaw,
             "roll": roll,
             "done_at": None,
@@ -263,11 +336,19 @@ class PushController:
         dt = ctx.task.controller.control_period
         force = float(np.linalg.norm(contacts(model, data, tool_geoms(ctx.scene), ctx.obj.geom_ids).net))
         total = STANDOFF + seg.length  # the contact point travels the standoff, then the push
-        stop_at = run["limit"] if seg.press is None else min(run["limit"], seg.press)
-        if force < stop_at:
-            st["s"] = min(total, st.get("s", 0.0) + run["speed"] * dt)
+        # a push to a criterion goes on (up to ``over``) until the observed state meets it, and a
+        # press until its force: the servo lags under the object's resistance
+        cap = total + (run["over"] if (seg.press is not None or seg.met is not None) else 0.0)
+        ok = seg.met is None or seg.met(data)
         travelled = st.get("s", 0.0)
-        off = max(0.0, STANDOFF - travelled)
+        arrived = travelled >= total - 1e-9 and (ok or travelled >= cap - 1e-9)
+        travel = seg.reach and not arrived
+        stop_at = run["limit"] if (seg.press is None or travel) else min(run["limit"], seg.press)
+        if force < stop_at and (travel or ok):  # pressing on keeps the state inside its criteria
+            st["s"] = min(cap, travelled + run["speed"] * dt)
+        travelled = st.get("s", 0.0)
+        arrived = travelled >= total - 1e-9 and (ok or travelled >= cap - 1e-9)
+        off = max(0.0, STANDOFF - travelled) - max(0.0, travelled - total)
         u = 1.0 if seg.length <= 1e-9 else min(1.0, max(0.0, travelled - STANDOFF) / seg.length)
         n = seg.normal(u)
         heading = run["yaw"] + run["roll"]
@@ -277,9 +358,10 @@ class PushController:
         if seg.press is not None and force >= seg.press and st.get("pressed_t") is None:
             st["pressed_t"] = t
         pressed = st.get("pressed_t") is not None and t - st["pressed_t"] >= 0.5
-        arrived = seg.press is None and travelled >= total - 1e-9
+        # every goal of the push: its travel (when that is a goal) and its press force
+        done = (arrived or not seg.reach) and (seg.press is None or pressed)
         run["last"] = wrist.copy()
-        if arrived or pressed or t >= st["t_end"]:
+        if done or t >= st["t_end"]:
             if run["index"] + 1 < len(segs):  # start the next push's transit now
                 run["index"] += 1
                 nxt = segs[run["index"]].state

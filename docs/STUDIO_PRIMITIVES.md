@@ -23,6 +23,7 @@ candidate effector, and each one is a named constant in its module.
 7. [Known limits](#7-known-limits)
 8. [S2b: the hero-task limits](#8-s2b-the-hero-task-limits)
 9. [S2c: tool stacks and the friction torques](#9-s2c-tool-stacks-and-the-friction-torques)
+10. [S2d: every goal of a step](#10-s2d-every-goal-of-a-step)
 
 ## 1. Rules every controller follows
 
@@ -59,6 +60,13 @@ candidate effector, and each one is a named constant in its module.
 * **Guarded moves.** A final approach onto a feature stops advancing while the tool presses on
   any object harder than 5 N (S2b: not only the step's object, so a hook moving in under a lid
   stops at the bin's wall).
+* **Every goal of a step** (S2d). Each at_least criterion is a goal, and a controller pursues
+  them all: it ends when every one is met, or when a limit ends it (an at_most bound, the step's
+  `max_force_n` or `max_torque_nm`, slip, a stall, the budget), never at the first goal reached.
+  Several criteria on one quantity all hold: the largest at_least and the smallest at_most
+  (`_common.criterion_bounds`). A force or torque goal is met once the measured force or torque
+  has been 3 % over it for 0.03 s (three check ticks) [assumed], so the predicate's samples see
+  it; a `force_n` at_most limits a push or a pull like `max_force_n` (80 % of it).
 
 ## 2. Templates
 
@@ -172,8 +180,12 @@ onto it) or `front` (descend 30 mm out, move in), guarded; close with the head's
 plus 0.3 s); carry the engagement point along the arc about the observed hinge or along the slide
 to the goal (the criterion plus 8 deg or 15 mm; a lid that must stay open goes past vertical, to
 at least 100 deg, when its stop allows) at `speed_mm_s` (min-jerk); a door's heading turns with
-it. Release to the pre-shape (so no finger shoves the panel), back off 40 mm from the face, rise
-60 mm.
+it. A `force_n` at_least (S2d) is a goal on top of the motion's: once the pull reaches its goal it
+goes on along the motion, toward the object's end and into it by the pull limit over the wrist
+servo's stiffness plus 2 mm (80 % of `max_force_n`, else 30 N [assumed]; not when the step bounds
+the motion on both sides), while the measured force is under that limit, until the force goal is
+met, within the equal budget `force_press` plus that travel; then it lets go. Release to the
+pre-shape (so no finger shoves the panel), back off 40 mm from the face, rise 60 mm.
 
 **A lid's lip** (S2b) has nothing to grip or pinch: the tool's calibrated sideways hook is turned
 toward the hinge, lowered outside the free edge (10 mm out, plus whatever of the tool reaches
@@ -203,10 +215,16 @@ finger's tip swings down as much as 14 mm as it closes, and landing on the latch
 42 N. Then the roll turns in `direction` at `speed_deg_s` (ramped over 0.2 s), holding while the
 roll torque is at the limit (90 % of `max_torque_nm`, else 95 % of the wrist's) or, under a step
 `max_force_n`, while the tool's contact force on the object is over 90 % of it; while it presses
-down harder than that the wrist eases up (10 mm/s, at most 4 mm) [assumed]. It stops at the goal
-(the criterion plus 3 deg; else the full travel, or to seated for a thread), at a `torque_nm`
-criterion's torque, on a stall (0.3 s at a limit without progress) or 90 deg past the goal. A
-thread is fed: the wrist descends one pitch per turn plus 1.5 mm of push. Then the roll target
+down harder than that the wrist eases up (10 mm/s, at most 4 mm) [assumed]. Its goals (S2d) are
+the rotation goal (the largest `angle_deg`, `turns` or `depth_mm` at_least, plus 3 deg) and a
+`torque_nm` at_least; it turns until **both** are met (without either, the full travel, or to
+seated for a thread; with only a torque goal it may turn as far as the object goes). Limits end it
+first: an `angle_deg` or `turns` at_most in the working sense (3 deg before it), a `torque_nm`
+at_most (the roll torque held under 95 % of it), a stall (0.3 s at a limit without progress), the
+tool 90 deg past the object (past the rotation goal, or with a torque goal, ahead of the object:
+slipping), the budget. A thread is fed: the wrist first takes the member back down to where it
+was before the fingers closed (closing fingers can draw it up its lead-in, off the thread), then
+descends one pitch per turn plus 1.5 mm of push. Then the roll target
 backs off to the measured roll; fingers in a wheel's spoke gaps turn back by their free play, to
 the middle of the gaps (so none lifts a spoke on the way out); the wrist holds where it is, lifts
 3 mm while the head opens, and rises.
@@ -236,7 +254,10 @@ bore holds it upright. A threaded member goes to the criterion plus 0.5 mm (else
 start). **Press home** for a plug started, or stalled at least 1 mm in: let go (under a step force
 limit the push eases off first: an opening finger on a pushed plug presses it down), rise until
 the tip is 15 mm over the plug's top, close into a fist and press it home with the same force
-limit. Release: the z target comes back to the wrist (the push stops) before the fingers open; a
+limit. A `force_n` at_least (S2d) is a goal on top of the depth: at the goal depth the push goes on
+pressing (the z servo's `F / k_z` reach) until the measured net force is over it, within the
+equal budget `force_press`, on the first push or the press home. Release: the z target comes back
+to the wrist (the push stops) before the fingers open; a
 fist rises closed, and if the plug comes up with it (fingers that closed around its top) it holds
 and opens first. Fingers are lowered for their lowest closing point, as in `twist`.
 
@@ -252,9 +273,17 @@ outer face 15 mm in from the free edge along the arc to the goal (3 deg past it)
 vertical that must close is pushed only to 80 deg, its weight closes it, and the tool then
 presses the closed lid home from above. A drawer is pushed on the front of its handle along the
 slide (3 mm past the goal); a part is pressed down on its top until the press force (10 N, or 60 %
-of the limit) for 0.5 s; a plug in its socket pressed down to the goal depth. The push advances
-at `speed_mm_s` while the tool's net force is under the limit (80 % of `max_force_n`, else
-30 N [assumed]) and holds while it is over. Then hold 0.3 s, back off 30 mm, rise 60 mm.
+of the limit; a `force_n` at_least above that, S2d) for 0.5 s; a plug in its socket pressed down
+to the goal depth. The push advances at `speed_mm_s` while the tool's net force is under the limit
+(80 % of `max_force_n`, else 30 N [assumed]) and holds while it is over. A push to a criterion on
+the object's state (S2d) ends when the **observed** state meets it (1 deg, 1 mm or 0.2 mm inside
+its bounds [assumed]), not when the command arrives: the wrist servo lags behind the command under
+the object's resistance (a drawer pushed shut stopped 7.7 mm open against a 5 mm criterion), so
+the push goes on, up to the limit over the servo's stiffness plus 2 mm past its path. A
+`force_n` at_least is a goal of the last push on top of its travel: it presses on, within that
+reach and while the observed state still meets its criteria, until the force is reached and held
+0.5 s, within the equal budget `force_press` plus that travel. Then hold 0.3 s, back off 30 mm,
+rise 60 mm.
 
 Observed: the template state at the end, `force_n` (peak net force), `penetration_mm`.
 
@@ -273,6 +302,7 @@ cycle times stay comparable.
 | `insert_search` | 2.0 | spiral search at a socket mouth |
 | `insert_reseat` | 2.6 | jam recovery (let go, press home), plus the press itself: 1.3 x the full depth less 1 mm at `speed_mm_s` (S2b; the same for every tool on the port, since a slipping grip can stall anywhere) |
 | `push_slack` | 1.5 | force-limited pushing may pause |
+| `force_press` | 1.0 | a push, an insert or a pull pressing on to a `force_n` at_least (S2d; only in a step with one, and for a part press only when it asks for more than the press force), plus 1.3 x the extra travel at the step's speed |
 
 Every step is capped at 30 s (`MAX_STEP_S`).
 
@@ -504,3 +534,72 @@ a driver needs the ramp within 10 %; runs stay deterministic (the anchor is the 
 in `MjData`). H2's tighten step is now a clean test of grip: the stock part jaw slips at its
 friction capacity, 0.6 N m, 0.1 turn in (before: 1.19 N m peaks from the motor's spikes); the
 fin-ray gripper at 0.36 N m.
+
+## 10. S2d: every goal of a step
+
+**The bug.** A twist stopped at the first goal it reached. H2's tighten step asks for `torque_nm`
+3 to 8 N m and `turns` at least 0.25; every tool that grips the coupling without slipping stopped
+at 0.26 turns, on the start of the thread's ramp, at 0.14 to 1.25 N m, and failed
+`criterion_not_met`. A twist now turns until every at_least goal is met (section 1): the rotation
+and the torque, the torque counted once it has been 3 % over its goal for 0.03 s (a stop on the
+first tick over 3.0 N m left the predicate's check-tick peak just under it). Limits still end it:
+a `torque_nm` at_most holds the roll torque under 95 % of it, an `angle_deg` or `turns` at_most
+in the working sense stops it 3 deg short, and with a torque goal slipping is the tool running
+90 deg ahead of the object. Two side fixes surfaced on the way: the thread twist first takes the
+member back down to its depth before the fingers closed (the designed four-finger hand drew the
+coupling 4 mm up its lead-in as it closed and then spun it off the thread, at 0.06 mm depth), and
+several criteria on one quantity now all hold (the largest at_least, the smallest at_most;
+before, the last one listed won).
+
+H2's tighten step from the screen's starting state (the screen's context tool inserts the
+coupling first), three conditions (nominal and the screen's two placement errors):
+
+| Tool | Before | After |
+|---|---|---|
+| library angular-jaw gripper | 0/3, criterion not met: 0.26 turns, 1.23 to 1.25 N m, slip 2.0 to 2.8 deg | 0/3, slip: 0.46 to 0.51 turns, 1.31 to 1.36 N m (its grip's capacity) |
+| library two-finger linkage gripper | 0/3, criterion not met: 0.26 turns, 1.20 N m, slip 0.7 deg | **3/3**: 0.75 turns, 3.10 to 3.11 N m, slip 2.4 deg |
+| designed four-finger hand (b56a) | 0/3, criterion not met: 0.26 turns, 0.14 N m, depth 0.06 mm (lifted off the thread) | 0/3: slip x2 and physics unreliable x1, 2.28 to 2.36 turns, 0.64 to 0.70 N m, depth 3.7 to 4.4 mm |
+| designed three-digit tentacle (f293) | 0/3, criterion not met: 0.26 turns, 0.45 to 0.72 N m | 0/3, criterion not met: 2.47 turns, 0.44 to 0.69 N m, depth 0.9 to 1.1 mm (the soft arm draws the member up while it turns) |
+
+So the tools that grip without slipping now meet the step when their grip holds 3 N m (the
+linkage gripper), and fail honestly at their own capacity when it does not. The angular jaw's end
+depth (0.5 to 2.8 mm, from 4.4) is its release dragging the member up after the slip; the thread
+holds a member only against going deeper.
+
+**hook_pull, insert, push.** The same rule: their extra at_least goal is `force_n` (the other
+measured quantities are limits). Before, each stopped at its travel or depth goal (or, for a part
+press, at the 10 N press) whatever the force goal; now each presses or pulls on to it, within
+the force limit and the equal `force_press` budget (section 4), and a push to a criterion on the
+object's state ends when the observed state meets it. Probe, one seed, two-finger adaptive
+gripper (pinch; power for the plug):
+
+| Step | Before | After |
+|---|---|---|
+| press a box, `force_n` >= 20, 40 N limit | criterion not met, 10.1 N | success, 20.8 N |
+| press a box, `force_n` >= 5 (the gate case) | success, 10.1 N | success, 10.1 N, same step time |
+| push a drawer shut, `travel_mm` <= 5 | criterion not met, 7.7 mm (the servo lags the command under the drawer's friction) | success, 3.1 mm |
+| push a drawer shut, `travel_mm` <= 5 and `force_n` >= 15 | criterion not met, 7.7 mm, 5.3 N | criterion not met: 0.0 mm, 13.2 N (pressed into the stop; the adaptive fingers slide off the handle) |
+| pull a drawer 120 mm, `force_n` >= 25 | criterion not met, 160 mm, 11.6 N | criterion not met: pulled on to its end, 246 mm, 15.2 N (the pinch grip holds no more) |
+| insert a 20 mm plug to 14 mm, `force_n` >= 20 | success, 46 N (seating) | success, the same run |
+| insert the plug, `force_n` >= 60, 100 N limit | criterion not met, 32.9 N | criterion not met, 38.9 N (pressed on; the grip's friction caps it) |
+| latch to 85 deg and `torque_nm` >= 0.3 | criterion not met: stopped at the breakaway torque, 0 deg | success, 90 deg, 0.33 N m |
+
+Regression tests: `test_a_twist_with_turns_and_torque_goals_turns_until_both_are_met` (a nut on
+a 0.05 to 0.3 N m ramp, a quarter turn and 0.2 N m: before, 0.26 turns and 0.15 N m; now
+2.25 turns and 0.21 N m; 0.5 N m, over the pinch grip's 0.35 N m, ends as slip after 1.6 turns)
+and `test_a_push_meets_its_force_goal_and_its_observed_travel_goal`. Both fail on the code before
+S2d.
+
+**Gate.** The S2 gate (section 6, 14 conditions per effector) is unchanged by S2d: grasp,
+suction, wrap, hook_pull, twist and push 14/14 with their references, insert 13/14, every wrong
+effector 0/14 with the same failure modes, the same penetrations and step times, no MuJoCo reset.
+The twist variants (latch, coupling, nut, cap, valve and disc cases with the pinch gripper) end
+exactly as before.
+
+**Left open.** Pushing a lid shut from past vertical (opened to 110 deg, then `angle_deg` <= 3)
+exceeds a 40 N limit, 43.9 N, before and after S2d: the tool already presses 43.7 N on the lid
+when its press from above starts, so the load comes from the move down to the press's standoff
+over the lid that gravity closed, which is position-controlled. The engineer's
+check that a `torque_nm` at_least stops a twist on a latch or valve before it turns
+(`rtt.studio.engineer.checks`, not an S2 file) still holds for a twist with only a torque goal; a
+twist with a rotation goal as well now turns to it.

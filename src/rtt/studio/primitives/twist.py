@@ -34,13 +34,20 @@ object's sense meets its stop and stalls.
    ``max_torque_nm``, else 95 % of the wrist's) or, under a step ``max_force_n``, while the
    tool's contact force on the object is over :data:`FORCE_HOLD` of it; while it presses down
    harder than that the wrist eases up (:data:`Z_RELIEF_SPEED`, at most :data:`Z_RELIEF_MAX`).
-   It stops when the observed object has turned
-   the goal (the criterion on ``angle_deg``, ``turns`` or ``depth_mm`` plus 3 deg; without one,
-   the object's whole travel, or to seated for a thread), when a ``torque_nm`` criterion's torque
-   is reached, when it stalls (0.3 s at the torque limit without progress), or when the tool has
-   turned 90 deg more than the goal (slipping). A thread is fed: the wrist descends with the
-   member, one pitch per turn, plus 1.5 mm of push. Budget: the nominal turn time x 1.3 plus
-   :data:`~._common.BUDGET_S` ``twist_slack``, the same rule for every candidate.
+   **Goals**: every at_least criterion of the step is a goal, and the turn runs until all of
+   them are met: the rotation goal (the largest of the ``angle_deg``, ``turns`` and ``depth_mm``
+   at_least criteria, plus 3 deg) and a ``torque_nm`` at_least (the roll torque over it plus
+   :data:`~._common.FORCE_MARGIN` for :data:`~._common.FORCE_HOLD_S`). Without either, the goal
+   is the object's whole travel (to seated for a thread); with only a torque goal the turn may
+   run as far as the object goes. It never stops at the first goal reached. Limits end it
+   earlier: an ``angle_deg`` or ``turns`` at_most in the working sense (3 deg before it); a
+   ``torque_nm`` at_most holds the roll torque under 95 % of it; a stall (0.3 s at the torque
+   limit without progress); slipping (the tool 90 deg past the object: past the rotation goal,
+   or with a torque goal, ahead of the object); the budget. A thread is fed: the wrist first
+   takes the member back down to where it was before the fingers closed (closing fingers can
+   draw it up its lead-in), then descends with it, one pitch per turn, plus 1.5 mm of push.
+   Budget: the nominal turn time x 1.3 plus :data:`~._common.BUDGET_S` ``twist_slack``, the same
+   rule for every candidate.
 4. **Release**: the roll target backs off to the measured roll (at the speed cap); fingers in a
    wheel's spoke gaps then turn back by their free play, to the middle of the gaps, so none lifts
    a spoke on the way out; the wrist holds where it is and lifts :data:`RELEASE_LIFT` while the
@@ -76,6 +83,8 @@ from rtt.studio.plan import (
 )
 from rtt.studio.primitives._common import (
     BUDGET_S,
+    FORCE_HOLD_S,
+    FORCE_MARGIN,
     PRESHAPE_CLOSURES,
     Guarded,
     Path,
@@ -177,6 +186,19 @@ def _spoke_heading(
 
 
 @dataclass(frozen=True)
+class _Goals:
+    """A turn's goals: ``rotation`` (rad, or ``None``) and ``torque`` (N m, or ``None``) are
+    at-least goals that must all be met; ``cap`` (rad) and ``torque_max`` (N m) are the step's
+    upper bounds; ``horizon`` (rad) is how far the turn may run (its budget and runaway)."""
+
+    rotation: float | None
+    horizon: float
+    cap: float | None
+    torque: float | None
+    torque_max: float | None
+
+
+@dataclass(frozen=True)
 class TwistController:
     primitive: PrimitiveKind = PrimitiveKind.TWIST
     name: str = "studio_twist"
@@ -214,11 +236,11 @@ class TwistController:
         guard = Guarded(path.last, engage, path.end, 1.0 + BUDGET_S["engage_slack"])
         t_close = guard.end
         t_turn = t_close + 1.3
-        goal, torque_stop = self._goal(ctx, data, sign, w, info)
+        goals = self._goal(ctx, data, sign, w, info)
         omega = math.radians(
             min(float(step.params["speed_deg_s"]), 0.98 * ctx.scene.wrist.roll_speed_max_deg_s)
         )
-        turn_budget = 1.3 * (goal + RUNAWAY * 0.25) / omega + 0.2 + BUDGET_S["twist_slack"]
+        turn_budget = 1.3 * (goals.horizon + RUNAWAY * 0.25) / omega + 0.2 + BUDGET_S["twist_slack"]
         t_end_turn = t_turn + turn_budget
         tail = 0.0 if step.hold_after else RELEASE_S + 0.6 + 0.3
         duration = min(30.0, t_end_turn + 0.5 + tail)
@@ -231,9 +253,12 @@ class TwistController:
             "t_turn": t_turn,
             "t_end_turn": min(t_end_turn, duration - 0.5 - tail),
             "omega": omega,
-            "goal": goal,
-            "torque_stop": torque_stop,
-            "torque_limit": torque_limit(ctx),
+            "goals": goals,
+            "torque_held": 0.0,
+            # an upper bound on the torque criterion limits the turn too (it holds below it)
+            "torque_limit": min(torque_limit(ctx), 0.95 * goals.torque_max)
+            if goals.torque_max is not None
+            else torque_limit(ctx),
             "roll_cmd": roll,
             "obs0": None,
             "obs_prev": mark_angle,
@@ -242,6 +267,9 @@ class TwistController:
             "done_at": None,
             "base": None,
             "feed": obj.kind is TemplateKind.THREADED_JOINT,
+            "depth0": observed_state(ctx, data)["depth_mm"] / 1000.0
+            if obj.kind is TemplateKind.THREADED_JOINT
+            else 0.0,
             "pitch": info.get("pitch_m", 0.0),
             "hold": step.hold_after,
             # spoke engagement: after the turn the fingers turn back by their free play, to the
@@ -257,7 +285,16 @@ class TwistController:
         return StepPlan(
             duration_s=duration,
             values={"run": run, "schedule": sch},
-            note=f"twist {step.params['direction']} by {math.degrees(goal):.0f} deg, {mode} engagement",
+            note=(
+                f"twist {step.params['direction']}: "
+                + (
+                    f"{math.degrees(goals.rotation):.0f} deg"
+                    if goals.rotation is not None
+                    else "no rotation goal"
+                )
+                + (f" and {goals.torque:g} N m" if goals.torque is not None else "")
+                + f", {mode} engagement"
+            ),
         )
 
     # ------------------------------------------------------------------ planning helpers
@@ -306,34 +343,44 @@ class TwistController:
 
     def _goal(
         self, ctx: StepContext, data: mujoco.MjData, sign: float, w: float, info: Mapping[str, float]
-    ) -> tuple[float, float | None]:
-        """(how far to turn the object, rad; the torque to stop at, N m or ``None``)."""
+    ) -> _Goals:
+        """The turn's goals and limits from the step's criteria (module docstring)."""
         state = observed_state(ctx, data)
         theta = math.radians(state["angle_deg"])
         along = sign * w > 0  # the commanded direction is the object's working sense
         kind = ctx.obj.kind
         goal: float | None = None
+        cap: float | None = None
         for q, scale in (("angle_deg", math.radians(1.0)), ("turns", 2.0 * math.pi)):
             lo, hi = criterion_bounds(ctx, q)
             now = theta if q == "angle_deg" else state.get("turns", 0.0) * 2.0 * math.pi
             if along and lo is not None:
                 goal = max(goal or 0.0, lo * scale - now)
+            if along and hi is not None:  # an upper bound in the working sense limits the turn
+                cap = min(cap if cap is not None else math.inf, hi * scale - now)
             if not along and hi is not None:
                 goal = max(goal or 0.0, now - hi * scale)
         lo, _ = criterion_bounds(ctx, "depth_mm")
         if kind is TemplateKind.THREADED_JOINT and lo is not None and along:
             need = (lo / 1000.0 - max(info["lead_m"], state["depth_mm"] / 1000.0)) / info["pitch_m"]
             goal = max(goal or 0.0, 2.0 * math.pi * need)
-        if goal is None:
-            if kind is TemplateKind.QUARTER_TURN_LATCH:
-                goal = info["turn_rad"] if along else theta
-            elif kind is TemplateKind.HANDWHEEL_VALVE:
-                goal = info["travel_rad"] if along else theta
-            else:
-                left = info["lead_m"] + info["seat_m"] - state["depth_mm"] / 1000.0
-                goal = 2.0 * math.pi * (left / info["pitch_m"] + 0.25)
-        t_lo, _ = criterion_bounds(ctx, "torque_nm")
-        return max(math.radians(5.0), goal + GOAL_MARGIN), t_lo
+        if kind is TemplateKind.QUARTER_TURN_LATCH:
+            travel = info["turn_rad"] if along else theta
+        elif kind is TemplateKind.HANDWHEEL_VALVE:
+            travel = info["travel_rad"] if along else theta
+        else:
+            left = info["lead_m"] + info["seat_m"] - state["depth_mm"] / 1000.0
+            travel = 2.0 * math.pi * (left / info["pitch_m"] + 0.25)
+        t_lo, t_hi = criterion_bounds(ctx, "torque_nm")
+        if goal is not None:
+            goal = max(math.radians(5.0), goal + GOAL_MARGIN)
+        elif t_lo is None:  # nothing asked: the object's whole travel (to seated for a thread)
+            goal = max(math.radians(5.0), travel + GOAL_MARGIN)
+        # how far the turn may run: its rotation goal; with a torque goal, as far as the object goes
+        horizon = goal if t_lo is None else max(goal or 0.0, travel + GOAL_MARGIN)
+        if cap is not None:
+            cap = max(0.0, cap - GOAL_MARGIN)
+        return _Goals(rotation=goal, horizon=float(horizon or 0.0), cap=cap, torque=t_lo, torque_max=t_hi)
 
     # ------------------------------------------------------------------ the control loop
 
@@ -391,7 +438,12 @@ class TwistController:
         v: Mapping[str, float],
     ) -> np.ndarray:
         if run["base"] is None:
-            run["base"] = guard.at(guard.end, 1e9)
+            run["base"] = guard.at(guard.end, 1e9).copy()
+            if run["feed"]:
+                # fingers that closed on a threaded member may have drawn it up its lead-in: the
+                # wrist takes it back down to where it was (on its thread) before it turns
+                lifted = run["depth0"] - observed_state(ctx, data)["depth_mm"] / 1000.0
+                run["base"][2] -= max(0.0, lifted)
             sch = schedule(ctx)
             sch.engaged = t
         base = run["base"]
@@ -411,18 +463,29 @@ class TwistController:
             step = run["omega"] * dt * ramp
             # the roll holds while the torque or the contact force is at its limit
             limited = torque >= run["torque_limit"] or float(np.linalg.norm(con.net)) > run["force_cap"]
-            stop_torque = run["torque_stop"] is not None and torque >= run["torque_stop"]
             if limited and progress <= run["progress"] + math.radians(0.05):
                 run["stall"] += dt
             else:
                 run["stall"] = 0.0
             run["progress"] = max(run["progress"], progress)
             turned = sign * (run["roll_cmd"] - float(base[4]))
+            g: _Goals = run["goals"]
+            if g.torque is not None and torque >= g.torque * (1.0 + FORCE_MARGIN):
+                run["torque_held"] += dt  # over the torque goal, held long enough to be measured
+            # every at-least goal must be met: the rotation and the torque
+            met = (g.rotation is None or progress >= g.rotation) and (
+                g.torque is None or run["torque_held"] >= FORCE_HOLD_S
+            )
+            at_cap = g.cap is not None and progress >= g.cap
+            # a torque goal turns as far as the object goes, so slipping is told by the tool
+            # running 90 deg ahead of the object
+            slipping = g.torque is not None and turned - progress >= RUNAWAY
             if (
-                progress >= run["goal"]
-                or stop_torque
+                met
+                or at_cap
+                or slipping
                 or run["stall"] >= STALL_S
-                or turned >= run["goal"] + RUNAWAY
+                or turned >= g.horizon + RUNAWAY
                 or t >= run["t_end_turn"]
             ):
                 run["done_at"] = t

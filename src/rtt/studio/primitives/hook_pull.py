@@ -20,7 +20,8 @@ Objects: ``hinged_lid`` (lid or door) and ``drawer``; handle ``handle`` (the tem
    (min-jerk, so the peak is 1.875 x the mean). A door's heading turns with the door. Goal: the
    criterion on ``angle_deg`` or ``travel_mm`` plus a margin (8 deg, 15 mm). A lid that has to
    stay open is pulled past vertical (at least 95 deg) when its stop allows, because gravity
-   closes it below vertical.
+   closes it below vertical. A ``force_n`` at_least is a goal on top of the motion's: the pull
+   goes on to it (:func:`_pull_on`) before it lets go.
 5. **Release and retract**: open over 0.5 s, rise 60 mm, settle 0.3 s.
 
 **A lid's lip** (a horizontal panel with nothing to grip) is hooked instead: the tool's sideways
@@ -63,15 +64,19 @@ from rtt.studio.plan import (
 )
 from rtt.studio.primitives._common import (
     BUDGET_S,
+    FORCE_HOLD_S,
     Guarded,
     Path,
     Tool,
     contacts,
     criterion_bounds,
+    force_allowed,
+    force_goal,
     heading_for_axis,
     observed_state,
     panel_angle,
     panel_normal,
+    press_reach,
     rot_z,
     rotate,
     safe_palm_z,
@@ -99,6 +104,7 @@ HOOK_PRELOAD = 0.001  # m the hook then presses up into the underside
 HOOK_MARGIN = 0.003  # m of the hook kept short of its full reach
 HOOK_MAX = 0.040  # m: the deepest a hook goes under a lip
 SLIP_FAIL_MM = 10.0
+PULL_N = 30.0  # N, the pull limit while pulling on to a force goal [assumed]
 SLIP_TOUCH_N = 0.3  # N of tool-object contact that counts as touching the feature
 
 
@@ -151,6 +157,61 @@ def _motion(ctx: StepContext, model: mujoco.MjModel, data: mujoco.MjData) -> _Mo
     else:
         goal = 0.8 * info["travel_m"]
     return _Motion(False, ctx.observe_site(data, "front"), axis, current, goal)
+
+
+def _pull_on(ctx: StepContext, motion: _Motion, delta: float, radius: float, speed: float) -> dict[str, Any]:
+    """Pulling on to a ``force_n`` at_least, a goal on top of the motion's: once the pull has
+    reached its goal, it goes on along the motion (toward the object's end, and into it by
+    :func:`~._common.press_reach` of the pull limit, unless the step bounds the motion on both
+    sides) while the measured force is under the pull limit, until the force has been over the
+    goal for :data:`~._common.FORCE_HOLD_S`, within the equal budget ``force_press`` plus that
+    travel."""
+    goal = force_goal(ctx)
+    if goal is None:
+        return {"force_goal": None, "ext_t": 0.0}
+    info = ctx.obj.handles.info
+    q = "angle_deg" if motion.hinged else "travel_mm"
+    lo, hi = criterion_bounds(ctx, q)
+    scale = radius if motion.hinged else 1.0
+    sense = 1.0 if delta >= 0.0 else -1.0
+    end = (info["max_angle_rad"] if motion.hinged else info["travel_m"]) if sense > 0 else 0.0
+    limit = force_allowed(ctx, PULL_N)
+    cap = (
+        0.0
+        if (lo is not None and hi is not None)
+        else max(0.0, sense * (end - motion.goal)) + press_reach(ctx, limit) / scale
+    )
+    rate = speed / scale
+    return {
+        "force_goal": goal,
+        "force_held": 0.0,
+        "pull_limit": limit,
+        "ext": 0.0,
+        "ext_cap": cap,
+        "ext_rate": rate,
+        "ext_sense": sense,
+        "ext_t": 1.3 * cap / rate + BUDGET_S["force_press"],
+    }
+
+
+def _pull_on_step(
+    t: float, ctx: StepContext, run: dict[str, Any], model: mujoco.MjModel, data: mujoco.MjData, t_goal: float
+) -> bool:
+    """One control tick of :func:`_pull_on`; ``True`` once the force goal is met after ``t_goal``
+    (the end of the pull to the motion's goal)."""
+    if run["force_goal"] is None:
+        return False
+    force = float(np.linalg.norm(contacts(model, data, tool_geoms(ctx.scene), ctx.obj.geom_ids).net))
+    dt = ctx.task.controller.control_period
+    if force >= run["force_goal"]:
+        run["force_held"] += dt
+    if t < t_goal:
+        return False
+    if run["force_held"] >= FORCE_HOLD_S:
+        return True
+    if force < run["pull_limit"]:
+        run["ext"] = min(run["ext_cap"], run["ext"] + run["ext_rate"] * dt)
+    return False
 
 
 def _face_out(ctx: StepContext, data: mujoco.MjData) -> np.ndarray:
@@ -239,8 +300,10 @@ class HookPullController:
         delta = motion.goal - motion.current
         radius = float(np.linalg.norm(np.cross(motion.axis, handle - motion.point))) if motion.hinged else 1.0
         length = abs(delta) * (radius if motion.hinged else 1.0)
-        pull_t = max(0.5, 1.875 * length / (float(step.params["speed_mm_s"]) / 1000.0))
-        t_release = t_pull + pull_t
+        speed = float(step.params["speed_mm_s"]) / 1000.0
+        pull_t = max(0.5, 1.875 * length / speed)
+        on = _pull_on(ctx, motion, delta, radius, speed)
+        t_release = t_pull + pull_t + on["ext_t"]
         t_end = t_release + RELEASE_S + 0.4 + 0.6 + 0.3 + BUDGET_S["hook_slack"]
         sch.engaged = t_pull
         sch.released = t_release
@@ -256,6 +319,7 @@ class HookPullController:
             "roll": roll,
             "engaged": None,  # the commanded TCP point when the pull starts
             "last": None,
+            **on,
         }
         return StepPlan(
             duration_s=min(t_end, 30.0),
@@ -284,6 +348,11 @@ class HookPullController:
             base = run["engaged"]
             motion: _Motion = run["motion"]
             s = run["delta"] * min_jerk((t - run["t_pull"]) / run["pull_t"])
+            if run["force_goal"] is not None:
+                s += run["ext_sense"] * run["ext"]
+                if _pull_on_step(t, ctx, run, model, data, run["t_pull"] + run["pull_t"]):
+                    v["t_release"] = t  # every goal met: let go now
+                    sch.released = t
             point = base[:3] + rot_z(run["yaw"] + run["roll"]) @ tool.tcp
             p = motion.carry(point, s)
             v["progress"] = motion.current + s  # where the tool is taking the object
@@ -349,8 +418,10 @@ class HookPullController:
         contact = tip - 0.5 * insert * d  # the hook point under the lid that lifts it (wrist frame)
         delta = motion.goal - motion.current
         radius = float(np.linalg.norm(np.cross(motion.axis, handle - motion.point)))
-        pull_t = max(0.5, 1.875 * abs(delta) * radius / (float(step.params["speed_mm_s"]) / 1000.0))
-        t_release = t_pull + pull_t
+        speed = float(step.params["speed_mm_s"]) / 1000.0
+        pull_t = max(0.5, 1.875 * abs(delta) * radius / speed)
+        on = _pull_on(ctx, motion, delta, radius, speed)
+        t_release = t_pull + pull_t + on["ext_t"]
         t_end = t_release + 0.6 + 0.6 + 0.3 + BUDGET_S["hook_slack"]
         sch.engaged = t_pull
         sch.released = t_release
@@ -374,6 +445,7 @@ class HookPullController:
             "standoff": standoff,
             "seated": None,
             "last": None,
+            **on,
         }
         return StepPlan(
             duration_s=min(t_end, 30.0),
@@ -400,6 +472,12 @@ class HookPullController:
             base = run["seated"]
             motion: _Motion = run["motion"]
             s = run["delta"] * min_jerk((t - run["t_pull"]) / run["pull_t"])
+            if run["force_goal"] is not None:
+                s += run["ext_sense"] * run["ext"]
+                if _pull_on_step(t, ctx, run, model, data, run["t_pull"] + run["pull_t"]):
+                    run["t_release"] = t  # every goal met: let go now
+                    schedule(ctx).released = t
+                    schedule(ctx).values["t_release"] = t
             point = base[:3] + rot_z(run["yaw"] + run["roll"]) @ run["contact"]
             schedule(ctx).values["progress"] = motion.current + s  # where the tool is taking the lid
             wrist = wrist_target(motion.carry(point, s), run["contact"], run["yaw"], run["roll"])
