@@ -12,7 +12,8 @@
 #     PASSWORD), and the first 5 characters of each as a key-shape prefix, so a pasted or
 #     rotated key of the same format is caught too;
 #   * the held-out seed in secrets/heldout_seed.txt (override with RTT_HELDOUT_SEED_FILE),
-#     whose SHA-256 is the only form that may be committed before the reveal.
+#     whose SHA-256 is the only form that may be committed before the reveal, and likewise
+#     the use-case benchmark v1 secret in secrets/usecase_v1_seed.txt (RTT_USECASE_SEED_FILE).
 # Patterns are matched as fixed strings in text and binary files: case-insensitively,
 # except the key-shape prefixes, which are matched exactly.
 # Hits are reported as file:line plus the pattern's source and index, never the
@@ -94,6 +95,9 @@ env_values "$repo/.env" ".env" '(KEY|TOKEN|SECRET|PASSWORD)' prefix
 # the held-out seed: until the results release reveals it, only its SHA-256 may appear
 seed_file="${RTT_HELDOUT_SEED_FILE:-$repo/secrets/heldout_seed.txt}"
 if [[ -r "$seed_file" ]]; then add_pattern "heldout seed" "$(head -n 1 "$seed_file")"; fi
+# the use-case benchmark v1 secret, under the same rule until its results reveal it
+usecase_seed="${RTT_USECASE_SEED_FILE:-$repo/secrets/usecase_v1_seed.txt}"
+if [[ -r "$usecase_seed" ]]; then add_pattern "usecase-v1 seed" "$(head -n 1 "$usecase_seed")"; fi
 
 n_patterns=$(( $(wc -l <"$pats") + $(wc -l <"$cs_pats") ))
 mode="${1:-}"
