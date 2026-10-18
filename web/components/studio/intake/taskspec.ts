@@ -1,0 +1,932 @@
+/**
+ * Task plans in the browser: types, the validator and the edit operations of the intake page.
+ *
+ * The validator mirrors the Python side message for message: `task_spec_from_tool_args` and
+ * `TaskSpec.problems` (src/rtt/studio/types.py), then `check_plan` (src/rtt/studio/engineer/
+ * checks.py), as `judge_args` (src/rtt/studio/engineer/engineer.py) runs them. Every number it
+ * checks against comes from catalog.json, which Python writes from the contract
+ * (`python -m rtt.studio.engineer export-web`). web/tests/studio_intake.test.ts replays the
+ * parity cases Python wrote (parity.json) and asserts identical problems, warnings, task ids and
+ * fidelity. Brand names are not checked here (the list is not shipped to the browser); the API
+ * and the Python parser check them.
+ */
+
+/* ------------------------------------------------------------------ catalog */
+
+export interface ParamDesc {
+  name: string;
+  kind: "float" | "int" | "choice" | "bool";
+  description: string;
+  unit: string;
+  low: number | null;
+  high: number | null;
+  choices: string[];
+  default: number | string | boolean;
+}
+
+export interface TemplateDesc {
+  kind: string;
+  display_name: string;
+  description: string;
+  note: string;
+  model: string;
+  fidelity: Tier;
+  caveat: string;
+  params: ParamDesc[];
+  handles: string[];
+  quantities: string[];
+  needs_ref: boolean;
+}
+
+export interface PrimitiveDesc {
+  kind: string;
+  description: string;
+  fidelity: Tier;
+  caveat: string;
+  objects: string[];
+  handles: string[];
+  targets: string[];
+  params: ParamDesc[];
+  quantities: string[];
+  uses_roll: boolean;
+  may_hold: boolean;
+}
+
+export interface QuantityDesc {
+  name: string;
+  unit: string;
+  low: number;
+  high: number;
+  description: string;
+}
+
+export interface Catalog {
+  format: string;
+  contract: string;
+  label: string;
+  templates: TemplateDesc[];
+  primitives: PrimitiveDesc[];
+  quantities: QuantityDesc[];
+  handles: Record<string, string>;
+  library_parts: string[];
+  limit_quantities: string[];
+  goal_extra: string[];
+  limits: {
+    max_objects: number;
+    max_steps: number;
+    pose_mm: number;
+    roll_torque_nm: number;
+    constraints: Record<string, [number, number]>;
+    text: { title: number; description: number; label: number; line: number; note: number; what: number };
+    max_assumptions: number;
+    max_clarifications: number;
+    max_unsupported: number;
+    refusal: number;
+  };
+}
+
+export type Tier = "rigid" | "approximation" | "not_simulated";
+
+/* ------------------------------------------------------------------ plan (tool arguments) */
+
+export type ParamValue = number | string | boolean;
+
+export interface Pose {
+  x_mm: number;
+  y_mm: number;
+  yaw_deg: number;
+}
+
+export interface PlanObject {
+  name: string;
+  kind: string;
+  label: string;
+  params: Record<string, ParamValue>;
+  pose: Pose;
+  ref: string | null;
+}
+
+export interface Criterion {
+  quantity: string;
+  at_least: number | null;
+  at_most: number | null;
+}
+
+export interface Constraints {
+  max_force_n: number | null;
+  max_torque_nm: number | null;
+  precision_mm: number | null;
+  precision_deg: number | null;
+}
+
+export interface PlanStep {
+  id: string;
+  primitive: string;
+  object: string;
+  handle: string;
+  target: string | null;
+  description: string;
+  params: Record<string, ParamValue>;
+  constraints: Constraints;
+  success: Criterion[];
+  after: string[];
+  hold_after: boolean;
+}
+
+export interface Clarification {
+  question: string;
+  assumed_answer: string;
+}
+
+export interface Unsupported {
+  what: string;
+  reason: string;
+  nearest_primitive: string | null;
+}
+
+export interface PlanArgs {
+  title: string;
+  description: string;
+  objects: PlanObject[];
+  steps: PlanStep[];
+  assumptions: string[];
+  clarifications: Clarification[];
+  unsupported: Unsupported[];
+  refusal: string | null;
+}
+
+export const CONSTRAINT_KEYS = ["max_force_n", "max_torque_nm", "precision_mm", "precision_deg"] as const;
+
+/* ------------------------------------------------------------------ Python-compatible text */
+
+/** Python's `repr` of a string, number, boolean, null or list (enough for the messages). */
+export function pyRepr(value: unknown): string {
+  if (value === null || value === undefined) return "None";
+  if (typeof value === "boolean") return value ? "True" : "False";
+  if (typeof value === "number") return pyFloat(value);
+  if (Array.isArray(value)) return `[${value.map(pyRepr).join(", ")}]`;
+  if (typeof value === "string") {
+    const quote = value.includes("'") && !value.includes('"') ? '"' : "'";
+    let body = value.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t");
+    if (quote === "'") body = body.replace(/'/g, "\\'");
+    return `${quote}${body}${quote}`;
+  }
+  return String(value);
+}
+
+/** Python's `format(v, "g")`: 6 significant digits, exponent outside 1e-4 <= |v| < 1e6. */
+export function fmtG(v: number): string {
+  if (!Number.isFinite(v)) return v > 0 ? "inf" : v < 0 ? "-inf" : "nan";
+  if (v === 0) return Object.is(v, -0) ? "-0" : "0";
+  const rounded = Number(v.toPrecision(6));
+  const exp = Math.floor(Math.log10(Math.abs(rounded)));
+  const strip = (s: string) => (s.includes(".") ? s.replace(/0+$/, "").replace(/\.$/, "") : s);
+  if (exp >= -4 && exp < 6) return strip(rounded.toFixed(Math.max(0, 5 - exp)));
+  const mantissa = strip((rounded / 10 ** exp).toFixed(5));
+  return `${mantissa}e${exp < 0 ? "-" : "+"}${String(Math.abs(exp)).padStart(2, "0")}`;
+}
+
+/** Python's `float.__repr__` / `json.dumps` of a number (integral values printed as integers). */
+export function pyFloat(v: number): string {
+  if (Number.isInteger(v)) return String(v);
+  const abs = Math.abs(v);
+  if (abs !== 0 && (abs < 1e-4 || abs >= 1e16)) {
+    const [m, e] = v.toExponential().split("e");
+    const n = Number(e);
+    return `${m}e${n < 0 ? "-" : "+"}${String(Math.abs(n)).padStart(2, "0")}`;
+  }
+  return String(v);
+}
+
+/** `rtt.studio.engineer.catalog.num`: at most two decimals, no trailing zeros. */
+export function num(v: number, digits = 2): string {
+  let s = v.toFixed(digits);
+  if (s.includes(".")) s = s.replace(/0+$/, "").replace(/\.$/, "");
+  return s === "-0" || s === "" ? "0" : s;
+}
+
+/** Python's code-point length. */
+function pyLen(s: string): number {
+  return [...s].length;
+}
+
+/* ------------------------------------------------------------------ catalog lookups */
+
+export function template(catalog: Catalog, kind: string): TemplateDesc | undefined {
+  return catalog.templates.find((t) => t.kind === kind);
+}
+
+export function primitive(catalog: Catalog, kind: string): PrimitiveDesc | undefined {
+  return catalog.primitives.find((p) => p.kind === kind);
+}
+
+export function quantity(catalog: Catalog, name: string): QuantityDesc | undefined {
+  return catalog.quantities.find((q) => q.name === name);
+}
+
+/** The handles `prim` may address on an object of `kind` (template order). */
+export function handlesFor(catalog: Catalog, prim: string, kind: string): string[] {
+  const t = template(catalog, kind);
+  const p = primitive(catalog, prim);
+  if (!t || !p) return [];
+  return t.handles.filter((h) => p.handles.includes(h));
+}
+
+/** Quantities a step of `prim` on an object of `kind` measures (sorted, as Python lists them). */
+export function measurable(catalog: Catalog, prim: string, kind: string): string[] {
+  const t = template(catalog, kind);
+  const p = primitive(catalog, prim);
+  return [...new Set([...(t?.quantities ?? []), ...(p?.quantities ?? [])])].sort();
+}
+
+function goalQuantities(catalog: Catalog, t: TemplateDesc): Set<string> {
+  return new Set([...t.quantities, ...catalog.goal_extra]);
+}
+
+/* ------------------------------------------------------------------ parsing (mirrors the Python constructors) */
+
+const SLUG = /^[a-z][a-z0-9_]{0,31}$/;
+const REF = /^(library|upload|scan):[a-z0-9][a-z0-9_.-]{0,63}$/;
+const NULL_TEXT = new Set(["none", "null", "nil", "n/a", "na", ""]);
+
+class PyError extends Error {}
+
+function isObj(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function isNum(v: unknown): v is number {
+  return typeof v === "number" && Number.isFinite(v);
+}
+
+function slug(what: string, value: unknown): string {
+  if (typeof value !== "string" || !SLUG.test(value)) {
+    throw new PyError(`${what} must be a short snake_case id (^[a-z][a-z0-9_]{0,31}$), got ${pyRepr(value)}`);
+  }
+  return value;
+}
+
+function text(what: string, value: unknown, max: number, required = true): string {
+  if (typeof value !== "string") throw new PyError(`${what} must be a string`);
+  if (required && !value.trim()) throw new PyError(`${what} must not be empty`);
+  if (pyLen(value) > max) throw new PyError(`${what} is longer than ${max} characters`);
+  return value;
+}
+
+function number(what: string, value: unknown, low: number, high: number): number {
+  if (!isNum(value)) throw new PyError(`${what} must be a finite number, got ${pyRepr(value)}`);
+  if (value < low || value > high) throw new PyError(`${what} must be in [${fmtG(low)}, ${fmtG(high)}], got ${fmtG(value)}`);
+  return value;
+}
+
+function optional(what: string, value: unknown, low: number, high: number): number | null {
+  return value === null || value === undefined ? null : number(what, value, low, high);
+}
+
+function paramProblems(p: ParamDesc, value: unknown): string[] {
+  if (p.kind === "bool") return typeof value === "boolean" ? [] : [`${p.name} must be true or false`];
+  if (p.kind === "choice") return typeof value === "string" && p.choices.includes(value) ? [] : [`${p.name} must be one of ${pyRepr(p.choices)}`];
+  if (!isNum(value)) return [`${p.name} must be a finite number`];
+  if (p.kind === "int" && !Number.isInteger(value)) return [`${p.name} must be a whole number`];
+  if (value < (p.low as number) || value > (p.high as number)) {
+    return [`${p.name} must be in [${fmtG(p.low as number)}, ${fmtG(p.high as number)}] ${p.unit}`.trimEnd()];
+  }
+  return [];
+}
+
+function paramsProblems(space: ParamDesc[], params: Record<string, unknown>): string[] {
+  const byName = new Map(space.map((p) => [p.name, p]));
+  const keys = Object.keys(params).sort();
+  const out = keys.filter((k) => !byName.has(k)).map((k) => `unknown param ${pyRepr(k)}`);
+  for (const p of space) if (!(p.name in params)) out.push(`missing param ${pyRepr(p.name)}`);
+  for (const k of keys) {
+    const p = byName.get(k);
+    if (p) out.push(...paramProblems(p, params[k]));
+  }
+  return out;
+}
+
+function need(o: Record<string, unknown>, key: string): unknown {
+  if (!(key in o)) throw new PyError(pyRepr(key)); // a Python KeyError prints the key
+  return o[key];
+}
+
+/** One object as `ObjectInstance(...)` builds it (throws the first problem, as Python does). */
+function parseObject(catalog: Catalog, o: unknown): PlanObject {
+  if (!isObj(o)) throw new PyError("'list' object has no attribute 'get'");
+  const pose = isObj(o.pose) ? o.pose : {};
+  const name = need(o, "name");
+  const kind = need(o, "kind");
+  const label = "label" in o ? o.label : (o.name ?? "");
+  const params = need(o, "params");
+  const lim = catalog.limits.pose_mm;
+  const parsedPose: Pose = {
+    x_mm: number("pose.x_mm", "x_mm" in pose ? pose.x_mm : 0, -lim, lim),
+    y_mm: number("pose.y_mm", "y_mm" in pose ? pose.y_mm : 0, -lim, lim),
+    yaw_deg: number("pose.yaw_deg", "yaw_deg" in pose ? pose.yaw_deg : 0, -180, 180),
+  };
+  slug("object name", name);
+  const t = template(catalog, String(kind));
+  if (!t) throw new PyError(`${pyRepr(kind)} is not a valid TemplateKind`);
+  text(`object ${name as string} label`, label, catalog.limits.text.label);
+  if (!isObj(params)) throw new PyError("object params must be a mapping");
+  const problems = paramsProblems(t.params, params);
+  if (problems.length) throw new PyError(`object ${name as string} (${t.kind}): ${problems.join("; ")}`);
+  const ref = o.ref ?? null;
+  if (ref !== null && (typeof ref !== "string" || !REF.test(ref))) {
+    throw new PyError(`object ${name as string}: ref must match ^(library|upload|scan):[a-z0-9][a-z0-9_.-]{0,63}$, got ${pyRepr(ref)}`);
+  }
+  const needs = t.kind === "part" && params.shape === "mesh";
+  if (needs && ref === null) throw new PyError(`object ${name as string}: a mesh part needs its ref`);
+  if (!needs && ref !== null) throw new PyError(`object ${name as string}: only a mesh part has a ref`);
+  return { name: name as string, kind: t.kind, label: label as string, params: params as Record<string, ParamValue>, pose: parsedPose, ref: ref as string | null };
+}
+
+function parseCriterion(catalog: Catalog, c: unknown): Criterion {
+  if (!isObj(c)) throw new PyError("argument after ** must be a mapping");
+  const q = quantity(catalog, String(c.quantity));
+  if (!q) throw new PyError(`unknown quantity ${pyRepr(c.quantity)}; known: ${pyRepr(catalog.quantities.map((x) => x.name).sort())}`);
+  const lo = optional(`${q.name}.at_least`, c.at_least, q.low, q.high);
+  const hi = optional(`${q.name}.at_most`, c.at_most, q.low, q.high);
+  if (lo === null && hi === null) throw new PyError(`criterion on ${q.name} needs at_least or at_most`);
+  if (lo !== null && hi !== null && lo > hi) throw new PyError(`criterion on ${q.name}: at_least ${fmtG(lo)} > at_most ${fmtG(hi)}`);
+  return { quantity: q.name, at_least: lo, at_most: hi };
+}
+
+/** One step as `Step(...)` builds it (throws the first problem, as Python does). */
+function parseStep(catalog: Catalog, s: unknown): PlanStep {
+  if (!isObj(s)) throw new PyError("'list' object has no attribute 'get'");
+  const id = need(s, "id");
+  const prim = need(s, "primitive");
+  const object = need(s, "object");
+  const handle = need(s, "handle");
+  const description = need(s, "description");
+  const params = need(s, "params");
+  const rawSuccess = need(s, "success");
+  if (!Array.isArray(rawSuccess)) throw new PyError("'success' must be a list");
+  const success = rawSuccess.map((c) => parseCriterion(catalog, c));
+  const rawCons = isObj(s.constraints) ? s.constraints : {};
+  const constraints = {} as Constraints;
+  for (const k of CONSTRAINT_KEYS) {
+    const [lo, hi] = catalog.limits.constraints[k] as [number, number];
+    constraints[k] = optional(`constraints.${k}`, rawCons[k], lo, hi);
+  }
+  const target = s.target ?? null;
+  const after = Array.isArray(s.after) ? (s.after as unknown[]) : [];
+  const holdAfter = Boolean(s.hold_after ?? false);
+  slug("step id", id);
+  const info = primitive(catalog, String(prim));
+  if (!info) throw new PyError(`${pyRepr(prim)} is not a valid PrimitiveKind`);
+  slug(`step ${id as string} object`, object);
+  slug(`step ${id as string} handle`, handle);
+  if (target !== null) slug(`step ${id as string} target`, target);
+  text(`step ${id as string} description`, description, catalog.limits.text.note);
+  if (!isObj(params)) throw new PyError("step params must be a mapping");
+  const problems = paramsProblems(info.params, params);
+  if (problems.length) throw new PyError(`step ${id as string} (${info.kind}): ${problems.join("; ")}`);
+  if (success.length < 1 || success.length > 4) throw new PyError(`step ${id as string}: 1 to 4 SuccessCriterion rows`);
+  for (const a of after) slug(`step ${id as string} after`, a);
+  if (new Set(after).size !== after.length || after.includes(id)) throw new PyError(`step ${id as string}: after must list distinct other steps`);
+  if (holdAfter && !info.may_hold) throw new PyError(`step ${id as string}: a ${info.kind} step cannot end holding its object`);
+  return {
+    id: id as string,
+    primitive: info.kind,
+    object: object as string,
+    handle: handle as string,
+    target: target as string | null,
+    description: description as string,
+    params: params as Record<string, ParamValue>,
+    constraints,
+    success,
+    after: after as string[],
+    hold_after: holdAfter,
+  };
+}
+
+/* ------------------------------------------------------------------ the validator */
+
+export interface Verdict {
+  status: "valid" | "refused" | "invalid";
+  problems: string[];
+  warnings: string[];
+  notes: string[];
+  /** The parsed plan when it constructs (problems may still exist, from the plan checks). */
+  objects: PlanObject[];
+  steps: PlanStep[];
+  constructed: boolean;
+}
+
+/** `rtt.studio.engineer.engineer.normalise_nulls`: null written as text, read as null. */
+export function normaliseNulls(args: PlanArgs): { args: PlanArgs; notes: string[] } {
+  const out = structuredClone(args) as PlanArgs & Record<string, unknown>;
+  const changed: string[] = [];
+  const nullish = (v: unknown) => typeof v === "string" && NULL_TEXT.has(v.trim().toLowerCase());
+  const fix = (c: unknown, key: string, where: string) => {
+    if (isObj(c) && key in c && nullish(c[key])) {
+      c[key] = null;
+      changed.push(where);
+    }
+  };
+  fix(out, "refusal", "refusal");
+  (Array.isArray(out.objects) ? out.objects : []).forEach((o, i) => fix(o, "ref", `objects[${i}].ref`));
+  (Array.isArray(out.steps) ? out.steps : []).forEach((st, i) => {
+    fix(st, "target", `steps[${i}].target`);
+    const cons = isObj(st) && isObj(st.constraints) ? st.constraints : null;
+    if (cons) for (const k of Object.keys(cons)) fix(cons, k, `steps[${i}].constraints.${k}`);
+    const crit = isObj(st) && Array.isArray(st.success) ? st.success : [];
+    crit.forEach((c, j) => {
+      fix(c, "at_least", `steps[${i}].success[${j}].at_least`);
+      fix(c, "at_most", `steps[${i}].success[${j}].at_most`);
+    });
+  });
+  (Array.isArray(out.unsupported) ? out.unsupported : []).forEach((u, i) => fix(u, "nearest_primitive", `unsupported[${i}].nearest_primitive`));
+  const notes = changed.length ? [`Null written as text was read as null (${changed.slice(0, 6).join(", ")}).`] : [];
+  return { args: out, notes };
+}
+
+const STEP_HINT = "One plain sentence for the step list";
+
+/** `explain_problems`: a bare missing key and a refusal next to steps, reworded. */
+function explain(problems: string[], args: PlanArgs): string[] {
+  return problems.map((p) => {
+    const m = /^(objects|steps)\[(\d+)\]: '([A-Za-z_]+)'$/.exec(p);
+    if (m) {
+      const list = (m[1] === "objects" ? args.objects : args.steps) as unknown[];
+      const item = Array.isArray(list) ? list[Number(m[2])] : undefined;
+      const name = isObj(item) ? item[m[1] === "objects" ? "name" : "id"] : undefined;
+      const label = typeof name === "string" ? ` (${name})` : "";
+      const hint = m[1] === "steps" && m[3] === "description" ? `: ${STEP_HINT}` : "";
+      return `${m[1]}[${m[2]}]${label}: missing ${pyRepr(m[3])}${hint}`;
+    }
+    if (p === "a refused task has no steps") {
+      return "refusal: must be null (JSON null, not text) when the plan has steps; a refused use case has no steps";
+    }
+    return p;
+  });
+}
+
+function parseParts(catalog: Catalog, args: PlanArgs): { objects: PlanObject[]; steps: PlanStep[]; problems: string[] } {
+  const problems: string[] = [];
+  const objects: PlanObject[] = [];
+  const steps: PlanStep[] = [];
+  if (!("objects" in args)) problems.push("$: missing 'objects'");
+  (Array.isArray(args.objects) ? args.objects : []).forEach((o, i) => {
+    try {
+      objects.push(parseObject(catalog, o));
+    } catch (e) {
+      problems.push(`objects[${i}]: ${(e as Error).message}`);
+    }
+  });
+  if (!("steps" in args)) problems.push("$: missing 'steps'");
+  (Array.isArray(args.steps) ? args.steps : []).forEach((s, i) => {
+    try {
+      steps.push(parseStep(catalog, s));
+    } catch (e) {
+      problems.push(`steps[${i}]: ${(e as Error).message}`);
+    }
+  });
+  const lim = catalog.limits.text;
+  (args.clarifications ?? []).forEach((c, i) => {
+    try {
+      text("clarification question", c.question, lim.line);
+      text("clarification assumed_answer", c.assumed_answer, lim.line);
+    } catch (e) {
+      problems.push(`clarifications[${i}]: ${(e as Error).message}`);
+    }
+  });
+  (args.unsupported ?? []).forEach((u, i) => {
+    try {
+      text("unsupported what", u.what, lim.what);
+      text("unsupported reason", u.reason, lim.line);
+      if (u.nearest_primitive !== null && u.nearest_primitive !== undefined && !primitive(catalog, u.nearest_primitive)) {
+        throw new PyError(`${pyRepr(u.nearest_primitive)} is not a valid PrimitiveKind`);
+      }
+    } catch (e) {
+      problems.push(`unsupported[${i}]: ${(e as Error).message}`);
+    }
+  });
+  if (!("title" in args)) problems.push("$: missing 'title'");
+  return { objects, steps, problems };
+}
+
+/** `TaskSpec.problems` on parsed parts. */
+function specProblems(catalog: Catalog, args: PlanArgs, objects: PlanObject[], steps: PlanStep[]): string[] {
+  const out: string[] = [];
+  const lim = catalog.limits;
+  try {
+    text("title", args.title, lim.text.title);
+    text("description", args.description ?? "", lim.text.description, false);
+    if (args.refusal !== null && args.refusal !== undefined) text("refusal", args.refusal, lim.refusal);
+  } catch (e) {
+    out.push((e as Error).message);
+  }
+  const assumptions = args.assumptions ?? [];
+  if (assumptions.length > lim.max_assumptions) out.push(`at most ${lim.max_assumptions} assumptions`);
+  assumptions.forEach((a, i) => {
+    try {
+      text(`assumptions[${i}]`, a, lim.text.line);
+    } catch (e) {
+      out.push((e as Error).message);
+    }
+  });
+  if ((args.clarifications ?? []).length > lim.max_clarifications || (args.unsupported ?? []).length > lim.max_unsupported) {
+    out.push("at most 6 clarifications and 6 unsupported items");
+  }
+  if (args.refusal !== null && args.refusal !== undefined) {
+    if (steps.length) out.push("a refused task has no steps");
+    return out;
+  }
+  if (!steps.length) out.push("a task needs at least one step (or a refusal)");
+  if (objects.length < 1 || objects.length > lim.max_objects) out.push(`a task has 1 to ${lim.max_objects} objects`);
+  if (steps.length > lim.max_steps) out.push(`a task has at most ${lim.max_steps} steps`);
+  const byName = new Map<string, PlanObject>(objects.map((o) => [o.name, o])); // the last of a name wins, as in Python
+  if (byName.size !== objects.length) out.push("object names must be unique");
+  if (new Set(steps.map((s) => s.id)).size !== steps.length) out.push("step ids must be unique");
+  const seen = new Set<string>();
+  let held: string | null = null;
+  steps.forEach((s, i) => {
+    const where = `step ${s.id}`;
+    const info = primitive(catalog, s.primitive) as PrimitiveDesc;
+    const obj = byName.get(s.object);
+    if (!obj) out.push(`${where}: unknown object ${pyRepr(s.object)}`);
+    else {
+      const t = template(catalog, obj.kind) as TemplateDesc;
+      if (!info.objects.includes(obj.kind)) out.push(`${where}: ${s.primitive} cannot act on a ${obj.kind} (it acts on ${info.objects.join(", ")})`);
+      if (!t.handles.includes(s.handle) || !info.handles.includes(s.handle)) {
+        out.push(`${where}: handle ${pyRepr(s.handle)} is not one of ${pyRepr(t.handles.filter((h) => info.handles.includes(h)))}`);
+      }
+      const meas = new Set([...t.quantities, ...info.quantities]);
+      for (const c of s.success) {
+        if (!meas.has(c.quantity)) out.push(`${where}: ${pyRepr(c.quantity)} is not measured here (use ${pyRepr([...meas].sort())})`);
+      }
+    }
+    if (s.target !== null) {
+      const tgt = byName.get(s.target);
+      if (!tgt) out.push(`${where}: unknown target ${pyRepr(s.target)}`);
+      else if (!info.targets.includes(tgt.kind)) out.push(`${where}: target ${pyRepr(s.target)} must be one of ${pyRepr(info.targets)}`);
+      else if (s.target === s.object) out.push(`${where}: the target is the object itself`);
+    }
+    for (const a of s.after) if (!seen.has(a)) out.push(`${where}: depends on ${pyRepr(a)}, which is not an earlier step`);
+    if (held !== null && s.object !== held) out.push(`${where}: acts on ${pyRepr(s.object)} while ${pyRepr(held)} is still held by the previous step`);
+    held = s.hold_after ? s.object : null;
+    seen.add(s.id);
+    if (i === steps.length - 1 && s.hold_after) out.push(`${where}: the last step must release its object`);
+  });
+  return out;
+}
+
+function demand(c: Criterion): number | null {
+  let out: number | null = null;
+  if (c.at_least !== null && c.at_least > 0) out = c.at_least;
+  if (c.at_most !== null && c.at_most < 0) out = Math.max(out ?? 0, -c.at_most);
+  return out;
+}
+
+function ceiling(kind: string, p: Record<string, ParamValue>, q: string): [number, string] | null {
+  const n = (k: string) => Number(p[k]);
+  if (kind === "hinged_lid" && q === "angle_deg") return [n("max_angle_deg"), "its hinge stop max_angle_deg"];
+  if (kind === "drawer" && q === "travel_mm") return [n("travel_mm"), "its travel_mm"];
+  if (kind === "quarter_turn_latch" && q === "angle_deg") return [n("turn_deg"), "its turn_deg"];
+  if (kind === "handwheel_valve" && q === "angle_deg") return [n("travel_deg"), "its travel_deg"];
+  if (kind === "threaded_joint" && q === "turns") return [n("engage_turns"), "its engage_turns"];
+  if (kind === "threaded_joint" && q === "depth_mm") return [n("engage_turns") * n("pitch_mm") + 0.5, "its seated depth engage_turns x pitch_mm"];
+  if (kind === "threaded_joint" && q === "angle_deg") return [360 * n("engage_turns"), "its engage_turns x 360 deg"];
+  if (kind === "port_plug" && q === "depth_mm") return [n("depth_mm"), "the socket's depth_mm"];
+  return null;
+}
+
+function torqueNeeded(kind: string, p: Record<string, ParamValue>, s: PlanStep): [number, string] | null {
+  if (s.primitive !== "twist") return null;
+  if (kind === "quarter_turn_latch") return [Number(p.torque_nm), "the latch's torque_nm"];
+  if (kind === "handwheel_valve") return [Number(p.torque_nm), "the valve's torque_nm"];
+  if (kind === "threaded_joint") {
+    const engage = Number(p.engage_turns);
+    const seated = engage * Number(p.pitch_mm);
+    let seats = false;
+    for (const c of s.success) {
+      const d = demand(c);
+      if (d === null) continue;
+      if (c.quantity === "turns" && d >= 0.9 * engage) seats = true;
+      if (c.quantity === "angle_deg" && d >= 0.9 * 360 * engage) seats = true;
+      if (c.quantity === "depth_mm" && d >= 0.9 * seated) seats = true;
+    }
+    return seats ? [Number(p.final_torque_nm), "the thread's final_torque_nm (seating it)"] : [Number(p.start_torque_nm), "the thread's start_torque_nm"];
+  }
+  return null;
+}
+
+function forceNeeded(kind: string, p: Record<string, ParamValue>, s: PlanStep): [number, string] | null {
+  if (kind === "drawer" && (s.primitive === "hook_pull" || s.primitive === "push")) return [Number(p.pull_force_n), "the drawer's pull_force_n"];
+  if (kind === "port_plug" && s.primitive === "insert") return [Number(p.insert_force_n), "the plug's insert_force_n"];
+  return null;
+}
+
+/** `check_parts`: refs and the per-step plan checks. */
+function checkParts(catalog: Catalog, objects: PlanObject[], steps: PlanStep[], uploads: string[]): string[] {
+  const out: string[] = [];
+  const used = new Set<string>();
+  objects.forEach((o, i) => {
+    if (o.ref === null) return;
+    const [scheme, ...rest] = o.ref.split(":");
+    const key = rest.join(":");
+    const where = `objects[${i}] (${o.name})`;
+    if (scheme === "upload") {
+      used.add(key);
+      if (!uploads.includes(key)) {
+        const known = uploads.map((u) => `upload:${u}`).join(", ") || "none";
+        out.push(`${where}: ${o.ref} was not uploaded (uploads: ${known}); use a box or cylinder`);
+      }
+    } else if (scheme === "scan") out.push(`${where}: scan refs cannot be resolved here; use a box or cylinder (ref null)`);
+    else if (scheme === "library" && !catalog.library_parts.includes(key)) {
+      out.push(`${where}: no library part ${pyRepr(key)} (known: ${catalog.library_parts.join(", ")}); use a box or cylinder`);
+    }
+  });
+  for (const key of uploads) {
+    if (!used.has(key)) out.push(`objects: the uploaded part upload:${key} is not used; model it as a part with shape mesh and ref upload:${key}`);
+  }
+  const byName = new Map<string, PlanObject>(objects.map((o) => [o.name, o]));
+  const wrist = catalog.limits.roll_torque_nm;
+  steps.forEach((s, i) => {
+    const where = `steps[${i}] (${s.id})`;
+    const obj = byName.get(s.object);
+    const info = primitive(catalog, s.primitive) as PrimitiveDesc;
+    if (!obj || !info.objects.includes(obj.kind)) return;
+    const t = template(catalog, obj.kind) as TemplateDesc;
+    const goals = goalQuantities(catalog, t);
+    if (!s.success.some((c) => goals.has(c.quantity))) {
+      const usable = [...goals].filter((q) => t.quantities.includes(q) || info.quantities.includes(q)).sort();
+      out.push(`${where}: add a criterion on what the step achieves (${usable.join(", ")}); force, torque, slip and penetration limits alone do not say when it succeeded`);
+    }
+    if (s.success.some((c) => c.quantity === "in_target") && s.target === null) out.push(`${where}: in_target needs a target bin`);
+    if (s.target !== null && s.hold_after) out.push(`${where}: placing ${pyRepr(s.object)} in ${pyRepr(s.target)} releases it; set hold_after false`);
+    if (s.primitive === "insert") {
+      const prev = i > 0 ? steps[i - 1] : undefined;
+      if (!prev || prev.object !== s.object || !prev.hold_after) {
+        out.push(`${where}: insert pushes a member the tool holds; put a grasp of ${pyRepr(s.object)} with hold_after true right before it`);
+      }
+    }
+    for (const c of s.success) {
+      const d = demand(c);
+      if (d === null) continue;
+      if ((c.quantity === "lift_mm" || c.quantity === "hold_s") && c.quantity in s.params) {
+        const own = Number(s.params[c.quantity]);
+        if (d > own) out.push(`${where}: ${c.quantity} at_least ${num(d)} is more than the step's own ${c.quantity} param (${num(own)}); raise the param or lower the criterion`);
+        continue;
+      }
+      const ceil = ceiling(obj.kind, obj.params, c.quantity);
+      if (ceil && d > ceil[0] + 1e-9) out.push(`${where}: ${c.quantity} ${num(d)} cannot be reached; ${pyRepr(s.object)} stops at ${num(ceil[0])} (${ceil[1]})`);
+    }
+    const tq = torqueNeeded(obj.kind, obj.params, s);
+    if (tq) {
+      const [torque, why] = tq;
+      if (torque > wrist) out.push(`${where}: it takes ${num(torque)} N m (${why}) but the wrist roll gives at most ${num(wrist)} N m; lower the torque or refuse the step`);
+      const cap = s.constraints.max_torque_nm;
+      if (cap !== null && cap < torque) out.push(`${where}: max_torque_nm ${num(cap)} is below the ${num(torque)} N m it takes (${why})`);
+      for (const c of s.success) {
+        if (c.quantity === "torque_nm" && c.at_most !== null && c.at_most < torque) {
+          out.push(`${where}: torque_nm at_most ${num(c.at_most)} is below the ${num(torque)} N m it takes (${why})`);
+        }
+      }
+    }
+    const fq = forceNeeded(obj.kind, obj.params, s);
+    if (fq) {
+      const cap = s.constraints.max_force_n;
+      if (cap !== null && cap < fq[0]) out.push(`${where}: max_force_n ${num(cap)} is below the ${num(fq[0])} N it takes (${fq[1]})`);
+    }
+  });
+  return out;
+}
+
+/**
+ * `judge_args` on a plan: every problem (paths name the entry) and every warning. `uploads` are
+ * the upload ids that exist, which the plan must also use.
+ */
+export function validatePlan(catalog: Catalog, raw: PlanArgs, uploads: string[] = []): Verdict {
+  const { args, notes } = normaliseNulls(raw);
+  const parsed = parseParts(catalog, args);
+  const refused = args.refusal !== null && args.refusal !== undefined;
+  const merge = (base: string[], extra: string[]) => [...base, ...extra.filter((p) => !base.includes(p))];
+  if (parsed.problems.length) {
+    let problems = explain(parsed.problems, args);
+    if (!refused) problems = merge(problems, checkParts(catalog, parsed.objects, parsed.steps, uploads));
+    return { status: "invalid", problems, warnings: [], notes, objects: parsed.objects, steps: parsed.steps, constructed: false };
+  }
+  const structural = specProblems(catalog, args, parsed.objects, parsed.steps);
+  if (structural.length) {
+    let problems = explain(structural, args);
+    if (!refused) problems = merge(problems, checkParts(catalog, parsed.objects, parsed.steps, uploads));
+    return { status: "invalid", problems, warnings: [], notes, objects: parsed.objects, steps: parsed.steps, constructed: false };
+  }
+  const problems: string[] = [];
+  const warnings: string[] = [];
+  if (refused) {
+    const items = args.unsupported ?? [];
+    if (!items.length) problems.push("unsupported: a refusal lists what is not simulated, why, and the nearest primitive");
+    else if (items.every((u) => u.nearest_primitive === null || u.nearest_primitive === undefined)) {
+      problems.push("unsupported: name the nearest primitive for at least one item (what the simulator could do instead)");
+    }
+  } else {
+    problems.push(...checkParts(catalog, parsed.objects, parsed.steps, uploads));
+    const touched = new Set<string>([...parsed.steps.map((s) => s.object), ...parsed.steps.flatMap((s) => (s.target ? [s.target] : []))]);
+    parsed.objects.forEach((o, i) => {
+      if (!touched.has(o.name)) warnings.push(`objects[${i}] (${o.name}): no step acts on it or places into it`);
+    });
+  }
+  const status = problems.length ? "invalid" : refused ? "refused" : "valid";
+  return { status, problems, warnings, notes, objects: parsed.objects, steps: parsed.steps, constructed: true };
+}
+
+/* ------------------------------------------------------------------ fidelity, task id, export */
+
+const TIER_ORDER: Record<Tier, number> = { rigid: 0, approximation: 1, not_simulated: 2 };
+
+/** `TaskSpec.fidelity` and `TaskSpec.caveats` of one step. */
+export function stepFidelity(catalog: Catalog, plan: { objects: PlanObject[] }, step: PlanStep): { tier: Tier; caveats: string[] } {
+  const info = primitive(catalog, step.primitive);
+  const names = [step.object, ...(step.target ? [step.target] : [])];
+  const temps = names.map((n) => template(catalog, plan.objects.find((o) => o.name === n)?.kind ?? ""));
+  const tiers: Tier[] = [info?.fidelity ?? "not_simulated", ...temps.map((t) => t?.fidelity ?? ("not_simulated" as Tier))];
+  const tier = tiers.reduce<Tier>((a, b) => (TIER_ORDER[b] > TIER_ORDER[a] ? b : a), "rigid");
+  const texts = [info?.caveat ?? "", ...temps.map((t) => t?.caveat ?? "")].filter(Boolean);
+  return { tier, caveats: [...new Set(texts)] };
+}
+
+function canon(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canon);
+  if (isObj(value)) {
+    const out: Record<string, unknown> = {};
+    for (const k of Object.keys(value).sort()) out[k] = canon(value[k]);
+    return out;
+  }
+  return value;
+}
+
+/** Python's `canonical_json`: sorted keys, compact separators, Python number forms, ASCII only. */
+export function canonicalJson(value: unknown): string {
+  const enc = (v: unknown): string => {
+    if (v === null || v === undefined) return "null";
+    if (typeof v === "boolean") return v ? "true" : "false";
+    if (typeof v === "number") return pyFloat(v);
+    if (typeof v === "string") return JSON.stringify(v).replace(/[\u007f-￿]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, "0")}`);
+    if (Array.isArray(v)) return `[${v.map(enc).join(",")}]`;
+    const o = v as Record<string, unknown>;
+    return `{${Object.keys(o)
+      .map((k) => `${enc(k)}:${enc(o[k])}`)
+      .join(",")}}`;
+  };
+  return enc(canon(value));
+}
+
+/** The text `TaskSpec.task_id` hashes (objects and steps only, no free text). */
+export function taskIdText(contract: string, objects: PlanObject[], steps: PlanStep[]): string {
+  return canonicalJson({
+    contract,
+    objects: objects.map((o) => ({ name: o.name, kind: o.kind, params: o.params, pose: o.pose, ref: o.ref })),
+    steps: steps.map((s) => ({
+      id: s.id,
+      primitive: s.primitive,
+      object: s.object,
+      handle: s.handle,
+      target: s.target,
+      params: s.params,
+      constraints: s.constraints,
+      success: s.success,
+      after: s.after,
+      hold_after: s.hold_after,
+    })),
+  });
+}
+
+/** SHA-256 (hex) of `text` with the Web Crypto API (browsers and Node 20). */
+export async function sha256Hex(text: string): Promise<string> {
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+export async function taskId(catalog: Catalog, verdict: Verdict): Promise<string | null> {
+  if (verdict.status !== "valid") return null;
+  return sha256Hex(taskIdText(catalog.contract, verdict.objects, verdict.steps));
+}
+
+/** The exported document: `TaskSpec.to_dict()` (contract, label, task id, source, plan, fidelity). */
+export function exportDocument(catalog: Catalog, plan: PlanArgs, id: string | null, source: string): Record<string, unknown> {
+  const fidelity: Record<string, Tier> = {};
+  for (const s of plan.steps) fidelity[s.id] = stepFidelity(catalog, plan, s).tier;
+  return {
+    contract: catalog.contract,
+    label: catalog.label,
+    task_id: id,
+    source,
+    title: plan.title,
+    description: plan.description,
+    objects: plan.objects,
+    steps: plan.steps,
+    assumptions: plan.assumptions,
+    clarifications: plan.clarifications,
+    unsupported: plan.unsupported,
+    refusal: plan.refusal,
+    fidelity,
+  };
+}
+
+/* ------------------------------------------------------------------ edits */
+
+/** Which entry a problem points at: `objects[2]`, `steps[1]`, `step <id>`, or the whole plan. */
+export function problemTarget(problem: string, plan: PlanArgs): { kind: "object" | "step" | "plan"; index: number } {
+  let m = /^objects\[(\d+)\]/.exec(problem);
+  if (m) return { kind: "object", index: Number(m[1]) };
+  m = /^steps\[(\d+)\]/.exec(problem);
+  if (m) return { kind: "step", index: Number(m[1]) };
+  m = /^step ([a-z][a-z0-9_]*)[: ]/.exec(problem);
+  if (m) {
+    const i = plan.steps.findIndex((s) => s.id === m![1]);
+    if (i >= 0) return { kind: "step", index: i };
+  }
+  m = /^object ([a-z][a-z0-9_]*)[: ]/.exec(problem);
+  if (m) {
+    const i = plan.objects.findIndex((o) => o.name === m![1]);
+    if (i >= 0) return { kind: "object", index: i };
+  }
+  return { kind: "plan", index: -1 };
+}
+
+function uniqueName(base: string, taken: string[]): string {
+  const stem = base.replace(/[^a-z0-9_]/g, "_").replace(/^[^a-z]+/, "").slice(0, 26) || "item";
+  if (!taken.includes(stem)) return stem;
+  for (let i = 2; ; i++) {
+    const name = `${stem}_${i}`;
+    if (!taken.includes(name)) return name;
+  }
+}
+
+function defaults(space: ParamDesc[]): Record<string, ParamValue> {
+  return Object.fromEntries(space.map((p) => [p.name, p.default]));
+}
+
+export function moveStep(plan: PlanArgs, index: number, delta: -1 | 1): PlanArgs {
+  const j = index + delta;
+  if (j < 0 || j >= plan.steps.length) return plan;
+  const steps = [...plan.steps];
+  const [s] = steps.splice(index, 1);
+  steps.splice(j, 0, s as PlanStep);
+  return { ...plan, steps };
+}
+
+export function deleteStep(plan: PlanArgs, index: number): PlanArgs {
+  const gone = plan.steps[index]?.id;
+  const steps = plan.steps.filter((_, i) => i !== index).map((s) => (gone && s.after.includes(gone) ? { ...s, after: s.after.filter((a) => a !== gone) } : s));
+  return { ...plan, steps };
+}
+
+/** A new object of `kind` with its template defaults, placed clear of the others. */
+export function addObject(catalog: Catalog, plan: PlanArgs, kind: string): PlanArgs {
+  const t = template(catalog, kind);
+  if (!t) return plan;
+  const name = uniqueName(kind, plan.objects.map((o) => o.name));
+  const params = defaults(t.params);
+  if (kind === "part") params.shape = "box";
+  const slot = plan.objects.length;
+  const pose: Pose = { x_mm: -240 + 120 * (slot % 5), y_mm: slot < 5 ? -220 : 220, yaw_deg: 0 };
+  return { ...plan, objects: [...plan.objects, { name, kind, label: t.display_name.slice(0, 60), params, pose, ref: null }], refusal: null };
+}
+
+export function deleteObject(plan: PlanArgs, index: number): PlanArgs {
+  return { ...plan, objects: plan.objects.filter((_, i) => i !== index) };
+}
+
+/** A new step of `prim` on the first object it can act on, with a goal criterion. */
+export function addStep(catalog: Catalog, plan: PlanArgs, prim: string): PlanArgs {
+  const info = primitive(catalog, prim);
+  if (!info) return plan;
+  const obj = plan.objects.find((o) => info.objects.includes(o.kind));
+  const kind = obj?.kind ?? info.objects[0] ?? "part";
+  const t = template(catalog, kind);
+  const goal = [...(t?.quantities ?? []), ...catalog.goal_extra].find((q) => measurable(catalog, prim, kind).includes(q)) ?? info.quantities[0] ?? "force_n";
+  const q = quantity(catalog, goal);
+  const success: Criterion[] = [{ quantity: goal, at_least: q && q.low < 1 && q.high >= 1 ? 1 : null, at_most: q && !(q.low < 1 && q.high >= 1) ? q.high : null }];
+  const id = uniqueName(`${prim}_${obj?.name ?? "step"}`, plan.steps.map((s) => s.id));
+  const step: PlanStep = {
+    id,
+    primitive: prim,
+    object: obj?.name ?? "",
+    handle: handlesFor(catalog, prim, kind)[0] ?? info.handles[0] ?? "",
+    target: null,
+    description: `${prim.replace("_", " ")} the ${(obj?.label ?? "object").toLowerCase()}.`.replace(/^./, (c) => c.toUpperCase()),
+    params: defaults(info.params),
+    constraints: { max_force_n: null, max_torque_nm: null, precision_mm: null, precision_deg: null },
+    success,
+    after: [],
+    hold_after: false,
+  };
+  return { ...plan, steps: [...plan.steps, step], refusal: null };
+}
+
+export function emptyPlan(): PlanArgs {
+  return { title: "New use case", description: "", objects: [], steps: [], assumptions: [], clarifications: [], unsupported: [], refusal: null };
+}
+
+/** The tool arguments of a recorded or returned plan document (`TaskSpec.to_dict()`). */
+export function planArgsOf(doc: Record<string, unknown>): PlanArgs {
+  const keys = ["title", "description", "objects", "steps", "assumptions", "clarifications", "unsupported", "refusal"] as const;
+  return structuredClone(Object.fromEntries(keys.map((k) => [k, doc[k] ?? (k === "refusal" ? null : k === "title" || k === "description" ? "" : [])]))) as unknown as PlanArgs;
+}

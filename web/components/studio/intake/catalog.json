@@ -1,0 +1,1201 @@
+{
+ "format": "rtt-studio-catalog",
+ "version": 1,
+ "contract": "rtt-effectors/2",
+ "label": "Product mode: not part of the pre-registered experiment",
+ "templates": [
+  {
+   "kind": "hinged_lid",
+   "display_name": "Hinged lid or door",
+   "description": "A panel on a revolute hinge: a lid opens upward about its back edge, a door swings about a side edge.",
+   "note": "A tote lid, a hatch or a cabinet door (orientation door).",
+   "model": "revolute joint with damping, a hinge stop and an optional opening torque (spring or detent)",
+   "fidelity": "rigid",
+   "caveat": "",
+   "params": [
+    {
+     "name": "orientation",
+     "kind": "choice",
+     "description": "Lid (opens upward) or door (swings sideways)",
+     "unit": "",
+     "low": null,
+     "high": null,
+     "choices": [
+      "lid",
+      "door"
+     ],
+     "default": "lid"
+    },
+    {
+     "name": "width_mm",
+     "kind": "float",
+     "description": "Panel width along the hinge",
+     "unit": "mm",
+     "low": 60.0,
+     "high": 600.0,
+     "choices": [],
+     "default": 300.0
+    },
+    {
+     "name": "depth_mm",
+     "kind": "float",
+     "description": "Panel depth from the hinge to the free edge",
+     "unit": "mm",
+     "low": 40.0,
+     "high": 600.0,
+     "choices": [],
+     "default": 200.0
+    },
+    {
+     "name": "thickness_mm",
+     "kind": "float",
+     "description": "Panel thickness",
+     "unit": "mm",
+     "low": 2.0,
+     "high": 30.0,
+     "choices": [],
+     "default": 6.0
+    },
+    {
+     "name": "max_angle_deg",
+     "kind": "float",
+     "description": "Hinge stop: the widest opening",
+     "unit": "deg",
+     "low": 60.0,
+     "high": 180.0,
+     "choices": [],
+     "default": 110.0
+    },
+    {
+     "name": "open_torque_nm",
+     "kind": "float",
+     "description": "Torque that resists opening at the hinge",
+     "unit": "N m",
+     "low": 0.0,
+     "high": 5.0,
+     "choices": [],
+     "default": 0.3
+    },
+    {
+     "name": "damping_nms",
+     "kind": "float",
+     "description": "Hinge damping",
+     "unit": "N m s",
+     "low": 0.0,
+     "high": 2.0,
+     "choices": [],
+     "default": 0.05
+    },
+    {
+     "name": "feature",
+     "kind": "choice",
+     "description": "What a hook can engage at the free edge",
+     "unit": "",
+     "low": null,
+     "high": null,
+     "choices": [
+      "lip",
+      "handle"
+     ],
+     "default": "lip"
+    },
+    {
+     "name": "feature_mm",
+     "kind": "float",
+     "description": "Lip overhang or handle clearance",
+     "unit": "mm",
+     "low": 5.0,
+     "high": 50.0,
+     "choices": [],
+     "default": 15.0
+    }
+   ],
+   "handles": [
+    "lid",
+    "handle"
+   ],
+   "quantities": [
+    "angle_deg"
+   ],
+   "needs_ref": false
+  },
+  {
+   "kind": "drawer",
+   "display_name": "Drawer",
+   "description": "A box on a prismatic slide with friction, opened by a bar, lip or knob handle.",
+   "note": "A drawer in a cabinet or shelf unit; it starts closed.",
+   "model": "prismatic joint with friction loss and end stops",
+   "fidelity": "rigid",
+   "caveat": "",
+   "params": [
+    {
+     "name": "width_mm",
+     "kind": "float",
+     "description": "Drawer front width",
+     "unit": "mm",
+     "low": 80.0,
+     "high": 600.0,
+     "choices": [],
+     "default": 300.0
+    },
+    {
+     "name": "height_mm",
+     "kind": "float",
+     "description": "Drawer front height",
+     "unit": "mm",
+     "low": 40.0,
+     "high": 300.0,
+     "choices": [],
+     "default": 100.0
+    },
+    {
+     "name": "depth_mm",
+     "kind": "float",
+     "description": "Drawer depth",
+     "unit": "mm",
+     "low": 80.0,
+     "high": 600.0,
+     "choices": [],
+     "default": 350.0
+    },
+    {
+     "name": "travel_mm",
+     "kind": "float",
+     "description": "Slide travel to the open stop",
+     "unit": "mm",
+     "low": 20.0,
+     "high": 500.0,
+     "choices": [],
+     "default": 250.0
+    },
+    {
+     "name": "pull_force_n",
+     "kind": "float",
+     "description": "Friction force that resists sliding",
+     "unit": "N",
+     "low": 0.5,
+     "high": 50.0,
+     "choices": [],
+     "default": 5.0
+    },
+    {
+     "name": "handle",
+     "kind": "choice",
+     "description": "Handle shape",
+     "unit": "",
+     "low": null,
+     "high": null,
+     "choices": [
+      "bar",
+      "lip",
+      "knob"
+     ],
+     "default": "bar"
+    },
+    {
+     "name": "handle_mm",
+     "kind": "float",
+     "description": "Handle clearance from the front",
+     "unit": "mm",
+     "low": 10.0,
+     "high": 60.0,
+     "choices": [],
+     "default": 25.0
+    }
+   ],
+   "handles": [
+    "drawer",
+    "handle"
+   ],
+   "quantities": [
+    "travel_mm"
+   ],
+   "needs_ref": false
+  },
+  {
+   "kind": "quarter_turn_latch",
+   "display_name": "Quarter-turn latch",
+   "description": "A slot or wing head on a revolute joint with a detent and a stop at the end of its turn.",
+   "note": "A panel fastener or cam lock; it starts locked.",
+   "model": "revolute joint with a torque to open, a detent and a stop",
+   "fidelity": "approximation",
+   "caveat": "Latches are an approximation: a detent torque on a revolute joint; no cam or spring geometry.",
+   "params": [
+    {
+     "name": "head",
+     "kind": "choice",
+     "description": "Head shape: a slot for a blade or a wing to grip",
+     "unit": "",
+     "low": null,
+     "high": null,
+     "choices": [
+      "slot",
+      "wing"
+     ],
+     "default": "wing"
+    },
+    {
+     "name": "head_diameter_mm",
+     "kind": "float",
+     "description": "Head diameter",
+     "unit": "mm",
+     "low": 10.0,
+     "high": 60.0,
+     "choices": [],
+     "default": 25.0
+    },
+    {
+     "name": "head_height_mm",
+     "kind": "float",
+     "description": "Head height above its panel",
+     "unit": "mm",
+     "low": 3.0,
+     "high": 40.0,
+     "choices": [],
+     "default": 12.0
+    },
+    {
+     "name": "turn_deg",
+     "kind": "float",
+     "description": "Turn from locked to open (the stop)",
+     "unit": "deg",
+     "low": 45.0,
+     "high": 180.0,
+     "choices": [],
+     "default": 90.0
+    },
+    {
+     "name": "torque_nm",
+     "kind": "float",
+     "description": "Torque needed to turn it",
+     "unit": "N m",
+     "low": 0.05,
+     "high": 5.0,
+     "choices": [],
+     "default": 0.8
+    },
+    {
+     "name": "detent",
+     "kind": "bool",
+     "description": "A detent holds it locked until the torque is exceeded",
+     "unit": "",
+     "low": null,
+     "high": null,
+     "choices": [],
+     "default": true
+    }
+   ],
+   "handles": [
+    "head"
+   ],
+   "quantities": [
+    "angle_deg"
+   ],
+   "needs_ref": false
+  },
+  {
+   "kind": "threaded_joint",
+   "display_name": "Threaded joint",
+   "description": "A cap, coupling or nut that starts on a fixed threaded seat and tightens to a final torque.",
+   "note": "A pipe coupling, cap or nut and the stub, rod or neck it threads onto (the seat).",
+   "model": "revolute joint coupled to a prismatic joint (helical equality) with a friction torque ramp",
+   "fidelity": "approximation",
+   "caveat": "Threads are an approximation: a helical joint with a torque ramp; no thread flanks, cross-threading or galling. A screen, not a promise.",
+   "params": [
+    {
+     "name": "member",
+     "kind": "choice",
+     "description": "The moving threaded part",
+     "unit": "",
+     "low": null,
+     "high": null,
+     "choices": [
+      "cap",
+      "coupling",
+      "nut"
+     ],
+     "default": "coupling"
+    },
+    {
+     "name": "diameter_mm",
+     "kind": "float",
+     "description": "Outer diameter of the moving part",
+     "unit": "mm",
+     "low": 6.0,
+     "high": 120.0,
+     "choices": [],
+     "default": 27.0
+    },
+    {
+     "name": "length_mm",
+     "kind": "float",
+     "description": "Length of the moving part",
+     "unit": "mm",
+     "low": 5.0,
+     "high": 120.0,
+     "choices": [],
+     "default": 40.0
+    },
+    {
+     "name": "pitch_mm",
+     "kind": "float",
+     "description": "Thread pitch",
+     "unit": "mm",
+     "low": 0.5,
+     "high": 5.0,
+     "choices": [],
+     "default": 1.8
+    },
+    {
+     "name": "engage_turns",
+     "kind": "float",
+     "description": "Turns from the thread start to seated",
+     "unit": "turn",
+     "low": 0.25,
+     "high": 10.0,
+     "choices": [],
+     "default": 3.0
+    },
+    {
+     "name": "start_torque_nm",
+     "kind": "float",
+     "description": "Running torque at the thread start",
+     "unit": "N m",
+     "low": 0.0,
+     "high": 2.0,
+     "choices": [],
+     "default": 0.1
+    },
+    {
+     "name": "final_torque_nm",
+     "kind": "float",
+     "description": "Torque when seated",
+     "unit": "N m",
+     "low": 0.1,
+     "high": 20.0,
+     "choices": [],
+     "default": 5.0
+    },
+    {
+     "name": "chamfer_mm",
+     "kind": "float",
+     "description": "Lead-in chamfer on the seat",
+     "unit": "mm",
+     "low": 0.0,
+     "high": 5.0,
+     "choices": [],
+     "default": 1.0
+    }
+   ],
+   "handles": [
+    "member",
+    "seat"
+   ],
+   "quantities": [
+    "turns",
+    "depth_mm",
+    "angle_deg"
+   ],
+   "needs_ref": false
+  },
+  {
+   "kind": "handwheel_valve",
+   "display_name": "Handwheel valve",
+   "description": "A handwheel on a vertical stem with a resistive torque over its travel.",
+   "note": "A valve or any round handwheel; angle_deg counts from where it starts.",
+   "model": "revolute joint with a resistive torque curve and travel stops",
+   "fidelity": "approximation",
+   "caveat": "Valves are an approximation: a resistive torque curve on a revolute joint; no packing or seat dynamics.",
+   "params": [
+    {
+     "name": "rim_diameter_mm",
+     "kind": "float",
+     "description": "Rim diameter",
+     "unit": "mm",
+     "low": 40.0,
+     "high": 400.0,
+     "choices": [],
+     "default": 120.0
+    },
+    {
+     "name": "rim_section_mm",
+     "kind": "float",
+     "description": "Rim cross-section diameter",
+     "unit": "mm",
+     "low": 6.0,
+     "high": 30.0,
+     "choices": [],
+     "default": 12.0
+    },
+    {
+     "name": "spokes",
+     "kind": "int",
+     "description": "Number of spokes (0: a solid disc)",
+     "unit": "count",
+     "low": 0,
+     "high": 6,
+     "choices": [],
+     "default": 3
+    },
+    {
+     "name": "torque_nm",
+     "kind": "float",
+     "description": "Torque needed to turn it",
+     "unit": "N m",
+     "low": 0.1,
+     "high": 20.0,
+     "choices": [],
+     "default": 3.0
+    },
+    {
+     "name": "travel_deg",
+     "kind": "float",
+     "description": "Travel from closed to open",
+     "unit": "deg",
+     "low": 30.0,
+     "high": 1440.0,
+     "choices": [],
+     "default": 90.0
+    }
+   ],
+   "handles": [
+    "wheel"
+   ],
+   "quantities": [
+    "angle_deg"
+   ],
+   "needs_ref": false
+  },
+  {
+   "kind": "port_plug",
+   "display_name": "Port and plug",
+   "description": "A fixed socket with a chamfer and a clearance, and a plug that starts free on the table.",
+   "note": "A connector and its port, a peg and its hole, a vial and its holder.",
+   "model": "rigid socket and plug with contact, an insertion friction and an optional latch click",
+   "fidelity": "rigid",
+   "caveat": "",
+   "params": [
+    {
+     "name": "plug_diameter_mm",
+     "kind": "float",
+     "description": "Plug diameter",
+     "unit": "mm",
+     "low": 3.0,
+     "high": 60.0,
+     "choices": [],
+     "default": 12.0
+    },
+    {
+     "name": "plug_length_mm",
+     "kind": "float",
+     "description": "Plug length",
+     "unit": "mm",
+     "low": 10.0,
+     "high": 120.0,
+     "choices": [],
+     "default": 40.0
+    },
+    {
+     "name": "clearance_mm",
+     "kind": "float",
+     "description": "Diametral clearance in the socket",
+     "unit": "mm",
+     "low": 0.02,
+     "high": 2.0,
+     "choices": [],
+     "default": 0.2
+    },
+    {
+     "name": "chamfer_mm",
+     "kind": "float",
+     "description": "Socket lead-in chamfer",
+     "unit": "mm",
+     "low": 0.0,
+     "high": 5.0,
+     "choices": [],
+     "default": 1.0
+    },
+    {
+     "name": "depth_mm",
+     "kind": "float",
+     "description": "Socket depth",
+     "unit": "mm",
+     "low": 3.0,
+     "high": 60.0,
+     "choices": [],
+     "default": 15.0
+    },
+    {
+     "name": "insert_force_n",
+     "kind": "float",
+     "description": "Friction force that resists insertion",
+     "unit": "N",
+     "low": 0.0,
+     "high": 50.0,
+     "choices": [],
+     "default": 5.0
+    },
+    {
+     "name": "latch",
+     "kind": "bool",
+     "description": "A latch clicks when the plug is seated",
+     "unit": "",
+     "low": null,
+     "high": null,
+     "choices": [],
+     "default": false
+    }
+   ],
+   "handles": [
+    "plug",
+    "socket"
+   ],
+   "quantities": [
+    "depth_mm"
+   ],
+   "needs_ref": false
+  },
+  {
+   "kind": "bin",
+   "display_name": "Bin or tote",
+   "description": "An open box: a fixed destination or a free body.",
+   "note": "A tote, tray, basket or box that picks drop into (fixed true unless it moves).",
+   "model": "static or free rigid box walls",
+   "fidelity": "rigid",
+   "caveat": "",
+   "params": [
+    {
+     "name": "length_mm",
+     "kind": "float",
+     "description": "Outer length (x)",
+     "unit": "mm",
+     "low": 60.0,
+     "high": 800.0,
+     "choices": [],
+     "default": 300.0
+    },
+    {
+     "name": "width_mm",
+     "kind": "float",
+     "description": "Outer width (y)",
+     "unit": "mm",
+     "low": 60.0,
+     "high": 600.0,
+     "choices": [],
+     "default": 200.0
+    },
+    {
+     "name": "height_mm",
+     "kind": "float",
+     "description": "Outer height",
+     "unit": "mm",
+     "low": 20.0,
+     "high": 400.0,
+     "choices": [],
+     "default": 120.0
+    },
+    {
+     "name": "wall_mm",
+     "kind": "float",
+     "description": "Wall thickness",
+     "unit": "mm",
+     "low": 1.0,
+     "high": 20.0,
+     "choices": [],
+     "default": 4.0
+    },
+    {
+     "name": "fixed",
+     "kind": "bool",
+     "description": "Fixed to the table (otherwise a free body)",
+     "unit": "",
+     "low": null,
+     "high": null,
+     "choices": [],
+     "default": true
+    }
+   ],
+   "handles": [
+    "bin"
+   ],
+   "quantities": [],
+   "needs_ref": false
+  },
+  {
+   "kind": "part",
+   "display_name": "Rigid part",
+   "description": "A rigid part: a library or uploaded mesh (ref), or a box or cylinder of the given size.",
+   "note": "A rigid item: shape box or cylinder (cylinder: size_x_mm is the diameter, size_y_mm is ignored) with ref null; shape mesh only for an uploaded part, with ref upload:<id>.",
+   "model": "free rigid body (exact convex pieces, or CoACD hulls for scans and uploads)",
+   "fidelity": "rigid",
+   "caveat": "",
+   "params": [
+    {
+     "name": "shape",
+     "kind": "choice",
+     "description": "Mesh from ref, or a procedural box or cylinder",
+     "unit": "",
+     "low": null,
+     "high": null,
+     "choices": [
+      "mesh",
+      "box",
+      "cylinder"
+     ],
+     "default": "box"
+    },
+    {
+     "name": "size_x_mm",
+     "kind": "float",
+     "description": "Size along x (box), or diameter (cylinder)",
+     "unit": "mm",
+     "low": 5.0,
+     "high": 400.0,
+     "choices": [],
+     "default": 40.0
+    },
+    {
+     "name": "size_y_mm",
+     "kind": "float",
+     "description": "Size along y (box; ignored for a cylinder)",
+     "unit": "mm",
+     "low": 5.0,
+     "high": 400.0,
+     "choices": [],
+     "default": 40.0
+    },
+    {
+     "name": "size_z_mm",
+     "kind": "float",
+     "description": "Height",
+     "unit": "mm",
+     "low": 2.0,
+     "high": 400.0,
+     "choices": [],
+     "default": 40.0
+    },
+    {
+     "name": "mass_g",
+     "kind": "float",
+     "description": "Mass (box and cylinder; a mesh uses its material)",
+     "unit": "g",
+     "low": 1.0,
+     "high": 5000.0,
+     "choices": [],
+     "default": 100.0
+    }
+   ],
+   "handles": [
+    "part"
+   ],
+   "quantities": [
+    "lift_mm",
+    "tilt_deg"
+   ],
+   "needs_ref": true
+  }
+ ],
+ "primitives": [
+  {
+   "kind": "grasp",
+   "description": "Approach, close the fingers, lift and hold; place in the target if one is given.",
+   "fidelity": "rigid",
+   "caveat": "",
+   "objects": [
+    "part",
+    "port_plug",
+    "threaded_joint"
+   ],
+   "handles": [
+    "part",
+    "plug",
+    "member"
+   ],
+   "targets": [
+    "bin"
+   ],
+   "params": [
+    {
+     "name": "lift_mm",
+     "kind": "float",
+     "description": "How high to lift the part before moving it",
+     "unit": "mm",
+     "low": 0.0,
+     "high": 300.0,
+     "choices": [],
+     "default": 100.0
+    },
+    {
+     "name": "hold_s",
+     "kind": "float",
+     "description": "How long to hold the part lifted",
+     "unit": "s",
+     "low": 0.0,
+     "high": 10.0,
+     "choices": [],
+     "default": 2.0
+    }
+   ],
+   "quantities": [
+    "lift_mm",
+    "hold_s",
+    "in_target",
+    "tilt_deg",
+    "force_n",
+    "penetration_mm"
+   ],
+   "uses_roll": false,
+   "may_hold": true
+  },
+  {
+   "kind": "suction",
+   "description": "Approach, seal a suction cup on a flat face, lift and hold; place if a target is given.",
+   "fidelity": "approximation",
+   "caveat": "Suction is an approximation: the seal is a geometric test gating a capped adhesion force; no air flow, leak rate or porosity.",
+   "objects": [
+    "part"
+   ],
+   "handles": [
+    "part"
+   ],
+   "targets": [
+    "bin"
+   ],
+   "params": [
+    {
+     "name": "lift_mm",
+     "kind": "float",
+     "description": "How high to lift the part before moving it",
+     "unit": "mm",
+     "low": 0.0,
+     "high": 300.0,
+     "choices": [],
+     "default": 100.0
+    },
+    {
+     "name": "hold_s",
+     "kind": "float",
+     "description": "How long to hold the part lifted",
+     "unit": "s",
+     "low": 0.0,
+     "high": 10.0,
+     "choices": [],
+     "default": 2.0
+    }
+   ],
+   "quantities": [
+    "lift_mm",
+    "hold_s",
+    "in_target",
+    "tilt_deg",
+    "force_n",
+    "penetration_mm"
+   ],
+   "uses_roll": false,
+   "may_hold": true
+  },
+  {
+   "kind": "wrap",
+   "description": "Curl a soft arm around the part (at least 180 deg), lift and hold; place if a target is given.",
+   "fidelity": "approximation",
+   "caveat": "The soft arm is an approximation: rigid segments on spring joints curled by a cable.",
+   "objects": [
+    "part"
+   ],
+   "handles": [
+    "part"
+   ],
+   "targets": [
+    "bin"
+   ],
+   "params": [
+    {
+     "name": "lift_mm",
+     "kind": "float",
+     "description": "How high to lift the part before moving it",
+     "unit": "mm",
+     "low": 0.0,
+     "high": 300.0,
+     "choices": [],
+     "default": 100.0
+    },
+    {
+     "name": "hold_s",
+     "kind": "float",
+     "description": "How long to hold the part lifted",
+     "unit": "s",
+     "low": 0.0,
+     "high": 10.0,
+     "choices": [],
+     "default": 2.0
+    }
+   ],
+   "quantities": [
+    "lift_mm",
+    "hold_s",
+    "in_target",
+    "tilt_deg",
+    "force_n",
+    "penetration_mm"
+   ],
+   "uses_roll": false,
+   "may_hold": true
+  },
+  {
+   "kind": "hook_pull",
+   "description": "Engage a handle or lip and pull it along the object's arc or line.",
+   "fidelity": "rigid",
+   "caveat": "",
+   "objects": [
+    "hinged_lid",
+    "drawer"
+   ],
+   "handles": [
+    "handle"
+   ],
+   "targets": [],
+   "params": [
+    {
+     "name": "speed_mm_s",
+     "kind": "float",
+     "description": "Pull speed at the handle",
+     "unit": "mm/s",
+     "low": 5.0,
+     "high": 200.0,
+     "choices": [],
+     "default": 50.0
+    },
+    {
+     "name": "approach",
+     "kind": "choice",
+     "description": "Where the tool comes from to engage the handle",
+     "unit": "",
+     "low": null,
+     "high": null,
+     "choices": [
+      "top",
+      "front"
+     ],
+     "default": "top"
+    }
+   ],
+   "quantities": [
+    "slip_mm",
+    "force_n",
+    "penetration_mm"
+   ],
+   "uses_roll": false,
+   "may_hold": false
+  },
+  {
+   "kind": "twist",
+   "description": "Grip or engage the object and turn the wrist roll under a resistive torque.",
+   "fidelity": "rigid",
+   "caveat": "",
+   "objects": [
+    "quarter_turn_latch",
+    "threaded_joint",
+    "handwheel_valve"
+   ],
+   "handles": [
+    "head",
+    "member",
+    "wheel"
+   ],
+   "targets": [],
+   "params": [
+    {
+     "name": "direction",
+     "kind": "choice",
+     "description": "Turn direction seen from above",
+     "unit": "",
+     "low": null,
+     "high": null,
+     "choices": [
+      "cw",
+      "ccw"
+     ],
+     "default": "cw"
+    },
+    {
+     "name": "speed_deg_s",
+     "kind": "float",
+     "description": "Wrist roll speed",
+     "unit": "deg/s",
+     "low": 5.0,
+     "high": 180.0,
+     "choices": [],
+     "default": 60.0
+    }
+   ],
+   "quantities": [
+    "slip_deg",
+    "torque_nm",
+    "force_n",
+    "penetration_mm"
+   ],
+   "uses_roll": true,
+   "may_hold": true
+  },
+  {
+   "kind": "insert",
+   "description": "Align the held member over its seat and push it in along the seat axis with compliance.",
+   "fidelity": "rigid",
+   "caveat": "",
+   "objects": [
+    "port_plug",
+    "threaded_joint"
+   ],
+   "handles": [
+    "plug",
+    "member"
+   ],
+   "targets": [],
+   "params": [
+    {
+     "name": "speed_mm_s",
+     "kind": "float",
+     "description": "Insertion speed along the seat axis",
+     "unit": "mm/s",
+     "low": 1.0,
+     "high": 50.0,
+     "choices": [],
+     "default": 10.0
+    },
+    {
+     "name": "standoff_mm",
+     "kind": "float",
+     "description": "Gap above the seat before the push starts",
+     "unit": "mm",
+     "low": 2.0,
+     "high": 50.0,
+     "choices": [],
+     "default": 10.0
+    }
+   ],
+   "quantities": [
+    "lateral_force_n",
+    "force_n",
+    "jam",
+    "penetration_mm"
+   ],
+   "uses_roll": false,
+   "may_hold": true
+  },
+  {
+   "kind": "push",
+   "description": "Press or close the object with a force limit until it reaches its target.",
+   "fidelity": "rigid",
+   "caveat": "",
+   "objects": [
+    "hinged_lid",
+    "drawer",
+    "part",
+    "port_plug"
+   ],
+   "handles": [
+    "lid",
+    "drawer",
+    "part",
+    "plug"
+   ],
+   "targets": [],
+   "params": [
+    {
+     "name": "speed_mm_s",
+     "kind": "float",
+     "description": "Push speed",
+     "unit": "mm/s",
+     "low": 1.0,
+     "high": 100.0,
+     "choices": [],
+     "default": 20.0
+    }
+   ],
+   "quantities": [
+    "force_n",
+    "penetration_mm"
+   ],
+   "uses_roll": false,
+   "may_hold": false
+  }
+ ],
+ "quantities": [
+  {
+   "name": "angle_deg",
+   "unit": "deg",
+   "low": -1440.0,
+   "high": 1440.0,
+   "description": "joint angle of the object from its start (lid, latch, valve)"
+  },
+  {
+   "name": "travel_mm",
+   "unit": "mm",
+   "low": -1000.0,
+   "high": 1000.0,
+   "description": "slide travel of the object from its start (drawer)"
+  },
+  {
+   "name": "depth_mm",
+   "unit": "mm",
+   "low": 0.0,
+   "high": 200.0,
+   "description": "insertion depth of a plug or threaded member in its seat"
+  },
+  {
+   "name": "turns",
+   "unit": "turn",
+   "low": -20.0,
+   "high": 20.0,
+   "description": "turns of a threaded member from its start"
+  },
+  {
+   "name": "lift_mm",
+   "unit": "mm",
+   "low": -50.0,
+   "high": 500.0,
+   "description": "rise of a part above where it started"
+  },
+  {
+   "name": "hold_s",
+   "unit": "s",
+   "low": 0.0,
+   "high": 30.0,
+   "description": "time the part stayed lifted"
+  },
+  {
+   "name": "in_target",
+   "unit": "flag",
+   "low": 0.0,
+   "high": 1.0,
+   "description": "1 when the part rests inside the destination"
+  },
+  {
+   "name": "tilt_deg",
+   "unit": "deg",
+   "low": 0.0,
+   "high": 180.0,
+   "description": "tilt of a part from its starting attitude"
+  },
+  {
+   "name": "slip_deg",
+   "unit": "deg",
+   "low": 0.0,
+   "high": 1440.0,
+   "description": "largest rotation slip between the tool and the object"
+  },
+  {
+   "name": "slip_mm",
+   "unit": "mm",
+   "low": 0.0,
+   "high": 500.0,
+   "description": "largest slip of the tool along the object's feature"
+  },
+  {
+   "name": "force_n",
+   "unit": "N",
+   "low": 0.0,
+   "high": 1000.0,
+   "description": "peak force the tool applied to the object"
+  },
+  {
+   "name": "lateral_force_n",
+   "unit": "N",
+   "low": 0.0,
+   "high": 1000.0,
+   "description": "peak force across the insertion axis"
+  },
+  {
+   "name": "torque_nm",
+   "unit": "N m",
+   "low": 0.0,
+   "high": 100.0,
+   "description": "peak torque the wrist applied about the tool axis"
+  },
+  {
+   "name": "jam",
+   "unit": "flag",
+   "low": 0.0,
+   "high": 1.0,
+   "description": "1 when an insertion stalled short of its depth"
+  },
+  {
+   "name": "penetration_mm",
+   "unit": "mm",
+   "low": 0.0,
+   "high": 100.0,
+   "description": "deepest tool-object penetration (physics validity)"
+  }
+ ],
+ "handles": {
+  "lid": "the panel itself (push it closed)",
+  "handle": "the lip or handle at the free edge or front (hook it to pull open)",
+  "drawer": "the drawer front (push it shut)",
+  "head": "the latch head, a slot or a wing (twist it)",
+  "member": "the cap, coupling or nut (grasp, insert or twist it)",
+  "seat": "the fixed threaded seat (no primitive acts on it)",
+  "wheel": "the handwheel rim (twist it)",
+  "plug": "the free plug or connector (grasp, insert or push it)",
+  "socket": "the fixed socket (no primitive acts on it; the plug goes in)",
+  "bin": "the open box (a destination for picks)",
+  "part": "the part itself"
+ },
+ "library_parts": [
+  "pipe_tee",
+  "block",
+  "hex_standoff",
+  "flanged_bushing",
+  "l_bracket",
+  "steel_slug"
+ ],
+ "limit_quantities": [
+  "force_n",
+  "jam",
+  "lateral_force_n",
+  "penetration_mm",
+  "slip_deg",
+  "slip_mm",
+  "torque_nm"
+ ],
+ "goal_extra": [
+  "hold_s",
+  "in_target",
+  "lift_mm"
+ ],
+ "limits": {
+  "max_objects": 8,
+  "max_steps": 12,
+  "pose_mm": 300.0,
+  "roll_torque_nm": 15.0,
+  "constraints": {
+   "max_force_n": [
+    0.1,
+    500.0
+   ],
+   "max_torque_nm": [
+    0.01,
+    50.0
+   ],
+   "precision_mm": [
+    0.05,
+    50.0
+   ],
+   "precision_deg": [
+    0.1,
+    45.0
+   ]
+  },
+  "text": {
+   "title": 80,
+   "description": 600,
+   "label": 60,
+   "line": 200,
+   "note": 200,
+   "what": 120
+  },
+  "max_assumptions": 10,
+  "max_clarifications": 6,
+  "max_unsupported": 6,
+  "refusal": 300
+ }
+}

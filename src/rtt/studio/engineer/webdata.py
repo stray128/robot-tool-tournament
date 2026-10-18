@@ -34,7 +34,9 @@ RECORDED_UPLOAD: Final = Path(__file__).with_name("recorded") / "upload-2026-10-
 FILES: Final = ("catalog.json", "recorded.json", "parity.json")
 
 
-def _dump(data: Any) -> str:
+def _dump(data: Any, *, compact: bool = False) -> str:
+    if compact:
+        return json.dumps(data, ensure_ascii=False, separators=(",", ":")) + "\n"
     return json.dumps(data, indent=1, ensure_ascii=False) + "\n"
 
 
@@ -297,6 +299,13 @@ def parity_cases(recorded: Path | None = None) -> dict[str, Any]:
                 "status": status,
                 "problems": problems,
                 "warnings": warnings,
+                "task_id": spec.task_id if spec is not None and status == "valid" else None,
+                "fidelity": {st.id: spec.fidelity(st.id).value for st in spec.steps}
+                if spec is not None
+                else {},
+                "caveats": {st.id: list(spec.caveats(st.id)) for st in spec.steps}
+                if spec is not None
+                else {},
             }
         )
     return {"format": "rtt-studio-parity", "version": 1, "cases": cases}
@@ -314,6 +323,6 @@ def write_web_data(recorded: Path | None = None, out: Path | None = None) -> lis
     paths = []
     for name in FILES:
         path = out / name
-        path.write_text(_dump(payloads[name]), encoding="utf-8")
+        path.write_text(_dump(payloads[name], compact=name == "parity.json"), encoding="utf-8")
         paths.append(path)
     return paths

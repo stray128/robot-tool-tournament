@@ -343,6 +343,12 @@ def _param_json(p: ParamSpec) -> dict[str, Any]:
     }
 
 
+def _library_parts() -> tuple[str, ...]:
+    from rtt.studio.engineer.checks import library_part_names
+
+    return library_part_names()
+
+
 def web_catalog() -> dict[str, Any]:
     """The catalog the intake page validates and edits plans with (``catalog.json``).
 
@@ -393,6 +399,7 @@ def web_catalog() -> dict[str, Any]:
             for q in QUANTITIES.values()
         ],
         "handles": dict(HANDLE_TEXT),
+        "library_parts": list(_library_parts()),
         "limit_quantities": sorted(LIMIT_QUANTITIES),
         "goal_extra": sorted(GOAL_EXTRA),
         "limits": {
