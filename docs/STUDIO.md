@@ -242,8 +242,10 @@ torque ramps). A kind without a builder raises `TemplateUnavailable`: its steps 
 The family that builds a tool sees the first part that tool picks, so a gripper whose opening is
 too small for its part is an `invalid_build`, as in v1. A tool that picks nothing (hook pull, twist,
 insert, push only) is built against a 10 mm probe cube (`PROBE_PART_NAME`), so a family's
-grip-sized reach and opening checks cannot refuse a hook or pusher; its fit on the objects it
-touches is the search's check (S5, ruling 4). Changed from the library `block` in CR-S5-1.
+grip-sized reach and opening checks cannot refuse a hook or pusher; a family whose own validators
+refuse the cube (digits that collide on it) gets the library `block` instead (CR-S5-2). Its fit on
+the objects it touches is the search's check (S5, ruling 4). Changed from the library `block` in
+CR-S5-1.
 
 ### 4.4 Segments and the tool-change hook
 
