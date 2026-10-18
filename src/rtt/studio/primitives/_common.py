@@ -38,7 +38,7 @@ from rtt.effectors.registry import get_family
 from rtt.effectors.scene import MOUNT_Z
 from rtt.sim.controller import Phase, min_jerk
 from rtt.studio.plan import V1SceneView, _V1Ids
-from rtt.studio.types import SetupKind, TemplateKind
+from rtt.studio.types import TemplateKind
 
 if TYPE_CHECKING:
     from rtt.studio.plan import StepContext
@@ -200,17 +200,6 @@ def _mechanism(family: str) -> Mechanism:
     return "fingers"
 
 
-def _mount_z(scene: StudioScene) -> float:
-    s = scene.setup
-    if s.kind is SetupKind.SINGLE:
-        return MOUNT_Z
-    if s.kind is SetupKind.TOOL_CHANGE:
-        assert s.changer is not None
-        return -s.changer.stack_mm / 1000.0
-    assert s.bracket is not None
-    return -s.bracket.adapter_thickness_mm / 1000.0
-
-
 def _view(ctx: StepContext, body: int | None) -> V1SceneView:
     s = ctx.scene
     obj = ctx.obj
@@ -291,7 +280,9 @@ def tool_of(ctx: StepContext, body: int | None = None) -> Tool:
     impl = get_family(head.spec.family)
     build = head.build
     view = _view(ctx, body)
-    tip_drop = float(build.tcp[2]) - (_mount_z(ctx.scene) - float(build.reach))
+    # build.tcp and build.reach are in the head's mount frame, whose mount plane is MOUNT_Z on the
+    # flange, a changer and a bracket alike (the scene builds every head so)
+    tip_drop = float(build.tcp[2]) - (MOUNT_Z - float(build.reach))
     return Tool(
         mechanism=_mechanism(head.spec.family.value),
         primitive=impl.primitive(head.spec, build),

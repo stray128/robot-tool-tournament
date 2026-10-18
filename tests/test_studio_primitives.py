@@ -14,6 +14,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 import rtt.studio.primitives as primitives_pkg
@@ -760,3 +761,113 @@ def test_a_closing_linkage_finger_reaches_below_its_open_tip() -> None:
     from rtt.studio.primitives._common import footprint
 
     assert footprint(scene, 1.0).tip_z < footprint(scene, 0.0).tip_z - 0.010
+
+
+# --------------------------------------------------------------------------- S2c: tool stacks
+
+#: one tool per build path: an adaptive gripper (honours ``mount_z``), vendored catalog models
+#: (they level their housing at ``MOUNT_Z`` whatever ``mount_z`` says), a cup, a soft arm
+STACK_TOOLS = [
+    ("catalog_gripper", "adaptive-2f", "pinch"),
+    ("catalog_gripper", "gripper-2f-finray", None),
+    ("catalog_hand", "hand-5f-22dof", "power"),
+    ("suction", "cup-25mm", None),
+    ("soft_arm", "tentacle-12", None),
+]
+
+
+def _with_spare_step(spec: TaskSpec) -> TaskSpec:
+    """The task plus a later push on a far-away part, so a tool-change setup has its two tools."""
+    spare = ObjectInstance.of(
+        "spare", "part", "Spare", ObjectPose(-260.0, -160.0, 0.0), size_x_mm=30, size_y_mm=30, size_z_mm=30
+    )
+    second = Step.of(
+        "spare_push", "push", "spare", "part", "Push the spare", [SuccessCriterion("force_n", at_least=0)]
+    )
+    return TaskSpec(spec.title, "", (*spec.objects, spare), (*spec.steps, second), source="test")
+
+
+def _mounted(eff: EffectorSpec, spec: TaskSpec, stack_mm: float | None) -> Setup:
+    if stack_mm is None:
+        return Setup.single(eff, spec.step_ids)
+    from rtt.studio.types import ToolChanger
+
+    other = (
+        preset("soft_arm", "tentacle-12") if eff.family.value == "suction" else preset("suction", "cup-25mm")
+    )
+    return Setup.tool_change({spec.steps[0].id: eff, "spare_push": other}, ToolChanger(stack_mm=stack_mm))
+
+
+@pytest.mark.parametrize("key", STACK_TOOLS, ids=lambda k: k[1])
+def test_a_tool_on_a_changer_hangs_below_it_and_the_planner_knows_where_its_tip_is(
+    key: tuple[str, str, str | None],
+) -> None:
+    """S2c: every family's tool hangs the changer's stack height lower than on the flange, and the
+    tip the controllers plan with (``Tool.tip``) moves with it (a vendored model used to stay put
+    inside a 40 mm changer while the planner moved its tip 28 mm down)."""
+    from rtt.sim.task import default_task_v2
+    from rtt.studio.plan import StepContext
+    from rtt.studio.primitives._common import footprint, tool_of
+    from rtt.studio.scene import build_studio_scene
+
+    task = default_task_v2()
+    spec = _with_spare_step(GATE["twist"][0])
+    eff = preset(*key)
+    lowest, planned = {}, {}
+    for stack in (None, 5.0, 40.0):
+        scene = build_studio_scene(_mounted(eff, spec, stack), spec, 0, task=task)
+        step = spec.steps[0]
+        ctx = StepContext(
+            step=step,
+            task_spec=spec,
+            scene=scene,
+            obj=scene.objects[step.object],
+            target=None,
+            head=scene.active,
+            wrist_start=np.zeros(5),
+            task=task,
+            seed=0,
+            aim_offsets={},
+        )
+        lowest[stack] = footprint(scene, 0.0).tip_z  # measured: the head's lowest point
+        planned[stack] = float(tool_of(ctx).tip[2])
+    for stack in (5.0, 40.0):
+        drop = -stack / 1000.0  # the flange's mount plane is MOUNT_Z, the changer's MOUNT_Z - stack
+        # measured by a settling calibration run: a hand's fingers settle within a few hundredths
+        assert lowest[stack] - lowest[None] == pytest.approx(drop, abs=0.0005), (key, stack)
+        assert planned[stack] - planned[None] == pytest.approx(drop, abs=1e-6), (key, stack)
+
+
+#: the S2 gate references (they honour ``mount_z``) and vendored tools that pass the same gate
+#: tasks on the flange (they did not on a changer before S2c)
+CHANGER_CASES = [(name, GATE[name][1]) for name in sorted(GATE)] + [
+    ("grasp", ("catalog_gripper", "gripper-2f-finray", None)),
+    ("wrap", ("catalog_gripper", "gripper-2f-finray", None)),
+    ("insert", ("catalog_gripper", "gripper-2f-rigid-a", None)),
+    ("push", ("catalog_hand", "hand-5f-22dof", "power")),
+]
+
+
+@pytest.mark.parametrize(("name", "key"), CHANGER_CASES, ids=lambda v: v if isinstance(v, str) else v[1])
+def test_a_gate_task_on_a_tool_changer_ends_as_on_the_flange(
+    name: str, key: tuple[str, str, str | None]
+) -> None:
+    spec = _with_spare_step(GATE[name][0])
+    eff = preset(*key)
+    jobs = [
+        StudioJob(_mounted(eff, spec, stack), spec, StudioCondition("seed0", 0))
+        for stack in (None, 25.0, 40.0)
+    ]
+    flange, *changers = (r.steps[0] for r in run_task_jobs(jobs, workers=3))
+    assert flange.success, (name, key, flange.failure_mode, dict(flange.quantities))
+    for out in changers:
+        assert out.success == flange.success and out.failure_mode == flange.failure_mode, (
+            name,
+            key,
+            out.failure_mode,
+            dict(out.quantities),
+        )
+        assert out.quantities["penetration_mm"] <= HELD_PENETRATION_MAX_MM
+        for q in ("angle_deg", "travel_mm", "depth_mm", "lift_mm"):
+            if q in flange.quantities:
+                assert out.quantities[q] == pytest.approx(flange.quantities[q], abs=3.0), (name, key, q)

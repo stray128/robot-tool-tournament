@@ -212,6 +212,17 @@ the objects' passive actuators.
   that the measured mass is the v1 mass.
 * **tool_change:** the changer's master and tool plates (`eff_studio_changer`) sit under the flange
   and the step's tool builds under them, `stack_mm` lower. A segment's scene holds only its tool.
+* **Mount frames on a stack (S2c contract fix).** A head on a changer or on a bracket adapter
+  builds under a mount frame (`eff_studio_face`) placed so that the frame's `MOUNT_Z` plane is the
+  stack's tool face, and every family gets `mount_z = MOUNT_Z` there: the same mount frame it gets
+  on the bare flange. Before, the scene passed the face's height as `mount_z` (`-stack_mm` on a
+  changer, `-adapter_thickness_mm` on a bracket), but the vendored catalog grippers and hands
+  level their housing at `MOUNT_Z` whatever `mount_z` says, so they sat inside the stack (at the
+  same height for any changer) while the controllers placed their tip by `mount_z`: on a 40 mm
+  changer a vendored tool's tip was planned 28 mm lower than it was, and it never reached a
+  valve or a part. Families that honour `mount_z` (adaptive grippers, cups, soft arms, designed
+  tools) are in the same place as before; `rtt.studio.primitives._common.tool_of` reads every
+  head's tip from its build in the one `MOUNT_Z` mount frame.
 * **multi_head:** a generated bracket (`eff_studio_bracket`: a hub and one capsule arm per head)
   carries both heads, each on its own adapter plate. Each head is built by its family into a
   scratch spec (the scene's options and defaults, no visual assets) and attached under its mount.
