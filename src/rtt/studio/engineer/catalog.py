@@ -361,7 +361,10 @@ def render_rules() -> str:
                 f"- Lids on bins: a lid's hinge height is fixed ({num(LID_HINGE_MM)} mm, its closed underside), so "
                 f"a bin a lid covers (at the lid's position) is {num(LID_HINGE_MM)} mm tall; when the use case "
                 "states another bin height, put that lid on that bin in unsupported (not modelled) instead of "
-                "changing the height."
+                "changing the height. A lid with feature lip is opened by a hook slid under its free edge, so it "
+                "overhangs its bin by feature_mm on every side (width_mm at least the bin's length_mm + 2 x "
+                "feature_mm, depth_mm at least the bin's width_mm + 2 x feature_mm); a lid with feature handle "
+                "may match its bin."
             ),
             (
                 "- Reachable criteria: a lid's or door's angle within its max_angle_deg; a drawer's travel "

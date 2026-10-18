@@ -38,6 +38,7 @@ keyword; it backs a refusal whose nearest primitive the model left out.
 
 from __future__ import annotations
 
+import math
 import re
 from collections.abc import Collection, Sequence
 from functools import cache
@@ -399,7 +400,9 @@ def _layout_warnings(objects: Sequence[ObjectInstance], steps: Sequence[Step]) -
 
 
 def _lid_problems(objects: Sequence[ObjectInstance]) -> list[str]:
-    """A lid over a bin (same position) whose height is not the lid's fixed hinge height."""
+    """A lid over a bin (same position) whose height is not the lid's fixed hinge height, and a lip lid
+    that does not overhang its bin by ``feature_mm`` on every side (CR-S2b-1: S2b's hook slides under
+    the free edge)."""
     out: list[str] = []
     for i, o in enumerate(objects):
         if o.kind is not TemplateKind.HINGED_LID or o.params["orientation"] != "lid":
@@ -408,14 +411,33 @@ def _lid_problems(objects: Sequence[ObjectInstance]) -> list[str]:
             if b.kind is not TemplateKind.BIN:
                 continue
             same = abs(b.pose.x_mm - o.pose.x_mm) < 1.0 and abs(b.pose.y_mm - o.pose.y_mm) < 1.0
+            if not same:
+                continue
             height = float(b.params["height_mm"])
-            if same and abs(height - LID_HINGE_MM) > 1.0:
+            if abs(height - LID_HINGE_MM) > 1.0:
                 out.append(
                     f"objects[{i}] ({o.name}): the lid template's hinge height is fixed at {num(LID_HINGE_MM)} mm, "
                     f"so the bin {b.name!r} it covers must be {num(LID_HINGE_MM)} mm tall (it is {num(height)} mm); "
                     "if the use case states another height, put that lid on that bin in unsupported (not "
                     "modelled) instead of changing it"
                 )
+            if o.params["feature"] == "lip":
+                # the bin's plan extent in the lid's frame (length along x, width along y, turned by the
+                # yaw between them)
+                rel = math.radians(b.pose.yaw_deg - o.pose.yaw_deg)
+                c, s = abs(math.cos(rel)), abs(math.sin(rel))
+                length, width = float(b.params["length_mm"]), float(b.params["width_mm"])
+                ex, ey = length * c + width * s, length * s + width * c
+                lip = float(o.params["feature_mm"])
+                need_x, need_y = ex + 2.0 * lip, ey + 2.0 * lip
+                w, d = float(o.params["width_mm"]), float(o.params["depth_mm"])
+                if w < need_x - 1e-9 or d < need_y - 1e-9:
+                    out.append(
+                        f"objects[{i}] ({o.name}): a lip lid is opened by a hook under its free edge, so it "
+                        f"overhangs its bin by feature_mm ({num(lip)} mm) on every side: at least {num(need_x)} x "
+                        f"{num(need_y)} mm over the bin {b.name!r} ({num(ex)} x {num(ey)} mm), it is {num(w)} x "
+                        f"{num(d)} mm; make it larger or give it a handle"
+                    )
     return out
 
 

@@ -30,7 +30,7 @@ from rtt.studio.types import CONTRACT_VERSION
 
 __all__ = ["RECORDED_UPLOAD", "parity_cases", "recorded_plans", "write_web_data"]
 
-RECORDED_UPLOAD: Final = Path(__file__).with_name("recorded") / "upload-2026-10-18-s4c"
+RECORDED_UPLOAD: Final = Path(__file__).with_name("recorded") / "upload-2026-10-18-s4d"
 FILES: Final = ("catalog.json", "recorded.json", "parity.json")
 
 
@@ -256,6 +256,28 @@ def _edits() -> list[tuple[str, str, Callable[[dict[str, Any]], None]]]:
             {"x_mm": drawer["pose"]["x_mm"], "y_mm": front - 0.5 * drawer["params"]["travel_mm"]}
         )
 
+    def lid_over_bin(
+        feature: str, over_x: float, over_y: float, turn: float = 0.0
+    ) -> Callable[[dict[str, Any]], None]:
+        """Put the lid on its bin with ``feature`` and an overall overhang of ``over_x`` x ``over_y``
+        mm (CR-S2b-1), the bin turned ``turn`` degrees relative to the lid."""
+
+        def f(a: dict[str, Any]) -> None:
+            tote, lid = _object(a, "bin"), _object(a, "hinged_lid")
+            tote["pose"].update({"x_mm": lid["pose"]["x_mm"], "y_mm": lid["pose"]["y_mm"]})
+            tote["pose"]["yaw_deg"] = lid["pose"]["yaw_deg"] + turn
+            tote["params"]["height_mm"] = 120
+            lid["params"].update(
+                {
+                    "feature": feature,
+                    "feature_mm": 15,
+                    "width_mm": tote["params"]["length_mm"] + over_x,
+                    "depth_mm": tote["params"]["width_mm"] + over_y,
+                }
+            )
+
+        return f
+
     return [
         ("valid_h1", "h1_tote", lambda a: None),
         ("valid_h2", "h2_coupling", lambda a: None),
@@ -421,6 +443,12 @@ def _edits() -> list[tuple[str, str, Callable[[dict[str, Any]], None]]]:
         ),
         ("lid_on_a_200_mm_bin", "h1_tote", setp("bin", "height_mm", 200)),
         ("lid_and_bin_apart", "h1_tote", chain(pose("bin", "y_mm", -200), setp("bin", "height_mm", 200))),
+        # a lip lid overhangs its bin by feature_mm on every side (S4d, CR-S2b-1)
+        ("lid_lip_flush_with_its_bin", "h1_tote", lid_over_bin("lip", 0, 0)),
+        ("lid_handle_flush_with_its_bin", "h1_tote", lid_over_bin("handle", 0, 0)),
+        ("lid_lip_overhangs_its_bin", "h1_tote", lid_over_bin("lip", 30, 30)),
+        ("lid_lip_short_in_depth", "h1_tote", lid_over_bin("lip", 30, 29)),
+        ("lid_lip_on_a_turned_bin", "h1_tote", lid_over_bin("lip", 30, 30, 90)),
         # layout and windows (S4c)
         (
             "layout_part_in_its_bin",

@@ -445,7 +445,9 @@ def test_twist_torque_is_checked_against_its_share_the_wrist_and_the_criterion()
 
 def test_a_lid_needs_a_120_mm_bin_under_it_and_a_low_stop_is_warned_about() -> None:
     tote = ObjectInstance.of("tote", "bin", "Tote", ObjectPose(0, 0, 0), height_mm=200)
-    lid = ObjectInstance.of("lid", "hinged_lid", "Lid", ObjectPose(0, 0, 0), max_angle_deg=85)
+    lid = ObjectInstance.of(
+        "lid", "hinged_lid", "Lid", ObjectPose(0, 0, 0), max_angle_deg=85, width_mm=330, depth_mm=230
+    )
     open_lid = Step.of("open", "hook_pull", "lid", "handle", "Open it.", [_crit("angle_deg", 80)])
     problems, warnings = check_plan(_spec([tote, lid], [open_lid]))
     assert problems == [
@@ -472,6 +474,46 @@ def test_a_lid_needs_a_120_mm_bin_under_it_and_a_low_stop_is_warned_about() -> N
     assert (
         len(on_door) == 1 and "overlaps the footprint of objects[0] (tote)" in on_door[0]
     )  # ... it overlaps
+
+
+def test_a_lip_lid_overhangs_its_bin_by_feature_mm_on_every_side_and_a_handle_lid_need_not() -> None:
+    tote = ObjectInstance.of("tote", "bin", "Tote", ObjectPose(0, 0, 0), height_mm=120)  # 300 x 200 mm
+
+    def lid(feature: str = "lip", w: float = 300, d: float = 200, lip: float = 15) -> ObjectInstance:
+        return ObjectInstance.of(
+            "lid",
+            "hinged_lid",
+            "Lid",
+            ObjectPose(0, 0, 0),
+            feature=feature,
+            feature_mm=lip,
+            width_mm=w,
+            depth_mm=d,
+        )
+
+    open_lid = Step.of("open", "hook_pull", "lid", "handle", "Open it.", [_crit("angle_deg", 110)])
+    assert check_plan(_spec([tote, lid()], [open_lid]))[0] == [
+        (
+            "objects[1] (lid): a lip lid is opened by a hook under its free edge, so it overhangs its bin by "
+            "feature_mm (15 mm) on every side: at least 330 x 230 mm over the bin 'tote' (300 x 200 mm), it is "
+            "300 x 200 mm; make it larger or give it a handle"
+        )
+    ]
+    assert check_plan(_spec([tote, lid("handle")], [open_lid]))[0] == []  # a handle lid may match its bin
+    assert check_plan(_spec([tote, lid(w=330, d=230)], [open_lid]))[0] == []
+    assert check_plan(_spec([tote, lid(w=310, d=210, lip=5)], [open_lid]))[0] == []
+    assert len(check_plan(_spec([tote, lid(w=329, d=230)], [open_lid]))[0]) == 1  # 1 mm short along x
+    assert len(check_plan(_spec([tote, lid(w=330, d=229)], [open_lid]))[0]) == 1  # ... and along y
+    # a bin turned a quarter turn under the lid: its 300 mm side now runs along the lid's depth
+    turned = ObjectInstance.of("tote", "bin", "Tote", ObjectPose(0, 0, 90), height_mm=120)
+    assert (
+        "at least 230 x 330 mm over the bin 'tote' (200 x 300 mm)"
+        in check_plan(_spec([turned, lid(w=330, d=230)], [open_lid]))[0][0]
+    )
+    assert check_plan(_spec([turned, lid(w=230, d=330)], [open_lid]))[0] == []
+    # a lid that is not over the bin owes it nothing
+    apart = ObjectInstance.of("tote", "bin", "Tote", ObjectPose(0, -260, 0), height_mm=120)
+    assert check_plan(_spec([apart, lid()], [open_lid]))[0] == []
 
 
 def _inside(px: float, py: float, poly: list[tuple[float, float]], tol: float) -> bool:
@@ -1041,6 +1083,7 @@ def test_parity_cases_cover_valid_refused_and_every_kind_of_problem() -> None:
         "lives on its stub",
         "before this twist",
         "label is longer",
+        "a lip lid is opened by a hook",
     ):
         assert fragment in joined, fragment
     recorded = recorded_plans()
