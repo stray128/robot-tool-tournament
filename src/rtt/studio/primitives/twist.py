@@ -320,7 +320,7 @@ class TwistController:
         if t < guard.t0:
             wrist = run["path"].at(t)
         elif t < run["t_turn"]:
-            pressing = contacts(model, data, tool_geoms(ctx.scene), ctx.obj.geom_ids).normal
+            pressing = contacts(model, data, tool_geoms(ctx.scene), ctx.scene.ids.object_geoms).normal
             wrist = guard.at(min(t, guard.end), pressing) if t <= guard.end else guard.at(guard.end, 1e9)
         else:
             wrist = self._turn(t, ctx, run, model, data, guard, v)

@@ -35,7 +35,8 @@ Sites: ``member`` (the member's top centre), ``seat`` (the stub top, static) and
 the lead, seated depth, pitch, sizes and the member code (0 cap, 1 coupling, 2 nut).
 
 State: ``turns`` and ``angle_deg`` (tightening from the start), ``depth_mm`` (slide travel from
-the stub top: the thread starts at the lead, seated at lead plus ``engage_turns x pitch_mm``).
+the stub top: the thread starts at the lead, seated at lead plus ``engage_turns x pitch_mm``),
+read within the joints' own limits (the seat stop and the helical flank).
 """
 
 from __future__ import annotations
@@ -257,11 +258,18 @@ class ThreadedJointBuilder(TemplateBuilder):
         )
 
     def state(self, obj: ResolvedHandles, model: mujoco.MjModel, data: mujoco.MjData) -> dict[str, float]:
+        info = obj.handles.info
         phi = float(data.qpos[obj.joint_qpos["hinge"]])
+        # within the joints' own limits: the seat stop and the helical flank (whose soft limit
+        # lets a member pushed onto the thread start sit a fraction of a micrometre past it)
+        flank = info["lead_m"] + info["pitch_m"] * phi / (2.0 * math.pi)
+        depth = min(
+            max(float(data.qpos[obj.joint_qpos["slide"]]), 0.0), info["lead_m"] + info["seat_m"], flank
+        )
         return {
             "turns": phi / (2.0 * math.pi),
             "angle_deg": math.degrees(phi),
-            "depth_mm": 1000.0 * float(data.qpos[obj.joint_qpos["slide"]]),
+            "depth_mm": 1000.0 * max(depth, 0.0),
         }
 
     def passive(self, obj: ResolvedHandles, model: mujoco.MjModel, data: mujoco.MjData) -> np.ndarray:

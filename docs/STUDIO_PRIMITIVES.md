@@ -21,6 +21,7 @@ candidate effector, and each one is a named constant in its module.
 5. [Fidelity and caveats](#5-fidelity-and-caveats)
 6. [Gate results](#6-gate-results)
 7. [Known limits](#7-known-limits)
+8. [S2b: the hero-task limits](#8-s2b-the-hero-task-limits)
 
 ## 1. Rules every controller follows
 
@@ -31,7 +32,7 @@ candidate effector, and each one is a named constant in its module.
   v1. A test (`test_controllers_never_read_the_true_object_state`) scans the package. The
   predicates read the true state.
 * **Proprioception and force sensing.** A controller may read its own wrist joints and the
-  contact forces between the tool and the step's object (a wrist force sensor). Force feedback
+  contact forces between the tool and the objects (a wrist force sensor). Force feedback
   within a step acts through the wrist targets and the effector controls only, with the equal
   per-step budgets of section 4 (orchestrator ruling on STUDIO.md open question 1).
 * **The tool's own mechanism.** Every effector control comes from the head's own v1 primitive,
@@ -42,8 +43,10 @@ candidate effector, and each one is a named constant in its module.
 * **Tool geometry** comes from a calibration run (`_common.footprint`): the active head alone,
   0.75 m above the table, its controls held at a closure for 0.6 s, its collision geoms read in
   the wrist frame. It gives the tip, the aperture between fingers along the closing axis (for
-  pre-shaping to a feature with 6 mm clearance each side) and the sides a push can use. It never
-  touches the step's `MjData` and is cached per compiled scene.
+  pre-shaping to a feature with 6 mm clearance each side), where a pair of pads mounted off the
+  TCP meets a part (`grip_centre`), the tool's sideways hook (`hook`: the geoms near the tip that
+  reach furthest beyond the rest, a soft arm's horizontal arm) and the sides a push can use. It
+  never touches the step's `MjData` and is cached per compiled scene.
 * **Wrist.** The palm yaw and the continuous roll turn about the same vertical axis. Controllers
   set headings with the yaw and turn objects with the roll; the roll target never moves faster
   than 98 % of the 180 deg/s cap [assumed, STUDIO.md 4.1]. The roll torque limit is 15 N m
@@ -53,7 +56,8 @@ candidate effector, and each one is a named constant in its module.
   collision geom (all heads, the bracket or changer, and the wrist flange): a wrist that presses
   on an object is the tool pressing on it.
 * **Guarded moves.** A final approach onto a feature stops advancing while the tool presses on
-  the object harder than 5 N.
+  any object harder than 5 N (S2b: not only the step's object, so a hook moving in under a lid
+  stops at the bin's wall).
 
 ## 2. Templates
 
@@ -75,7 +79,7 @@ Auxiliary sites beyond the handles exist only for controllers to observe geometr
 | `feature = lip` | `handle` site at the middle of the free edge, mid-thickness (a door's: 40 mm below its top); a door's stop post behind the panel sits `feature_mm` in from the free edge (60 % of the door height) |
 | `feature = handle` | a 10 mm bar [assumed] on two posts, `feature_mm` clear of the outer face: a lid's along x, 20 mm in from the front edge; a door's vertical, 25 mm in from the free edge, on its upper part |
 | Sites | `handle`, `lid` (outer-face centre), `hinge` (aux, static) |
-| State | `angle_deg` (0 closed, positive open) |
+| State | `angle_deg` (0 closed, positive open), read within `[0, max_angle_deg]`: the solver's soft limit lets a panel resting on its stop lean a few thousandths of a degree past it |
 | Density | 700 kg/m^3 [assumed] |
 
 ### 2.2 `drawer` (rigid)
@@ -86,7 +90,7 @@ Auxiliary sites beyond the handles exist only for controllers to observe geometr
 | Drawer | an overlay front `width x height` (12 mm) just in front of the carcass and a box in it with 2 mm clearance [assumed]; one slide along local -y, range `[0, travel_mm]`, friction loss `pull_force_n`, damping 2 N s/m [assumed] |
 | Handle | centre `min(height/2, 30 mm)` below the top edge: `bar` 10 mm x 120 mm (or 60 % of the width) on posts, `handle_mm` off the face; `knob` 12 mm neck `handle_mm` long with a 26 mm head; `lip` a 4 mm plate standing `handle_mm` up from the front's top edge [assumed geometry] |
 | Sites | `drawer` (front centre), `handle`, `front` (aux, carcass front) |
-| State | `travel_mm` |
+| State | `travel_mm`, read within `[0, travel_mm]` |
 | Note | the slide holds the drawer level, so a travel longer than the drawer does not drop it |
 
 ### 2.3 `quarter_turn_latch` (approximation)
@@ -99,7 +103,7 @@ Auxiliary sites beyond the handles exist only for controllers to observe geometr
 | `head = wing` | a boss and a fin `head_diameter_mm` long, `head_height_mm` tall, 20 % of the diameter thick (at least 4 mm) |
 | `head = slot` | a round head with a slot across it, 30 % of the diameter wide, half the height deep [assumed]: it needs a blade |
 | Sites | `head` (top centre), `mark` (aux: the rim at local +x, shows the rotation) |
-| State | `angle_deg` (counter-clockwise from locked) |
+| State | `angle_deg` (counter-clockwise from locked), read within `[0, turn_deg]` |
 
 ### 2.4 `threaded_joint` (approximation)
 
@@ -113,7 +117,7 @@ Auxiliary sites beyond the handles exist only for controllers to observe geometr
 | Torque ramp | engaged: resisting torque rises linearly from `start_torque_nm` to `final_torque_nm` when seated, and stays at `final_torque_nm` past it (a tightening step stops on torque); the template's motor as a velocity-saturated friction (0.3 rad/s) plus 0.02 N m of dry friction always [assumed] |
 | Shapes | wall `max(1.5 mm, 15 % of d)` [assumed]: `coupling` 12-sided tube, `cap` the tube closed on top, `nut` a hexagon (`d` across corners) with a bore; contacts with the stub excluded |
 | Sites | `member` (top centre), `seat` (stub top, static), `flat` (aux: a flat's centre) |
-| State | `turns`, `angle_deg` (tightening from the start), `depth_mm` (from the stub top) |
+| State | `turns`, `angle_deg` (tightening from the start), `depth_mm` (from the stub top), read within the seat stop and the helical flank (`lead + pitch x turns`) |
 
 ### 2.5 `handwheel_valve` (approximation)
 
@@ -123,7 +127,7 @@ Auxiliary sites beyond the handles exist only for controllers to observe geometr
 | Wheel | hinge about the vertical, **opening counter-clockwise from above**, range `[0, travel_deg]`; hub `max(10 mm, 12 % of R)`; rim of 24 capsules `rim_section_mm` thick; `spokes` capsules 40 % of the section thick; `spokes = 0` a solid disc; density 2700 kg/m^3 [assumed] |
 | Torque curve | `c(angle) x torque_nm`, c = 1.0 closed, 0.6 after 20 % of the travel, rising to 0.8 over the last 10 % [assumed shape]; half of `torque_nm` is dry friction, the rest the template's motor (velocity saturated at 0.1 rad/s) |
 | Sites | `wheel` (hub top), `spoke0` (aux: spoke 0 at the rim centre line) |
-| State | `angle_deg` (counter-clockwise from closed) |
+| State | `angle_deg` (counter-clockwise from closed), read within `[0, travel_deg]` |
 
 ### 2.6 `port_plug` (rigid)
 
@@ -134,7 +138,7 @@ Auxiliary sites beyond the handles exist only for controllers to observe geometr
 | `insert_force_n` | three spring-loaded contact pads in the wall just below the chamfer (capsules on radial slides, preloaded 2 mm against an inner stop, squeezed 0.4 mm by a centred plug); their stiffness makes the pads' contact friction (the task friction, jittered) equal `insert_force_n`. A real, implicit contact friction (an explicit friction force chattered on a 6 to 20 g plug, so it was replaced) |
 | `latch` | the plug gets a 0.8 mm groove where the pads sit when it is seated: they snap in and hold it [assumed geometry] |
 | Sites | `plug` (top), `socket` (mouth centre, static), `plug_tip` (aux) |
-| State | `depth_mm` (tip below the mouth while in the bore) |
+| State | `depth_mm` (tip below the mouth while in the bore); within 0.1 mm of the floor it reads the full depth (`SEAT_TOL` [assumed]: the floor contact springs back a few hundredths of a millimetre when a press lets go) |
 
 ## 3. Primitives
 
@@ -170,9 +174,19 @@ at least 100 deg, when its stop allows) at `speed_mm_s` (min-jerk); a door's hea
 it. Release to the pre-shape (so no finger shoves the panel), back off 40 mm from the face, rise
 60 mm.
 
+**A lid's lip** (S2b) has nothing to grip or pinch: the tool's calibrated sideways hook is turned
+toward the hinge, lowered outside the free edge (10 mm out, plus whatever of the tool reaches
+further toward the lid than the hook), moved in under it, guarded, by the hook's depth less 3 mm
+(at most the lip less 2 mm and 40 mm), raised 3 mm onto the underside and carried along the arc,
+open. The soft arms' horizontal arms are such hooks (131, 151 and 171 mm); grippers, hands, cups
+and the designed sliding hook gripper (whose hooks point inward, 4 mm) have none, reach nothing
+under the lip and fail honestly.
+
 Observed: the template state after the release, `slip_mm` (largest displacement of the handle
-relative to the TCP in the tool frame, engaged to release), `force_n` (peak net force),
-`penetration_mm`. Failing with more than 10 mm of slip is `slip`.
+relative to the tool, in the tool frame, or the panel's for a hooked lip, engaged to release,
+counted while the tool touches the object or the object lags more than 1 deg or 2 mm behind where
+the tool is taking it: a lid that falls open past vertical ahead of a hook has not slipped from
+it), `force_n` (peak net force), `penetration_mm`. Failing with more than 10 mm of slip is `slip`.
 
 ### 3.3 `twist`
 
@@ -197,16 +211,24 @@ Failing with more than 15 deg of slip is `slip`.
 
 ### 3.4 `insert`
 
-Hold the member (pick a plug off the table, gripping it at least 5 mm above the socket depth so
-the fingers clear the socket; grip a threaded member in place across its flats, or press its top
-with a cup or soft arm), align the plug's observed tip over the mouth (`standoff_mm` above), then
-re-aim once it has settled 0.3 s (at most 15 mm). Push: the z target descends at `speed_mm_s`
-but never more than `F / k_z` below the wrist (F: 80 % of `max_force_n`, else 30 N [assumed]),
-the x/y target yields to the lateral force (0.002 m per N s, at most 3 mm) [assumed]; a plug
-stalled on the mouth spirals (0.4 mm per turn up to 3 mm). A plug is pushed home onto the floor;
-a threaded member to the criterion plus 0.5 mm (else the thread start). Jam recovery for a plug
-stalled part way in: let go, rise until the tip is 15 mm over the plug's top, close into a fist
-and press it home with the same force limit.
+Hold the member: pick a plug off the table; grip a threaded member in place across its flats, or
+press its top with a cup or soft arm. Fingers grip a plug (S2b) low: 5 mm above the socket depth
+(so they clear the socket when it is home), but with their first contact (3 mm above the tips
+[assumed]) below 80 % of the plug's tip-over height `r / mu` (closing fingers that touch a
+standing pin above that tip it over instead of sliding it; an 8 mm pin at mu 0.3 tips above
+13 mm); and between the pads wherever they are mounted (the fin-ray gripper's pads span 0.6 to
+26 mm along its x, off the TCP: it grips the plug at their middle). Align the plug's observed tip
+over the mouth (`standoff_mm` above), then re-aim once it has settled 0.3 s (at most 15 mm). Push:
+the z target descends at `speed_mm_s` but never more than `F / k_z` below the wrist (F: 80 % of
+`max_force_n`, else 30 N [assumed]); under a step force limit it also rises while the measured
+push is over 90 % of the limit (a tool's weight or a stiff cup adds to the servo); the x/y target
+yields to the lateral force (0.002 m per N s, at most 3 mm) [assumed]; a plug stalled on the
+mouth spirals (0.4 mm per turn up to 3 mm). A grip whose fingertips reach takes the plug home
+(they stop 3 mm over the socket); a lower grip only starts it, 1 mm past the chamfer, where the
+bore holds it upright. A threaded member goes to the criterion plus 0.5 mm (else the thread
+start). **Press home** for a plug started, or stalled at least 1 mm in: let go, rise until the tip
+is 15 mm over the plug's top, close into a fist and press it home with the same force limit.
+Release: the z target comes back to the wrist (the push stops) before the fingers open.
 
 Observed: `depth_mm` at the end, `lateral_force_n` (peak force across the axis during the push),
 `force_n`, `jam` (1 when it ends more than 0.5 mm short of the criterion, else of the full
@@ -239,7 +261,7 @@ cycle times stay comparable.
 | `twist_slack` | 1.0 | on top of 1.3 x the nominal turn time |
 | `insert_slack` | 1.0 | on top of 1.3 x the nominal insertion time |
 | `insert_search` | 2.0 | spiral search at a socket mouth |
-| `insert_reseat` | 2.6 | jam recovery (let go, press home) |
+| `insert_reseat` | 2.6 | jam recovery (let go, press home), plus the press itself: 1.3 x the full depth less 1 mm at `speed_mm_s` (S2b; the same for every tool on the port, since a slipping grip can stall anywhere) |
 | `push_slack` | 1.5 | force-limited pushing may pause |
 
 Every step is capped at 30 s (`MAX_STEP_S`).

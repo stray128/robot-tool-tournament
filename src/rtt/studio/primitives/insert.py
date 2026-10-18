@@ -6,10 +6,14 @@ Objects: ``port_plug`` (``plug``) and ``threaded_joint`` (``member``).
 
 1. **Hold it.** If the tool does not already hold the member (a previous ``grasp`` step with
    ``hold_after``), it picks it: a plug off the table with the head's own v1 primitive and the v1
-   phases (as :mod:`._pick`, lifted to a carry height), fingertips at least
-   :data:`FINGER_ROOM` above the socket depth so they clear the socket; a threaded member, which
-   lives on its stub, is gripped in place across its flats (as :mod:`.twist`), or pressed on its
-   top by a cup or a soft arm.
+   phases (as :mod:`._pick`, lifted to a carry height); a threaded member, which lives on its
+   stub, is gripped in place across its flats (as :mod:`.twist`), or pressed on its top by a cup
+   or a soft arm. Fingers grip a plug
+   low (:func:`grip_tip`): :data:`FINGER_ROOM` above the socket depth (so they clear the socket
+   when it is home), but no higher than :data:`TIP_SAFE` of its tip-over height ``r / mu``
+   (closing fingers that touch a standing pin above that tip it over instead of sliding it), and
+   between the pads wherever they are mounted (``Footprint.grip_centre``: a head whose pads sit
+   off its TCP grips the plug at the pads' middle).
 2. **Align** (a plug): over the socket, with the plug's tip ``standoff_mm`` above the mouth. The
    plug's place in the tool is estimated when the move starts (the observed tip relative to the
    TCP, from proprioception) and once more when it has settled 0.3 s over the mouth (the
@@ -17,19 +21,23 @@ Objects: ``port_plug`` (``plug``) and ``threaded_joint`` (``member``).
    or slid in the grasp is re-aimed before the push.
 3. **Push** (closed loop, force feedback through the wrist only): the wrist's z target descends
    at ``speed_mm_s`` but never more than ``F / k_z`` below the TCP (``F``: 80 % of the step's
-   ``max_force_n``, else :data:`PUSH_N`; ``k_z`` the z servo's stiffness), so the push force stays
-   under ``F``. Lateral compliance: the x/y target yields to the lateral force on the tool
-   (:data:`ADMITTANCE` m per N s, at most 3 mm). Search: a plug that stalls on the socket's top
-   face spirals (0.4 mm per turn, up to 3 mm) while pressing, within the equal budget
-   :data:`~._common.BUDGET_S` ``insert_search``. A plug is pushed home (onto the socket floor);
-   a threaded member to the ``depth_mm`` criterion plus 0.5 mm (without one, the thread start).
-   It stops there, or when the depth stalls for :data:`STALL_S` (a jam).
-   **Jam recovery** (a plug stalled part way in, within the equal budget
-   :data:`~._common.BUDGET_S` ``insert_reseat``): let go (0.3 s), rise until the tip is
-   :data:`RESEAT_CLEAR` over the plug's top, close into a fist and press the plug home from its top
-   with the same force limit: a plug held cocked in the grasp straightens once released.
-4. **Release**: open over 0.4 s, rise 50 mm (``hold_after`` keeps the grip and skips the
-   recovery).
+   ``max_force_n``, else :data:`PUSH_N`; ``k_z`` the z servo's stiffness); under a step force
+   limit it also rises at that speed while the measured push is over :data:`FORCE_HOLD` of the
+   limit (a tool's weight or a stiff cup adds to the servo). Lateral compliance: the x/y target yields to the
+   lateral force on the tool (:data:`ADMITTANCE` m per N s, at most 3 mm). Search: a plug that
+   stalls on the socket's top face spirals (0.4 mm per turn, up to 3 mm) while pressing, within
+   the equal budget :data:`~._common.BUDGET_S` ``insert_search``. A plug is pushed home (onto
+   the socket floor) when the fingertips reach (they stop :data:`START_CLEAR` over the socket);
+   a grip too low for that only starts it, :data:`START_DEPTH` past the chamfer, where the bore
+   holds it upright. A threaded member goes to the ``depth_mm`` criterion plus 0.5 mm (without
+   one, the thread start). The push stops there, or when the depth stalls for :data:`STALL_S`.
+   **Press home** (a plug started or stalled at least :data:`RESEAT_MIN` deep, within the equal
+   budget :data:`~._common.BUDGET_S` ``insert_reseat`` plus the press from :data:`RESEAT_MIN`
+   to the goal at ``speed_mm_s``, the same for every tool): let go (0.3 s), rise until the tip is :data:`RESEAT_CLEAR` over the plug's top,
+   close into a fist and press the plug home from its top with the same force limit: a plug held
+   cocked in the grasp straightens once released.
+4. **Release**: the z target comes back to the wrist (the push stops) before the fingers open
+   over 0.4 s, then rise 50 mm (``hold_after`` keeps the grip and skips the recovery).
 
 **Predicate** (:class:`InsertPredicate`): ``depth_mm`` (the template state at the end),
 ``lateral_force_n`` (the peak force across the insertion axis the tool applied, during the
@@ -91,9 +99,40 @@ SPIRAL_PITCH = 0.0004  # m per turn
 SPIRAL_PERIOD = 0.5  # s per turn
 CARRY = 0.020  # m: the plug's tip this far above the standoff point while carried
 FINGER_ROOM = 0.005  # m: fingertips grip this far above the socket depth (and below the plug top)
+TIP_SAFE = 0.8  # of the tip-over height r / mu: a grip contact below it slides a plug, not tips it
+PAD_CONTACT = 0.003  # m: a finger's first contact sits this far above its tip [assumed]
+START_CLEAR = 0.003  # m: a gripped plug goes in until the fingertips are this far over the socket
+START_DEPTH = 0.001  # m past the chamfer: how far the grip starts a plug it cannot take home
 RELEASE_S = 0.4
 RETRACT = 0.050
+FORCE_HOLD = 0.9  # of a step's max_force_n: the measured push the z servo backs off above
+RESEAT_MIN = 0.001  # m: a plug at least this deep in the bore stands upright for a press home
 RESEAT_CLEAR = 0.015  # m over the plug's top while the fingers close into a fist
+
+
+def grip_start(reach: float, goal: float, info: Mapping[str, float]) -> float:
+    """How deep a finger grip takes a plug before it lets go: all the way when its fingertips
+    reach (``reach`` >= ``goal``), else only just past the chamfer, where the bore holds the plug
+    upright for the press home (the plan budgets the press from the same depth)."""
+    if reach >= goal:
+        return goal
+    return min(reach, info["chamfer_m"] + START_DEPTH)
+
+
+def grip_tip(info: Mapping[str, float], height: float, mu: float, floor: float) -> float:
+    """Where fingers grip a standing plug (their tips, m above its bottom).
+
+    High enough that they clear the socket at full depth (:data:`FINGER_ROOM` above it), but
+    never so high that the first finger to touch tips the plug over instead of sliding it: a
+    push at height ``z`` on a plug of radius ``r`` standing on the table tips it once ``z``
+    exceeds ``r / mu`` (the friction at its foot against its weight's lever), so the contact
+    (:data:`PAD_CONTACT` above the tips) stays below :data:`TIP_SAFE` of that. A short or slim
+    plug is therefore gripped low and only started in its socket by the grip; it is pressed home
+    from its top (``press_home``).
+    """
+    full = info["depth_m"] + FINGER_ROOM
+    tip_safe = TIP_SAFE * (0.5 * info["plug_d_m"]) / mu - PAD_CONTACT
+    return max(floor, min(full, tip_safe, height - FINGER_ROOM))
 
 
 def push_depth(ctx: StepContext) -> float:
@@ -115,6 +154,16 @@ def goal_depth(ctx: StepContext) -> float:
         cap = info["depth_m"] if ctx.obj.kind is TemplateKind.PORT_PLUG else info["lead_m"] + info["seat_m"]
         return min(cap, lo / 1000.0 + 0.0005)
     return full
+
+
+def _servo_z(z: float, palm_z: float, push: float, run: Mapping[str, Any], dt: float) -> float:
+    """The z target of a force-limited push: it descends at the insertion speed but never more
+    than ``F / k_z`` below the wrist (so the servo pushes at most ``F``), and, under a step force
+    limit, rises at that speed while the measured push on the object is over :data:`FORCE_HOLD` of
+    the limit (the tool's own weight or a stiff cup adds to the servo's force)."""
+    if push > run["force_cap"]:
+        return z + run["speed"] * dt
+    return max(z - run["speed"] * dt, palm_z - run["push_n"] / run["kz"])
 
 
 def _depth_observed(ctx: StepContext, data: mujoco.MjData, run: Mapping[str, Any]) -> float:
@@ -161,18 +210,19 @@ class InsertController:
             heading += 2.0 * math.pi * round((start[3] + roll - heading) / (2.0 * math.pi))
             yaw = heading - roll
             c = task.controller
-            # grip above the insertion depth so the fingers clear the socket, but still on the plug
-            room = info["depth_m"] + FINGER_ROOM
             tip = max(c.min_tip_clearance, pplan.tip_height)
+            grip = tool.tip
             if tool.mechanism == "fingers":
-                tip = max(tip, min(room, h - FINGER_ROOM))
+                tip = grip_tip(info, h, float(task.physics.friction), c.min_tip_clearance)
+                # the plug goes between the pads, wherever they are mounted
+                grip = grip + np.array([tool.footprint(0.0).grip_centre(0.5 * info["plug_d_m"]), 0.0, 0.0])
             approach = wrist_target(
                 np.array([site[0], site[1], base_z + max(tip + c.approach_offset, h + c.approach_clearance)]),
-                tool.tip,
+                grip,
                 yaw,
                 roll,
             )
-            grasp = wrist_target(np.array([site[0], site[1], base_z + tip]), tool.tip, yaw, roll)
+            grasp = wrist_target(np.array([site[0], site[1], base_z + tip]), grip, yaw, roll)
             transit(path, approach, max(approach[2], safe_palm_z(ctx, model, data, tool)))
             path.hold(c.settle_time)
             t_close = path.to(grasp, c.descend_time)
@@ -210,8 +260,13 @@ class InsertController:
         speed = float(step.params["speed_mm_s"]) / 1000.0
         travel = target - depth_now + (float(step.params["standoff_mm"]) / 1000.0 if port else 0.0)
         push_t = 1.3 * max(travel, 0.001) / speed + BUDGET_S["insert_slack"]
+        press_t = 0.0
         if port:
-            push_t += BUDGET_S["insert_search"] + BUDGET_S["insert_reseat"]
+            # jam recovery presses the plug home from wherever the grip left it (a grip that cannot
+            # take it home starts it just past the chamfer; a slipping grip stalls anywhere): every
+            # tool gets the budget of the longest press, from the shallowest plug it recovers
+            press_t = 1.3 * max(0.0, target - RESEAT_MIN) / speed
+            push_t += BUDGET_S["insert_search"] + BUDGET_S["insert_reseat"] + press_t
         t_end_push = t_push + push_t
         tail = 0.0 if step.hold_after else RELEASE_S + 0.6 + 0.2
         duration = min(30.0, t_end_push + 0.2 + tail)
@@ -228,8 +283,14 @@ class InsertController:
             "yaw": yaw,
             "roll": roll,
             "goal": target,
+            "press_t": press_t,
             "speed": speed,
             "push_n": force_limit(ctx, PUSH_N),
+            # a step's force limit is also held against the measured push (the servo cap alone
+            # lets a tool's weight or a stiff cup add to it); without one, the cap is the rule
+            "force_cap": FORCE_HOLD * step.constraints.max_force_n
+            if step.constraints.max_force_n
+            else math.inf,
             "kz": task.gripper.z_kp,
             "port": port,
             "standoff": float(step.params["standoff_mm"]) / 1000.0,
@@ -260,7 +321,7 @@ class InsertController:
         v = sch.values
         guard: Guarded | None = run["guard"]
         if guard is not None and guard.t0 <= t < guard.end + 1e-9:
-            pressing = contacts(model, data, tool_geoms(ctx.scene), ctx.obj.geom_ids).normal
+            pressing = contacts(model, data, tool_geoms(ctx.scene), ctx.scene.ids.object_geoms).normal
             wrist = guard.at(t, pressing)
         elif t < run["t_align"]:
             wrist = run["path"].at(t) if guard is None or t < guard.t0 else guard.at(guard.end, 1e9)
@@ -323,16 +384,22 @@ class InsertController:
             if run["port"]:  # re-aim once the carried plug has settled: its observed tip over the mouth
                 gap = ctx.observe_site(data, "socket") - ctx.observe_site(data, "plug_tip")
                 run["realign"] = np.clip(gap[:2], -0.015, 0.015)
+                # the grip takes the plug in until the tool's tip is START_CLEAR over the mouth
+                tip_z = float(tool_point_world(ctx.scene, data, tool.tip)[2])
+                reach = tip_z - float(ctx.observe_site(data, "plug_tip")[2]) - START_CLEAR
+                if tool.mechanism == "fingers":
+                    run["grip_goal"] = grip_start(reach, run["goal"], ctx.obj.handles.info)
+                else:
+                    run["grip_goal"] = run["goal"]
         base = base.copy()
         base[:2] += run.get("realign", np.zeros(2))
         if "reseat_at" in run and run["done_at"] is None:
-            return self._reseat(t, ctx, run, data)
+            return self._reseat(t, ctx, run, model, data)
         depth = _depth_observed(ctx, data, run)
         if run["done_at"] is None:
             con = contacts(model, data, tool_geoms(ctx.scene), ctx.obj.geom_ids)
             palm_z = float(data.qpos[ctx.scene.ids.palm_qpos[2]])
-            lead = run["push_n"] / run["kz"]  # the z servo pushes at most push_n
-            run["z_cmd"] = max(run["z_cmd"] - run["speed"] * dt, palm_z - lead)
+            run["z_cmd"] = _servo_z(run["z_cmd"], palm_z, -float(con.net[2]), run, dt)
             run["shift"] = np.clip(run["shift"] - ADMITTANCE * dt * con.net[:2], -MAX_SHIFT, MAX_SHIFT)
             if depth > run["best"] + STALL_MM / 1000.0:
                 run["best"], run["best_t"] = depth, t
@@ -343,14 +410,15 @@ class InsertController:
                 phi = 2.0 * math.pi * run["search_t"] / SPIRAL_PERIOD
                 r = min(MAX_SHIFT, SPIRAL_PITCH * phi / (2.0 * math.pi))
                 run["spiral"] = np.array([r * math.cos(phi), r * math.sin(phi)])
-            elif depth >= run["goal"] or stalled or t >= run["t_end_push"]:
+            elif depth >= run.get("grip_goal", run["goal"]) or stalled or t >= run["t_end_push"]:
                 short = depth < run["goal"] - 0.0005
+                started = depth >= run.get("grip_goal", run["goal"])  # as far as the grip can take it
                 if (
                     short
-                    and stalled
+                    and (stalled or started)
                     and run["port"]
                     and not run["hold"]
-                    and depth > 0.001
+                    and depth > RESEAT_MIN
                     and "reseat_at" not in run
                 ):
                     run["reseat_at"] = t  # let go, then press the plug home from its top
@@ -370,17 +438,20 @@ class InsertController:
                     sch.released = run["release_at"]
                     sch.values["push_end"] = t
         if "reseat_at" in run and run["done_at"] is None:
-            return self._reseat(t, ctx, run, data)
+            return self._reseat(t, ctx, run, model, data)
         wrist = base.copy()
         wrist[:2] += run["shift"] + run.get("spiral", np.zeros(2))
         wrist[2] = run["z_cmd"]
         if run["done_at"] is not None and run["last"] is None:
             run["last"] = wrist.copy()
+            run["last"][2] = float(data.qpos[ctx.scene.ids.palm_qpos[2]])  # stop pushing, then let go
         if run["last"] is not None:
             wrist = run["last"].copy()
         return wrist
 
-    def _reseat(self, t: float, ctx: StepContext, run: dict[str, Any], data: mujoco.MjData) -> np.ndarray:
+    def _reseat(
+        self, t: float, ctx: StepContext, run: dict[str, Any], model: mujoco.MjModel, data: mujoco.MjData
+    ) -> np.ndarray:
         """Jam recovery (the fixed budget ``insert_reseat``): open 0.3 s, rise until the tip is
         :data:`RESEAT_CLEAR` over the plug's top, close into a fist 0.3 s, then press down with the
         push limit."""
@@ -399,13 +470,15 @@ class InsertController:
             return wrist
         run["closure_override"] = 1.0
         palm_z = float(data.qpos[ctx.scene.ids.palm_qpos[2]])
-        run["press_z"] = max(run["press_z"] - run["speed"] * dt, palm_z - run["push_n"] / run["kz"])
+        push = -float(contacts(model, data, tool_geoms(ctx.scene), ctx.obj.geom_ids).net[2])
+        run["press_z"] = _servo_z(run["press_z"], palm_z, push, run, dt)
         wrist[2] = run["press_z"]
         depth = _depth_observed(ctx, data, run)
-        if depth >= run["goal"] or u >= BUDGET_S["insert_reseat"]:
+        if depth >= run["goal"] or u >= BUDGET_S["insert_reseat"] + run["press_t"]:
             run["done_at"] = t
             run["release_at"] = t + 0.1
             run["last"] = wrist.copy()
+            run["last"][2] = palm_z  # stop pressing, then rise
             sch.released = run["release_at"]
             sch.values["push_end"] = t
         return wrist

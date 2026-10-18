@@ -41,7 +41,8 @@ relative to the hinge site (``lid0_*``, ``out0_*``: a controller turns them by t
 observes), the geometry and the codes (``orientation``: 0 lid, 1 door; ``feature``: 0 lip,
 1 handle).
 
-State: ``angle_deg``, the hinge angle (0 closed, positive open).
+State: ``angle_deg``, the hinge angle (0 closed, positive open), within the hinge's stops (the
+solver's soft limits let a panel resting on a stop lean a few thousandths of a degree past it).
 """
 
 from __future__ import annotations
@@ -263,7 +264,9 @@ class HingedLidBuilder(TemplateBuilder):
         )
 
     def state(self, obj: ResolvedHandles, model: mujoco.MjModel, data: mujoco.MjData) -> dict[str, float]:
-        return {"angle_deg": math.degrees(float(data.qpos[obj.joint_qpos["hinge"]]))}
+        angle = float(data.qpos[obj.joint_qpos["hinge"]])  # within the joint's own stops (the
+        # solver's soft limits let it lean a thousandth of a degree past them)
+        return {"angle_deg": math.degrees(min(max(angle, 0.0), obj.handles.info["max_angle_rad"]))}
 
     def passive(self, obj: ResolvedHandles, model: mujoco.MjModel, data: mujoco.MjData) -> np.ndarray:
         catch = obj.handles.info["catch_nm"]

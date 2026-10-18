@@ -23,11 +23,23 @@ Objects: ``hinged_lid`` (lid or door) and ``drawer``; handle ``handle`` (the tem
    closes it below vertical.
 5. **Release and retract**: open over 0.5 s, rise 60 mm, settle 0.3 s.
 
+**A lid's lip** (a horizontal panel with nothing to grip) is hooked instead: the tool's sideways
+hook from its calibration (``Footprint.hook``: the geoms near the tip that reach furthest beyond
+the rest of the tool, a soft arm's horizontal arm) is turned toward the hinge, lowered outside
+the free edge (stood off :data:`HOOK_STANDOFF`, plus whatever of the tool reaches further than
+the hook), moved in under it, guarded, by the hook's depth less :data:`HOOK_MARGIN` (at most the
+lip less 2 mm and :data:`HOOK_MAX`), raised onto the underside, and carried along the arc with the
+fingers open. A tool without a hook reaches nothing under the lip and fails honestly. Every
+guarded move stops on contact with any object in the scene, not only the step's.
+
 **Predicate** (:class:`HookPullPredicate`): ``angle_deg`` or ``travel_mm`` (the template state
-when the step ends, after the release), ``slip_mm`` (the largest displacement of the handle relative to the
-tool's TCP, in the tool's frame, from the end of the engagement to the release: the tool frame
-turns with a door and not with a lid, whose handle turns in the grip), ``force_n`` (peak net force of the tool on the object), ``penetration_mm``; then the
-shared rule. A step that fails its criteria after slipping more than 10 mm is ``slip``.
+when the step ends, after the release), ``slip_mm`` (the largest displacement of the handle
+relative to the tool, in the tool's frame (the panel's for a hooked lip), from the end of the
+engagement to the release, counted while the tool touches the object or the object lags more
+than 1 deg or 2 mm behind where the tool is taking it: a lid that falls open ahead of the hook
+past vertical has not slipped), ``force_n`` (peak net force of the tool on the object),
+``penetration_mm``; then the shared rule. A step that fails its criteria after slipping more
+than 10 mm is ``slip``.
 """
 
 from __future__ import annotations
@@ -35,6 +47,7 @@ from __future__ import annotations
 import math
 from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import Any
 
 import mujoco
 import numpy as np
@@ -80,7 +93,13 @@ RELEASE_S = 0.5
 FRONT_STANDOFF = 0.030
 RETRACT = 0.060
 RETRACT_OUT = 0.040  # m away from the face the feature stands on, before rising
+HOOK_STANDOFF = 0.010  # m in front of a lid's free edge before the hook goes under it
+HOOK_GAP = 0.002  # m under the lid's underside while the hook goes in
+HOOK_PRELOAD = 0.001  # m the hook then presses up into the underside
+HOOK_MARGIN = 0.003  # m of the hook kept short of its full reach
+HOOK_MAX = 0.040  # m: the deepest a hook goes under a lip
 SLIP_FAIL_MM = 10.0
+SLIP_TOUCH_N = 0.3  # N of tool-object contact that counts as touching the feature
 
 
 def _object_yaw(ctx: StepContext) -> float:
@@ -193,6 +212,9 @@ class HookPullController:
         handle = ctx.observe_site(data, "handle")
         start = np.asarray(ctx.wrist_start, dtype=np.float64)
         roll = float(start[4])
+        info = ctx.obj.handles.info
+        if motion.hinged and info["orientation"] == 0.0 and info["feature"] == 0.0:
+            return self._plan_hook(ctx, model, data, tool, motion, handle, start)
         heading = heading_for_axis(
             _closing_axis(ctx, motion.current), _yaw_offset(ctx, tool), float(start[3] + roll)
         )
@@ -222,7 +244,7 @@ class HookPullController:
         t_end = t_release + RELEASE_S + 0.4 + 0.6 + 0.3 + BUDGET_S["hook_slack"]
         sch.engaged = t_pull
         sch.released = t_release
-        sch.values.update(t_close=t_close, t_release=t_release, pre=pre)
+        sch.values.update(t_close=t_close, t_release=t_release, pre=pre, sense=math.copysign(1.0, delta))
         run = {
             "path": path,
             "guard": guard,
@@ -248,11 +270,13 @@ class HookPullController:
         run = plan.values["run"]
         tool = sch.tool
         v = sch.values
+        if run.get("mode") == "hook":
+            return self._command_hook(t, ctx, run, model, data)
         guard: Guarded = run["guard"]
         if t < guard.t0:
             wrist = run["path"].at(t)
         elif t < run["t_pull"]:
-            pressing = contacts(model, data, tool_geoms(ctx.scene), ctx.obj.geom_ids).normal
+            pressing = contacts(model, data, tool_geoms(ctx.scene), ctx.scene.ids.object_geoms).normal
             wrist = guard.at(min(t, guard.end), pressing) if t <= guard.end else guard.at(guard.end, 1e9)
         elif t < v["t_release"]:
             if run["engaged"] is None:
@@ -262,6 +286,7 @@ class HookPullController:
             s = run["delta"] * min_jerk((t - run["t_pull"]) / run["pull_t"])
             point = base[:3] + rot_z(run["yaw"] + run["roll"]) @ tool.tcp
             p = motion.carry(point, s)
+            v["progress"] = motion.current + s  # where the tool is taking the object
             dyaw = s * float(motion.axis[2]) if motion.hinged else 0.0
             wrist = wrist_target(p, tool.tcp, run["yaw"] + dyaw, run["roll"])
             run["last"] = wrist
@@ -279,6 +304,115 @@ class HookPullController:
             closure = pre + (1.0 - pre) * max(0.0, 1.0 - (t - v["t_release"]) / RELEASE_S)
         phase = Phase.HOLD if t >= v["t_close"] else Phase.DESCEND
         return PrimitiveCommand(wrist, tool.controls(t, closure, model, data, phase))
+
+    # ------------------------------------------------------------------ hooking under a lid's lip
+
+    def _plan_hook(
+        self,
+        ctx: StepContext,
+        model: mujoco.MjModel,
+        data: mujoco.MjData,
+        tool: Tool,
+        motion: _Motion,
+        handle: np.ndarray,
+        start: np.ndarray,
+    ) -> StepPlan:
+        """A lid's lip has nothing to grip: the tool's sideways hook (``Footprint.hook``, open) goes
+        under the free edge from the front and lifts it along the arc (module docstring)."""
+        step, info = ctx.step, ctx.obj.handles.info
+        sch = schedule(ctx)
+        roll = float(start[4])
+        fp = tool.footprint(0.0)
+        d, depth, far, top = fp.hook()
+        # the approach keeps the whole tool outside the edge: whatever reaches further toward the
+        # lid than the hook's end (all of a tool without a hook) stands off by that much more
+        standoff = HOOK_STANDOFF + max(0.0, fp.front(d) - far)
+        out = _outward(ctx, data, handle, motion)
+        u_in = -out  # from the free edge toward the hinge, horizontal
+        heading = math.atan2(float(u_in[1]), float(u_in[0])) - math.atan2(float(d[1]), float(d[0]))
+        heading += 2.0 * math.pi * round((float(start[3]) + roll - heading) / (2.0 * math.pi))
+        yaw = heading - roll
+        n_out = panel_normal(ctx, motion.current)
+        underside = handle - 0.5 * info["thickness_m"] * n_out  # the free edge's underside
+        insert = float(np.clip(depth - HOOK_MARGIN, 0.0, min(info["feature_m"] - 0.002, HOOK_MAX)))
+        tip = d * far + np.array([0.0, 0.0, top])  # the hook's far end, on its top (wrist frame)
+        down = np.array([0.0, 0.0, -HOOK_GAP])
+        engaged = wrist_target(underside + insert * u_in + down, tip, yaw, roll)
+        pre = wrist_target(underside - standoff * u_in + down, tip, yaw, roll)
+        path = Path.start(start)
+        above = pre + np.array([0.0, 0.0, 0.08, 0.0, 0.0])
+        transit(path, above, max(above[2], safe_palm_z(ctx, model, data, tool)))
+        path.to(pre, 0.8)
+        guard = Guarded(path.last, engaged, path.end, 1.0 + BUDGET_S["engage_slack"])
+        t_seat = guard.end
+        t_pull = t_seat + 0.3  # rise onto the underside: the gap plus 1 mm of preload
+        contact = tip - 0.5 * insert * d  # the hook point under the lid that lifts it (wrist frame)
+        delta = motion.goal - motion.current
+        radius = float(np.linalg.norm(np.cross(motion.axis, handle - motion.point)))
+        pull_t = max(0.5, 1.875 * abs(delta) * radius / (float(step.params["speed_mm_s"]) / 1000.0))
+        t_release = t_pull + pull_t
+        t_end = t_release + 0.6 + 0.6 + 0.3 + BUDGET_S["hook_slack"]
+        sch.engaged = t_pull
+        sch.released = t_release
+        sch.values.update(t_close=t_seat, t_release=t_release, pre=0.0, sense=math.copysign(1.0, delta))
+        sch.values["slip_point"] = contact.tolist()  # type: ignore[assignment]
+        run = {
+            "mode": "hook",
+            "path": path,
+            "guard": guard,
+            "motion": motion,
+            "delta": delta,
+            "t_seat": t_seat,
+            "t_pull": t_pull,
+            "pull_t": pull_t,
+            "t_release": t_release,
+            "yaw": yaw,
+            "roll": roll,
+            "contact": contact,
+            "u_in": u_in,
+            "insert": insert,
+            "standoff": standoff,
+            "seated": None,
+            "last": None,
+        }
+        return StepPlan(
+            duration_s=min(t_end, 30.0),
+            values={"run": run, "schedule": sch},
+            note=f"hook pull: under the lip by {1000 * insert:.0f} mm (hook {1000 * depth:.0f} mm), arc by {delta:.3f}",
+        )
+
+    def _command_hook(
+        self, t: float, ctx: StepContext, run: dict[str, Any], model: mujoco.MjModel, data: mujoco.MjData
+    ) -> PrimitiveCommand:
+        tool: Tool = schedule(ctx).tool
+        guard: Guarded = run["guard"]
+        lift = np.array([0.0, 0.0, HOOK_GAP + HOOK_PRELOAD, 0.0, 0.0])
+        if t < guard.t0:
+            wrist = run["path"].at(t)
+        elif t < run["t_seat"]:
+            pressing = contacts(model, data, tool_geoms(ctx.scene), ctx.scene.ids.object_geoms).normal
+            wrist = guard.at(t, pressing)
+        elif t < run["t_pull"]:
+            wrist = guard.at(guard.end, 1e9) + lift * min_jerk((t - run["t_seat"]) / 0.3)
+        elif t < run["t_release"]:
+            if run["seated"] is None:
+                run["seated"] = guard.at(guard.end, 1e9) + lift
+            base = run["seated"]
+            motion: _Motion = run["motion"]
+            s = run["delta"] * min_jerk((t - run["t_pull"]) / run["pull_t"])
+            point = base[:3] + rot_z(run["yaw"] + run["roll"]) @ run["contact"]
+            schedule(ctx).values["progress"] = motion.current + s  # where the tool is taking the lid
+            wrist = wrist_target(motion.carry(point, s), run["contact"], run["yaw"], run["roll"])
+            run["last"] = wrist
+        else:  # draw the hook back out from under the lid, then rise
+            last = run["last"] if run["last"] is not None else guard.at(guard.end, 1e9)
+            back = min_jerk(min(1.0, max(0.0, (t - run["t_release"]) / 0.6)))
+            up = min_jerk(min(1.0, max(0.0, (t - run["t_release"] - 0.6) / 0.6)))
+            shift = -(run["insert"] + run["standoff"]) * back * run["u_in"] + np.array(
+                [0.0, 0.0, RETRACT * up]
+            )
+            wrist = last + np.concatenate([shift, [0.0, 0.0]])
+        return PrimitiveCommand(wrist, tool.controls(t, 0.0, model, data, Phase.SETTLE))
 
 
 def _yaw_offset(ctx: StepContext, tool: Tool) -> float:
@@ -311,15 +445,37 @@ class HookPullPredicate:
         acc.setdefault("slip_mm", 0.0)
         if sch.active(t) and sch.tool is not None:
             site = ctx.obj.site_ids["handle"]
-            q = data.qpos
-            heading = float(q[ctx.scene.ids.palm_qpos[3]] + q[ctx.scene.ids.roll_qpos])
-            rel = rot_z(heading).T @ (data.site_xpos[site] - tool_point_world(ctx.scene, data, sch.tool.tcp))
+            point = sch.values.get("slip_point")
+            if point is not None:  # a hook: its lifting point in the panel's frame
+                rel = data.site_xmat[site].reshape(3, 3).T @ (
+                    tool_point_world(ctx.scene, data, np.asarray(point)) - data.site_xpos[site]
+                )
+            else:
+                q = data.qpos
+                heading = float(q[ctx.scene.ids.palm_qpos[3]] + q[ctx.scene.ids.roll_qpos])
+                rel = rot_z(heading).T @ (
+                    data.site_xpos[site] - tool_point_world(ctx.scene, data, sch.tool.tcp)
+                )
             ref = sch.values.get("rel0")
             if ref is None:
                 sch.values["rel0"] = rel.tolist()  # type: ignore[assignment]
-            else:
+            elif con.normal > SLIP_TOUCH_N or self._lags(ctx, acc, sch.values):
+                # slip is the tool moving along the feature while it touches it, or losing it while
+                # the object falls behind; an object that runs ahead of the tool (a lid falling open
+                # past vertical) has not slipped from it
                 slip = 1000.0 * float(np.linalg.norm(rel - np.asarray(ref)))
                 acc["slip_mm"] = max(acc["slip_mm"], slip)
+
+    @staticmethod
+    def _lags(ctx: StepContext, acc: Mapping[str, float], v: Mapping[str, Any]) -> bool:
+        progress = v.get("progress")
+        if progress is None:
+            return True
+        if ctx.obj.kind is TemplateKind.HINGED_LID:
+            now, tol = math.radians(acc["angle_deg"]), math.radians(1.0)
+        else:
+            now, tol = acc["travel_mm"] / 1000.0, 0.002
+        return v.get("sense", 1.0) * (progress - now) > tol
 
     def verdict(self, ctx: StepContext, acc: Mapping[str, float]) -> StepVerdict:
         out = criteria_verdict(ctx.step, acc)
