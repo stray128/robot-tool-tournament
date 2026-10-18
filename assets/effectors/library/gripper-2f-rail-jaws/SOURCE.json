@@ -1,0 +1,303 @@
+{
+  "format": "rtt-library-source",
+  "version": 1,
+  "key": "gripper-2f-rail-jaws",
+  "display_name": "Rail-guided parallel gripper with swappable jaws",
+  "summary": "A printed parallel gripper on miniature linear rails for a hobby arm; it reuses the arm's jaw servo and takes custom jaws.",
+  "kind": "parallel_gripper",
+  "class": "open_hardware",
+  "capabilities": [
+    "pinch"
+  ],
+  "upstream": {
+    "repository": "https://github.com/XiujinLiu/Grip4SO101",
+    "commit": "8dd3a2328e7eee866abd5aa85895ca51c1c2a643"
+  },
+  "licence": [
+    {
+      "spdx": "MIT",
+      "covers": "CAD and print files"
+    }
+  ],
+  "copyright": "Copyright (c) 2025 Xiujin Liu",
+  "attribution": "\"Grip4SO101\" by Xiujin Liu, https://github.com/XiujinLiu/Grip4SO101 (commit 8dd3a23), licensed MIT (https://spdx.org/licenses/MIT.html)",
+  "chain": [
+    {
+      "spdx": "MIT",
+      "relation": "licensed",
+      "what": "repository LICENSE",
+      "source": "https://github.com/XiujinLiu/Grip4SO101/blob/8dd3a2328e7eee866abd5aa85895ca51c1c2a643/LICENSE"
+    }
+  ],
+  "reviewed": {
+    "by": "Effector Lab licence gate, against the 2026-10-18 licence audit",
+    "date": "2026-10-18"
+  },
+  "mount": {
+    "interface": "a hobby arm's wrist, reusing its jaw servo",
+    "iso_pattern": null,
+    "status": "unknown",
+    "adapter": null,
+    "source": "",
+    "notes": []
+  },
+  "specs": [
+    {
+      "name": "Guidance",
+      "value": "miniature linear rails",
+      "unit": "",
+      "tag": "sourced",
+      "source": "https://github.com/XiujinLiu/Grip4SO101/blob/8dd3a2328e7eee866abd5aa85895ca51c1c2a643/README.md"
+    }
+  ],
+  "sim": {
+    "status": "visual_only",
+    "reason": "articulated design without an upstream simulation model; building one needs a joint specification checked against the CAD"
+  },
+  "notes": [],
+  "ingest": {
+    "licence_files": [
+      {
+        "path": "LICENSE",
+        "license": "MIT"
+      }
+    ],
+    "files": [
+      {
+        "path": "stl/individual_parts_15infill/gripper_left.stl",
+        "out": "print/gripper_left.stl",
+        "license": "MIT"
+      },
+      {
+        "path": "stl/individual_parts_15infill/gripper_right.stl",
+        "out": "print/gripper_right.stl",
+        "license": "MIT"
+      },
+      {
+        "path": "stl/individual_parts_15infill/bottom.stl",
+        "out": "print/bottom.stl",
+        "license": "MIT"
+      },
+      {
+        "path": "stl/individual_parts_15infill/panel_front.stl",
+        "out": "print/panel_front.stl",
+        "license": "MIT"
+      },
+      {
+        "path": "stl/individual_parts_15infill/panel_back.stl",
+        "out": "print/panel_back.stl",
+        "license": "MIT"
+      },
+      {
+        "path": "stl/individual_parts_100infill/gear2.stl",
+        "out": "print/gear2.stl",
+        "license": "MIT"
+      },
+      {
+        "path": "stl/individual_parts_100infill/gear3.stl",
+        "out": "print/gear3.stl",
+        "license": "MIT"
+      }
+    ],
+    "links": [
+      {
+        "path": "gripper.stp",
+        "size": 6485316,
+        "license": "MIT",
+        "reason": "assembly CAD (6.5 MB): linked, not mirrored"
+      },
+      {
+        "path": "stl/individual_parts_100infill/gear_motor.stl",
+        "size": 2269984,
+        "license": "MIT",
+        "reason": "motor gear print file: linked to keep the repository small"
+      },
+      {
+        "path": "stl/individual_parts_100infill/gear1.stl",
+        "size": 1570184,
+        "license": "MIT",
+        "reason": "gear print file: linked to keep the repository small"
+      },
+      {
+        "path": "stl/individual_parts_100infill/gripper_attach_left.stl",
+        "size": 1297684,
+        "license": "MIT",
+        "reason": "jaw carrier print file: linked to keep the repository small"
+      }
+    ],
+    "preview": {
+      "from": "files",
+      "license": "MIT",
+      "files": [
+        {
+          "path": "stl/individual_parts_15infill/bottom.stl"
+        },
+        {
+          "path": "stl/individual_parts_15infill/gripper_left.stl"
+        },
+        {
+          "path": "stl/individual_parts_15infill/gripper_right.stl"
+        }
+      ]
+    }
+  },
+  "files": [
+    {
+      "path": "assets/effectors/library/gripper-2f-rail-jaws/LICENSES/LICENSE",
+      "sha256": "0eaac539dbc45ce2b7b696eb7e27c4aacc1939c64d8e673ffb014ac01d062e7d",
+      "size": 1066,
+      "role": "licence",
+      "upstream_url": "https://github.com/XiujinLiu/Grip4SO101",
+      "upstream_commit": "8dd3a2328e7eee866abd5aa85895ca51c1c2a643",
+      "upstream_path": "LICENSE",
+      "upstream_sha256": "0eaac539dbc45ce2b7b696eb7e27c4aacc1939c64d8e673ffb014ac01d062e7d",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Xiujin Liu",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-rail-jaws/print/bottom.stl",
+      "sha256": "eb19a52205f53f1b0d7d1c4d24c92c74b896a4eec2fe0bcd412477f4c464d79c",
+      "size": 657684,
+      "role": "print",
+      "upstream_url": "https://github.com/XiujinLiu/Grip4SO101",
+      "upstream_commit": "8dd3a2328e7eee866abd5aa85895ca51c1c2a643",
+      "upstream_path": "stl/individual_parts_15infill/bottom.stl",
+      "upstream_sha256": "eb19a52205f53f1b0d7d1c4d24c92c74b896a4eec2fe0bcd412477f4c464d79c",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Xiujin Liu",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-rail-jaws/print/gear2.stl",
+      "sha256": "7115c1a585d5dbd8af295cbb8e5e427707170625ef85d556ef5798694b4eea39",
+      "size": 88984,
+      "role": "print",
+      "upstream_url": "https://github.com/XiujinLiu/Grip4SO101",
+      "upstream_commit": "8dd3a2328e7eee866abd5aa85895ca51c1c2a643",
+      "upstream_path": "stl/individual_parts_100infill/gear2.stl",
+      "upstream_sha256": "7115c1a585d5dbd8af295cbb8e5e427707170625ef85d556ef5798694b4eea39",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Xiujin Liu",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-rail-jaws/print/gear3.stl",
+      "sha256": "f2574dac6d114439346cd4ee82c959d8a0723d9ed5317b1bae87aa92035ffc4c",
+      "size": 41684,
+      "role": "print",
+      "upstream_url": "https://github.com/XiujinLiu/Grip4SO101",
+      "upstream_commit": "8dd3a2328e7eee866abd5aa85895ca51c1c2a643",
+      "upstream_path": "stl/individual_parts_100infill/gear3.stl",
+      "upstream_sha256": "f2574dac6d114439346cd4ee82c959d8a0723d9ed5317b1bae87aa92035ffc4c",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Xiujin Liu",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-rail-jaws/print/gripper_left.stl",
+      "sha256": "28582afcc665e38d366140e90fe76c225d94df5cdffa803bc78bff304299cc4e",
+      "size": 100134,
+      "role": "print",
+      "upstream_url": "https://github.com/XiujinLiu/Grip4SO101",
+      "upstream_commit": "8dd3a2328e7eee866abd5aa85895ca51c1c2a643",
+      "upstream_path": "stl/individual_parts_15infill/gripper_left.stl",
+      "upstream_sha256": "28582afcc665e38d366140e90fe76c225d94df5cdffa803bc78bff304299cc4e",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Xiujin Liu",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-rail-jaws/print/gripper_right.stl",
+      "sha256": "81c409758b9816b93cb50830e635958ec51c86f4f61d29c5b4977a5cbb3a8f23",
+      "size": 99934,
+      "role": "print",
+      "upstream_url": "https://github.com/XiujinLiu/Grip4SO101",
+      "upstream_commit": "8dd3a2328e7eee866abd5aa85895ca51c1c2a643",
+      "upstream_path": "stl/individual_parts_15infill/gripper_right.stl",
+      "upstream_sha256": "81c409758b9816b93cb50830e635958ec51c86f4f61d29c5b4977a5cbb3a8f23",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Xiujin Liu",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-rail-jaws/print/panel_back.stl",
+      "sha256": "04445c844e742d1d4584cabb98374527e835e0b31796d8ab5deaacc39f2b451c",
+      "size": 408984,
+      "role": "print",
+      "upstream_url": "https://github.com/XiujinLiu/Grip4SO101",
+      "upstream_commit": "8dd3a2328e7eee866abd5aa85895ca51c1c2a643",
+      "upstream_path": "stl/individual_parts_15infill/panel_back.stl",
+      "upstream_sha256": "04445c844e742d1d4584cabb98374527e835e0b31796d8ab5deaacc39f2b451c",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Xiujin Liu",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-rail-jaws/print/panel_front.stl",
+      "sha256": "e69cc0237cbe5467fe911374c7dd1c61f4fcc8d2324e70e12568d9ccb5d62715",
+      "size": 292284,
+      "role": "print",
+      "upstream_url": "https://github.com/XiujinLiu/Grip4SO101",
+      "upstream_commit": "8dd3a2328e7eee866abd5aa85895ca51c1c2a643",
+      "upstream_path": "stl/individual_parts_15infill/panel_front.stl",
+      "upstream_sha256": "e69cc0237cbe5467fe911374c7dd1c61f4fcc8d2324e70e12568d9ccb5d62715",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Xiujin Liu",
+      "changes": [],
+      "rating": "green"
+    }
+  ],
+  "skipped": [
+    {
+      "upstream_path": "gripper.stp",
+      "size": 6485316,
+      "license": "MIT",
+      "reason": "assembly CAD (6.5 MB): linked, not mirrored",
+      "url": "https://github.com/XiujinLiu/Grip4SO101/blob/8dd3a2328e7eee866abd5aa85895ca51c1c2a643/gripper.stp"
+    },
+    {
+      "upstream_path": "stl/individual_parts_100infill/gear1.stl",
+      "size": 1570184,
+      "license": "MIT",
+      "reason": "gear print file: linked to keep the repository small",
+      "url": "https://github.com/XiujinLiu/Grip4SO101/blob/8dd3a2328e7eee866abd5aa85895ca51c1c2a643/stl/individual_parts_100infill/gear1.stl"
+    },
+    {
+      "upstream_path": "stl/individual_parts_100infill/gear_motor.stl",
+      "size": 2269984,
+      "license": "MIT",
+      "reason": "motor gear print file: linked to keep the repository small",
+      "url": "https://github.com/XiujinLiu/Grip4SO101/blob/8dd3a2328e7eee866abd5aa85895ca51c1c2a643/stl/individual_parts_100infill/gear_motor.stl"
+    },
+    {
+      "upstream_path": "stl/individual_parts_100infill/gripper_attach_left.stl",
+      "size": 1297684,
+      "license": "MIT",
+      "reason": "jaw carrier print file: linked to keep the repository small",
+      "url": "https://github.com/XiujinLiu/Grip4SO101/blob/8dd3a2328e7eee866abd5aa85895ca51c1c2a643/stl/individual_parts_100infill/gripper_attach_left.stl"
+    }
+  ],
+  "preview": {
+    "path": "web/public/data/library/glb/gripper-2f-rail-jaws.glb",
+    "sha256": "68e21d4776b45511de1d4d85f482b6b8ea72840b6fb4c62cb159d981b6ea2f71",
+    "size": 345140,
+    "license": "MIT",
+    "derived_from": [
+      "stl/individual_parts_15infill/bottom.stl",
+      "stl/individual_parts_15infill/gripper_left.stl",
+      "stl/individual_parts_15infill/gripper_right.stl"
+    ],
+    "changes": [
+      "drawn from the item's own geometry in its reference pose, simplified by vertex clustering",
+      "re-encoded as GLB (Y up, metres) in one flat grey, with generic node names"
+    ]
+  }
+}

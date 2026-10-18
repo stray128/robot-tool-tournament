@@ -1,0 +1,302 @@
+{
+  "format": "rtt-library-source",
+  "version": 1,
+  "key": "gripper-angular-jaw-hobby",
+  "display_name": "Angular-jaw gripper of an open hobby arm",
+  "summary": "The stock gripper of the most-built open hobby arm: a fixed jaw and a moving jaw on the wrist servo.",
+  "kind": "angular_jaw",
+  "class": "open_hardware",
+  "capabilities": [
+    "pinch"
+  ],
+  "upstream": {
+    "repository": "https://github.com/google-deepmind/mujoco_menagerie",
+    "commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+    "extra": [
+      {
+        "repository": "https://github.com/TheRobotStudio/SO-ARM100",
+        "commit": "a758567c3978dfeefe282ede0500085a48fe8f78"
+      }
+    ]
+  },
+  "licence": [
+    {
+      "spdx": "Apache-2.0",
+      "covers": "the simulation model and the arm's printable parts"
+    }
+  ],
+  "copyright": "Copyright The Robot Studio and the SO-ARM100 contributors",
+  "attribution": "\"SO-ARM100 MJCF model\" by The Robot Studio and MuJoCo Menagerie contributors, https://github.com/google-deepmind/mujoco_menagerie (commit 62ab00f), licensed Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0); MJCF from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie); \"SO-ARM100 / SO-101 moving jaw\" by The Robot Studio, https://github.com/TheRobotStudio/SO-ARM100 (commit a758567), licensed Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)",
+  "chain": [
+    {
+      "spdx": "Apache-2.0",
+      "relation": "licensed",
+      "what": "trs_so_arm100/LICENSE",
+      "source": "https://github.com/google-deepmind/mujoco_menagerie/blob/62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35/trs_so_arm100/LICENSE"
+    },
+    {
+      "spdx": "Apache-2.0",
+      "relation": "licensed",
+      "what": "arm project LICENSE",
+      "source": "https://github.com/TheRobotStudio/SO-ARM100/blob/a758567c3978dfeefe282ede0500085a48fe8f78/LICENSE"
+    }
+  ],
+  "reviewed": {
+    "by": "Effector Lab licence gate, against the 2026-10-18 licence audit",
+    "date": "2026-10-18"
+  },
+  "mount": {
+    "interface": "the arm's wrist-roll servo (no ISO flange)",
+    "iso_pattern": null,
+    "status": "unknown",
+    "adapter": null,
+    "source": "",
+    "notes": [
+      "the jaw is built around the wrist servo"
+    ]
+  },
+  "specs": [
+    {
+      "name": "Jaw servo stall torque (12 V)",
+      "value": "30",
+      "unit": "kg cm",
+      "tag": "assumed",
+      "source": ""
+    }
+  ],
+  "sim": {
+    "status": "native",
+    "source": "upstream MJCF (the gripper of the arm model; wrist roll joint removed)",
+    "fidelity": "rigid",
+    "model_file": "sim/gripper-angular-jaw-hobby.xml",
+    "n_bodies": 2,
+    "n_joints": 1,
+    "n_actuators": 1,
+    "mass_kg": 0.11323
+  },
+  "notes": [
+    "the servo torque is the hobby servo's published 12 V rating, not re-read today"
+  ],
+  "ingest": {
+    "licence_files": [
+      {
+        "path": "trs_so_arm100/LICENSE",
+        "license": "Apache-2.0"
+      },
+      {
+        "path": "LICENSE",
+        "out": "LICENSE-arm",
+        "license": "Apache-2.0",
+        "repository": "https://github.com/TheRobotStudio/SO-ARM100",
+        "commit": "a758567c3978dfeefe282ede0500085a48fe8f78"
+      }
+    ],
+    "sim": {
+      "type": "mjcf",
+      "entry": "trs_so_arm100/so_arm100.xml",
+      "root": "Fixed_Jaw",
+      "drop_joints": [
+        "Wrist_Roll"
+      ],
+      "license": "Apache-2.0"
+    },
+    "files": [
+      {
+        "path": "STL/SO101/Individual/Moving_Jaw_SO101.stl",
+        "out": "print/moving_jaw.stl",
+        "license": "Apache-2.0",
+        "repository": "https://github.com/TheRobotStudio/SO-ARM100",
+        "commit": "a758567c3978dfeefe282ede0500085a48fe8f78"
+      },
+      {
+        "path": "STEP/SO101/Follower_Specific/Moving_Jaw_SO101.step",
+        "out": "cad/moving_jaw.step",
+        "role": "cad",
+        "license": "Apache-2.0",
+        "repository": "https://github.com/TheRobotStudio/SO-ARM100",
+        "commit": "a758567c3978dfeefe282ede0500085a48fe8f78"
+      }
+    ],
+    "preview": {
+      "from": "mjcf",
+      "entry": "trs_so_arm100/so_arm100.xml",
+      "root": "Fixed_Jaw",
+      "license": "Apache-2.0"
+    }
+  },
+  "files": [
+    {
+      "path": "assets/effectors/library/gripper-angular-jaw-hobby/LICENSES/LICENSE",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "size": 11357,
+      "role": "licence",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "trs_so_arm100/LICENSE",
+      "upstream_sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "license": "Apache-2.0",
+      "copyright": "Copyright The Robot Studio and the SO-ARM100 contributors",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-angular-jaw-hobby/LICENSES/LICENSE-arm",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "size": 11357,
+      "role": "licence",
+      "upstream_url": "https://github.com/TheRobotStudio/SO-ARM100",
+      "upstream_commit": "a758567c3978dfeefe282ede0500085a48fe8f78",
+      "upstream_path": "LICENSE",
+      "upstream_sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "license": "Apache-2.0",
+      "copyright": "Copyright The Robot Studio and the SO-ARM100 contributors",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-angular-jaw-hobby/cad/moving_jaw.step",
+      "sha256": "dff53ace072470c9a6c84dbb68dd84f9fd0959429f181905d9d05fe3007549b5",
+      "size": 620823,
+      "role": "cad",
+      "upstream_url": "https://github.com/TheRobotStudio/SO-ARM100",
+      "upstream_commit": "a758567c3978dfeefe282ede0500085a48fe8f78",
+      "upstream_path": "STEP/SO101/Follower_Specific/Moving_Jaw_SO101.step",
+      "upstream_sha256": "dff53ace072470c9a6c84dbb68dd84f9fd0959429f181905d9d05fe3007549b5",
+      "license": "Apache-2.0",
+      "copyright": "Copyright The Robot Studio and the SO-ARM100 contributors",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-angular-jaw-hobby/print/moving_jaw.stl",
+      "sha256": "403763bbab8656cc7ce5ea6374741d0860bd19426b5b4b0041de3a2c1275f90b",
+      "size": 563084,
+      "role": "print",
+      "upstream_url": "https://github.com/TheRobotStudio/SO-ARM100",
+      "upstream_commit": "a758567c3978dfeefe282ede0500085a48fe8f78",
+      "upstream_path": "STL/SO101/Individual/Moving_Jaw_SO101.stl",
+      "upstream_sha256": "403763bbab8656cc7ce5ea6374741d0860bd19426b5b4b0041de3a2c1275f90b",
+      "license": "Apache-2.0",
+      "copyright": "Copyright The Robot Studio and the SO-ARM100 contributors",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-angular-jaw-hobby/sim/gripper-angular-jaw-hobby.xml",
+      "sha256": "de8da70227e949f048f3a8ecbcc8e31d8ae195c5fe81dcd27ccdedbee32ac53b",
+      "size": 4076,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "trs_so_arm100/so_arm100.xml",
+      "upstream_sha256": "1901fe7e86d2458e2011390bf52014c1f6f4fcea79abef1788b3108ea9781955",
+      "license": "Apache-2.0",
+      "copyright": "Copyright The Robot Studio and the SO-ARM100 contributors",
+      "changes": [
+        "the effector subtree from body 'Fixed_Jaw' written as one MJCF by MuJoCo 3.15.0",
+        "every body's mass, centre of mass and inertia pinned at the upstream model's compiled values",
+        "3 visual-only geoms removed (the catalog preview draws the upstream visuals)"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-angular-jaw-hobby/sim/meshes/Fixed_Jaw_Collision_1.obj",
+      "sha256": "e232d7924468a05d75ee2c181cb681522fb94434922c249dd19f4b85b1ace1f6",
+      "size": 1075,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "trs_so_arm100/assets/Fixed_Jaw_Collision_1.stl",
+      "upstream_sha256": "c6f83e6b45d9bd3e3af5f624bd514604230609ff9a941702ab890cf366c684dd",
+      "license": "Apache-2.0",
+      "copyright": "Copyright The Robot Studio and the SO-ARM100 contributors",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-angular-jaw-hobby/sim/meshes/Fixed_Jaw_Collision_2.obj",
+      "sha256": "36981788061f93c89262fcc4af65ade8b1e0d63f3cdb2f4115b0204a4c613dab",
+      "size": 15246,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "trs_so_arm100/assets/Fixed_Jaw_Collision_2.stl",
+      "upstream_sha256": "4b142e4390f13b15982612e705fa8e593a84c735ed4744aa72e555c06144a740",
+      "license": "Apache-2.0",
+      "copyright": "Copyright The Robot Studio and the SO-ARM100 contributors",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-angular-jaw-hobby/sim/meshes/Moving_Jaw_Collision_1.obj",
+      "sha256": "ed74c664d9066627ad50a02f4187ae353f4228dcb5395c7c28f91655ca668f9a",
+      "size": 841,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "trs_so_arm100/assets/Moving_Jaw_Collision_1.stl",
+      "upstream_sha256": "2221d6aab391dda19dd6a65e20d6a6fab3614e375e4b663ec48bc6e71f5bd258",
+      "license": "Apache-2.0",
+      "copyright": "Copyright The Robot Studio and the SO-ARM100 contributors",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-angular-jaw-hobby/sim/meshes/Moving_Jaw_Collision_2.obj",
+      "sha256": "73a6f1648a708d6f8bb309fc1dc7e873126a8032aade5c7e0c5d9b0668491fd5",
+      "size": 581,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "trs_so_arm100/assets/Moving_Jaw_Collision_2.stl",
+      "upstream_sha256": "090684040392589bdb07436debf17da0af8998c7b954c252fecf7a59515da020",
+      "license": "Apache-2.0",
+      "copyright": "Copyright The Robot Studio and the SO-ARM100 contributors",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-angular-jaw-hobby/sim/meshes/Moving_Jaw_Collision_3.obj",
+      "sha256": "bd59cb6d17137e16f829d2d729d6f9be3f41ffa782a919755445ede5a68eba93",
+      "size": 12849,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "trs_so_arm100/assets/Moving_Jaw_Collision_3.stl",
+      "upstream_sha256": "f7fd477de449365ba659425a01ac8c3c0f299b8609a6b832968b7fdb616d3746",
+      "license": "Apache-2.0",
+      "copyright": "Copyright The Robot Studio and the SO-ARM100 contributors",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    }
+  ],
+  "skipped": [],
+  "preview": {
+    "path": "web/public/data/library/glb/gripper-angular-jaw-hobby.glb",
+    "sha256": "b203ed4a7c527815e06746100d63dba10384a7c3c678c465b814543bf7305558",
+    "size": 238020,
+    "license": "Apache-2.0",
+    "derived_from": [
+      "trs_so_arm100/so_arm100.xml"
+    ],
+    "changes": [
+      "drawn from the item's own geometry in its reference pose, simplified by vertex clustering",
+      "re-encoded as GLB (Y up, metres) in one flat grey, with generic node names"
+    ]
+  }
+}

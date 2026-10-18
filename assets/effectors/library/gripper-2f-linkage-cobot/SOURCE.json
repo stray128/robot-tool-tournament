@@ -1,0 +1,221 @@
+{
+  "format": "rtt-library-source",
+  "version": 1,
+  "key": "gripper-2f-linkage-cobot",
+  "display_name": "Two-finger linkage gripper of a cobot arm",
+  "summary": "A cobot maker's electric gripper: two fingers on parallel linkages, one motor.",
+  "kind": "parallel_gripper",
+  "class": "sim_model",
+  "capabilities": [
+    "pinch"
+  ],
+  "upstream": {
+    "repository": "https://github.com/google-deepmind/mujoco_menagerie",
+    "commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35"
+  },
+  "licence": [
+    {
+      "spdx": "BSD-3-Clause",
+      "covers": "the simulation model (MJCF and meshes)"
+    }
+  ],
+  "copyright": "Copyright (c) 2018, UFACTORY Inc.",
+  "attribution": "\"UFACTORY xArm gripper MJCF model\" by UFACTORY Inc. and MuJoCo Menagerie contributors, https://github.com/google-deepmind/mujoco_menagerie (commit 62ab00f), licensed BSD-3-Clause (https://spdx.org/licenses/BSD-3-Clause.html); MJCF from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie)",
+  "chain": [
+    {
+      "spdx": "BSD-3-Clause",
+      "relation": "licensed",
+      "what": "ufactory_xarm7/LICENSE",
+      "source": "https://github.com/google-deepmind/mujoco_menagerie/blob/62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35/ufactory_xarm7/LICENSE"
+    }
+  ],
+  "reviewed": {
+    "by": "Effector Lab licence gate, against the 2026-10-18 licence audit",
+    "date": "2026-10-18"
+  },
+  "mount": {
+    "interface": "the arm maker's tool flange (6 x M6 and one 6 mm locating hole)",
+    "iso_pattern": null,
+    "status": "unknown",
+    "adapter": null,
+    "source": "",
+    "notes": [
+      "six-hole flange: an adapter to ISO patterns is on the generator's list, not built yet"
+    ]
+  },
+  "specs": [
+    {
+      "name": "Fingers",
+      "value": "2, parallel four-bar linkages",
+      "unit": "",
+      "tag": "derived",
+      "source": ""
+    }
+  ],
+  "sim": {
+    "status": "native",
+    "source": "upstream MJCF",
+    "fidelity": "rigid",
+    "model_file": "sim/gripper-2f-linkage-cobot.xml",
+    "n_bodies": 7,
+    "n_joints": 6,
+    "n_actuators": 1,
+    "mass_kg": 0.75143
+  },
+  "notes": [],
+  "ingest": {
+    "licence_files": [
+      {
+        "path": "ufactory_xarm7/LICENSE",
+        "license": "BSD-3-Clause"
+      }
+    ],
+    "sim": {
+      "type": "mjcf",
+      "entry": "ufactory_xarm7/hand.xml",
+      "root": "xarm_gripper_base_link",
+      "license": "BSD-3-Clause"
+    },
+    "preview": {
+      "from": "mjcf",
+      "entry": "ufactory_xarm7/hand.xml",
+      "root": "xarm_gripper_base_link",
+      "license": "BSD-3-Clause"
+    }
+  },
+  "files": [
+    {
+      "path": "assets/effectors/library/gripper-2f-linkage-cobot/LICENSES/LICENSE",
+      "sha256": "4fe659325706d0fc41592c8743d085a0bdf778056249f2a108943d22be916fb2",
+      "size": 1522,
+      "role": "licence",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "ufactory_xarm7/LICENSE",
+      "upstream_sha256": "4fe659325706d0fc41592c8743d085a0bdf778056249f2a108943d22be916fb2",
+      "license": "BSD-3-Clause",
+      "copyright": "Copyright (c) 2018, UFACTORY Inc.",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-linkage-cobot/sim/gripper-2f-linkage-cobot.xml",
+      "sha256": "a765e24d63df2e009fe9e189a8597431d38e84616346105ac31ca9ba7a292a37",
+      "size": 5856,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "ufactory_xarm7/hand.xml",
+      "upstream_sha256": "2b404c4470c7998003f573cfc90c4fb513ef1b4d34b2fddccecbd3ef4a0e91a2",
+      "license": "BSD-3-Clause",
+      "copyright": "Copyright (c) 2018, UFACTORY Inc.",
+      "changes": [
+        "the effector subtree from body 'xarm_gripper_base_link' written as one MJCF by MuJoCo 3.15.0",
+        "every body's mass, centre of mass and inertia pinned at the upstream model's compiled values",
+        "2 visual-only geoms removed (the catalog preview draws the upstream visuals)",
+        "contact priority set to 0 on 4 geoms (the part's contact parameters govern every contact)",
+        "2 element or class names carrying a maker's or product's name renamed"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-linkage-cobot/sim/meshes/base_link.obj",
+      "sha256": "d03a740e3af6d4b5941f17742c29fc4d0e60a70dc6064fdfadc3857fd361449e",
+      "size": 73917,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "ufactory_xarm7/assets/base_link.stl",
+      "upstream_sha256": "cdaa4cff22f7c9cff05c6a8ed32f94fd2b11a69d37dd97a159ccee2d8dd32f13",
+      "license": "BSD-3-Clause",
+      "copyright": "Copyright (c) 2018, UFACTORY Inc.",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-linkage-cobot/sim/meshes/left_inner_knuckle.obj",
+      "sha256": "8d9a1c8a1ef03e13539166478da57899d11457a570723126a3ed81fd6924f476",
+      "size": 5453,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "ufactory_xarm7/assets/left_inner_knuckle.stl",
+      "upstream_sha256": "e8e48692ad26837bb3d6a97582c89784d09948fc09bfe4e5a59017859ff04dac",
+      "license": "BSD-3-Clause",
+      "copyright": "Copyright (c) 2018, UFACTORY Inc.",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-linkage-cobot/sim/meshes/left_outer_knuckle.obj",
+      "sha256": "9240964309262caaaa40e05566f03d13e68257dc4de39eded7e010d9dead6657",
+      "size": 3428,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "ufactory_xarm7/assets/left_outer_knuckle.stl",
+      "upstream_sha256": "501665812b08d67e764390db781e839adc6896a9540301d60adf606f57648921",
+      "license": "BSD-3-Clause",
+      "copyright": "Copyright (c) 2018, UFACTORY Inc.",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-linkage-cobot/sim/meshes/right_inner_knuckle.obj",
+      "sha256": "a9f884861a3c513c9b808acdd342a782ede9becc79da04d86f488d0219dcd37a",
+      "size": 5552,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "ufactory_xarm7/assets/right_inner_knuckle.stl",
+      "upstream_sha256": "b41dd2c2c550281bf78d7cc6fa117b14786700e5c453560a0cb5fd6dfa0ffb3e",
+      "license": "BSD-3-Clause",
+      "copyright": "Copyright (c) 2018, UFACTORY Inc.",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-linkage-cobot/sim/meshes/right_outer_knuckle.obj",
+      "sha256": "8d7077d007c5eaa83769692b65adc632a63e1638ff582da82b0cd2ddeb6f3de8",
+      "size": 3456,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "ufactory_xarm7/assets/right_outer_knuckle.stl",
+      "upstream_sha256": "75ca1107d0a42a0f03802a9a49cab48419b31851ee8935f8f1ca06be1c1c91e8",
+      "license": "BSD-3-Clause",
+      "copyright": "Copyright (c) 2018, UFACTORY Inc.",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    }
+  ],
+  "skipped": [],
+  "preview": {
+    "path": "web/public/data/library/glb/gripper-2f-linkage-cobot.glb",
+    "sha256": "0de1559b74437f78033e26b006cf4b1536e0b188ab695adca1c0bc96dc2a012b",
+    "size": 373652,
+    "license": "BSD-3-Clause",
+    "derived_from": [
+      "ufactory_xarm7/hand.xml"
+    ],
+    "changes": [
+      "drawn from the item's own geometry in its reference pose, simplified by vertex clustering",
+      "re-encoded as GLB (Y up, metres) in one flat grey, with generic node names"
+    ]
+  }
+}

@@ -1,0 +1,247 @@
+{
+  "format": "rtt-library-source",
+  "version": 1,
+  "key": "gripper-2f-adaptive-85",
+  "display_name": "Two-finger adaptive linkage gripper, 85 mm",
+  "summary": "A two-finger gripper whose four-bar linkages close parallel on small parts and wrap around larger ones; one motor drives both fingers.",
+  "kind": "adaptive_gripper",
+  "class": "sim_model",
+  "capabilities": [
+    "pinch",
+    "power"
+  ],
+  "upstream": {
+    "repository": "https://github.com/google-deepmind/mujoco_menagerie",
+    "commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35"
+  },
+  "licence": [
+    {
+      "spdx": "BSD-2-Clause",
+      "covers": "the simulation model (MJCF and meshes)"
+    }
+  ],
+  "copyright": "Copyright (c) 2013, ROS-Industrial",
+  "attribution": "\"Robotiq 2F-85 (v4) MJCF model\" by ROS-Industrial and MuJoCo Menagerie contributors, https://github.com/google-deepmind/mujoco_menagerie (commit 62ab00f), licensed BSD-2-Clause (https://spdx.org/licenses/BSD-2-Clause.html); MJCF from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie)",
+  "chain": [
+    {
+      "spdx": "BSD-2-Clause",
+      "relation": "licensed",
+      "what": "robotiq_2f85_v4/LICENSE",
+      "source": "https://github.com/google-deepmind/mujoco_menagerie/blob/62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35/robotiq_2f85_v4/LICENSE"
+    }
+  ],
+  "reviewed": {
+    "by": "Effector Lab licence gate, against the 2026-10-18 licence audit",
+    "date": "2026-10-18"
+  },
+  "mount": {
+    "interface": "the maker's coupling to a cobot tool flange",
+    "iso_pattern": "ISO 9409-1-50-4-M6",
+    "status": "assumed",
+    "adapter": "plate-iso50-4-m6",
+    "source": "",
+    "notes": [
+      "the coupling's pattern was not read today: verify before ordering bolts"
+    ]
+  },
+  "specs": [
+    {
+      "name": "Stroke (model name)",
+      "value": "85",
+      "unit": "mm",
+      "tag": "derived",
+      "source": ""
+    },
+    {
+      "name": "Fingers",
+      "value": "2, adaptive four-bar linkages, one actuator",
+      "unit": "",
+      "tag": "derived",
+      "source": ""
+    }
+  ],
+  "sim": {
+    "status": "native",
+    "source": "upstream MJCF",
+    "fidelity": "rigid",
+    "note": "a simulation model of a commercial gripper, shipped under a generic name; the licence covers the model files, not the product's patents or marks",
+    "model_file": "sim/gripper-2f-adaptive-85.xml",
+    "n_bodies": 11,
+    "n_joints": 6,
+    "n_actuators": 1,
+    "mass_kg": 0.9
+  },
+  "notes": [],
+  "ingest": {
+    "licence_files": [
+      {
+        "path": "robotiq_2f85_v4/LICENSE",
+        "license": "BSD-2-Clause"
+      }
+    ],
+    "sim": {
+      "type": "mjcf",
+      "entry": "robotiq_2f85_v4/2f85.xml",
+      "root": "base",
+      "license": "BSD-2-Clause"
+    },
+    "preview": {
+      "from": "mjcf",
+      "entry": "robotiq_2f85_v4/2f85.xml",
+      "root": "base",
+      "license": "BSD-2-Clause"
+    }
+  },
+  "files": [
+    {
+      "path": "assets/effectors/library/gripper-2f-adaptive-85/LICENSES/LICENSE",
+      "sha256": "3d5edd18d1e22a17666e9bb84270171ed5ac90b192d24e0177fd171708ea2316",
+      "size": 1297,
+      "role": "licence",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "robotiq_2f85_v4/LICENSE",
+      "upstream_sha256": "3d5edd18d1e22a17666e9bb84270171ed5ac90b192d24e0177fd171708ea2316",
+      "license": "BSD-2-Clause",
+      "copyright": "Copyright (c) 2013, ROS-Industrial",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-adaptive-85/sim/gripper-2f-adaptive-85.xml",
+      "sha256": "c1c77f862df9751ee0800af882e86d55ec69b7ccd75f7755543b9e2d18af033e",
+      "size": 8192,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "robotiq_2f85_v4/2f85.xml",
+      "upstream_sha256": "8d4a4f840ff5f928d56e387a8325d1f34437b35f72b82792e4d46f8de879e133",
+      "license": "BSD-2-Clause",
+      "copyright": "Copyright (c) 2013, ROS-Industrial",
+      "changes": [
+        "the effector subtree from body 'base' written as one MJCF by MuJoCo 3.15.0",
+        "every body's mass, centre of mass and inertia pinned at the upstream model's compiled values",
+        "13 visual-only geoms removed (the catalog preview draws the upstream visuals)",
+        "contact priority set to 0 on 4 geoms (the part's contact parameters govern every contact)",
+        "1 element or class names carrying a maker's or product's name renamed"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-adaptive-85/sim/meshes/base.obj",
+      "sha256": "6639c2189c8b079ad37a88231ec49e775164d09263ad8cad82d257c6eca9846b",
+      "size": 335326,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "robotiq_2f85_v4/assets/base.stl",
+      "upstream_sha256": "1019b87c1dcff4a08a2fdca2dfd4893d60a5e2fc53512c6b5fe2e372b75c9aa3",
+      "license": "BSD-2-Clause",
+      "copyright": "Copyright (c) 2013, ROS-Industrial",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-adaptive-85/sim/meshes/coupler.obj",
+      "sha256": "550554299ed7e2c3eead9a20dd4c48f6e161fe2f63d345aea2bc0207967fd4a2",
+      "size": 212018,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "robotiq_2f85_v4/assets/coupler.stl",
+      "upstream_sha256": "54949f7355c35c976d854fb77272feb92d9201213e343a8852429556fc81d416",
+      "license": "BSD-2-Clause",
+      "copyright": "Copyright (c) 2013, ROS-Industrial",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-adaptive-85/sim/meshes/driver.obj",
+      "sha256": "90a6b59d8b5065bc991652327df30a9e717f9ef34d47dd57b2f2a0f7737e851e",
+      "size": 115114,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "robotiq_2f85_v4/assets/driver.stl",
+      "upstream_sha256": "baf8b4dde18ce59eeebc0928a289c69dccec9da81bb186e2838e2e304274e106",
+      "license": "BSD-2-Clause",
+      "copyright": "Copyright (c) 2013, ROS-Industrial",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-adaptive-85/sim/meshes/follower.obj",
+      "sha256": "ce995a16445087127a6c333e77fa702c3594994ad6198b68efa548bea9c8def9",
+      "size": 89144,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "robotiq_2f85_v4/assets/follower.stl",
+      "upstream_sha256": "28811d3651345dbb5f2020c67d3bd05f754b5e3e791e379c3c4d1d87418bb9c5",
+      "license": "BSD-2-Clause",
+      "copyright": "Copyright (c) 2013, ROS-Industrial",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-adaptive-85/sim/meshes/spring_link.obj",
+      "sha256": "ef7396ba39309b279b1c2967429569843dc289996d712139aa1606c893e80c84",
+      "size": 203467,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "robotiq_2f85_v4/assets/spring_link.stl",
+      "upstream_sha256": "56e9f28ce90841d654ab6d953161aeb62142b1459c210335d5862e7fcb281aab",
+      "license": "BSD-2-Clause",
+      "copyright": "Copyright (c) 2013, ROS-Industrial",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-adaptive-85/sim/meshes/tongue.obj",
+      "sha256": "3d49ad2f1e5f8f878130ab8d5a746000244f2772c1bf18e704c865417b0b71ce",
+      "size": 148159,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "robotiq_2f85_v4/assets/tongue.stl",
+      "upstream_sha256": "2bd5df8a2132542703d40d94be36a990bbc3eabe070283232871147081348d52",
+      "license": "BSD-2-Clause",
+      "copyright": "Copyright (c) 2013, ROS-Industrial",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    }
+  ],
+  "skipped": [],
+  "preview": {
+    "path": "web/public/data/library/glb/gripper-2f-adaptive-85.glb",
+    "sha256": "e401be5cefd926a0b1578562f90bb7718f27f7b178fa32899cb4881b3449b2ad",
+    "size": 379076,
+    "license": "BSD-2-Clause",
+    "derived_from": [
+      "robotiq_2f85_v4/2f85.xml"
+    ],
+    "changes": [
+      "drawn from the item's own geometry in its reference pose, simplified by vertex clustering",
+      "re-encoded as GLB (Y up, metres) in one flat grey, with generic node names"
+    ]
+  }
+}

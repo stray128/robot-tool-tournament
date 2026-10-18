@@ -1,0 +1,481 @@
+{
+  "format": "rtt-library-source",
+  "version": 1,
+  "key": "gripper-2f-hobby-parallel-84",
+  "display_name": "Rack-and-pinion parallel gripper for an open hobby arm",
+  "summary": "A printed parallel gripper that replaces a hobby arm's stock jaw: two clamps on a gear rack, about 84 mm of stroke, camera mounts.",
+  "kind": "parallel_gripper",
+  "class": "open_hardware",
+  "capabilities": [
+    "pinch"
+  ],
+  "upstream": {
+    "repository": "https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper",
+    "commit": "305ad0f6e8f19e4e739616160cbdc7cae1ab153f"
+  },
+  "licence": [
+    {
+      "spdx": "CERN-OHL-P-2.0",
+      "covers": "the hardware (print files, CAD) and the two clamp meshes"
+    },
+    {
+      "spdx": "Apache-2.0",
+      "covers": "the robot description (URDF) and the wrist mesh"
+    },
+    {
+      "spdx": "CC-BY-4.0",
+      "covers": "documentation"
+    }
+  ],
+  "copyright": "Copyright (c) 2025 Robonine",
+  "attribution": "\"SO-ARM100/101 Parallel Gripper\" by Robonine, https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper (commit 305ad0f), licensed CERN-OHL-P-2.0 (https://ohwr.org/cern_ohl_p_v2.txt); description Apache-2.0; documentation CC-BY-4.0",
+  "chain": [
+    {
+      "spdx": "CERN-OHL-P-2.0",
+      "relation": "licensed",
+      "what": "HARDWARE-LICENSE.txt and REUSE.toml",
+      "source": "https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper/blob/305ad0f6e8f19e4e739616160cbdc7cae1ab153f/REUSE.toml"
+    },
+    {
+      "spdx": "Apache-2.0",
+      "relation": "licensed",
+      "what": "SOFTWARE-LICENSE.txt (descriptions)",
+      "source": "https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper/blob/305ad0f6e8f19e4e739616160cbdc7cae1ab153f/LICENSING.md"
+    },
+    {
+      "spdx": "Apache-2.0",
+      "relation": "derived_from",
+      "what": "the wrist mesh fuses the hobby arm's own wrist (Apache-2.0)",
+      "source": "https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper/blob/305ad0f6e8f19e4e739616160cbdc7cae1ab153f/REUSE.toml"
+    }
+  ],
+  "reviewed": {
+    "by": "Effector Lab licence gate, against the 2026-10-18 licence audit",
+    "date": "2026-10-18"
+  },
+  "mount": {
+    "interface": "the hobby arm's wrist servo (replaces its stock jaw)",
+    "iso_pattern": null,
+    "status": "unknown",
+    "adapter": null,
+    "source": "",
+    "notes": [
+      "camera holders for common depth cameras are included upstream"
+    ]
+  },
+  "specs": [
+    {
+      "name": "Full stroke",
+      "value": "84",
+      "unit": "mm",
+      "tag": "sourced",
+      "source": "https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper/blob/305ad0f6e8f19e4e739616160cbdc7cae1ab153f/README.md"
+    },
+    {
+      "name": "Gripping force",
+      "value": "120",
+      "unit": "N",
+      "tag": "sourced",
+      "source": "https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper/blob/305ad0f6e8f19e4e739616160cbdc7cae1ab153f/README.md"
+    },
+    {
+      "name": "Speed",
+      "value": "14",
+      "unit": "mm/s",
+      "tag": "sourced",
+      "source": "https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper/blob/305ad0f6e8f19e4e739616160cbdc7cae1ab153f/README.md"
+    },
+    {
+      "name": "Repeatability",
+      "value": "0.5",
+      "unit": "mm",
+      "tag": "sourced",
+      "source": "https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper/blob/305ad0f6e8f19e4e739616160cbdc7cae1ab153f/README.md"
+    }
+  ],
+  "sim": {
+    "status": "native",
+    "source": "converted from the upstream URDF (relicensed 2026-08-24; the community variant is not used)",
+    "fidelity": "rigid",
+    "note": "the description has no actuator; the clamp servo is modelled from the published 120 N grip",
+    "model_file": "sim/gripper-2f-hobby-parallel-84.xml",
+    "n_bodies": 3,
+    "n_joints": 2,
+    "n_actuators": 1,
+    "mass_kg": 0.863796
+  },
+  "notes": [],
+  "ingest": {
+    "licence_files": [
+      {
+        "path": "HARDWARE-LICENSE.txt",
+        "license": "CERN-OHL-P-2.0"
+      },
+      {
+        "path": "SOFTWARE-LICENSE.txt",
+        "license": "Apache-2.0"
+      },
+      {
+        "path": "DOCS-LICENSE.txt",
+        "license": "CC-BY-4.0"
+      },
+      {
+        "path": "NOTICE",
+        "license": "Apache-2.0"
+      },
+      {
+        "path": "LICENSING.md",
+        "license": "CC-BY-4.0"
+      }
+    ],
+    "sim": {
+      "type": "urdf",
+      "entry": "simulation/so_arm_101_description/urdf/so_101.urdf.xacro",
+      "root": "link5_1",
+      "links": [
+        "link5_1",
+        "clamp_1",
+        "clamp_2"
+      ],
+      "mesh_paths": {
+        "package://so_arm_101_description/meshes/collision/link5_1.stl": "simulation/so_arm_101_description/meshes/collision/link5_1.stl",
+        "package://so_arm_101_description/meshes/collision/clamp_1.stl": "simulation/so_arm_101_description/meshes/collision/clamp_1.stl",
+        "package://so_arm_101_description/meshes/collision/clamp_2.stl": "simulation/so_arm_101_description/meshes/collision/clamp_2.stl"
+      },
+      "mesh_licenses": {
+        "clamp_1.stl": "CERN-OHL-P-2.0",
+        "clamp_2.stl": "CERN-OHL-P-2.0",
+        "link5_1.stl": "Apache-2.0"
+      },
+      "actuators": [
+        {
+          "name": "clamp",
+          "joint": "right_clamp",
+          "kp": 3000,
+          "kv": 20,
+          "ctrlrange": [
+            0.0,
+            0.037
+          ],
+          "forcerange": [
+            -120,
+            120
+          ]
+        }
+      ],
+      "conversion_notes": [
+        "the clamp position servo (kp 3000 N/m, force limit 120 N, the published grip) is ours: the description declares no actuator",
+        "the mirrored clamp follows through a joint equality (the description's mimic tag)"
+      ],
+      "license": "Apache-2.0"
+    },
+    "files": [
+      {
+        "path": "models/parts/RB9.01.062.010 Main frame.STL",
+        "out": "print/main_frame.stl",
+        "license": "CERN-OHL-P-2.0"
+      },
+      {
+        "path": "models/parts/RB9.01.062.020 Clamp.STL",
+        "out": "print/clamp.stl",
+        "license": "CERN-OHL-P-2.0"
+      },
+      {
+        "path": "models/parts/RB9.01.062.030 Gear rack.STL",
+        "out": "print/gear_rack_a.stl",
+        "license": "CERN-OHL-P-2.0"
+      },
+      {
+        "path": "models/parts/RB9.01.062.031 Gear rack.STL",
+        "out": "print/gear_rack_b.stl",
+        "license": "CERN-OHL-P-2.0"
+      },
+      {
+        "path": "models/parts/RB9.01.062.040 Gear.STL",
+        "out": "print/gear.stl",
+        "license": "CERN-OHL-P-2.0"
+      },
+      {
+        "path": "models/parts/RB9.01.062.100 Nail.STL",
+        "out": "print/nail.stl",
+        "license": "CERN-OHL-P-2.0"
+      },
+      {
+        "path": "models/parts/RB9.01.060.074 Camera holder.STL",
+        "out": "print/camera_holder.stl",
+        "license": "CERN-OHL-P-2.0"
+      }
+    ],
+    "links": [
+      {
+        "path": "models/RB9.01.062.000 Gripper.STEP",
+        "size": 5731780,
+        "license": "CERN-OHL-P-2.0",
+        "reason": "assembly CAD (5.7 MB): linked, not mirrored"
+      }
+    ],
+    "preview": {
+      "from": "model",
+      "license": "CERN-OHL-P-2.0"
+    }
+  },
+  "files": [
+    {
+      "path": "assets/effectors/library/gripper-2f-hobby-parallel-84/LICENSES/DOCS-LICENSE.txt",
+      "sha256": "9ba9550ad48438d0836ddab3da480b3b69ffa0aac7b7878b5a0039e7ab429411",
+      "size": 18657,
+      "role": "licence",
+      "upstream_url": "https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper",
+      "upstream_commit": "305ad0f6e8f19e4e739616160cbdc7cae1ab153f",
+      "upstream_path": "DOCS-LICENSE.txt",
+      "upstream_sha256": "9ba9550ad48438d0836ddab3da480b3b69ffa0aac7b7878b5a0039e7ab429411",
+      "license": "CC-BY-4.0",
+      "copyright": "Copyright (c) 2025 Robonine",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-hobby-parallel-84/LICENSES/HARDWARE-LICENSE.txt",
+      "sha256": "6e471d647db50527d0c75ee5f1a55a74012ab177c73282bef0bdc7f6562b7ded",
+      "size": 8852,
+      "role": "licence",
+      "upstream_url": "https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper",
+      "upstream_commit": "305ad0f6e8f19e4e739616160cbdc7cae1ab153f",
+      "upstream_path": "HARDWARE-LICENSE.txt",
+      "upstream_sha256": "6e471d647db50527d0c75ee5f1a55a74012ab177c73282bef0bdc7f6562b7ded",
+      "license": "CERN-OHL-P-2.0",
+      "copyright": "Copyright (c) 2025 Robonine",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-hobby-parallel-84/LICENSES/LICENSING.md",
+      "sha256": "e6494f67aae72c64191dba4810a50bba6a560546c31f9056aae577f575af588c",
+      "size": 5392,
+      "role": "licence",
+      "upstream_url": "https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper",
+      "upstream_commit": "305ad0f6e8f19e4e739616160cbdc7cae1ab153f",
+      "upstream_path": "LICENSING.md",
+      "upstream_sha256": "e6494f67aae72c64191dba4810a50bba6a560546c31f9056aae577f575af588c",
+      "license": "CC-BY-4.0",
+      "copyright": "Copyright (c) 2025 Robonine",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-hobby-parallel-84/LICENSES/NOTICE",
+      "sha256": "cfeb6a263bedb0971392324ce019f39603d40fd3969f0674b38223a70d2ec1a2",
+      "size": 3637,
+      "role": "licence",
+      "upstream_url": "https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper",
+      "upstream_commit": "305ad0f6e8f19e4e739616160cbdc7cae1ab153f",
+      "upstream_path": "NOTICE",
+      "upstream_sha256": "cfeb6a263bedb0971392324ce019f39603d40fd3969f0674b38223a70d2ec1a2",
+      "license": "Apache-2.0",
+      "copyright": "Copyright (c) 2025 Robonine",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-hobby-parallel-84/LICENSES/SOFTWARE-LICENSE.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "size": 11358,
+      "role": "licence",
+      "upstream_url": "https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper",
+      "upstream_commit": "305ad0f6e8f19e4e739616160cbdc7cae1ab153f",
+      "upstream_path": "SOFTWARE-LICENSE.txt",
+      "upstream_sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "license": "Apache-2.0",
+      "copyright": "Copyright (c) 2025 Robonine",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-hobby-parallel-84/print/camera_holder.stl",
+      "sha256": "82d9d5590e3cc336e8cd0393f5f41cb55ddb6080508856b291a8c6fc2c060e51",
+      "size": 145184,
+      "role": "print",
+      "upstream_url": "https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper",
+      "upstream_commit": "305ad0f6e8f19e4e739616160cbdc7cae1ab153f",
+      "upstream_path": "models/parts/RB9.01.060.074 Camera holder.STL",
+      "upstream_sha256": "82d9d5590e3cc336e8cd0393f5f41cb55ddb6080508856b291a8c6fc2c060e51",
+      "license": "CERN-OHL-P-2.0",
+      "copyright": "Copyright (c) 2025 Robonine",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-hobby-parallel-84/print/clamp.stl",
+      "sha256": "4470542147827f9cc839b10ef6e54bf5c7f64f08a654d7d751660daf2600de8e",
+      "size": 37784,
+      "role": "print",
+      "upstream_url": "https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper",
+      "upstream_commit": "305ad0f6e8f19e4e739616160cbdc7cae1ab153f",
+      "upstream_path": "models/parts/RB9.01.062.020 Clamp.STL",
+      "upstream_sha256": "4470542147827f9cc839b10ef6e54bf5c7f64f08a654d7d751660daf2600de8e",
+      "license": "CERN-OHL-P-2.0",
+      "copyright": "Copyright (c) 2025 Robonine",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-hobby-parallel-84/print/gear.stl",
+      "sha256": "9f88db5828c1e26b7b15e3c0a4cfcea42805f0652b48beecca2ac57d037d8094",
+      "size": 55784,
+      "role": "print",
+      "upstream_url": "https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper",
+      "upstream_commit": "305ad0f6e8f19e4e739616160cbdc7cae1ab153f",
+      "upstream_path": "models/parts/RB9.01.062.040 Gear.STL",
+      "upstream_sha256": "9f88db5828c1e26b7b15e3c0a4cfcea42805f0652b48beecca2ac57d037d8094",
+      "license": "CERN-OHL-P-2.0",
+      "copyright": "Copyright (c) 2025 Robonine",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-hobby-parallel-84/print/gear_rack_a.stl",
+      "sha256": "7d5fc2d18776725ececa88add05a28aa04c6153d3bf7ad0c52dbdee4690135b2",
+      "size": 22084,
+      "role": "print",
+      "upstream_url": "https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper",
+      "upstream_commit": "305ad0f6e8f19e4e739616160cbdc7cae1ab153f",
+      "upstream_path": "models/parts/RB9.01.062.030 Gear rack.STL",
+      "upstream_sha256": "7d5fc2d18776725ececa88add05a28aa04c6153d3bf7ad0c52dbdee4690135b2",
+      "license": "CERN-OHL-P-2.0",
+      "copyright": "Copyright (c) 2025 Robonine",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-hobby-parallel-84/print/gear_rack_b.stl",
+      "sha256": "48a987bc9f216cf795ec8e056fc9a67eae5e14d1fad468dbf29848cbc04e003b",
+      "size": 23584,
+      "role": "print",
+      "upstream_url": "https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper",
+      "upstream_commit": "305ad0f6e8f19e4e739616160cbdc7cae1ab153f",
+      "upstream_path": "models/parts/RB9.01.062.031 Gear rack.STL",
+      "upstream_sha256": "48a987bc9f216cf795ec8e056fc9a67eae5e14d1fad468dbf29848cbc04e003b",
+      "license": "CERN-OHL-P-2.0",
+      "copyright": "Copyright (c) 2025 Robonine",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-hobby-parallel-84/print/main_frame.stl",
+      "sha256": "fdd2b1273c9e8d03627316e1f35972cf97eeb77d30e280a0231e9c49d8c15e0e",
+      "size": 90284,
+      "role": "print",
+      "upstream_url": "https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper",
+      "upstream_commit": "305ad0f6e8f19e4e739616160cbdc7cae1ab153f",
+      "upstream_path": "models/parts/RB9.01.062.010 Main frame.STL",
+      "upstream_sha256": "fdd2b1273c9e8d03627316e1f35972cf97eeb77d30e280a0231e9c49d8c15e0e",
+      "license": "CERN-OHL-P-2.0",
+      "copyright": "Copyright (c) 2025 Robonine",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-hobby-parallel-84/print/nail.stl",
+      "sha256": "63e6615466ffc75e26843fd6de4895b8653f4afca017fe19f61ceeabf0dc8d96",
+      "size": 2684,
+      "role": "print",
+      "upstream_url": "https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper",
+      "upstream_commit": "305ad0f6e8f19e4e739616160cbdc7cae1ab153f",
+      "upstream_path": "models/parts/RB9.01.062.100 Nail.STL",
+      "upstream_sha256": "63e6615466ffc75e26843fd6de4895b8653f4afca017fe19f61ceeabf0dc8d96",
+      "license": "CERN-OHL-P-2.0",
+      "copyright": "Copyright (c) 2025 Robonine",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-hobby-parallel-84/sim/gripper-2f-hobby-parallel-84.xml",
+      "sha256": "4b8b662a093a502c8285e699d0b4f0cbde21e3d200f419b6228e5a6328102dc1",
+      "size": 1902,
+      "role": "derived",
+      "upstream_url": "https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper",
+      "upstream_commit": "305ad0f6e8f19e4e739616160cbdc7cae1ab153f",
+      "upstream_path": "simulation/so_arm_101_description/urdf/so_101.urdf.xacro",
+      "upstream_sha256": "7d54a2f5b86ecdeec340618c187d757cbe9cf5cbe5fd52c7689081fda52e062e",
+      "license": "Apache-2.0",
+      "copyright": "Copyright (c) 2025 Robonine",
+      "changes": [
+        "converted from the upstream URDF (so_101.urdf.xacro) to MJCF: links clamp_1, clamp_2, link5_1",
+        "the clamp position servo (kp 3000 N/m, force limit 120 N, the published grip) is ours: the description declares no actuator",
+        "the mirrored clamp follows through a joint equality (the description's mimic tag)"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-hobby-parallel-84/sim/meshes/m0.obj",
+      "sha256": "7916ca777e5f3475d6514cf4abdeb6c9a9144482cca145f5873c8bf91a8c458c",
+      "size": 36664,
+      "role": "derived",
+      "upstream_url": "https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper",
+      "upstream_commit": "305ad0f6e8f19e4e739616160cbdc7cae1ab153f",
+      "upstream_path": "simulation/so_arm_101_description/meshes/collision/link5_1.stl",
+      "upstream_sha256": "abd81281837a4bfd1e1f4a8fd58157e79cde3485d04fe658abb850fce3c094bc",
+      "license": "Apache-2.0",
+      "copyright": "Copyright (c) 2025 Robonine",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-hobby-parallel-84/sim/meshes/m1.obj",
+      "sha256": "16159f7c705dbfe6e8a2057a625db3219596bfef9d8a9aa934c5e435f1872d14",
+      "size": 17297,
+      "role": "derived",
+      "upstream_url": "https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper",
+      "upstream_commit": "305ad0f6e8f19e4e739616160cbdc7cae1ab153f",
+      "upstream_path": "simulation/so_arm_101_description/meshes/collision/clamp_1.stl",
+      "upstream_sha256": "61132125e2a3de4d7fbb0f6c171bf5402f8bb53a52e1bc5777be65ec4c4901e0",
+      "license": "CERN-OHL-P-2.0",
+      "copyright": "Copyright (c) 2025 Robonine",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-hobby-parallel-84/sim/meshes/m2.obj",
+      "sha256": "fa801ddd514f11ec9d7ba4bcacfd70b6e1cfdfdb934f4c01120b080652330f99",
+      "size": 17388,
+      "role": "derived",
+      "upstream_url": "https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper",
+      "upstream_commit": "305ad0f6e8f19e4e739616160cbdc7cae1ab153f",
+      "upstream_path": "simulation/so_arm_101_description/meshes/collision/clamp_2.stl",
+      "upstream_sha256": "e4386cb44a721736d13aaa19ceeaacf6d00b0c30758254e58fbb77be8c2c2de0",
+      "license": "CERN-OHL-P-2.0",
+      "copyright": "Copyright (c) 2025 Robonine",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    }
+  ],
+  "skipped": [
+    {
+      "upstream_path": "models/RB9.01.062.000 Gripper.STEP",
+      "size": 5731780,
+      "license": "CERN-OHL-P-2.0",
+      "reason": "assembly CAD (5.7 MB): linked, not mirrored",
+      "url": "https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper/blob/305ad0f6e8f19e4e739616160cbdc7cae1ab153f/models/RB9.01.062.000%20Gripper.STEP"
+    }
+  ],
+  "preview": {
+    "path": "web/public/data/library/glb/gripper-2f-hobby-parallel-84.glb",
+    "sha256": "0ef255a0dc7318035db8b7e8abe4b1c3e6f9e7f66d52cc14f41dbefae4be38d8",
+    "size": 44936,
+    "license": "CERN-OHL-P-2.0",
+    "derived_from": [],
+    "changes": [
+      "drawn from the item's own geometry in its reference pose, simplified by vertex clustering",
+      "re-encoded as GLB (Y up, metres) in one flat grey, with generic node names"
+    ]
+  }
+}

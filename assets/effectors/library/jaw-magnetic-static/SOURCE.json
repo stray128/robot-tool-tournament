@@ -1,0 +1,139 @@
+{
+  "format": "rtt-library-source",
+  "version": 1,
+  "key": "jaw-magnetic-static",
+  "display_name": "Magnetic static jaw for a hobby-arm gripper",
+  "summary": "A printed static jaw with a pocket for a magnet, so the gripper can pick and hold small ferrous parts such as screws.",
+  "kind": "magnetic_gripper",
+  "class": "open_hardware",
+  "capabilities": [
+    "magnetic",
+    "pinch"
+  ],
+  "upstream": {
+    "repository": "https://github.com/jackvial/assembler0",
+    "commit": "841a758a12317220c6d13f30192f324aa3c5330d"
+  },
+  "licence": [
+    {
+      "spdx": "MIT",
+      "covers": "OpenSCAD source and STL"
+    }
+  ],
+  "copyright": "Copyright (c) 2025 Jack Vial",
+  "attribution": "\"assembler0 magnetic follower gripper static part\" by Jack Vial, https://github.com/jackvial/assembler0 (commit 841a758), licensed MIT (https://spdx.org/licenses/MIT.html)",
+  "chain": [
+    {
+      "spdx": "MIT",
+      "relation": "licensed",
+      "what": "repository LICENSE",
+      "source": "https://github.com/jackvial/assembler0/blob/841a758a12317220c6d13f30192f324aa3c5330d/LICENSE"
+    }
+  ],
+  "reviewed": {
+    "by": "Effector Lab licence gate, against the 2026-10-18 licence audit",
+    "date": "2026-10-18"
+  },
+  "mount": {
+    "interface": "a hobby arm's stock gripper (replaces the static jaw)",
+    "iso_pattern": null,
+    "status": "unknown",
+    "adapter": null,
+    "source": "",
+    "notes": []
+  },
+  "specs": [],
+  "sim": {
+    "status": "visual_only",
+    "reason": "magnetic holding is not modelled yet (a ferrous-gated adhesion proxy is planned)"
+  },
+  "notes": [],
+  "ingest": {
+    "licence_files": [
+      {
+        "path": "LICENSE",
+        "license": "MIT"
+      }
+    ],
+    "files": [
+      {
+        "path": "packages/assembler0-hardware/stl/magnetic_follower_gripper_static_v4.stl",
+        "out": "print/magnetic_static_jaw.stl",
+        "license": "MIT"
+      },
+      {
+        "path": "packages/assembler0-hardware/scad/magnetic_follower_gripper_static.scad",
+        "out": "cad/magnetic_static_jaw.scad",
+        "role": "cad",
+        "license": "MIT"
+      }
+    ],
+    "preview": {
+      "from": "files",
+      "license": "MIT",
+      "files": [
+        {
+          "path": "packages/assembler0-hardware/stl/magnetic_follower_gripper_static_v4.stl"
+        }
+      ]
+    }
+  },
+  "files": [
+    {
+      "path": "assets/effectors/library/jaw-magnetic-static/LICENSES/LICENSE",
+      "sha256": "a73af38bde2ed7671ed0028d7cc44403c0d7424683ab8fdb5f21dd1724c1f790",
+      "size": 1065,
+      "role": "licence",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "LICENSE",
+      "upstream_sha256": "a73af38bde2ed7671ed0028d7cc44403c0d7424683ab8fdb5f21dd1724c1f790",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/jaw-magnetic-static/cad/magnetic_static_jaw.scad",
+      "sha256": "cfbe0f17052b2467c7d7796dc63ea0de4ac4e8e8eba8a040875e63945050edb5",
+      "size": 1561,
+      "role": "cad",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/scad/magnetic_follower_gripper_static.scad",
+      "upstream_sha256": "cfbe0f17052b2467c7d7796dc63ea0de4ac4e8e8eba8a040875e63945050edb5",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/jaw-magnetic-static/print/magnetic_static_jaw.stl",
+      "sha256": "fc91cda19fc3ba194114b9a7b70eedaa1e3edc4e66941aa23bd8a0309943c308",
+      "size": 86884,
+      "role": "print",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/magnetic_follower_gripper_static_v4.stl",
+      "upstream_sha256": "fc91cda19fc3ba194114b9a7b70eedaa1e3edc4e66941aa23bd8a0309943c308",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [],
+      "rating": "green"
+    }
+  ],
+  "skipped": [],
+  "preview": {
+    "path": "web/public/data/library/glb/jaw-magnetic-static.glb",
+    "sha256": "011f9800517dca57f38126344347e7ff09cf9eea0736499021d8d9b1f1ecfd05",
+    "size": 34928,
+    "license": "MIT",
+    "derived_from": [
+      "packages/assembler0-hardware/stl/magnetic_follower_gripper_static_v4.stl"
+    ],
+    "changes": [
+      "drawn from the item's own geometry in its reference pose, simplified by vertex clustering",
+      "re-encoded as GLB (Y up, metres) in one flat grey, with generic node names"
+    ]
+  }
+}

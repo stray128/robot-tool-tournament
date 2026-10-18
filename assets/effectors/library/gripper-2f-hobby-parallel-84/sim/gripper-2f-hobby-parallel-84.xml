@@ -1,0 +1,34 @@
+<mujoco model="gripper-2f-hobby-parallel-84">
+  <compiler angle="radian"/>
+
+  <asset>
+    <mesh name="m0" content_type="model/obj" file="meshes/m0.obj"/>
+    <mesh name="m1" content_type="model/obj" file="meshes/m1.obj"/>
+    <mesh name="m2" content_type="model/obj" file="meshes/m2.obj"/>
+  </asset>
+
+  <worldbody>
+    <body name="link5_1">
+      <inertial pos="-0.000583929 -0.0415391 0.0150558" quat="0.577692 0.411217 0.560252 0.428124" mass="0.556172" diaginertia="0.00100896 0.000711206 0.000578834"/>
+      <geom pos="-0.007062 0.120627 -0.152066" quat="1 0 0 0" type="mesh" mesh="m0"/>
+      <body name="clamp_1" pos="-0.052134 -0.220077 -0.186037">
+        <inertial pos="0.0601695 0.144807 0.184483" quat="0.745779 0.661192 0.0475857 -0.0661413" mass="0.153812" diaginertia="8.63574e-05 7.31474e-05 4.04952e-05"/>
+        <joint name="right_clamp" type="slide" range="0 0.037" damping="0.5" frictionloss="0.1" axis="0.999848 -0.000154 0.017451" limited="true"/>
+        <geom pos="0.045072 0.340704 0.033971" quat="1 0 0 0" type="mesh" mesh="m1"/>
+      </body>
+      <body name="clamp_2" pos="0.072828 -0.222278 -0.183875">
+        <inertial pos="-0.0800042 0.14701 0.185068" quat="0.661192 0.745779 0.0661413 -0.0475857" mass="0.153812" diaginertia="8.63574e-05 7.31474e-05 4.04952e-05"/>
+        <joint name="left_clamp" type="slide" range="-0.038 0" damping="0.5" frictionloss="0.1" axis="0.999848 -0.000154 0.017451" limited="true"/>
+        <geom pos="-0.07989 0.342905 0.031809" quat="1 0 0 0" type="mesh" mesh="m2"/>
+      </body>
+    </body>
+  </worldbody>
+
+  <equality>
+    <joint joint1="left_clamp" joint2="right_clamp" polycoef="0 -1 0 0 0"/>
+  </equality>
+
+  <actuator>
+    <general name="clamp" joint="right_clamp" ctrlrange="0 0.037" ctrllimited="true" forcelimited="true" forcerange="-120 120" biastype="affine" gainprm="3000" biasprm="0 -3000 -20"/>
+  </actuator>
+</mujoco>

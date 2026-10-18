@@ -1,0 +1,43 @@
+<mujoco model="tool-marker-holder">
+  <compiler angle="radian"/>
+  <asset>
+    <mesh name="holder_0" file="pieces/holder_0.obj"/>
+    <mesh name="holder_1" file="pieces/holder_1.obj"/>
+    <mesh name="holder_2" file="pieces/holder_2.obj"/>
+    <mesh name="holder_3" file="pieces/holder_3.obj"/>
+    <mesh name="holder_4" file="pieces/holder_4.obj"/>
+    <mesh name="holder_5" file="pieces/holder_5.obj"/>
+    <mesh name="holder_6" file="pieces/holder_6.obj"/>
+    <mesh name="holder_7" file="pieces/holder_7.obj"/>
+    <mesh name="holder_8" file="pieces/holder_8.obj"/>
+    <mesh name="holder_9" file="pieces/holder_9.obj"/>
+    <mesh name="holder_10" file="pieces/holder_10.obj"/>
+    <mesh name="holder_11" file="pieces/holder_11.obj"/>
+    <mesh name="holder_12" file="pieces/holder_12.obj"/>
+    <mesh name="holder_13" file="pieces/holder_13.obj"/>
+    <mesh name="holder_14" file="pieces/holder_14.obj"/>
+    <mesh name="holder_15" file="pieces/holder_15.obj"/>
+  </asset>
+  <worldbody>
+    <body name="holder">
+      <inertial pos="-0.0378039186 0.000159138107 -0.0155524992" mass="0.0182633837" fullinertia="1.65065538e-06 2.76188612e-05 2.75936677e-05 1.87522398e-08 1.08966177e-08 -1.1864716e-08"/>
+      <geom type="mesh" mesh="holder_0"/>
+      <geom type="mesh" mesh="holder_1"/>
+      <geom type="mesh" mesh="holder_2"/>
+      <geom type="mesh" mesh="holder_3"/>
+      <geom type="mesh" mesh="holder_4"/>
+      <geom type="mesh" mesh="holder_5"/>
+      <geom type="mesh" mesh="holder_6"/>
+      <geom type="mesh" mesh="holder_7"/>
+      <geom type="mesh" mesh="holder_8"/>
+      <geom type="mesh" mesh="holder_9"/>
+      <geom type="mesh" mesh="holder_10"/>
+      <geom type="mesh" mesh="holder_11"/>
+      <geom type="mesh" mesh="holder_12"/>
+      <geom type="mesh" mesh="holder_13"/>
+      <geom type="mesh" mesh="holder_14"/>
+      <geom type="mesh" mesh="holder_15"/>
+      <site name="tcp" pos="0 0 -0.031750571" size="0.003"/>
+    </body>
+  </worldbody>
+</mujoco>

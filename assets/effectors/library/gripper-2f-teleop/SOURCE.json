@@ -1,0 +1,337 @@
+{
+  "format": "rtt-library-source",
+  "version": 1,
+  "key": "gripper-2f-teleop",
+  "display_name": "Two-finger parallel gripper, teleop-arm fingers",
+  "summary": "The gripper of a widely used bimanual teleoperation rig: two fingers on linear slides, with printable finger sets.",
+  "kind": "parallel_gripper",
+  "class": "sim_model",
+  "capabilities": [
+    "pinch"
+  ],
+  "upstream": {
+    "repository": "https://github.com/google-deepmind/mujoco_menagerie",
+    "commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+    "extra": [
+      {
+        "repository": "https://github.com/tonyzhaozh/aloha",
+        "commit": "06369f03cd8e0a47e16d3a90167853fd33af7557"
+      }
+    ]
+  },
+  "licence": [
+    {
+      "spdx": "BSD-3-Clause",
+      "covers": "the simulation model (MJCF and meshes)"
+    },
+    {
+      "spdx": "MIT",
+      "covers": "the printable finger sets (STL archives) of the teleoperation project"
+    }
+  ],
+  "copyright": "Copyright (c) 2023, Trossen Robotics (model); Copyright (c) 2023 Tony Z. Zhao (finger sets)",
+  "attribution": "\"ALOHA gripper MJCF model\" by Trossen Robotics and MuJoCo Menagerie contributors, https://github.com/google-deepmind/mujoco_menagerie (commit 62ab00f), licensed BSD-3-Clause (https://spdx.org/licenses/BSD-3-Clause.html); MJCF from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie); \"ALOHA 2 gripper finger STLs\" by Tony Z. Zhao, https://github.com/tonyzhaozh/aloha (commit 06369f0), licensed MIT (https://spdx.org/licenses/MIT.html)",
+  "chain": [
+    {
+      "spdx": "BSD-3-Clause",
+      "relation": "licensed",
+      "what": "aloha/LICENSE",
+      "source": "https://github.com/google-deepmind/mujoco_menagerie/blob/62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35/aloha/LICENSE"
+    },
+    {
+      "spdx": "MIT",
+      "relation": "licensed",
+      "what": "teleoperation project LICENSE",
+      "source": "https://github.com/tonyzhaozh/aloha/blob/06369f03cd8e0a47e16d3a90167853fd33af7557/LICENSE"
+    }
+  ],
+  "reviewed": {
+    "by": "Effector Lab licence gate, against the 2026-10-18 licence audit",
+    "date": "2026-10-18"
+  },
+  "mount": {
+    "interface": "the teleoperation arm's wrist (arm-specific)",
+    "iso_pattern": null,
+    "status": "unknown",
+    "adapter": null,
+    "source": "",
+    "notes": [
+      "no ISO flange; the gripper is part of the arm"
+    ]
+  },
+  "specs": [
+    {
+      "name": "Finger travel in the model",
+      "value": "2 x 37",
+      "unit": "mm",
+      "tag": "derived",
+      "source": ""
+    }
+  ],
+  "sim": {
+    "status": "native",
+    "source": "upstream MJCF (one gripper of the bimanual model)",
+    "fidelity": "rigid",
+    "note": "a simulation model of an arm-integrated gripper, cut from the bimanual model",
+    "model_file": "sim/gripper-2f-teleop.xml",
+    "n_bodies": 3,
+    "n_joints": 2,
+    "n_actuators": 1,
+    "mass_kg": 0.594167
+  },
+  "notes": [],
+  "ingest": {
+    "licence_files": [
+      {
+        "path": "aloha/LICENSE",
+        "license": "BSD-3-Clause"
+      },
+      {
+        "path": "LICENSE",
+        "out": "LICENSE-fingers",
+        "license": "MIT",
+        "repository": "https://github.com/tonyzhaozh/aloha",
+        "commit": "06369f03cd8e0a47e16d3a90167853fd33af7557",
+        "copyright": "Copyright (c) 2023 Tony Z. Zhao"
+      }
+    ],
+    "sim": {
+      "type": "mjcf",
+      "entry": "aloha/aloha.xml",
+      "root": "left/gripper_base",
+      "license": "BSD-3-Clause"
+    },
+    "files": [
+      {
+        "path": "aloha2/viperx_gripper_stl.zip",
+        "out": "print/fingers_set_a_stl.zip",
+        "license": "MIT",
+        "repository": "https://github.com/tonyzhaozh/aloha",
+        "commit": "06369f03cd8e0a47e16d3a90167853fd33af7557",
+        "copyright": "Copyright (c) 2023 Tony Z. Zhao"
+      },
+      {
+        "path": "aloha2/widowx_gripper_std.zip",
+        "out": "print/fingers_set_b_stl.zip",
+        "license": "MIT",
+        "repository": "https://github.com/tonyzhaozh/aloha",
+        "commit": "06369f03cd8e0a47e16d3a90167853fd33af7557",
+        "copyright": "Copyright (c) 2023 Tony Z. Zhao"
+      }
+    ],
+    "links": [
+      {
+        "path": "aloha2/aloha_gripper_assembly.pdf",
+        "size": 772495,
+        "license": "MIT",
+        "reason": "assembly guide: linked to keep the repository small"
+      }
+    ],
+    "preview": {
+      "from": "mjcf",
+      "entry": "aloha/aloha.xml",
+      "root": "left/gripper_base",
+      "license": "BSD-3-Clause"
+    }
+  },
+  "files": [
+    {
+      "path": "assets/effectors/library/gripper-2f-teleop/LICENSES/LICENSE",
+      "sha256": "21868447315ac2b10e592d08958c1035b19a32cf39e9165b23033f68390098cb",
+      "size": 1502,
+      "role": "licence",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "aloha/LICENSE",
+      "upstream_sha256": "21868447315ac2b10e592d08958c1035b19a32cf39e9165b23033f68390098cb",
+      "license": "BSD-3-Clause",
+      "copyright": "Copyright (c) 2023, Trossen Robotics (model); Copyright (c) 2023 Tony Z. Zhao (finger sets)",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-teleop/LICENSES/LICENSE-fingers",
+      "sha256": "4666c312da313e6c46929f6695d06cf98a2e7359b9c7dcbb0ea232d01b32cd42",
+      "size": 1069,
+      "role": "licence",
+      "upstream_url": "https://github.com/tonyzhaozh/aloha",
+      "upstream_commit": "06369f03cd8e0a47e16d3a90167853fd33af7557",
+      "upstream_path": "LICENSE",
+      "upstream_sha256": "4666c312da313e6c46929f6695d06cf98a2e7359b9c7dcbb0ea232d01b32cd42",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2023 Tony Z. Zhao",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-teleop/print/fingers_set_a_stl.zip",
+      "sha256": "bd8e5c8a86c2fee8b86820ef03e36a1d62b3d635d462bc935bcc43f2891dcca5",
+      "size": 167598,
+      "role": "print",
+      "upstream_url": "https://github.com/tonyzhaozh/aloha",
+      "upstream_commit": "06369f03cd8e0a47e16d3a90167853fd33af7557",
+      "upstream_path": "aloha2/viperx_gripper_stl.zip",
+      "upstream_sha256": "bd8e5c8a86c2fee8b86820ef03e36a1d62b3d635d462bc935bcc43f2891dcca5",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2023 Tony Z. Zhao",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-teleop/print/fingers_set_b_stl.zip",
+      "sha256": "9240e509574ace1d09a065eb688ae59748375cf19924328111bcad13f99ff2b2",
+      "size": 389043,
+      "role": "print",
+      "upstream_url": "https://github.com/tonyzhaozh/aloha",
+      "upstream_commit": "06369f03cd8e0a47e16d3a90167853fd33af7557",
+      "upstream_path": "aloha2/widowx_gripper_std.zip",
+      "upstream_sha256": "9240e509574ace1d09a065eb688ae59748375cf19924328111bcad13f99ff2b2",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2023 Tony Z. Zhao",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-teleop/sim/gripper-2f-teleop.xml",
+      "sha256": "2aeb4b1de91d684edc2e8cf1f7f01e65d88263849ab63fe99015c6839a53b2dd",
+      "size": 5844,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "aloha/aloha.xml",
+      "upstream_sha256": "68430b29719bda1b75e63f540953f81991bc3fd136bdf0a43bbe3e04393b78d3",
+      "license": "BSD-3-Clause",
+      "copyright": "Copyright (c) 2023, Trossen Robotics (model); Copyright (c) 2023 Tony Z. Zhao (finger sets)",
+      "changes": [
+        "the effector subtree from body 'left/gripper_base' written as one MJCF by MuJoCo 3.15.0",
+        "every body's mass, centre of mass and inertia pinned at the upstream model's compiled values",
+        "6 visual-only geoms removed (the catalog preview draws the upstream visuals)"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-teleop/sim/meshes/d405_solid.obj",
+      "sha256": "83becadcab02de05ae3408d46bd19fce7bb6d09e91e8af70c1faa17aa0a6afe5",
+      "size": 536853,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "aloha/assets/d405_solid.stl",
+      "upstream_sha256": "8a9a84dd9c9a67687e5ad0b37a7ed334dbfea6b0f995fef28524cc8da5f21ed2",
+      "license": "BSD-3-Clause",
+      "copyright": "Copyright (c) 2023, Trossen Robotics (model); Copyright (c) 2023 Tony Z. Zhao (finger sets)",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-teleop/sim/meshes/vx300s_7_gripper_bar.obj",
+      "sha256": "f649f3854021eb0a989b084ec12fd6e420cf98d80625e20c3bd6e3b98437bdb1",
+      "size": 8282,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "aloha/assets/vx300s_7_gripper_bar.stl",
+      "upstream_sha256": "b76420544e84102b1cd30745f3c6c2675f9bf08a656808101f32b6466a33f2ee",
+      "license": "BSD-3-Clause",
+      "copyright": "Copyright (c) 2023, Trossen Robotics (model); Copyright (c) 2023 Tony Z. Zhao (finger sets)",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-teleop/sim/meshes/vx300s_7_gripper_prop.obj",
+      "sha256": "5a6f1373bd30129460d89be538af97eda3dc9b514869dd1f657440237b680959",
+      "size": 6633,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "aloha/assets/vx300s_7_gripper_prop.stl",
+      "upstream_sha256": "4536e8975278953841f25391dccef10907859e69c71b9f06f794fef6dfc5959c",
+      "license": "BSD-3-Clause",
+      "copyright": "Copyright (c) 2023, Trossen Robotics (model); Copyright (c) 2023 Tony Z. Zhao (finger sets)",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-teleop/sim/meshes/vx300s_7_gripper_wrist_mount.obj",
+      "sha256": "c879008266fd7cf3b3dcb7600c39175e16ae8dbdec12d3af037bfa204f77cbe6",
+      "size": 139731,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "aloha/assets/vx300s_7_gripper_wrist_mount.stl",
+      "upstream_sha256": "50c54e0486d3e349785163dbce209313f7b4b3feadc252ab2e2c9e55a5d0e7ef",
+      "license": "BSD-3-Clause",
+      "copyright": "Copyright (c) 2023, Trossen Robotics (model); Copyright (c) 2023 Tony Z. Zhao (finger sets)",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-teleop/sim/meshes/vx300s_8_custom_finger_left.obj",
+      "sha256": "23fe9619ef24416bef852c6a745c0a7a1b311d9f166214151e9f4e26aa240a22",
+      "size": 23706,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "aloha/assets/vx300s_8_custom_finger_left.stl",
+      "upstream_sha256": "5853af5b66dd9fc954b6705a883d8569c96536d86775d094f3670befaff67a93",
+      "license": "BSD-3-Clause",
+      "copyright": "Copyright (c) 2023, Trossen Robotics (model); Copyright (c) 2023 Tony Z. Zhao (finger sets)",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-teleop/sim/meshes/vx300s_8_custom_finger_right.obj",
+      "sha256": "4e3276ca9bac00d8efda784251d419e665fa2e54022a264f2a3ba25ad7700f08",
+      "size": 23923,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "aloha/assets/vx300s_8_custom_finger_right.stl",
+      "upstream_sha256": "9a1bbd942b887f27e2680b4c99dd3b3d2f73578fa9a87cc0f4dd1da3cf88b2e2",
+      "license": "BSD-3-Clause",
+      "copyright": "Copyright (c) 2023, Trossen Robotics (model); Copyright (c) 2023 Tony Z. Zhao (finger sets)",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    }
+  ],
+  "skipped": [
+    {
+      "upstream_path": "aloha2/aloha_gripper_assembly.pdf",
+      "size": 772495,
+      "license": "MIT",
+      "reason": "assembly guide: linked to keep the repository small",
+      "url": "https://github.com/google-deepmind/mujoco_menagerie/blob/62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35/aloha2/aloha_gripper_assembly.pdf"
+    }
+  ],
+  "preview": {
+    "path": "web/public/data/library/glb/gripper-2f-teleop.glb",
+    "sha256": "4e38532fd34cf09b0eee4715111093e0e5f88966ba74cca56dbc8a986fdea40a",
+    "size": 340824,
+    "license": "BSD-3-Clause",
+    "derived_from": [
+      "aloha/aloha.xml"
+    ],
+    "changes": [
+      "drawn from the item's own geometry in its reference pose, simplified by vertex clustering",
+      "re-encoded as GLB (Y up, metres) in one flat grey, with generic node names"
+    ]
+  }
+}

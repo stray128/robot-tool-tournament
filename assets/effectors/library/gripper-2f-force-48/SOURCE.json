@@ -1,0 +1,465 @@
+{
+  "format": "rtt-library-source",
+  "version": 1,
+  "key": "gripper-2f-force-48",
+  "display_name": "Force-controlled parallel gripper, 48 mm stroke",
+  "summary": "A buildable electric parallel gripper with a brushless motor whose gripping force is set in software, with printed fin-ray or solid jaws.",
+  "kind": "parallel_gripper",
+  "class": "open_hardware",
+  "capabilities": [
+    "pinch"
+  ],
+  "upstream": {
+    "repository": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper",
+    "commit": "cb99f63e793e1887edfcfa8c07353b5c5bdedc51"
+  },
+  "licence": [
+    {
+      "spdx": "Apache-2.0",
+      "covers": "mechanical files, simulation model, software and documentation (one LICENSE for the repository)"
+    }
+  ],
+  "copyright": "Copyright Source Robotics and the SSG-48 contributors",
+  "attribution": "\"SSG-48 adaptive electric gripper\" by Source Robotics, https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper (commit cb99f63), licensed Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)",
+  "chain": [
+    {
+      "spdx": "Apache-2.0",
+      "relation": "licensed",
+      "what": "repository LICENSE",
+      "source": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper/blob/cb99f63e793e1887edfcfa8c07353b5c5bdedc51/LICENSE"
+    }
+  ],
+  "reviewed": {
+    "by": "Effector Lab licence gate, against the 2026-10-18 licence audit",
+    "date": "2026-10-18"
+  },
+  "mount": {
+    "interface": "adapter plate to the arm; upstream ships a coupler plate for a cobot tool flange",
+    "iso_pattern": "ISO 9409-1-50-4-M6",
+    "status": "assumed",
+    "adapter": "plate-iso50-4-m6",
+    "source": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper/blob/cb99f63e793e1887edfcfa8c07353b5c5bdedc51/STEPS/UR5%20adapter%20plate/UR_coupler_gripper.STEP",
+    "notes": [
+      "the upstream coupler plate targets a cobot flange of this pattern; its bolt circle was not measured here"
+    ]
+  },
+  "specs": [
+    {
+      "name": "Stroke",
+      "value": "48",
+      "unit": "mm",
+      "tag": "sourced",
+      "source": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper/blob/cb99f63e793e1887edfcfa8c07353b5c5bdedc51/README.md"
+    },
+    {
+      "name": "Gripping force (adjustable)",
+      "value": "5 to 80",
+      "unit": "N",
+      "tag": "sourced",
+      "source": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper/blob/cb99f63e793e1887edfcfa8c07353b5c5bdedc51/README.md"
+    },
+    {
+      "name": "Mass",
+      "value": "400",
+      "unit": "g",
+      "tag": "sourced",
+      "source": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper/blob/cb99f63e793e1887edfcfa8c07353b5c5bdedc51/README.md"
+    },
+    {
+      "name": "Actuation",
+      "value": "brushless motor with a micro BLDC driver, force control",
+      "unit": "",
+      "tag": "sourced",
+      "source": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper/blob/cb99f63e793e1887edfcfa8c07353b5c5bdedc51/README.md"
+    },
+    {
+      "name": "Simulated jaw force limit",
+      "value": "50",
+      "unit": "N",
+      "tag": "sourced",
+      "source": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper/blob/cb99f63e793e1887edfcfa8c07353b5c5bdedc51/SSG48_gripper_description/ssg48_gripper.xml"
+    }
+  ],
+  "sim": {
+    "status": "native",
+    "source": "upstream MJCF",
+    "fidelity": "rigid",
+    "note": "two marker bodies removed: a camera frame and a TCP marker whose 1 m visual capsule carried 0.32 kg of default density",
+    "model_file": "sim/gripper-2f-force-48.xml",
+    "n_bodies": 3,
+    "n_joints": 2,
+    "n_actuators": 1,
+    "mass_kg": 0.414
+  },
+  "notes": [],
+  "ingest": {
+    "licence_files": [
+      {
+        "path": "LICENSE",
+        "license": "Apache-2.0"
+      }
+    ],
+    "sim": {
+      "type": "mjcf",
+      "entry": "SSG48_gripper_description/ssg48_gripper.xml",
+      "root": "gripper",
+      "delete_bodies": [
+        "camera_center",
+        "tcp_link"
+      ],
+      "license": "Apache-2.0"
+    },
+    "files": [
+      {
+        "path": "gripper jaws/fin_ray_1.STL",
+        "out": "print/jaw_fin_ray_1.stl",
+        "license": "Apache-2.0"
+      },
+      {
+        "path": "gripper jaws/fin_ray_3.STL",
+        "out": "print/jaw_fin_ray_3.stl",
+        "license": "Apache-2.0"
+      },
+      {
+        "path": "gripper jaws/Finger_1.STL",
+        "out": "print/finger_1.stl",
+        "license": "Apache-2.0"
+      },
+      {
+        "path": "STEPS/3D MODEL/JAW.STEP",
+        "out": "cad/jaw.step",
+        "role": "cad",
+        "license": "Apache-2.0"
+      },
+      {
+        "path": "STEPS/Jaw_plate.STEP",
+        "out": "cad/jaw_plate.step",
+        "role": "cad",
+        "license": "Apache-2.0"
+      },
+      {
+        "path": "STEPS/solid_jaws_pinch.STEP",
+        "out": "cad/solid_jaws_pinch.step",
+        "role": "cad",
+        "license": "Apache-2.0"
+      },
+      {
+        "path": "STEPS/UR5 adapter plate/UR_coupler_gripper.STEP",
+        "out": "cad/cobot_coupler_plate.step",
+        "role": "cad",
+        "license": "Apache-2.0"
+      },
+      {
+        "path": "STEPS/coupler_connector_generic_STEP.STEP",
+        "out": "cad/coupler_generic.step",
+        "role": "cad",
+        "license": "Apache-2.0"
+      },
+      {
+        "path": "BOM/BOM.md",
+        "out": "doc/BOM.md",
+        "role": "doc",
+        "license": "Apache-2.0"
+      }
+    ],
+    "links": [
+      {
+        "path": "Gripper STL parts/V2/Gripper_body.STL",
+        "size": 23730784,
+        "license": "Apache-2.0",
+        "reason": "gripper body print file (23 MB): linked, not mirrored"
+      },
+      {
+        "path": "Gripper STL parts/V2/Lid_large_bearing.STL",
+        "size": 18895484,
+        "license": "Apache-2.0",
+        "reason": "lid print file (19 MB): linked, not mirrored"
+      },
+      {
+        "path": "Gripper STL parts/V2/gripper_jaw.STL",
+        "size": 1060284,
+        "license": "Apache-2.0",
+        "reason": "jaw carriage print file: linked to keep the repository small"
+      },
+      {
+        "path": "STEPS/3D MODEL/Gripper_body.STEP",
+        "size": 6138846,
+        "license": "Apache-2.0",
+        "reason": "body CAD (6 MB): linked, not mirrored"
+      },
+      {
+        "path": "Assembly manual/Gripper_assembly_manual.pdf",
+        "size": 2889964,
+        "license": "Apache-2.0",
+        "reason": "assembly manual: linked to keep the repository small"
+      }
+    ],
+    "preview": {
+      "from": "mjcf",
+      "entry": "SSG48_gripper_description/ssg48_gripper.xml",
+      "root": "gripper",
+      "license": "Apache-2.0"
+    }
+  },
+  "files": [
+    {
+      "path": "assets/effectors/library/gripper-2f-force-48/LICENSES/LICENSE",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "size": 11357,
+      "role": "licence",
+      "upstream_url": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper",
+      "upstream_commit": "cb99f63e793e1887edfcfa8c07353b5c5bdedc51",
+      "upstream_path": "LICENSE",
+      "upstream_sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "license": "Apache-2.0",
+      "copyright": "Copyright Source Robotics and the SSG-48 contributors",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-force-48/cad/cobot_coupler_plate.step",
+      "sha256": "371eb94dee2c1c3e62fa057c4236ad2839676072321c6d99636d58e185189ba5",
+      "size": 235659,
+      "role": "cad",
+      "upstream_url": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper",
+      "upstream_commit": "cb99f63e793e1887edfcfa8c07353b5c5bdedc51",
+      "upstream_path": "STEPS/UR5 adapter plate/UR_coupler_gripper.STEP",
+      "upstream_sha256": "371eb94dee2c1c3e62fa057c4236ad2839676072321c6d99636d58e185189ba5",
+      "license": "Apache-2.0",
+      "copyright": "Copyright Source Robotics and the SSG-48 contributors",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-force-48/cad/coupler_generic.step",
+      "sha256": "22f25b6f56cda35bc8a87ba0998988e3bab253d5d7e8ac3d7353e4136ff66f30",
+      "size": 176601,
+      "role": "cad",
+      "upstream_url": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper",
+      "upstream_commit": "cb99f63e793e1887edfcfa8c07353b5c5bdedc51",
+      "upstream_path": "STEPS/coupler_connector_generic_STEP.STEP",
+      "upstream_sha256": "22f25b6f56cda35bc8a87ba0998988e3bab253d5d7e8ac3d7353e4136ff66f30",
+      "license": "Apache-2.0",
+      "copyright": "Copyright Source Robotics and the SSG-48 contributors",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-force-48/cad/jaw.step",
+      "sha256": "13fd5fda248f26a8c288ce7a1cf0a840dba7def0ea74afa14d4d0e81958aa8a1",
+      "size": 94788,
+      "role": "cad",
+      "upstream_url": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper",
+      "upstream_commit": "cb99f63e793e1887edfcfa8c07353b5c5bdedc51",
+      "upstream_path": "STEPS/3D MODEL/JAW.STEP",
+      "upstream_sha256": "13fd5fda248f26a8c288ce7a1cf0a840dba7def0ea74afa14d4d0e81958aa8a1",
+      "license": "Apache-2.0",
+      "copyright": "Copyright Source Robotics and the SSG-48 contributors",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-force-48/cad/jaw_plate.step",
+      "sha256": "da02d618024b6e7958deaa286de446d03cf6db86010e8366f6fe72759ef1e551",
+      "size": 39719,
+      "role": "cad",
+      "upstream_url": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper",
+      "upstream_commit": "cb99f63e793e1887edfcfa8c07353b5c5bdedc51",
+      "upstream_path": "STEPS/Jaw_plate.STEP",
+      "upstream_sha256": "da02d618024b6e7958deaa286de446d03cf6db86010e8366f6fe72759ef1e551",
+      "license": "Apache-2.0",
+      "copyright": "Copyright Source Robotics and the SSG-48 contributors",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-force-48/cad/solid_jaws_pinch.step",
+      "sha256": "ee2f151ab9fab9e60d15df57c9e0796cb0c016a4558970da25ae35b0b01455d2",
+      "size": 91049,
+      "role": "cad",
+      "upstream_url": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper",
+      "upstream_commit": "cb99f63e793e1887edfcfa8c07353b5c5bdedc51",
+      "upstream_path": "STEPS/solid_jaws_pinch.STEP",
+      "upstream_sha256": "ee2f151ab9fab9e60d15df57c9e0796cb0c016a4558970da25ae35b0b01455d2",
+      "license": "Apache-2.0",
+      "copyright": "Copyright Source Robotics and the SSG-48 contributors",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-force-48/doc/BOM.md",
+      "sha256": "4cdb4dfbe3280b8ec5a43d28598c02ba06164fa580e68162233358137296a7a3",
+      "size": 3545,
+      "role": "doc",
+      "upstream_url": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper",
+      "upstream_commit": "cb99f63e793e1887edfcfa8c07353b5c5bdedc51",
+      "upstream_path": "BOM/BOM.md",
+      "upstream_sha256": "4cdb4dfbe3280b8ec5a43d28598c02ba06164fa580e68162233358137296a7a3",
+      "license": "Apache-2.0",
+      "copyright": "Copyright Source Robotics and the SSG-48 contributors",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-force-48/print/finger_1.stl",
+      "sha256": "5cf3ca52b54011f89672333b259b10cec6a78597ca768394b6b6d5d911c3914f",
+      "size": 392084,
+      "role": "print",
+      "upstream_url": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper",
+      "upstream_commit": "cb99f63e793e1887edfcfa8c07353b5c5bdedc51",
+      "upstream_path": "gripper jaws/Finger_1.STL",
+      "upstream_sha256": "5cf3ca52b54011f89672333b259b10cec6a78597ca768394b6b6d5d911c3914f",
+      "license": "Apache-2.0",
+      "copyright": "Copyright Source Robotics and the SSG-48 contributors",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-force-48/print/jaw_fin_ray_1.stl",
+      "sha256": "1e1169aac2c38be1699ed56192e0597aab2d56544d8fb3431388642404847ac7",
+      "size": 582884,
+      "role": "print",
+      "upstream_url": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper",
+      "upstream_commit": "cb99f63e793e1887edfcfa8c07353b5c5bdedc51",
+      "upstream_path": "gripper jaws/fin_ray_1.STL",
+      "upstream_sha256": "1e1169aac2c38be1699ed56192e0597aab2d56544d8fb3431388642404847ac7",
+      "license": "Apache-2.0",
+      "copyright": "Copyright Source Robotics and the SSG-48 contributors",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-force-48/print/jaw_fin_ray_3.stl",
+      "sha256": "e721b6fa94a531445e96e5a92f967f218b46553dc5cfce8c121b7063c76bede2",
+      "size": 345284,
+      "role": "print",
+      "upstream_url": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper",
+      "upstream_commit": "cb99f63e793e1887edfcfa8c07353b5c5bdedc51",
+      "upstream_path": "gripper jaws/fin_ray_3.STL",
+      "upstream_sha256": "e721b6fa94a531445e96e5a92f967f218b46553dc5cfce8c121b7063c76bede2",
+      "license": "Apache-2.0",
+      "copyright": "Copyright Source Robotics and the SSG-48 contributors",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-force-48/sim/gripper-2f-force-48.xml",
+      "sha256": "c23f646e58c8ec3f328f86d1f16f0a6ffe6458f83bce7e4c11f6ee8b01c7ea39",
+      "size": 2071,
+      "role": "derived",
+      "upstream_url": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper",
+      "upstream_commit": "cb99f63e793e1887edfcfa8c07353b5c5bdedc51",
+      "upstream_path": "SSG48_gripper_description/ssg48_gripper.xml",
+      "upstream_sha256": "7ed59876337a63d84c546499608878772c9fb585e8f3d1e40669199da065e51b",
+      "license": "Apache-2.0",
+      "copyright": "Copyright Source Robotics and the SSG-48 contributors",
+      "changes": [
+        "the effector subtree from body 'gripper' written as one MJCF by MuJoCo 3.15.0",
+        "every body's mass, centre of mass and inertia pinned at the upstream model's compiled values",
+        "1 element or class names carrying a maker's or product's name renamed"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-force-48/sim/meshes/gripper.obj",
+      "sha256": "21f41404f0c6b8c157d93e4b62357ccdd8ec0a5ed9b6aff1caf55ef013c9efe9",
+      "size": 44685,
+      "role": "derived",
+      "upstream_url": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper",
+      "upstream_commit": "cb99f63e793e1887edfcfa8c07353b5c5bdedc51",
+      "upstream_path": "SSG48_gripper_description/assets/gripper_SSG48.STL",
+      "upstream_sha256": "e90a8a4b0d9d53581854732babec0e8fd364d8ac9079a33215bef5e07274faf4",
+      "license": "Apache-2.0",
+      "copyright": "Copyright Source Robotics and the SSG-48 contributors",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-force-48/sim/meshes/jaw1.obj",
+      "sha256": "883c98ad0465454582f431251c9394840434dd1b1a208d85508675d9d894a9bb",
+      "size": 3384,
+      "role": "derived",
+      "upstream_url": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper",
+      "upstream_commit": "cb99f63e793e1887edfcfa8c07353b5c5bdedc51",
+      "upstream_path": "SSG48_gripper_description/assets/jaw1_SSG48.STL",
+      "upstream_sha256": "d3cbd3919b4489ca00dd6816b78a5f52ab6a90ea050ae3341fadd38bf6cf0608",
+      "license": "Apache-2.0",
+      "copyright": "Copyright Source Robotics and the SSG-48 contributors",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-force-48/sim/meshes/jaw2.obj",
+      "sha256": "e658e950bc5484eb009a216edb590e221597c512852e8450e18bc65eb662cca8",
+      "size": 3328,
+      "role": "derived",
+      "upstream_url": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper",
+      "upstream_commit": "cb99f63e793e1887edfcfa8c07353b5c5bdedc51",
+      "upstream_path": "SSG48_gripper_description/assets/jaw2_SSG48.STL",
+      "upstream_sha256": "ebd4142408f1a0871954337c72549b105f845a6fd2d6a3e813d36575c8d99d48",
+      "license": "Apache-2.0",
+      "copyright": "Copyright Source Robotics and the SSG-48 contributors",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    }
+  ],
+  "skipped": [
+    {
+      "upstream_path": "Assembly manual/Gripper_assembly_manual.pdf",
+      "size": 2889964,
+      "license": "Apache-2.0",
+      "reason": "assembly manual: linked to keep the repository small",
+      "url": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper/blob/cb99f63e793e1887edfcfa8c07353b5c5bdedc51/Assembly%20manual/Gripper_assembly_manual.pdf"
+    },
+    {
+      "upstream_path": "Gripper STL parts/V2/Gripper_body.STL",
+      "size": 23730784,
+      "license": "Apache-2.0",
+      "reason": "gripper body print file (23 MB): linked, not mirrored",
+      "url": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper/blob/cb99f63e793e1887edfcfa8c07353b5c5bdedc51/Gripper%20STL%20parts/V2/Gripper_body.STL"
+    },
+    {
+      "upstream_path": "Gripper STL parts/V2/Lid_large_bearing.STL",
+      "size": 18895484,
+      "license": "Apache-2.0",
+      "reason": "lid print file (19 MB): linked, not mirrored",
+      "url": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper/blob/cb99f63e793e1887edfcfa8c07353b5c5bdedc51/Gripper%20STL%20parts/V2/Lid_large_bearing.STL"
+    },
+    {
+      "upstream_path": "Gripper STL parts/V2/gripper_jaw.STL",
+      "size": 1060284,
+      "license": "Apache-2.0",
+      "reason": "jaw carriage print file: linked to keep the repository small",
+      "url": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper/blob/cb99f63e793e1887edfcfa8c07353b5c5bdedc51/Gripper%20STL%20parts/V2/gripper_jaw.STL"
+    },
+    {
+      "upstream_path": "STEPS/3D MODEL/Gripper_body.STEP",
+      "size": 6138846,
+      "license": "Apache-2.0",
+      "reason": "body CAD (6 MB): linked, not mirrored",
+      "url": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper/blob/cb99f63e793e1887edfcfa8c07353b5c5bdedc51/STEPS/3D%20MODEL/Gripper_body.STEP"
+    }
+  ],
+  "preview": {
+    "path": "web/public/data/library/glb/gripper-2f-force-48.glb",
+    "sha256": "e9dbb35753714645c4f5395e811045b413cf33c040fa5d7443a08f32f2fcb240",
+    "size": 226868,
+    "license": "Apache-2.0",
+    "derived_from": [
+      "SSG48_gripper_description/ssg48_gripper.xml"
+    ],
+    "changes": [
+      "drawn from the item's own geometry in its reference pose, simplified by vertex clustering",
+      "re-encoded as GLB (Y up, metres) in one flat grey, with generic node names"
+    ]
+  }
+}

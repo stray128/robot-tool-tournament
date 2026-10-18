@@ -1,0 +1,128 @@
+{
+  "format": "rtt-library-source",
+  "version": 1,
+  "key": "finger-fin-tpu",
+  "display_name": "TPU fin-style compliant finger",
+  "summary": "A fin-ray style finger printed in TPU on a PLA base, for a hobby arm's gripper.",
+  "kind": "compliant_finger",
+  "class": "open_hardware",
+  "capabilities": [
+    "pinch"
+  ],
+  "upstream": {
+    "repository": "https://github.com/Vector-Wangel/XLeRobot",
+    "commit": "b017b5e6354bd9f61f4247a920c72622ca0aade0"
+  },
+  "licence": [
+    {
+      "spdx": "Apache-2.0",
+      "covers": "the hardware files"
+    }
+  ],
+  "copyright": "Copyright the XLeRobot contributors",
+  "attribution": "\"XLeRobot soft fin\" by the XLeRobot contributors, https://github.com/Vector-Wangel/XLeRobot (commit b017b5e), licensed Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)",
+  "chain": [
+    {
+      "spdx": "Apache-2.0",
+      "relation": "licensed",
+      "what": "repository LICENSE",
+      "source": "https://github.com/Vector-Wangel/XLeRobot/blob/b017b5e6354bd9f61f4247a920c72622ca0aade0/LICENSE"
+    }
+  ],
+  "reviewed": {
+    "by": "Effector Lab licence gate, against the 2026-10-18 licence audit",
+    "date": "2026-10-18"
+  },
+  "mount": {
+    "interface": "a hobby arm's gripper (replaces a jaw)",
+    "iso_pattern": null,
+    "status": "unknown",
+    "adapter": null,
+    "source": "",
+    "notes": []
+  },
+  "specs": [
+    {
+      "name": "Material",
+      "value": "TPU 95A finger, PLA base",
+      "unit": "",
+      "tag": "assumed",
+      "source": ""
+    }
+  ],
+  "sim": {
+    "status": "visual_only",
+    "reason": "fin-ray compliance is not modelled yet (a pseudo-rigid chain or flex model is planned)"
+  },
+  "notes": [
+    "the materials are the licence audit's reading of the upstream docs, not re-read today"
+  ],
+  "ingest": {
+    "licence_files": [
+      {
+        "path": "LICENSE",
+        "license": "Apache-2.0"
+      }
+    ],
+    "files": [
+      {
+        "path": "hardware/SO101_soft_fin.stl",
+        "out": "print/soft_fin.stl",
+        "license": "Apache-2.0"
+      }
+    ],
+    "preview": {
+      "from": "files",
+      "license": "Apache-2.0",
+      "files": [
+        {
+          "path": "hardware/SO101_soft_fin.stl"
+        }
+      ]
+    }
+  },
+  "files": [
+    {
+      "path": "assets/effectors/library/finger-fin-tpu/LICENSES/LICENSE",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "size": 11357,
+      "role": "licence",
+      "upstream_url": "https://github.com/Vector-Wangel/XLeRobot",
+      "upstream_commit": "b017b5e6354bd9f61f4247a920c72622ca0aade0",
+      "upstream_path": "LICENSE",
+      "upstream_sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "license": "Apache-2.0",
+      "copyright": "Copyright the XLeRobot contributors",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/finger-fin-tpu/print/soft_fin.stl",
+      "sha256": "4125201fffaca5f9e5ee354a11ff80328c08e7ccb4676661442a937b7a79b121",
+      "size": 3094284,
+      "role": "print",
+      "upstream_url": "https://github.com/Vector-Wangel/XLeRobot",
+      "upstream_commit": "b017b5e6354bd9f61f4247a920c72622ca0aade0",
+      "upstream_path": "hardware/SO101_soft_fin.stl",
+      "upstream_sha256": "4125201fffaca5f9e5ee354a11ff80328c08e7ccb4676661442a937b7a79b121",
+      "license": "Apache-2.0",
+      "copyright": "Copyright the XLeRobot contributors",
+      "changes": [],
+      "rating": "green"
+    }
+  ],
+  "skipped": [],
+  "preview": {
+    "path": "web/public/data/library/glb/finger-fin-tpu.glb",
+    "sha256": "96262d29b031f6dc5388d0a4961db5a1ae00240bb85204e4f820e062a412114a",
+    "size": 319416,
+    "license": "Apache-2.0",
+    "derived_from": [
+      "hardware/SO101_soft_fin.stl"
+    ],
+    "changes": [
+      "drawn from the item's own geometry in its reference pose, simplified by vertex clustering",
+      "re-encoded as GLB (Y up, metres) in one flat grey, with generic node names"
+    ]
+  }
+}

@@ -1,0 +1,568 @@
+{
+  "format": "rtt-library-catalog",
+  "version": 1,
+  "audit": {
+    "date": "2026-10-18",
+    "note": "licence facts read from upstream LICENSE files, READMEs and listing pages on 2026-10-18; not legal advice"
+  },
+  "listed": [
+    {
+      "name": "Universal jamming gripper (balloon and granular fill)",
+      "kind": "jamming_gripper",
+      "capabilities": [
+        "jamming"
+      ],
+      "license": "CC-BY-4.0",
+      "url": "https://www.thingiverse.com/thing:3597180",
+      "reason": "the host blocks scripted downloads with a bot check, so the files are not mirrored: link only; jamming physics is not modelled yet"
+    },
+    {
+      "name": "Hobby six-axis arm servo gripper",
+      "kind": "parallel_gripper",
+      "capabilities": [
+        "pinch"
+      ],
+      "license": "CC-BY-4.0",
+      "url": "https://www.thingiverse.com/thing:5461202",
+      "reason": "the host blocks scripted downloads with a bot check, so the files are not mirrored: link only"
+    },
+    {
+      "name": "Two-joint servo gripper and clamp",
+      "kind": "parallel_gripper",
+      "capabilities": [
+        "pinch"
+      ],
+      "license": "CC-BY-4.0",
+      "url": "https://www.thingiverse.com/thing:3648782",
+      "reason": "the host blocks scripted downloads with a bot check, so the files are not mirrored: link only"
+    },
+    {
+      "name": "Dual-material flex gripper",
+      "kind": "compliant_finger",
+      "capabilities": [
+        "pinch"
+      ],
+      "license": "CC-BY-4.0",
+      "url": "https://www.thingiverse.com/thing:3596934",
+      "reason": "the host blocks scripted downloads with a bot check, so the files are not mirrored: link only"
+    },
+    {
+      "name": "Three-finger TPU fin-ray adaptive gripper",
+      "kind": "adaptive_gripper",
+      "capabilities": [
+        "pinch",
+        "power"
+      ],
+      "license": "CC-BY-4.0",
+      "url": "https://www.thingiverse.com/thing:4894257",
+      "reason": "the host blocks scripted downloads with a bot check, so the files are not mirrored: link only"
+    },
+    {
+      "name": "Fin-ray soft gripper for multi-robot caging (2026 open-hardware article)",
+      "kind": "compliant_finger",
+      "capabilities": [
+        "pinch",
+        "wrap"
+      ],
+      "license": "CC-BY-4.0",
+      "url": "https://www.sciencedirect.com/science/article/pii/S2468067226000660",
+      "reason": "the data-repository link and its licence must be verified first (the article page needs a login for automated reading)"
+    },
+    {
+      "name": "Anthropomorphic research hand (2020 open-hardware article)",
+      "kind": "multi_finger_hand",
+      "capabilities": [
+        "pinch",
+        "power"
+      ],
+      "license": "MIT",
+      "url": "https://github.com/hj26-park/HRI-Hand-ROS",
+      "reason": "the CAD is on a separate data repository whose licence must be confirmed to match the code's MIT"
+    },
+    {
+      "name": "Three-joint finger modules (open dynamic robot platform)",
+      "kind": "three_finger_hand",
+      "capabilities": [
+        "pinch"
+      ],
+      "license": "BSD-3-Clause",
+      "url": "https://github.com/open-dynamic-robot-initiative/open_robot_actuator_hardware",
+      "reason": "next tranche: simulation model to convert"
+    },
+    {
+      "name": "Five-finger prosthetic-class hand, simulation model",
+      "kind": "multi_finger_hand",
+      "capabilities": [
+        "pinch",
+        "power"
+      ],
+      "license": "MIT",
+      "url": "https://github.com/psyonicinc/ability-hand-api",
+      "reason": "next tranche: simulation model of a commercial hand"
+    },
+    {
+      "name": "Three-finger 7-joint humanoid hand, simulation model",
+      "kind": "three_finger_hand",
+      "capabilities": [
+        "pinch",
+        "power"
+      ],
+      "license": "BSD-3-Clause",
+      "url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "reason": "next tranche: must be cut from a humanoid model"
+    },
+    {
+      "name": "Adaptive two-finger servo gripper, simulation model",
+      "kind": "adaptive_gripper",
+      "capabilities": [
+        "pinch",
+        "power"
+      ],
+      "license": "Apache-2.0",
+      "url": "https://github.com/ROBOTIS-GIT/RH-P12-RN-A",
+      "reason": "next tranche: URDF to convert"
+    },
+    {
+      "name": "Compact two-finger arm gripper, simulation model",
+      "kind": "parallel_gripper",
+      "capabilities": [
+        "pinch"
+      ],
+      "license": "BSD-3-Clause",
+      "url": "https://github.com/Kinovarobotics/ros2_kortex",
+      "reason": "next tranche: URDF to convert"
+    },
+    {
+      "name": "Two-finger adaptive 140 mm and three-finger adaptive grippers, simulation models",
+      "kind": "adaptive_gripper",
+      "capabilities": [
+        "pinch",
+        "power"
+      ],
+      "license": "BSD-2-Clause",
+      "url": "https://github.com/ros-industrial-attic/robotiq",
+      "reason": "next tranche: URDF to convert (archived upstream)"
+    },
+    {
+      "name": "Low-cost arm gripper",
+      "kind": "angular_jaw",
+      "capabilities": [
+        "pinch"
+      ],
+      "license": "Apache-2.0",
+      "url": "https://github.com/jess-moss/koch-v1-1",
+      "reason": "next tranche: simulation model exists"
+    },
+    {
+      "name": "Arm-integrated parallel grippers, simulation models (several arms)",
+      "kind": "parallel_gripper",
+      "capabilities": [
+        "pinch"
+      ],
+      "license": "BSD-3-Clause",
+      "url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "reason": "next tranche: each must be cut from its arm model (MIT, BSD-3-Clause or Apache-2.0 per folder)"
+    },
+    {
+      "name": "Robot-learning gripper set: generic three-finger, wiping tool, parallel",
+      "kind": "parallel_gripper",
+      "capabilities": [
+        "pinch",
+        "tool"
+      ],
+      "license": "MIT",
+      "url": "https://github.com/ARISE-Initiative/robosuite",
+      "reason": "next tranche: generic simulation templates"
+    },
+    {
+      "name": "Simulation-format conversions of several grippers and hands",
+      "kind": "parallel_gripper",
+      "capabilities": [],
+      "license": "Apache-2.0",
+      "url": "https://github.com/newton-physics/newton-assets",
+      "reason": "a format source only: the library uses the MJCF originals"
+    }
+  ],
+  "excluded": [
+    {
+      "name": "Cobot parallel and vacuum grippers (third-party simulation package)",
+      "rating": "amber",
+      "license": "MIT",
+      "url": "https://github.com/UOsaka-Harada-Laboratory/onrobot",
+      "reason": "third-party repackaging; the meshes' provenance is not stated (likely vendor CAD)"
+    },
+    {
+      "name": "Industrial parallel gripper, wrist and three-finger hand (third-party models)",
+      "rating": "amber",
+      "license": "Apache-2.0",
+      "url": "https://github.com/ipa320/schunk_modular_robotics",
+      "reason": "third-party vendor geometry, unmaintained since 2022"
+    },
+    {
+      "name": "Three-finger spread hand (2013 model)",
+      "rating": "amber",
+      "license": "LicenseRef-manifest-only",
+      "url": "https://github.com/jhu-lcsr-attic/bhand_model",
+      "reason": "a licence named only in a package manifest, no LICENSE file"
+    },
+    {
+      "name": "Five-finger hands converted from vendor CAD (three makers)",
+      "rating": "amber",
+      "license": "MIT",
+      "url": "https://github.com/dexsuite/dex-urdf",
+      "reason": "meshes converted from vendor CAD by third parties"
+    },
+    {
+      "name": "Compliant two-finger gripper of a mobile manipulator, simulation model",
+      "rating": "amber",
+      "license": "Apache-2.0",
+      "url": "https://github.com/hello-robot/stretch_tool_share/blob/master/ROBOT_LICENSE.md",
+      "reason": "the maker licenses the same robot parts CC-BY-NC-SA-4.0"
+    },
+    {
+      "name": "Compliant stepper parallel gripper",
+      "rating": "amber",
+      "license": "CERN-OHL-S-2.0",
+      "url": "https://github.com/Source-Robotics/MSG-compliant-AI-stepper-gripper",
+      "reason": "strongly reciprocal: modified files and products must publish their source"
+    },
+    {
+      "name": "Low-cost parallel gripper (share-alike)",
+      "rating": "amber",
+      "license": "CC-BY-SA-4.0",
+      "url": "https://github.com/pollen-robotics/PincOpen",
+      "reason": "share-alike"
+    },
+    {
+      "name": "Hand-exoskeleton capture adapters",
+      "rating": "amber",
+      "license": "MIT",
+      "url": "https://github.com/real-stanford/DexUMI",
+      "reason": "the CAD's licence is not stated"
+    },
+    {
+      "name": "Two-finger servo gripper (share-alike)",
+      "rating": "amber",
+      "license": "CC-BY-SA-4.0",
+      "url": "https://www.thingiverse.com/thing:7130255",
+      "reason": "share-alike"
+    },
+    {
+      "name": "Hobby-arm gripper (share-alike)",
+      "rating": "amber",
+      "license": "CC-BY-SA-4.0",
+      "url": "https://github.com/AngelLM/Thor",
+      "reason": "share-alike"
+    },
+    {
+      "name": "Desktop-arm gripper and vacuum accessories",
+      "rating": "amber",
+      "license": "GPL-3.0-only",
+      "url": "https://github.com/Source-Robotics/PAROL6-Desktop-robot-arm",
+      "reason": "copyleft, and a software licence on CAD is ambiguous"
+    },
+    {
+      "name": "Humanoid-arm parallel gripper hardware",
+      "rating": "amber",
+      "license": "CERN-OHL-S-2.0",
+      "url": "https://github.com/enactic/openarm_hardware",
+      "reason": "reciprocal hardware licence (its Apache-2.0 simulation model is not ingested in this version)"
+    },
+    {
+      "name": "Tactile parallel gripper add-on",
+      "rating": "amber",
+      "license": "NOASSERTION",
+      "url": "https://github.com/TNA001-AI/lerobot_tactile",
+      "reason": "the hardware licence is not confirmed"
+    },
+    {
+      "name": "Tendon-driven humanoid hand (university lab)",
+      "rating": "amber",
+      "license": "MIT",
+      "url": "https://github.com/ruka-hand/RUKA",
+      "reason": "MIT code; the CAD's licence is not stated"
+    },
+    {
+      "name": "Underactuated adaptive hands (research lab)",
+      "rating": "amber",
+      "license": "CC-BY-SA-4.0",
+      "url": "https://github.com/OpenBionics/Robot-Hands",
+      "reason": "share-alike"
+    },
+    {
+      "name": "Five-finger research hands (prosthetics maker)",
+      "rating": "amber",
+      "license": "CC-BY-SA-4.0",
+      "url": "https://github.com/Open-Bionics/Ada_3D_model_files",
+      "reason": "share-alike, and no LICENSE file in one repository"
+    },
+    {
+      "name": "Three-finger 9-joint manipulator (research platform)",
+      "rating": "amber",
+      "license": "Apache-2.0",
+      "url": "https://github.com/google-research/robel",
+      "reason": "Apache-2.0 code and simulation; the CAD's licence is not stated"
+    },
+    {
+      "name": "16-joint four-finger hand, simulation model",
+      "rating": "amber",
+      "license": "MIT",
+      "url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "reason": "the geometry copies a non-commercial hardware design: simulation only, never printable"
+    },
+    {
+      "name": "Tendon five-finger hand, simulation model",
+      "rating": "amber",
+      "license": "Apache-2.0",
+      "url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "reason": "three licences on one geometry (simulation Apache-2.0, description CC-BY-SA-4.0, hardware CC-BY-NC-SA-4.0)"
+    },
+    {
+      "name": "Cobot end-of-arm prototypes: bellows vacuum pad, non-contact and magnetic",
+      "rating": "amber",
+      "license": "MIT",
+      "url": "https://github.com/rparak/SMC_End_Effector_Prototype",
+      "reason": "the adapters are the author's, but the embedded vendor part models are likely vendor CAD"
+    },
+    {
+      "name": "Electropermanent magnet gripper",
+      "rating": "amber",
+      "license": "CC-BY-SA-4.0",
+      "url": "https://github.com/Zubax/opengrab_epm_v3",
+      "reason": "share-alike hardware and GPL firmware; the product is discontinued"
+    },
+    {
+      "name": "Cobot tool changer and tools (university lab)",
+      "rating": "amber",
+      "license": "NOASSERTION",
+      "url": "https://github.com/BerkeleyAutomation/RobotToolChanger",
+      "reason": "no licence in a file; MIT appears only in a commented-out README section"
+    },
+    {
+      "name": "Printed tool changer for printer heads",
+      "rating": "amber",
+      "license": "LicenseRef-conflicting-statements",
+      "url": "https://github.com/ankurv2k6/daksh-toolchanger-v2",
+      "reason": "a CC0 LICENSE file conflicts with non-commercial README text"
+    },
+    {
+      "name": "Underactuated research hands, university lab (nine models)",
+      "rating": "red",
+      "license": "CC-BY-NC-3.0",
+      "url": "https://github.com/grablab/openhand-hardware",
+      "reason": "non-commercial"
+    },
+    {
+      "name": "16-joint four-finger hand hardware",
+      "rating": "red",
+      "license": "CC-BY-NC-4.0",
+      "url": "https://github.com/leap-hand/LEAP_Hand_API",
+      "reason": "non-commercial (CAD under non-commercial share-alike terms)"
+    },
+    {
+      "name": "Tendon five-finger hand hardware",
+      "rating": "red",
+      "license": "CC-BY-NC-SA-4.0",
+      "url": "https://github.com/Chestnut-Robotics/aero-hand-open",
+      "reason": "non-commercial; commercial use only for purchased units"
+    },
+    {
+      "name": "Printed humanoid robot hand (maker community)",
+      "rating": "red",
+      "license": "CC-BY-NC-4.0",
+      "url": "https://www.thingiverse.com/thing:17773",
+      "reason": "non-commercial"
+    },
+    {
+      "name": "Dexterous hobby hand",
+      "rating": "red",
+      "license": "CC-BY-NC-SA-4.0",
+      "url": "https://github.com/TheRobotStudio/V1.0-Dexhand",
+      "reason": "non-commercial"
+    },
+    {
+      "name": "Humanoid hands of a hobby-arm maker",
+      "rating": "red",
+      "license": "NONE",
+      "url": null,
+      "reason": "no licence file: all rights reserved despite an open-source label"
+    },
+    {
+      "name": "Commercial prosthetic arm",
+      "rating": "red",
+      "license": "NONE",
+      "url": null,
+      "reason": "a commercial medical device; no design files were found"
+    },
+    {
+      "name": "A mobile manipulator's own parts and default gripper CAD",
+      "rating": "red",
+      "license": "CC-BY-NC-SA-4.0",
+      "url": "https://github.com/hello-robot/stretch_tool_share/blob/master/ROBOT_LICENSE.md",
+      "reason": "non-commercial"
+    },
+    {
+      "name": "Soft bubble gripper build files",
+      "rating": "red",
+      "license": "CC-BY-NC-4.0",
+      "url": "https://punyo.tech/bubble-gripper.html",
+      "reason": "non-commercial"
+    },
+    {
+      "name": "Tactile fingertip",
+      "rating": "red",
+      "license": "CC-BY-NC-4.0",
+      "url": "https://github.com/facebookresearch/digit-design",
+      "reason": "non-commercial"
+    },
+    {
+      "name": "Vacuum end-effector for a cobot plate (dataset project)",
+      "rating": "red",
+      "license": "CC-BY-NC-SA-3.0",
+      "url": null,
+      "reason": "non-commercial"
+    },
+    {
+      "name": "Fabricatable tools: extruder, teaching tools, arm adapters",
+      "rating": "red",
+      "license": "CC-BY-NC-SA-4.0",
+      "url": null,
+      "reason": "non-commercial"
+    },
+    {
+      "name": "Open tool changer for small industrial robots",
+      "rating": "red",
+      "license": "CC-BY-NC-SA-4.0",
+      "url": null,
+      "reason": "the instructions page is non-commercial and the repository has no licence"
+    },
+    {
+      "name": "Hobby-arm parallel gripper (second edition)",
+      "rating": "red",
+      "license": "CC-BY-NC-4.0",
+      "url": "https://www.thingiverse.com/thing:4362304",
+      "reason": "non-commercial"
+    },
+    {
+      "name": "Mantis-derived arm gripper",
+      "rating": "red",
+      "license": "CC-BY-NC-4.0",
+      "url": "https://www.thingiverse.com/thing:1748596",
+      "reason": "non-commercial"
+    },
+    {
+      "name": "Collaborative servo gripper with camera",
+      "rating": "red",
+      "license": "CC-BY-NC-4.0",
+      "url": "https://www.thingiverse.com/thing:3854710",
+      "reason": "non-commercial"
+    },
+    {
+      "name": "Soft robotics toolkit designs (university)",
+      "rating": "red",
+      "license": "NONE",
+      "url": null,
+      "reason": "no licence statement on the site: treated as all rights reserved, link only"
+    },
+    {
+      "name": "Three-fingered adaptive gripper (university)",
+      "rating": "red",
+      "license": "NONE",
+      "url": null,
+      "reason": "the repository has no licence; the paper's CC BY covers the article, not the files"
+    },
+    {
+      "name": "Symmetrical gripper for a hobby arm",
+      "rating": "red",
+      "license": "NONE",
+      "url": null,
+      "reason": "no licence"
+    },
+    {
+      "name": "Precise gripper for a hobby arm",
+      "rating": "red",
+      "license": "NONE",
+      "url": null,
+      "reason": "no licence"
+    },
+    {
+      "name": "Rack-and-pinion gripper with 105 mm opening for a hobby arm",
+      "rating": "red",
+      "license": "NONE",
+      "url": null,
+      "reason": "no licence (a good design: the author could be asked)"
+    },
+    {
+      "name": "Screwdriver for a low-cost arm",
+      "rating": "red",
+      "license": "NONE",
+      "url": null,
+      "reason": "no licence (the same author's other screwdriver is in the library under MIT)"
+    },
+    {
+      "name": "Food-grade soft gripper molds",
+      "rating": "red",
+      "license": "NONE",
+      "url": null,
+      "reason": "licence not found"
+    },
+    {
+      "name": "Source class: simulator asset packs",
+      "rating": "red",
+      "license": "LicenseRef-simulator-asset-eula",
+      "url": null,
+      "reason": "the asset licence says the assets may not be modified or redistributed"
+    },
+    {
+      "name": "Source class: CAD-sharing platform models",
+      "rating": "red",
+      "license": "LicenseRef-platform-eula",
+      "url": null,
+      "reason": "the site licence is non-sublicensable and non-transferable; used only when the author also posts the file under an open licence"
+    },
+    {
+      "name": "Source class: vendor CAD portals",
+      "rating": "red",
+      "license": "LicenseRef-vendor-cad-portal",
+      "url": null,
+      "reason": "the terms forbid redistribution"
+    }
+  ],
+  "already_vendored": [
+    {
+      "name": "Four-finger 16-joint hand",
+      "where": "effector catalog",
+      "key": "hand-4f-16dof"
+    },
+    {
+      "name": "Five-finger 18-actuator hand",
+      "where": "effector catalog",
+      "key": "hand-5f-18act"
+    },
+    {
+      "name": "Five-finger 22-joint hand",
+      "where": "effector catalog",
+      "key": "hand-5f-22dof"
+    },
+    {
+      "name": "Two-finger parallel gripper, fin-ray pads",
+      "where": "effector catalog",
+      "key": "gripper-2f-finray"
+    },
+    {
+      "name": "Two-finger parallel gripper, rigid pads A",
+      "where": "effector catalog",
+      "key": "gripper-2f-rigid-a"
+    },
+    {
+      "name": "Two-finger parallel gripper, rigid pads B",
+      "where": "effector catalog",
+      "key": "gripper-2f-rigid-b"
+    },
+    {
+      "name": "Open parallel gripper of the core experiment",
+      "where": "core experiment",
+      "key": "parallel-jaw"
+    }
+  ]
+}

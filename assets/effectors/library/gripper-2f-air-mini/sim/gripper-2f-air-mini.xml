@@ -1,0 +1,64 @@
+<mujoco model="MuJoCo Model">
+  <compiler angle="radian"/>
+
+  <default>
+    <default class="upstream">
+      <default class="n1">
+        <joint armature="0.1" damping="1"/>
+        <geom type="mesh"/>
+        <site size="0.001 0.005 0.005" group="4" rgba="0.5 0.5 0.5 0.3"/>
+        <general biastype="affine" gainprm="2000" biasprm="0 -2000 -200"/>
+        <default class="size1">
+          <general forcerange="-50 50"/>
+        </default>
+        <default class="size2">
+          <general forcerange="-32 32"/>
+        </default>
+        <default class="size3">
+          <general forcerange="-20 20"/>
+        </default>
+        <default class="visual">
+          <geom contype="0" conaffinity="0" group="2" material="white"/>
+        </default>
+        <default class="collision">
+          <geom group="3"/>
+        </default>
+      </default>
+    </default>
+  </default>
+
+  <asset>
+    <material name="white"/>
+    <material name="silver" rgba="0.753 0.753 0.753 1"/>
+    <material name="black" rgba="0.1 0.1 0.1 1"/>
+    <mesh name="gripper_lite_left_finger_narrow" content_type="model/obj" file="meshes/gripper_lite_left_finger_narrow.obj"/>
+    <mesh name="gripper_lite_right_finger_narrow" content_type="model/obj" file="meshes/gripper_lite_right_finger_narrow.obj"/>
+    <mesh name="gripper_lite_body_c" content_type="model/obj" file="meshes/gripper_lite_body_c.obj"/>
+  </asset>
+
+  <worldbody>
+    <body name="gripper_body" childclass="n1">
+      <inertial pos="0 0 0.026" mass="0.26" diaginertia="0.00016117 0.000118 0.00014455"/>
+      <geom name="gripper_lite_body_c" class="collision" quat="1 0 0 0" mesh="gripper_lite_body_c"/>
+      <site name="end_effector" pos="0 0 0.0811"/>
+      <body name="gripper_left_finger" pos="0 0 0.054">
+        <inertial pos="0 -0.005 0.01" mass="0.024" diaginertia="1.961e-06 2.274e-06 1.238e-06"/>
+        <joint name="gripper_left_finger" type="slide" range="-0.0081 -1e-05" frictionloss="1" axis="0 1 0" limited="true"/>
+        <geom name="gripper_left_finger" quat="1 0 0 0" condim="4" solref="0.01" solimp="2 1 0.01" material="black" mesh="gripper_lite_left_finger_narrow"/>
+      </body>
+      <body name="gripper_right_finger" pos="0 0 0.054">
+        <inertial pos="0 0.005 0.01" mass="0.024" diaginertia="1.961e-06 2.274e-06 1.238e-06"/>
+        <joint name="gripper_right_finger" type="slide" range="1e-05 0.0081" frictionloss="1" axis="0 1 0" limited="true"/>
+        <geom name="gripper_right_finger" quat="1 0 0 0" condim="4" solref="0.01" solimp="2 1 0.01" material="black" mesh="gripper_lite_right_finger_narrow"/>
+      </body>
+    </body>
+  </worldbody>
+
+  <equality>
+    <joint joint1="gripper_left_finger" joint2="gripper_right_finger" polycoef="0 -1 0 0 0"/>
+  </equality>
+
+  <actuator>
+    <general name="gripper" joint="gripper_left_finger" ctrlrange="-10 10" forcerange="-10 10"/>
+  </actuator>
+</mujoco>

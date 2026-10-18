@@ -1,0 +1,43 @@
+<mujoco model="tool-button-pusher">
+  <compiler angle="radian"/>
+  <asset>
+    <mesh name="pusher_0" file="pieces/pusher_0.obj"/>
+    <mesh name="pusher_1" file="pieces/pusher_1.obj"/>
+    <mesh name="pusher_2" file="pieces/pusher_2.obj"/>
+    <mesh name="pusher_3" file="pieces/pusher_3.obj"/>
+    <mesh name="pusher_4" file="pieces/pusher_4.obj"/>
+    <mesh name="pusher_5" file="pieces/pusher_5.obj"/>
+    <mesh name="pusher_6" file="pieces/pusher_6.obj"/>
+    <mesh name="pusher_7" file="pieces/pusher_7.obj"/>
+    <mesh name="pusher_8" file="pieces/pusher_8.obj"/>
+    <mesh name="pusher_9" file="pieces/pusher_9.obj"/>
+    <mesh name="pusher_10" file="pieces/pusher_10.obj"/>
+    <mesh name="pusher_11" file="pieces/pusher_11.obj"/>
+    <mesh name="pusher_12" file="pieces/pusher_12.obj"/>
+    <mesh name="pusher_13" file="pieces/pusher_13.obj"/>
+    <mesh name="pusher_14" file="pieces/pusher_14.obj"/>
+    <mesh name="pusher_15" file="pieces/pusher_15.obj"/>
+  </asset>
+  <worldbody>
+    <body name="pusher">
+      <inertial pos="-1.0400721e-07 0.00306953081 -0.0369161068" mass="0.0363698261" fullinertia="1.1557902e-05 2.93348592e-05 3.43715008e-05 -1.02889669e-10 -2.79646701e-10 6.44796504e-07"/>
+      <geom type="mesh" mesh="pusher_0"/>
+      <geom type="mesh" mesh="pusher_1"/>
+      <geom type="mesh" mesh="pusher_2"/>
+      <geom type="mesh" mesh="pusher_3"/>
+      <geom type="mesh" mesh="pusher_4"/>
+      <geom type="mesh" mesh="pusher_5"/>
+      <geom type="mesh" mesh="pusher_6"/>
+      <geom type="mesh" mesh="pusher_7"/>
+      <geom type="mesh" mesh="pusher_8"/>
+      <geom type="mesh" mesh="pusher_9"/>
+      <geom type="mesh" mesh="pusher_10"/>
+      <geom type="mesh" mesh="pusher_11"/>
+      <geom type="mesh" mesh="pusher_12"/>
+      <geom type="mesh" mesh="pusher_13"/>
+      <geom type="mesh" mesh="pusher_14"/>
+      <geom type="mesh" mesh="pusher_15"/>
+      <site name="tcp" pos="0 0 -0.0507999992" size="0.003"/>
+    </body>
+  </worldbody>
+</mujoco>

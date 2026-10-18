@@ -1,0 +1,101 @@
+<mujoco model="MuJoCo Model">
+  <compiler angle="radian"/>
+
+  <default>
+    <default class="upstream">
+      <default class="vx300s">
+        <joint actuatorfrcrange="-35 35" axis="0 1 0"/>
+        <site group="4"/>
+        <default class="waist">
+          <joint range="-3.14158 3.14158" damping="5.76" axis="0 0 1"/>
+          <general ctrlrange="-3.14158 3.14158" biastype="affine" gainprm="43" biasprm="0 -43"/>
+        </default>
+        <default class="shoulder">
+          <joint range="-1.85005 1.25664" actuatorfrcrange="-144 144" armature="0.395" damping="20" frictionloss="2"/>
+          <general ctrlrange="-1.85005 1.25664" biastype="affine" gainprm="265" biasprm="0 -265"/>
+        </default>
+        <default class="elbow">
+          <joint range="-1.76278 1.6057" actuatorfrcrange="-59 59" armature="0.383" damping="18.49" frictionloss="1.15"/>
+          <general ctrlrange="-1.76278 1.6057" biastype="affine" gainprm="227" biasprm="0 -227"/>
+        </default>
+        <default class="forearm_roll">
+          <joint range="-3.14158 3.14158" actuatorfrcrange="-22 22" armature="0.14" damping="6.78" axis="1 0 0"/>
+          <general ctrlrange="-3.14158 3.14158" biastype="affine" gainprm="78" biasprm="0 -78"/>
+        </default>
+        <default class="wrist_angle">
+          <joint range="-1.8675 2.23402" armature="0.008" damping="6.28"/>
+          <general ctrlrange="-1.8675 2.23402" biastype="affine" gainprm="37" biasprm="0 -37"/>
+        </default>
+        <default class="wrist_rotate">
+          <joint range="-3.14158 3.14158" damping="1.2" axis="1 0 0"/>
+          <general ctrlrange="-3.14158 3.14158" biastype="affine" gainprm="10.4" biasprm="0 -10.4"/>
+        </default>
+        <default class="finger">
+          <joint type="slide" armature="0.243" damping="40"/>
+          <general ctrlrange="0.002 0.037" biastype="affine" gainprm="2000" biasprm="0 -2000 -124"/>
+          <default class="left_finger">
+            <joint range="0 0.041" axis="0 0 -1"/>
+          </default>
+          <default class="right_finger">
+            <joint range="0 0.041" axis="0 0 -1"/>
+          </default>
+        </default>
+        <default class="visual">
+          <geom type="mesh" contype="0" conaffinity="0" group="2" material="black"/>
+        </default>
+        <default class="collision">
+          <geom type="mesh" condim="6" group="3" friction="1 0.005 0.0005" solref="0.01"/>
+          <default class="sphere_collision">
+            <geom size="0.0006 0 0" type="sphere" rgba="1 0 0 1"/>
+          </default>
+        </default>
+      </default>
+    </default>
+  </default>
+
+  <asset>
+    <material name="black" rgba="0.15 0.15 0.15 1"/>
+    <mesh name="vx300s_7_gripper_prop" content_type="model/obj" file="meshes/vx300s_7_gripper_prop.obj"/>
+    <mesh name="vx300s_7_gripper_bar" content_type="model/obj" file="meshes/vx300s_7_gripper_bar.obj"/>
+    <mesh name="vx300s_7_gripper_wrist_mount" content_type="model/obj" file="meshes/vx300s_7_gripper_wrist_mount.obj"/>
+    <mesh name="vx300s_8_custom_finger_left" content_type="model/obj" file="meshes/vx300s_8_custom_finger_left.obj"/>
+    <mesh name="vx300s_8_custom_finger_right" content_type="model/obj" file="meshes/vx300s_8_custom_finger_right.obj"/>
+    <mesh name="d405_solid" content_type="model/obj" file="meshes/d405_solid.obj"/>
+  </asset>
+
+  <worldbody>
+    <body name="left/gripper_base" childclass="vx300s" pos="0.035 0 0" quat="0.500398 -0.499602 0.5 -0.5">
+      <inertial pos="0.000182154 -0.0341589 -0.0106026" quat="0.435286 0.557074 -0.551539 0.442718" mass="0.42158" diaginertia="0.00110438 0.000790537 0.000469727"/>
+      <geom class="collision" quat="1 0 0 0" mesh="vx300s_7_gripper_prop"/>
+      <geom class="collision" quat="1 0 0 0" mesh="vx300s_7_gripper_bar"/>
+      <geom class="collision" pos="0 -0.03525 -0.0227" quat="0 -0.707107 0 -0.707107" mesh="vx300s_7_gripper_wrist_mount"/>
+      <geom class="collision" pos="0 -0.0824748 -0.0095955" quat="0 0 -0.21644 -0.976296" mesh="d405_solid"/>
+      <body name="left/left_finger_link" pos="0.0191 -0.0141637 0.0211727" quat="0.5 -0.5 -0.5 0.5">
+        <inertial pos="0.0143478 -0.0284791 0.0122897" quat="0.535486 0.458766 -0.450407 0.547651" mass="0.0862937" diaginertia="5.86848e-05 4.46887e-05 1.8397e-05"/>
+        <joint name="left/left_finger" class="left_finger"/>
+        <geom class="collision" pos="0.0141637 0.0211727 0.06" quat="0.5 0.5 0.5 -0.5" mesh="vx300s_8_custom_finger_left"/>
+        <geom name="left/left_g0" class="sphere_collision" pos="0.013 -0.0892 0.0268"/>
+        <geom name="left/left_g1" class="sphere_collision" pos="0.0222 -0.0892 0.0268"/>
+        <geom name="left/left_g2" class="sphere_collision" pos="0.0182 -0.0845 0.0266"/>
+        <site name="left/left_finger" pos="0.015 -0.06 0.02"/>
+      </body>
+      <body name="left/right_finger_link" pos="-0.0191 -0.0141637 0.0211727" quat="0.5 0.5 0.5 0.5">
+        <inertial pos="0.0143711 0.0284792 0.0121421" quat="0.461317 0.537615 -0.545478 0.447894" mass="0.0862932" diaginertia="5.86828e-05 4.46887e-05 1.83949e-05"/>
+        <joint name="left/right_finger" class="right_finger"/>
+        <geom class="collision" pos="0.0141637 -0.0211727 0.0597067" quat="0.5 -0.5 -0.5 -0.5" mesh="vx300s_8_custom_finger_right"/>
+        <geom name="left/right_g0" class="sphere_collision" pos="0.013 0.0892 0.0268"/>
+        <geom name="left/right_g1" class="sphere_collision" pos="0.0222 0.0892 0.0268"/>
+        <geom name="left/right_g2" class="sphere_collision" pos="0.0182 0.0845 0.0266"/>
+        <site name="left/right_finger" pos="0.015 0.06 0.02"/>
+      </body>
+    </body>
+  </worldbody>
+
+  <equality>
+    <joint joint1="left/left_finger" joint2="left/right_finger"/>
+  </equality>
+
+  <actuator>
+    <general name="left/gripper" class="finger" joint="left/left_finger"/>
+  </actuator>
+</mujoco>

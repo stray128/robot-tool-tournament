@@ -1,0 +1,135 @@
+{
+  "format": "rtt-library-source",
+  "version": 1,
+  "key": "suction-primitive",
+  "display_name": "Generic suction primitive (simulation abstraction)",
+  "summary": "A simulation template for suction: a cylinder cup with an adhesion actuator, from a robot-learning framework.",
+  "kind": "suction_gripper",
+  "class": "proxy",
+  "capabilities": [
+    "suction"
+  ],
+  "upstream": {
+    "repository": "https://github.com/ARISE-Initiative/robosuite",
+    "commit": "5ce6643f3092639d08f7b0f90ed1c6a84f50552c"
+  },
+  "licence": [
+    {
+      "spdx": "MIT",
+      "covers": "the MJCF"
+    }
+  ],
+  "copyright": "Copyright (c) 2022 Stanford Vision and Learning Lab and UT Robot Perception and Learning Lab",
+  "attribution": "\"robosuite suction gripper MJCF\" by the robosuite authors (Stanford SVL and UT RPL), https://github.com/ARISE-Initiative/robosuite (commit 5ce6643), licensed MIT (https://spdx.org/licenses/MIT.html)",
+  "chain": [
+    {
+      "spdx": "MIT",
+      "relation": "licensed",
+      "what": "repository LICENSE",
+      "source": "https://github.com/ARISE-Initiative/robosuite/blob/5ce6643f3092639d08f7b0f90ed1c6a84f50552c/LICENSE"
+    }
+  ],
+  "reviewed": {
+    "by": "Effector Lab licence gate, against the 2026-10-18 licence audit",
+    "date": "2026-10-18"
+  },
+  "mount": {
+    "interface": "none (a simulation template)",
+    "iso_pattern": null,
+    "status": "unknown",
+    "adapter": null,
+    "source": "",
+    "notes": []
+  },
+  "specs": [
+    {
+      "name": "Cup diameter in the model",
+      "value": "70",
+      "unit": "mm",
+      "tag": "derived",
+      "source": ""
+    },
+    {
+      "name": "Adhesion gain in the model",
+      "value": "1000",
+      "unit": "",
+      "tag": "derived",
+      "source": ""
+    }
+  ],
+  "sim": {
+    "status": "native",
+    "source": "upstream MJCF (reference only)",
+    "fidelity": "approximation",
+    "model_file": "sim/suction_gripper.xml",
+    "entrant": false,
+    "reason": "its adhesion is not gated by a seal, so it would hold any face; the seal-gated suction family replaces it, and the family's 8 to 40 mm cups do not cover its 70 mm cup"
+  },
+  "notes": [],
+  "ingest": {
+    "licence_files": [
+      {
+        "path": "LICENSE",
+        "license": "MIT"
+      }
+    ],
+    "files": [
+      {
+        "path": "robosuite/models/assets/grippers/suction_gripper.xml",
+        "out": "sim/suction_gripper.xml",
+        "role": "sim",
+        "license": "MIT"
+      }
+    ],
+    "preview": {
+      "from": "mjcf",
+      "entry": "robosuite/models/assets/grippers/suction_gripper.xml",
+      "root": "suction_gripper_base",
+      "license": "MIT"
+    }
+  },
+  "files": [
+    {
+      "path": "assets/effectors/library/suction-primitive/LICENSES/LICENSE",
+      "sha256": "177978cbece0a4c454c2aaec5b3f145b39270814874c43109da9e829c39d9cba",
+      "size": 1474,
+      "role": "licence",
+      "upstream_url": "https://github.com/ARISE-Initiative/robosuite",
+      "upstream_commit": "5ce6643f3092639d08f7b0f90ed1c6a84f50552c",
+      "upstream_path": "LICENSE",
+      "upstream_sha256": "177978cbece0a4c454c2aaec5b3f145b39270814874c43109da9e829c39d9cba",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2022 Stanford Vision and Learning Lab and UT Robot Perception and Learning Lab",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/suction-primitive/sim/suction_gripper.xml",
+      "sha256": "681aba29b21c18b4f9d09f4c34d54ea63aa9f67c790e30d5d859ff6e370818f9",
+      "size": 3081,
+      "role": "sim",
+      "upstream_url": "https://github.com/ARISE-Initiative/robosuite",
+      "upstream_commit": "5ce6643f3092639d08f7b0f90ed1c6a84f50552c",
+      "upstream_path": "robosuite/models/assets/grippers/suction_gripper.xml",
+      "upstream_sha256": "681aba29b21c18b4f9d09f4c34d54ea63aa9f67c790e30d5d859ff6e370818f9",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2022 Stanford Vision and Learning Lab and UT Robot Perception and Learning Lab",
+      "changes": [],
+      "rating": "green"
+    }
+  ],
+  "skipped": [],
+  "preview": {
+    "path": "web/public/data/library/glb/suction-primitive.glb",
+    "sha256": "e5c33c657047dff0c9423f33da3faf81c8c42d4c0fd1d8f8aa0436ccf3d127c2",
+    "size": 4892,
+    "license": "MIT",
+    "derived_from": [
+      "robosuite/models/assets/grippers/suction_gripper.xml"
+    ],
+    "changes": [
+      "drawn from the item's own geometry in its reference pose, simplified by vertex clustering",
+      "re-encoded as GLB (Y up, metres) in one flat grey, with generic node names"
+    ]
+  }
+}

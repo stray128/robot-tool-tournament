@@ -1,0 +1,271 @@
+{
+  "format": "rtt-library-source",
+  "version": 1,
+  "key": "gripper-2f-camera-holder",
+  "display_name": "Parallel gripper with a camera holder",
+  "summary": "A printed parallel gripper for hobby arms with interchangeable camera mounts: 54 mm total stroke.",
+  "kind": "parallel_gripper",
+  "class": "open_hardware",
+  "capabilities": [
+    "pinch"
+  ],
+  "upstream": {
+    "repository": "https://github.com/norma-core/norma-core",
+    "commit": "0d17bb300d712eeb5437d41ddb95ce380b5384e6"
+  },
+  "licence": [
+    {
+      "spdx": "Apache-2.0",
+      "covers": "the gripper folder (its own LICENSE; the repository root is MIT)"
+    }
+  ],
+  "copyright": "Copyright the norma-core contributors",
+  "attribution": "\"norma-core pgripper\" by the norma-core contributors, https://github.com/norma-core/norma-core (commit 0d17bb3), licensed Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)",
+  "chain": [
+    {
+      "spdx": "Apache-2.0",
+      "relation": "licensed",
+      "what": "hardware/pgripper/LICENSE",
+      "source": "https://github.com/norma-core/norma-core/blob/0d17bb300d712eeb5437d41ddb95ce380b5384e6/hardware/pgripper/LICENSE"
+    }
+  ],
+  "reviewed": {
+    "by": "Effector Lab licence gate, against the 2026-10-18 licence audit",
+    "date": "2026-10-18"
+  },
+  "mount": {
+    "interface": "hobby arm wrists (two arm families supported upstream)",
+    "iso_pattern": null,
+    "status": "unknown",
+    "adapter": null,
+    "source": "",
+    "notes": []
+  },
+  "specs": [
+    {
+      "name": "Total gripping stroke",
+      "value": "54",
+      "unit": "mm",
+      "tag": "sourced",
+      "source": "https://github.com/norma-core/norma-core/blob/0d17bb300d712eeb5437d41ddb95ce380b5384e6/hardware/pgripper/README.md"
+    },
+    {
+      "name": "Finger length x width",
+      "value": "44 x 22",
+      "unit": "mm",
+      "tag": "sourced",
+      "source": "https://github.com/norma-core/norma-core/blob/0d17bb300d712eeb5437d41ddb95ce380b5384e6/hardware/pgripper/README.md"
+    },
+    {
+      "name": "Closing force",
+      "value": "at least 4 kg",
+      "unit": "",
+      "tag": "sourced",
+      "source": "https://github.com/norma-core/norma-core/blob/0d17bb300d712eeb5437d41ddb95ce380b5384e6/hardware/pgripper/README.md"
+    }
+  ],
+  "sim": {
+    "status": "visual_only",
+    "reason": "articulated design without an upstream simulation model"
+  },
+  "notes": [],
+  "ingest": {
+    "licence_files": [
+      {
+        "path": "hardware/pgripper/LICENSE",
+        "license": "Apache-2.0"
+      }
+    ],
+    "files": [
+      {
+        "path": "hardware/pgripper/STL/individual/Gripper_Base.stl",
+        "out": "print/base.stl",
+        "license": "Apache-2.0"
+      },
+      {
+        "path": "hardware/pgripper/STL/individual/Gripper Base Shield.stl",
+        "out": "print/base_shield.stl",
+        "license": "Apache-2.0"
+      },
+      {
+        "path": "hardware/pgripper/STL/individual/Gripper_Gear.stl",
+        "out": "print/gear.stl",
+        "license": "Apache-2.0"
+      },
+      {
+        "path": "hardware/pgripper/STL/individual/Gripper_Jaw.stl",
+        "out": "print/jaw.stl",
+        "license": "Apache-2.0"
+      },
+      {
+        "path": "hardware/pgripper/STL/individual/Wiring_bracket.stl",
+        "out": "print/wiring_bracket.stl",
+        "license": "Apache-2.0"
+      },
+      {
+        "path": "hardware/pgripper/STL/camera_mounts/CameraMount_regular.stl",
+        "out": "print/camera_mount.stl",
+        "license": "Apache-2.0"
+      },
+      {
+        "path": "hardware/pgripper/README.md",
+        "out": "doc/README.md",
+        "role": "doc",
+        "license": "Apache-2.0"
+      }
+    ],
+    "links": [
+      {
+        "path": "hardware/pgripper/STEP/Gripper.stp",
+        "size": 3458538,
+        "license": "Apache-2.0",
+        "reason": "assembly CAD (3.5 MB): linked, not mirrored"
+      }
+    ],
+    "preview": {
+      "from": "files",
+      "license": "Apache-2.0",
+      "files": [
+        {
+          "path": "hardware/pgripper/STL/print/gripper_no_camera_mount.stl"
+        }
+      ]
+    }
+  },
+  "files": [
+    {
+      "path": "assets/effectors/library/gripper-2f-camera-holder/LICENSES/LICENSE",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "size": 11357,
+      "role": "licence",
+      "upstream_url": "https://github.com/norma-core/norma-core",
+      "upstream_commit": "0d17bb300d712eeb5437d41ddb95ce380b5384e6",
+      "upstream_path": "hardware/pgripper/LICENSE",
+      "upstream_sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "license": "Apache-2.0",
+      "copyright": "Copyright the norma-core contributors",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-camera-holder/doc/README.md",
+      "sha256": "cc48e0d66dc7b3cbe9886d5291e14ffc34aeb077a5c657d19623e6eeb3f8bc38",
+      "size": 3302,
+      "role": "doc",
+      "upstream_url": "https://github.com/norma-core/norma-core",
+      "upstream_commit": "0d17bb300d712eeb5437d41ddb95ce380b5384e6",
+      "upstream_path": "hardware/pgripper/README.md",
+      "upstream_sha256": "cc48e0d66dc7b3cbe9886d5291e14ffc34aeb077a5c657d19623e6eeb3f8bc38",
+      "license": "Apache-2.0",
+      "copyright": "Copyright the norma-core contributors",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-camera-holder/print/base.stl",
+      "sha256": "c2a0d14df2a2775862da931b032fe1f026e320e058227ee3f20c9c3c36450632",
+      "size": 219284,
+      "role": "print",
+      "upstream_url": "https://github.com/norma-core/norma-core",
+      "upstream_commit": "0d17bb300d712eeb5437d41ddb95ce380b5384e6",
+      "upstream_path": "hardware/pgripper/STL/individual/Gripper_Base.stl",
+      "upstream_sha256": "c2a0d14df2a2775862da931b032fe1f026e320e058227ee3f20c9c3c36450632",
+      "license": "Apache-2.0",
+      "copyright": "Copyright the norma-core contributors",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-camera-holder/print/base_shield.stl",
+      "sha256": "364785792d6be82d0c24c29e18df54030747a277161bfcf6ac1363a0beb6838d",
+      "size": 70884,
+      "role": "print",
+      "upstream_url": "https://github.com/norma-core/norma-core",
+      "upstream_commit": "0d17bb300d712eeb5437d41ddb95ce380b5384e6",
+      "upstream_path": "hardware/pgripper/STL/individual/Gripper Base Shield.stl",
+      "upstream_sha256": "364785792d6be82d0c24c29e18df54030747a277161bfcf6ac1363a0beb6838d",
+      "license": "Apache-2.0",
+      "copyright": "Copyright the norma-core contributors",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-camera-holder/print/camera_mount.stl",
+      "sha256": "55b34f1f25cb0e1862861a4ca7f87a393aba1a915e16734ef1fb8aa6e8f2bdc9",
+      "size": 78084,
+      "role": "print",
+      "upstream_url": "https://github.com/norma-core/norma-core",
+      "upstream_commit": "0d17bb300d712eeb5437d41ddb95ce380b5384e6",
+      "upstream_path": "hardware/pgripper/STL/camera_mounts/CameraMount_regular.stl",
+      "upstream_sha256": "55b34f1f25cb0e1862861a4ca7f87a393aba1a915e16734ef1fb8aa6e8f2bdc9",
+      "license": "Apache-2.0",
+      "copyright": "Copyright the norma-core contributors",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-camera-holder/print/gear.stl",
+      "sha256": "966bb466a7437463666b60084257a6744d3cefe0973effc0db9ca54a907e25f2",
+      "size": 157884,
+      "role": "print",
+      "upstream_url": "https://github.com/norma-core/norma-core",
+      "upstream_commit": "0d17bb300d712eeb5437d41ddb95ce380b5384e6",
+      "upstream_path": "hardware/pgripper/STL/individual/Gripper_Gear.stl",
+      "upstream_sha256": "966bb466a7437463666b60084257a6744d3cefe0973effc0db9ca54a907e25f2",
+      "license": "Apache-2.0",
+      "copyright": "Copyright the norma-core contributors",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-camera-holder/print/jaw.stl",
+      "sha256": "f3c7766cbcb61a8ff4ffb5d4588ded441c701e445f7cbc6487a2903d7a98ed46",
+      "size": 115784,
+      "role": "print",
+      "upstream_url": "https://github.com/norma-core/norma-core",
+      "upstream_commit": "0d17bb300d712eeb5437d41ddb95ce380b5384e6",
+      "upstream_path": "hardware/pgripper/STL/individual/Gripper_Jaw.stl",
+      "upstream_sha256": "f3c7766cbcb61a8ff4ffb5d4588ded441c701e445f7cbc6487a2903d7a98ed46",
+      "license": "Apache-2.0",
+      "copyright": "Copyright the norma-core contributors",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-camera-holder/print/wiring_bracket.stl",
+      "sha256": "333dd417b6e66a3bb86723e0f4431b4ec806095384901ffa5088aec2316fd7b3",
+      "size": 21984,
+      "role": "print",
+      "upstream_url": "https://github.com/norma-core/norma-core",
+      "upstream_commit": "0d17bb300d712eeb5437d41ddb95ce380b5384e6",
+      "upstream_path": "hardware/pgripper/STL/individual/Wiring_bracket.stl",
+      "upstream_sha256": "333dd417b6e66a3bb86723e0f4431b4ec806095384901ffa5088aec2316fd7b3",
+      "license": "Apache-2.0",
+      "copyright": "Copyright the norma-core contributors",
+      "changes": [],
+      "rating": "green"
+    }
+  ],
+  "skipped": [
+    {
+      "upstream_path": "hardware/pgripper/STEP/Gripper.stp",
+      "size": 3458538,
+      "license": "Apache-2.0",
+      "reason": "assembly CAD (3.5 MB): linked, not mirrored",
+      "url": "https://github.com/norma-core/norma-core/blob/0d17bb300d712eeb5437d41ddb95ce380b5384e6/hardware/pgripper/STEP/Gripper.stp"
+    }
+  ],
+  "preview": {
+    "path": "web/public/data/library/glb/gripper-2f-camera-holder.glb",
+    "sha256": "61fcf20db97041fda48182b35bef62d5816b742e3727567a72e75fc36ef81a72",
+    "size": 309040,
+    "license": "Apache-2.0",
+    "derived_from": [
+      "hardware/pgripper/STL/print/gripper_no_camera_mount.stl"
+    ],
+    "changes": [
+      "drawn from the item's own geometry in its reference pose, simplified by vertex clustering",
+      "re-encoded as GLB (Y up, metres) in one flat grey, with generic node names"
+    ]
+  }
+}

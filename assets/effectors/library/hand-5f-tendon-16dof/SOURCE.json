@@ -1,0 +1,466 @@
+{
+  "format": "rtt-library-source",
+  "version": 1,
+  "key": "hand-5f-tendon-16dof",
+  "display_name": "Tendon-driven five-finger hand, 16 joints",
+  "summary": "A buildable anthropomorphic hand: printed bones, silicone skin, tendons pulled by servos in the forearm.",
+  "kind": "multi_finger_hand",
+  "class": "open_hardware",
+  "capabilities": [
+    "pinch",
+    "power"
+  ],
+  "upstream": {
+    "repository": "https://github.com/orcahand/orcahand_description",
+    "commit": "b9b349a21ee0238c62b6cf92ae7597027867adf8",
+    "extra": [
+      {
+        "repository": "https://github.com/orcahand/orcahand_hardware",
+        "commit": "37b71dc03d3f11e48b920cbf54562b33c025bc8c"
+      }
+    ]
+  },
+  "licence": [
+    {
+      "spdx": "MIT",
+      "covers": "the robot description (MJCF, URDF, meshes)"
+    },
+    {
+      "spdx": "CC-BY-4.0",
+      "covers": "the hardware design files (print files, CAD, molds), linked"
+    }
+  ],
+  "copyright": "Copyright (c) 2025 ORCA (description); Copyright (c) 2026 ORCA Dexterity, Inc. (hardware)",
+  "attribution": "\"ORCA hand description (v2)\" by ORCA, https://github.com/orcahand/orcahand_description (commit b9b349a), licensed MIT (https://spdx.org/licenses/MIT.html); \"ORCA Hand v2 hardware\" by ORCA Dexterity, Inc., https://github.com/orcahand/orcahand_hardware (commit 37b71dc), licensed CC-BY-4.0 (https://creativecommons.org/licenses/by/4.0/)",
+  "chain": [
+    {
+      "spdx": "MIT",
+      "relation": "licensed",
+      "what": "description LICENSE",
+      "source": "https://github.com/orcahand/orcahand_description/blob/b9b349a21ee0238c62b6cf92ae7597027867adf8/LICENSE"
+    },
+    {
+      "spdx": "CC-BY-4.0",
+      "relation": "derived_from",
+      "what": "the hardware design the meshes come from",
+      "source": "https://github.com/orcahand/orcahand_hardware/blob/37b71dc03d3f11e48b920cbf54562b33c025bc8c/LICENSE"
+    }
+  ],
+  "reviewed": {
+    "by": "Effector Lab licence gate, against the 2026-10-18 licence audit",
+    "date": "2026-10-18"
+  },
+  "mount": {
+    "interface": "its own forearm tower; an arm adapter is not published",
+    "iso_pattern": null,
+    "status": "unknown",
+    "adapter": null,
+    "source": "",
+    "notes": []
+  },
+  "specs": [
+    {
+      "name": "Joints",
+      "value": "16 (wrist joint removed)",
+      "unit": "",
+      "tag": "derived",
+      "source": ""
+    }
+  ],
+  "sim": {
+    "status": "native",
+    "source": "upstream MJCF (includes flattened)",
+    "fidelity": "rigid",
+    "note": "the hardware licence grants no patent or trademark rights (stated upstream)",
+    "model_file": "sim/hand-5f-tendon-16dof.xml",
+    "n_bodies": 20,
+    "n_joints": 16,
+    "n_actuators": 16,
+    "mass_kg": 1.764152
+  },
+  "notes": [],
+  "ingest": {
+    "licence_files": [
+      {
+        "path": "LICENSE",
+        "license": "MIT"
+      },
+      {
+        "path": "LICENSE",
+        "out": "LICENSE-hardware",
+        "license": "CC-BY-4.0",
+        "repository": "https://github.com/orcahand/orcahand_hardware",
+        "commit": "37b71dc03d3f11e48b920cbf54562b33c025bc8c",
+        "copyright": "Copyright (c) 2026 ORCA Dexterity, Inc."
+      }
+    ],
+    "sim": {
+      "type": "mjcf",
+      "entry": "v2/scene_right.xml",
+      "root": "right_tower",
+      "drop_joints": [
+        "right_wrist"
+      ],
+      "zero_margin": true,
+      "license": "MIT"
+    },
+    "links": [
+      {
+        "path": "orca_v2/base/Prints-1100.3mf",
+        "size": 0,
+        "license": "CC-BY-4.0",
+        "reason": "hand print file in the hardware repository: linked, not mirrored"
+      }
+    ],
+    "preview": {
+      "from": "mjcf",
+      "entry": "v2/scene_right.xml",
+      "root": "right_tower",
+      "license": "MIT",
+      "max_faces": 16000
+    }
+  },
+  "files": [
+    {
+      "path": "assets/effectors/library/hand-5f-tendon-16dof/LICENSES/LICENSE",
+      "sha256": "fbe1992f5485169984e944a26e5a7f5ef62bc1335b8c3946c715e645bc0c2624",
+      "size": 1061,
+      "role": "licence",
+      "upstream_url": "https://github.com/orcahand/orcahand_description",
+      "upstream_commit": "b9b349a21ee0238c62b6cf92ae7597027867adf8",
+      "upstream_path": "LICENSE",
+      "upstream_sha256": "fbe1992f5485169984e944a26e5a7f5ef62bc1335b8c3946c715e645bc0c2624",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 ORCA (description); Copyright (c) 2026 ORCA Dexterity, Inc. (hardware)",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-5f-tendon-16dof/LICENSES/LICENSE-hardware",
+      "sha256": "a0d1cc4791072562651444fefd9522b251b5ef451565837bf78076ac4a24e7bd",
+      "size": 19279,
+      "role": "licence",
+      "upstream_url": "https://github.com/orcahand/orcahand_hardware",
+      "upstream_commit": "37b71dc03d3f11e48b920cbf54562b33c025bc8c",
+      "upstream_path": "LICENSE",
+      "upstream_sha256": "a0d1cc4791072562651444fefd9522b251b5ef451565837bf78076ac4a24e7bd",
+      "license": "CC-BY-4.0",
+      "copyright": "Copyright (c) 2026 ORCA Dexterity, Inc.",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-5f-tendon-16dof/sim/hand-5f-tendon-16dof.xml",
+      "sha256": "c0aa85b6abb4ac93a8dcd75f90c700c4963da11d8200380ed17208cf8623c02b",
+      "size": 22424,
+      "role": "derived",
+      "upstream_url": "https://github.com/orcahand/orcahand_description",
+      "upstream_commit": "b9b349a21ee0238c62b6cf92ae7597027867adf8",
+      "upstream_path": "v2/scene_right.xml",
+      "upstream_sha256": "93de1edfea36b4cf455aa5c917ebaf3dcc5098df8d11fd045ca13275e355a0db",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 ORCA (description); Copyright (c) 2026 ORCA Dexterity, Inc. (hardware)",
+      "changes": [
+        "the effector subtree from body 'right_tower' written as one MJCF by MuJoCo 3.15.0",
+        "every body's mass, centre of mass and inertia pinned at the upstream model's compiled values",
+        "11 visual-only geoms removed (the catalog preview draws the upstream visuals)",
+        "contact margin set to 0 on 19 geoms (the shared scene refuses effector contact margins)"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_ForeArmStructure-Model.obj",
+      "sha256": "3d4f4cd01fa200f3a5bce031e0fa43ad0d3d3ea62484be7f66421aee0485641b",
+      "size": 10160,
+      "role": "derived",
+      "upstream_url": "https://github.com/orcahand/orcahand_description",
+      "upstream_commit": "b9b349a21ee0238c62b6cf92ae7597027867adf8",
+      "upstream_path": "v2/models/assets/right/ForeArmStructure-Model.stl",
+      "upstream_sha256": "5955f1dba99df5e6ff346662a674f25ceaefd969621a1e0bdd84bcf318b1cc5d",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 ORCA (description); Copyright (c) 2026 ORCA Dexterity, Inc. (hardware)",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_I-AP-R.obj",
+      "sha256": "30754c976f975c4ea356c659a3b57a342ca803052aa8e46794677487ed48fbee",
+      "size": 162119,
+      "role": "derived",
+      "upstream_url": "https://github.com/orcahand/orcahand_description",
+      "upstream_commit": "b9b349a21ee0238c62b6cf92ae7597027867adf8",
+      "upstream_path": "v2/models/assets/right/I-AP-R.stl",
+      "upstream_sha256": "9ddb51761e562f6608879707795fc7939cb628cd304096b1456472158127a993",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 ORCA (description); Copyright (c) 2026 ORCA Dexterity, Inc. (hardware)",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_I-IP_IP.obj",
+      "sha256": "b714cd161f2bf5e8359eb2ca5eb55bcac876c92f0a9813b8c96ce38ea7560b6c",
+      "size": 55883,
+      "role": "derived",
+      "upstream_url": "https://github.com/orcahand/orcahand_description",
+      "upstream_commit": "b9b349a21ee0238c62b6cf92ae7597027867adf8",
+      "upstream_path": "v2/models/assets/right/I-IP_IP.stl",
+      "upstream_sha256": "743d5b30709c2d82f5beef5b304b482ce542030ba137b64832e610404d2d76e1",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 ORCA (description); Copyright (c) 2026 ORCA Dexterity, Inc. (hardware)",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_I-PP_PP.obj",
+      "sha256": "50ba362725ff4ed226a2087e96a0d1fc2e3cbad035a902a6508fba4010ee2a05",
+      "size": 76286,
+      "role": "derived",
+      "upstream_url": "https://github.com/orcahand/orcahand_description",
+      "upstream_commit": "b9b349a21ee0238c62b6cf92ae7597027867adf8",
+      "upstream_path": "v2/models/assets/right/I-PP_PP.stl",
+      "upstream_sha256": "a00c234b978cd4426254e3b1a01c139d51237b835fc63fa8a0deb2997251e28c",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 ORCA (description); Copyright (c) 2026 ORCA Dexterity, Inc. (hardware)",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_M-AP.obj",
+      "sha256": "9431cc80cd52b4d7df00ad7459a0c4ad3c50f5bfa71f7385d05f1df19839747f",
+      "size": 153555,
+      "role": "derived",
+      "upstream_url": "https://github.com/orcahand/orcahand_description",
+      "upstream_commit": "b9b349a21ee0238c62b6cf92ae7597027867adf8",
+      "upstream_path": "v2/models/assets/right/M-AP.stl",
+      "upstream_sha256": "7495a5ef101f6bd08f533a30452fbb43443dfed87081744577333bedc961a41a",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 ORCA (description); Copyright (c) 2026 ORCA Dexterity, Inc. (hardware)",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_M-IP_IP.obj",
+      "sha256": "fd2ac0ecdde0baf976469de99e2fa0db718c7a791e487e8e2b5ef3b7657345ea",
+      "size": 56268,
+      "role": "derived",
+      "upstream_url": "https://github.com/orcahand/orcahand_description",
+      "upstream_commit": "b9b349a21ee0238c62b6cf92ae7597027867adf8",
+      "upstream_path": "v2/models/assets/right/M-IP_IP.stl",
+      "upstream_sha256": "61ea109d708a761f3b28ca30164c69b6e431d3c802d6b5a19b5e98761b6dd303",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 ORCA (description); Copyright (c) 2026 ORCA Dexterity, Inc. (hardware)",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_M-PP_PP.obj",
+      "sha256": "e12b28df63e9e215a4b1afd09688a09073e3dcadf3044f694f6081f495246c8a",
+      "size": 74504,
+      "role": "derived",
+      "upstream_url": "https://github.com/orcahand/orcahand_description",
+      "upstream_commit": "b9b349a21ee0238c62b6cf92ae7597027867adf8",
+      "upstream_path": "v2/models/assets/right/M-PP_PP.stl",
+      "upstream_sha256": "757e30be7b4049c124e3b3f550a45918b55581e7ec096d32c545437923b8d182",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 ORCA (description); Copyright (c) 2026 ORCA Dexterity, Inc. (hardware)",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_P-AP.obj",
+      "sha256": "9cab2e611565e1d682a623443b6f380ee4a1e3915abc311e0eba4ca04fe81a5d",
+      "size": 140848,
+      "role": "derived",
+      "upstream_url": "https://github.com/orcahand/orcahand_description",
+      "upstream_commit": "b9b349a21ee0238c62b6cf92ae7597027867adf8",
+      "upstream_path": "v2/models/assets/right/P-AP.stl",
+      "upstream_sha256": "71f29043b0d170c414432cd07b61c666092a4b51ea340937d5bb09093cf43183",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 ORCA (description); Copyright (c) 2026 ORCA Dexterity, Inc. (hardware)",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_P-IP_IP.obj",
+      "sha256": "c2a9909ecf19e11d8ee7503fc0d4443162b0c5d6276217d18fbcfb57207331a2",
+      "size": 73016,
+      "role": "derived",
+      "upstream_url": "https://github.com/orcahand/orcahand_description",
+      "upstream_commit": "b9b349a21ee0238c62b6cf92ae7597027867adf8",
+      "upstream_path": "v2/models/assets/right/P-IP_IP.stl",
+      "upstream_sha256": "147af96879b1e75953ca4250ca41cb7202d815a42491295389a415152dd2a535",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 ORCA (description); Copyright (c) 2026 ORCA Dexterity, Inc. (hardware)",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_P-PP_PP.obj",
+      "sha256": "7d77cd70111ecff681f223ab173dc9e2b8ffe5dd1c2c85b207fd2e3f048d6ee6",
+      "size": 85627,
+      "role": "derived",
+      "upstream_url": "https://github.com/orcahand/orcahand_description",
+      "upstream_commit": "b9b349a21ee0238c62b6cf92ae7597027867adf8",
+      "upstream_path": "v2/models/assets/right/P-PP_PP.stl",
+      "upstream_sha256": "66b679f5c886c73ecae62007879317aaa0d86ffb8e0278676b97dc14e7a00f5b",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 ORCA (description); Copyright (c) 2026 ORCA Dexterity, Inc. (hardware)",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_R-Carpals.obj",
+      "sha256": "28ec1b3912a90288a7d302e8c6ee7449b74b265b9bdf4a34a2052746dab4befd",
+      "size": 99277,
+      "role": "derived",
+      "upstream_url": "https://github.com/orcahand/orcahand_description",
+      "upstream_commit": "b9b349a21ee0238c62b6cf92ae7597027867adf8",
+      "upstream_path": "v2/models/assets/right/R-Carpals.stl",
+      "upstream_sha256": "fd8d6d6e76370516825c2edb6f61d10cb06c5370e6501583b082e0ec4af80737",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 ORCA (description); Copyright (c) 2026 ORCA Dexterity, Inc. (hardware)",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_R-T-AP.obj",
+      "sha256": "74751ca8e1f6786f10a0e62a27472cd6a5a7dd2ddab31890607032367288fdcd",
+      "size": 138236,
+      "role": "derived",
+      "upstream_url": "https://github.com/orcahand/orcahand_description",
+      "upstream_commit": "b9b349a21ee0238c62b6cf92ae7597027867adf8",
+      "upstream_path": "v2/models/assets/right/R-T-AP.stl",
+      "upstream_sha256": "c6b01ca3f7d15794da0c9aab74c5b93be8763e258eedebb42886909e2d065b40",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 ORCA (description); Copyright (c) 2026 ORCA Dexterity, Inc. (hardware)",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_T-DP_T-DP.obj",
+      "sha256": "8091e58b82c2ad5dc56d31857616cb648ec9ff676c0453b68b12b1fe00ea18e3",
+      "size": 73026,
+      "role": "derived",
+      "upstream_url": "https://github.com/orcahand/orcahand_description",
+      "upstream_commit": "b9b349a21ee0238c62b6cf92ae7597027867adf8",
+      "upstream_path": "v2/models/assets/right/T-DP_T-DP.stl",
+      "upstream_sha256": "9b0105ac3bf3f74e4ef91f5bd7aa30a6e5d368543a0a0fed00f525e31af0c8db",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 ORCA (description); Copyright (c) 2026 ORCA Dexterity, Inc. (hardware)",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_T-PP_PP.obj",
+      "sha256": "dffee8a813ed3f1b81212f166e4f5b5b0a06bfc883ee91040dcc18b292187a74",
+      "size": 87026,
+      "role": "derived",
+      "upstream_url": "https://github.com/orcahand/orcahand_description",
+      "upstream_commit": "b9b349a21ee0238c62b6cf92ae7597027867adf8",
+      "upstream_path": "v2/models/assets/right/T-PP_PP.stl",
+      "upstream_sha256": "e9d618e70cb0ce27d4b9a358ae930812be4d4bdb3570309c08a8a449c2f074ec",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 ORCA (description); Copyright (c) 2026 ORCA Dexterity, Inc. (hardware)",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_T-TP-R.obj",
+      "sha256": "6d7e1f3185a19a347840aa70851b303e151fa351a8622c2a474f63bedd50e884",
+      "size": 98586,
+      "role": "derived",
+      "upstream_url": "https://github.com/orcahand/orcahand_description",
+      "upstream_commit": "b9b349a21ee0238c62b6cf92ae7597027867adf8",
+      "upstream_path": "v2/models/assets/right/T-TP-R.stl",
+      "upstream_sha256": "c41bfc4c42177f4238deca1d1fdd77fada6e4addef1a3e24026f1ea09c441a28",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 ORCA (description); Copyright (c) 2026 ORCA Dexterity, Inc. (hardware)",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_TopTower-Model.obj",
+      "sha256": "102be2aac581fce4df600ebc7a2b6c236b0838957b9932e913146a9fac50a037",
+      "size": 134690,
+      "role": "derived",
+      "upstream_url": "https://github.com/orcahand/orcahand_description",
+      "upstream_commit": "b9b349a21ee0238c62b6cf92ae7597027867adf8",
+      "upstream_path": "v2/models/assets/right/TopTower-Model.stl",
+      "upstream_sha256": "5126fea52e59d478afcde4a3dafbe204e8c0dc151b3956153e6fac34f76ba2a7",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 ORCA (description); Copyright (c) 2026 ORCA Dexterity, Inc. (hardware)",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    }
+  ],
+  "skipped": [
+    {
+      "upstream_path": "orca_v2/base/Prints-1100.3mf",
+      "size": 0,
+      "license": "CC-BY-4.0",
+      "reason": "hand print file in the hardware repository: linked, not mirrored",
+      "url": "https://github.com/orcahand/orcahand_description/blob/b9b349a21ee0238c62b6cf92ae7597027867adf8/orca_v2/base/Prints-1100.3mf"
+    }
+  ],
+  "preview": {
+    "path": "web/public/data/library/glb/hand-5f-tendon-16dof.glb",
+    "sha256": "9b74eabbc24104b3582645a74029f714e74f928ae6a395b1090cb9d9baa9d02e",
+    "size": 261144,
+    "license": "MIT",
+    "derived_from": [
+      "v2/scene_right.xml"
+    ],
+    "changes": [
+      "drawn from the item's own geometry in its reference pose, simplified by vertex clustering",
+      "re-encoded as GLB (Y up, metres) in one flat grey, with generic node names"
+    ]
+  }
+}

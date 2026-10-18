@@ -1,0 +1,450 @@
+{
+  "format": "rtt-library-source",
+  "version": 1,
+  "key": "tool-hook-drawer",
+  "display_name": "Drawer-pull hook tool",
+  "summary": "A printed hook that a gripper holds to pull drawers, cabinet doors and fridge doors open, and push them shut.",
+  "kind": "passive_tool",
+  "class": "open_hardware",
+  "capabilities": [
+    "hook",
+    "push"
+  ],
+  "upstream": {
+    "repository": "https://github.com/hello-robot/stretch_tool_share",
+    "commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526"
+  },
+  "licence": [
+    {
+      "spdx": "Apache-2.0",
+      "covers": "the tool's CAD and print files"
+    }
+  ],
+  "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+  "attribution": "\"Stretch Tool Share puller (v1)\" by Hello Robot Inc., https://github.com/hello-robot/stretch_tool_share (commit 802e128), licensed Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)",
+  "chain": [
+    {
+      "spdx": "Apache-2.0",
+      "relation": "licensed",
+      "what": "TOOL_LICENSE.md (tool contents only; the robot's own parts are excluded)",
+      "source": "https://github.com/hello-robot/stretch_tool_share/blob/802e1287ea6a4ff7b513e7faf8cf8c468816a526/TOOL_LICENSE.md"
+    }
+  ],
+  "reviewed": {
+    "by": "Effector Lab licence gate, against the 2026-10-18 licence audit",
+    "date": "2026-10-18"
+  },
+  "mount": {
+    "interface": "a mobile manipulator's compliant gripper (the tool is held or screwed on)",
+    "iso_pattern": null,
+    "status": "unknown",
+    "adapter": null,
+    "source": "",
+    "notes": [
+      "the robot's own gripper is not part of this item (it is under a non-commercial licence)"
+    ]
+  },
+  "specs": [
+    {
+      "name": "Use",
+      "value": "pulls drawers, cabinet and fridge doors; pushes them shut",
+      "unit": "",
+      "tag": "sourced",
+      "source": "https://github.com/hello-robot/stretch_tool_share/blob/802e1287ea6a4ff7b513e7faf8cf8c468816a526/tool_share/puller_v1/README.md"
+    }
+  ],
+  "sim": {
+    "status": "proxy",
+    "source": "rigid proxy from the print file (CoACD)",
+    "fidelity": "rigid",
+    "model_file": "sim/tool-hook-drawer.xml",
+    "n_bodies": 1,
+    "n_joints": 0,
+    "n_actuators": 0,
+    "mass_kg": 0.001076,
+    "pieces": 16,
+    "reach_m": 0.005
+  },
+  "notes": [],
+  "ingest": {
+    "licence_files": [
+      {
+        "path": "TOOL_LICENSE.md",
+        "license": "Apache-2.0"
+      }
+    ],
+    "sim": {
+      "type": "rigid_proxy",
+      "parts": [
+        {
+          "name": "hook",
+          "path": "tool_share/puller_v1/CAD/Puller_V1.STL",
+          "scale": 0.001
+        }
+      ],
+      "down": [
+        0,
+        0,
+        -1
+      ],
+      "forward": [
+        0,
+        1,
+        0
+      ],
+      "material": "PLA",
+      "infill": 0.4,
+      "license": "Apache-2.0"
+    },
+    "files": [
+      {
+        "path": "tool_share/puller_v1/CAD/Puller_V1.STL",
+        "out": "print/puller.stl",
+        "license": "Apache-2.0"
+      },
+      {
+        "path": "tool_share/puller_v1/README.md",
+        "out": "doc/README.md",
+        "role": "doc",
+        "license": "Apache-2.0"
+      }
+    ],
+    "preview": {
+      "from": "proxy",
+      "license": "Apache-2.0",
+      "sources": [
+        "tool_share/puller_v1/CAD/Puller_V1.STL"
+      ]
+    }
+  },
+  "files": [
+    {
+      "path": "assets/effectors/library/tool-hook-drawer/LICENSES/TOOL_LICENSE.md",
+      "sha256": "d031804eb24b7372a60773f5b57a9467f58c27182ae3e262a3e015c4452adf48",
+      "size": 1289,
+      "role": "licence",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "TOOL_LICENSE.md",
+      "upstream_sha256": "d031804eb24b7372a60773f5b57a9467f58c27182ae3e262a3e015c4452adf48",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-hook-drawer/doc/README.md",
+      "sha256": "655939e223e44f5de15175d2b78dfff317adab70cec69bfc0224211927d24159",
+      "size": 1375,
+      "role": "doc",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/puller_v1/README.md",
+      "upstream_sha256": "655939e223e44f5de15175d2b78dfff317adab70cec69bfc0224211927d24159",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-hook-drawer/print/puller.stl",
+      "sha256": "89c0c46f70a6420eba2baeb12782fb413dfe0fc5c54a9333e8f237121b3e1dbb",
+      "size": 131184,
+      "role": "print",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/puller_v1/CAD/Puller_V1.STL",
+      "upstream_sha256": "89c0c46f70a6420eba2baeb12782fb413dfe0fc5c54a9333e8f237121b3e1dbb",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_0.obj",
+      "sha256": "20bc0847ded14a86da41c0b0e3abdb12ac4e8accb01550347d90fb7a664ac4f8",
+      "size": 6975,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/puller_v1/CAD/Puller_V1.STL",
+      "upstream_sha256": "89c0c46f70a6420eba2baeb12782fb413dfe0fc5c54a9333e8f237121b3e1dbb",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_1.obj",
+      "sha256": "5854e4d4c85f288d6b83e120376670bc026829b01faac517c34c4f8bc349651d",
+      "size": 1913,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/puller_v1/CAD/Puller_V1.STL",
+      "upstream_sha256": "89c0c46f70a6420eba2baeb12782fb413dfe0fc5c54a9333e8f237121b3e1dbb",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_10.obj",
+      "sha256": "a5e8da967b2e848f559da83d07e0cb883a77aca8317d1b74b4e6d589cd77b28e",
+      "size": 3528,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/puller_v1/CAD/Puller_V1.STL",
+      "upstream_sha256": "89c0c46f70a6420eba2baeb12782fb413dfe0fc5c54a9333e8f237121b3e1dbb",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_11.obj",
+      "sha256": "8788e6e30b26379029c347b068319947ce944149b52bc0167e3502887dead4d9",
+      "size": 2740,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/puller_v1/CAD/Puller_V1.STL",
+      "upstream_sha256": "89c0c46f70a6420eba2baeb12782fb413dfe0fc5c54a9333e8f237121b3e1dbb",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_12.obj",
+      "sha256": "f6206c96d7c7b84efaa3a15162acaa3a771b9a63e61b22add87f21d94b5c9d9e",
+      "size": 7731,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/puller_v1/CAD/Puller_V1.STL",
+      "upstream_sha256": "89c0c46f70a6420eba2baeb12782fb413dfe0fc5c54a9333e8f237121b3e1dbb",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_13.obj",
+      "sha256": "0d7972acc3236085bd6824848e38baa634e519a2c5399eaf0438d644f62cc73c",
+      "size": 2634,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/puller_v1/CAD/Puller_V1.STL",
+      "upstream_sha256": "89c0c46f70a6420eba2baeb12782fb413dfe0fc5c54a9333e8f237121b3e1dbb",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_14.obj",
+      "sha256": "3af3ca58f57dc471fb4b74a352502c24007d1067abdcfd367e7293e26ebc74a9",
+      "size": 3518,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/puller_v1/CAD/Puller_V1.STL",
+      "upstream_sha256": "89c0c46f70a6420eba2baeb12782fb413dfe0fc5c54a9333e8f237121b3e1dbb",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_15.obj",
+      "sha256": "7c1d6ed24f4832e32e4e0c27ec147e598edeb284d4091b1d87117cb457f3608f",
+      "size": 2578,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/puller_v1/CAD/Puller_V1.STL",
+      "upstream_sha256": "89c0c46f70a6420eba2baeb12782fb413dfe0fc5c54a9333e8f237121b3e1dbb",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_2.obj",
+      "sha256": "54ed8f7695d66a47b77e7bea39568becaaa446b58a55129b5d0652e4cc2d26e0",
+      "size": 13314,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/puller_v1/CAD/Puller_V1.STL",
+      "upstream_sha256": "89c0c46f70a6420eba2baeb12782fb413dfe0fc5c54a9333e8f237121b3e1dbb",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_3.obj",
+      "sha256": "211e85791563bc47b1cc64ddc9a47ca641d8e1c1a0322eeb837dd67d9cecc417",
+      "size": 7372,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/puller_v1/CAD/Puller_V1.STL",
+      "upstream_sha256": "89c0c46f70a6420eba2baeb12782fb413dfe0fc5c54a9333e8f237121b3e1dbb",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_4.obj",
+      "sha256": "7f2bb25a7247b4448418eb4b32585f5496f67f557607461be48f7352aaac79ea",
+      "size": 12062,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/puller_v1/CAD/Puller_V1.STL",
+      "upstream_sha256": "89c0c46f70a6420eba2baeb12782fb413dfe0fc5c54a9333e8f237121b3e1dbb",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_5.obj",
+      "sha256": "559a44c384926c1a28a2b853d39ecc196a74e76eb05ff3de0422badca90e66e6",
+      "size": 2175,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/puller_v1/CAD/Puller_V1.STL",
+      "upstream_sha256": "89c0c46f70a6420eba2baeb12782fb413dfe0fc5c54a9333e8f237121b3e1dbb",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_6.obj",
+      "sha256": "f5df3b95608bb62374b083ca6163c1d46fa065f74e202452ac43455b4573454f",
+      "size": 12236,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/puller_v1/CAD/Puller_V1.STL",
+      "upstream_sha256": "89c0c46f70a6420eba2baeb12782fb413dfe0fc5c54a9333e8f237121b3e1dbb",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_7.obj",
+      "sha256": "9cd5806865aee5f689f69d29137898f3fa74d7db57b4a29c44122d2a658de12a",
+      "size": 7080,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/puller_v1/CAD/Puller_V1.STL",
+      "upstream_sha256": "89c0c46f70a6420eba2baeb12782fb413dfe0fc5c54a9333e8f237121b3e1dbb",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_8.obj",
+      "sha256": "46c19aa42b815b75ac95a8100b0b2b2ff483495d949271fdaba4f7353c00d03e",
+      "size": 3258,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/puller_v1/CAD/Puller_V1.STL",
+      "upstream_sha256": "89c0c46f70a6420eba2baeb12782fb413dfe0fc5c54a9333e8f237121b3e1dbb",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_9.obj",
+      "sha256": "eb1723b5e8d34528ee4d2d68e9ac7ac1ef89ae60bce47eaa0edbdb50ce61099d",
+      "size": 13540,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/puller_v1/CAD/Puller_V1.STL",
+      "upstream_sha256": "89c0c46f70a6420eba2baeb12782fb413dfe0fc5c54a9333e8f237121b3e1dbb",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-hook-drawer/sim/tool-hook-drawer.xml",
+      "sha256": "35cef09337ecfae37679abb8171a9378bc2786287f398b343c8eb41b7e6f2359",
+      "size": 1880,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/puller_v1/CAD/Puller_V1.STL",
+      "upstream_sha256": "89c0c46f70a6420eba2baeb12782fb413dfe0fc5c54a9333e8f237121b3e1dbb",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "a rigid simulation proxy generated by Effector Lab from the part's own mesh: rigid proxy: 16 convex pieces (CoACD threshold 0.02, seed 0); PLA at 1.24 g/cm3 x 0.4 infill (assumed)"
+      ],
+      "rating": "green"
+    }
+  ],
+  "skipped": [],
+  "preview": {
+    "path": "web/public/data/library/glb/tool-hook-drawer.glb",
+    "sha256": "c2ceda2390bb73746623394ecb0028181d45d5156a5b8f865e78dd0eb6eea906",
+    "size": 53392,
+    "license": "Apache-2.0",
+    "derived_from": [
+      "tool_share/puller_v1/CAD/Puller_V1.STL"
+    ],
+    "changes": [
+      "drawn from the item's own geometry in its reference pose, simplified by vertex clustering",
+      "re-encoded as GLB (Y up, metres) in one flat grey, with generic node names"
+    ]
+  }
+}

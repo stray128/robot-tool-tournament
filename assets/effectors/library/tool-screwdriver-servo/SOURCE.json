@@ -1,0 +1,770 @@
+{
+  "format": "rtt-library-source",
+  "version": 1,
+  "key": "tool-screwdriver-servo",
+  "display_name": "Servo screwdriver attachment for a hobby arm",
+  "summary": "A printed screwdriver head: a servo turns a hex bit holder about the tool axis, mounted on a hobby arm's wrist.",
+  "kind": "powered_tool",
+  "class": "open_hardware",
+  "capabilities": [
+    "twist",
+    "tool"
+  ],
+  "upstream": {
+    "repository": "https://github.com/jackvial/assembler0",
+    "commit": "841a758a12317220c6d13f30192f324aa3c5330d"
+  },
+  "licence": [
+    {
+      "spdx": "MIT",
+      "covers": "OpenSCAD sources and STL files"
+    }
+  ],
+  "copyright": "Copyright (c) 2025 Jack Vial",
+  "attribution": "\"assembler0 SO-101 screwdriver\" by Jack Vial, https://github.com/jackvial/assembler0 (commit 841a758), licensed MIT (https://spdx.org/licenses/MIT.html)",
+  "chain": [
+    {
+      "spdx": "MIT",
+      "relation": "licensed",
+      "what": "repository LICENSE",
+      "source": "https://github.com/jackvial/assembler0/blob/841a758a12317220c6d13f30192f324aa3c5330d/LICENSE"
+    }
+  ],
+  "reviewed": {
+    "by": "Effector Lab licence gate, against the 2026-10-18 licence audit",
+    "date": "2026-10-18"
+  },
+  "mount": {
+    "interface": "a hobby arm's wrist (servo holder with a camera mount)",
+    "iso_pattern": null,
+    "status": "unknown",
+    "adapter": null,
+    "source": "",
+    "notes": []
+  },
+  "specs": [
+    {
+      "name": "Drive",
+      "value": "a hobby servo turns the bit holder",
+      "unit": "",
+      "tag": "sourced",
+      "source": "https://github.com/jackvial/assembler0/blob/841a758a12317220c6d13f30192f324aa3c5330d/README.md"
+    },
+    {
+      "name": "Spindle speed and torque in the proxy",
+      "value": "10 rad/s, 0.5 N m",
+      "unit": "",
+      "tag": "assumed",
+      "source": ""
+    }
+  ],
+  "sim": {
+    "status": "proxy",
+    "source": "rigid proxy of the servo holder plus a spindle body (the bit holder on a hinge, velocity servo)",
+    "fidelity": "rigid",
+    "note": "spindle speed and torque are assumed hobby-servo values; the bit holder is placed on the tool axis under the holder (the upstream files carry no assembly)",
+    "model_file": "sim/tool-screwdriver-servo.xml",
+    "n_bodies": 2,
+    "n_joints": 1,
+    "n_actuators": 1,
+    "mass_kg": 0.006277,
+    "pieces": 32,
+    "reach_m": 0.077012
+  },
+  "notes": [],
+  "ingest": {
+    "licence_files": [
+      {
+        "path": "LICENSE",
+        "license": "MIT"
+      }
+    ],
+    "sim": {
+      "type": "rigid_proxy",
+      "parts": [
+        {
+          "name": "holder",
+          "path": "packages/assembler0-hardware/stl/screwdriver_servo_holder_with_camera_mount_v1.2.stl",
+          "scale": 0.001
+        },
+        {
+          "name": "bit",
+          "path": "packages/assembler0-hardware/stl/so101_screwdriver_bit_holder.stl",
+          "scale": 0.001
+        }
+      ],
+      "down": [
+        0,
+        0,
+        -1
+      ],
+      "forward": [
+        0,
+        1,
+        0
+      ],
+      "material": "PLA",
+      "infill": 0.4,
+      "stack": true,
+      "spindle": {
+        "part": "bit",
+        "axis": [
+          0,
+          0,
+          1
+        ],
+        "max_speed": 10.0,
+        "max_torque": 0.5,
+        "kv": 0.05
+      },
+      "license": "MIT"
+    },
+    "files": [
+      {
+        "path": "packages/assembler0-hardware/stl/screwdriver_servo_holder_with_camera_mount_v1.2.stl",
+        "out": "print/servo_holder.stl",
+        "license": "MIT"
+      },
+      {
+        "path": "packages/assembler0-hardware/stl/so101_screwdriver_bit_holder.stl",
+        "out": "print/bit_holder.stl",
+        "license": "MIT"
+      },
+      {
+        "path": "packages/assembler0-hardware/scad/screwdriver_servo_holder_with_camera_mount.scad",
+        "out": "cad/servo_holder.scad",
+        "role": "cad",
+        "license": "MIT"
+      },
+      {
+        "path": "packages/assembler0-hardware/scad/SO101_screwdriver_bit_holder.scad",
+        "out": "cad/bit_holder.scad",
+        "role": "cad",
+        "license": "MIT"
+      }
+    ],
+    "preview": {
+      "from": "proxy",
+      "license": "MIT",
+      "sources": [
+        "packages/assembler0-hardware/stl/screwdriver_servo_holder_with_camera_mount_v1.2.stl",
+        "packages/assembler0-hardware/stl/so101_screwdriver_bit_holder.stl"
+      ]
+    }
+  },
+  "files": [
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/LICENSES/LICENSE",
+      "sha256": "a73af38bde2ed7671ed0028d7cc44403c0d7424683ab8fdb5f21dd1724c1f790",
+      "size": 1065,
+      "role": "licence",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "LICENSE",
+      "upstream_sha256": "a73af38bde2ed7671ed0028d7cc44403c0d7424683ab8fdb5f21dd1724c1f790",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/cad/bit_holder.scad",
+      "sha256": "1a70685d2cbadf9c7e9734367e13e4f1f1093cf6b7b3ded4a00ede609663941e",
+      "size": 1881,
+      "role": "cad",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/scad/SO101_screwdriver_bit_holder.scad",
+      "upstream_sha256": "1a70685d2cbadf9c7e9734367e13e4f1f1093cf6b7b3ded4a00ede609663941e",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/cad/servo_holder.scad",
+      "sha256": "63167dd08d80db0130496f7149ded5c165172ac20548d983acc52301f9e0b898",
+      "size": 3186,
+      "role": "cad",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/scad/screwdriver_servo_holder_with_camera_mount.scad",
+      "upstream_sha256": "63167dd08d80db0130496f7149ded5c165172ac20548d983acc52301f9e0b898",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/print/bit_holder.stl",
+      "sha256": "d27d238b82d23538630402493d8457eb064c861f677c089145234bb779a9e3d1",
+      "size": 63084,
+      "role": "print",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/so101_screwdriver_bit_holder.stl",
+      "upstream_sha256": "d27d238b82d23538630402493d8457eb064c861f677c089145234bb779a9e3d1",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/print/servo_holder.stl",
+      "sha256": "bf11743a918a72f308a4241aa0a118cd5ca25ae76b1fa0aba67a12bd3979c8f7",
+      "size": 91384,
+      "role": "print",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/screwdriver_servo_holder_with_camera_mount_v1.2.stl",
+      "upstream_sha256": "bf11743a918a72f308a4241aa0a118cd5ca25ae76b1fa0aba67a12bd3979c8f7",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_0.obj",
+      "sha256": "b72cc2e24d1e6702a3abff0b495dff8a1d3388d0396ed6a5093764c0f93d0685",
+      "size": 1135,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/so101_screwdriver_bit_holder.stl",
+      "upstream_sha256": "d27d238b82d23538630402493d8457eb064c861f677c089145234bb779a9e3d1",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_1.obj",
+      "sha256": "2594b436ed1f7814c2370d935d1b23388b0fe4703e3c0606e8ad37ded75283ae",
+      "size": 1834,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/so101_screwdriver_bit_holder.stl",
+      "upstream_sha256": "d27d238b82d23538630402493d8457eb064c861f677c089145234bb779a9e3d1",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_10.obj",
+      "sha256": "d00fe985826e8ccc65f23bca2cbddafd740d424d45d17932ace1b28d6f61ff51",
+      "size": 1279,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/so101_screwdriver_bit_holder.stl",
+      "upstream_sha256": "d27d238b82d23538630402493d8457eb064c861f677c089145234bb779a9e3d1",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_11.obj",
+      "sha256": "af86eadd302479e31e6f0732c3234fe829d378147b5584caf4b4f7ca92156161",
+      "size": 1404,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/so101_screwdriver_bit_holder.stl",
+      "upstream_sha256": "d27d238b82d23538630402493d8457eb064c861f677c089145234bb779a9e3d1",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_12.obj",
+      "sha256": "a446dc1ef946273ae8bd42de3f4088e22bc35e6c84bb3284636769e856c6e89f",
+      "size": 2124,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/so101_screwdriver_bit_holder.stl",
+      "upstream_sha256": "d27d238b82d23538630402493d8457eb064c861f677c089145234bb779a9e3d1",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_13.obj",
+      "sha256": "58652e089bdf40684460518c12992d119d1aed2688cffcc1c0ebafdb01cfe6e5",
+      "size": 889,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/so101_screwdriver_bit_holder.stl",
+      "upstream_sha256": "d27d238b82d23538630402493d8457eb064c861f677c089145234bb779a9e3d1",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_14.obj",
+      "sha256": "f93f6a45f88792a5e69e161e2330f846b886e946a5a0858858b93b4da7646d65",
+      "size": 517,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/so101_screwdriver_bit_holder.stl",
+      "upstream_sha256": "d27d238b82d23538630402493d8457eb064c861f677c089145234bb779a9e3d1",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_15.obj",
+      "sha256": "5b3778ca30d51082cd627cc370814643f7570287756d22e084098682f7ba3e66",
+      "size": 1674,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/so101_screwdriver_bit_holder.stl",
+      "upstream_sha256": "d27d238b82d23538630402493d8457eb064c861f677c089145234bb779a9e3d1",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_2.obj",
+      "sha256": "d93aee091060f83d8b6c23c44db42e9e19ef630fd7a57eb4fff3013f525fd40f",
+      "size": 1490,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/so101_screwdriver_bit_holder.stl",
+      "upstream_sha256": "d27d238b82d23538630402493d8457eb064c861f677c089145234bb779a9e3d1",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_3.obj",
+      "sha256": "b7d18c29cc89200f7f9b95a0bfa1caba0d22ac62119a3b7733402028e26c1e5d",
+      "size": 1399,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/so101_screwdriver_bit_holder.stl",
+      "upstream_sha256": "d27d238b82d23538630402493d8457eb064c861f677c089145234bb779a9e3d1",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_4.obj",
+      "sha256": "5f041f2fb02b345c14218043db392d64326dafd4267bc7c9073192f6cded2be2",
+      "size": 1660,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/so101_screwdriver_bit_holder.stl",
+      "upstream_sha256": "d27d238b82d23538630402493d8457eb064c861f677c089145234bb779a9e3d1",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_5.obj",
+      "sha256": "8f2c698f15484e79da1879f70795be66fb638ed72f4f13fe0160ee6cd4b99c41",
+      "size": 2631,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/so101_screwdriver_bit_holder.stl",
+      "upstream_sha256": "d27d238b82d23538630402493d8457eb064c861f677c089145234bb779a9e3d1",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_6.obj",
+      "sha256": "f64c43737379684baa461aaeac9a3309b6f2fad6bc12d2abc817463873d31392",
+      "size": 2311,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/so101_screwdriver_bit_holder.stl",
+      "upstream_sha256": "d27d238b82d23538630402493d8457eb064c861f677c089145234bb779a9e3d1",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_7.obj",
+      "sha256": "bc9e7224fdf945b81d659d65e0a421ff6e70d2d2b2fab835cbaf66e899f785a3",
+      "size": 1648,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/so101_screwdriver_bit_holder.stl",
+      "upstream_sha256": "d27d238b82d23538630402493d8457eb064c861f677c089145234bb779a9e3d1",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_8.obj",
+      "sha256": "abeab7d1e760f244aa459bfc02e139d906e4dff7cc60b34e02eda717433b130e",
+      "size": 1239,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/so101_screwdriver_bit_holder.stl",
+      "upstream_sha256": "d27d238b82d23538630402493d8457eb064c861f677c089145234bb779a9e3d1",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_9.obj",
+      "sha256": "e887706918d82f24abfc73a387d1e31861ec1262b42f144889716c19a646e82d",
+      "size": 3201,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/so101_screwdriver_bit_holder.stl",
+      "upstream_sha256": "d27d238b82d23538630402493d8457eb064c861f677c089145234bb779a9e3d1",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_0.obj",
+      "sha256": "8ea99f75470c932915209c01c0b0d753bc400e2ba0c473c3e19d6a7461d5c34e",
+      "size": 7147,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/screwdriver_servo_holder_with_camera_mount_v1.2.stl",
+      "upstream_sha256": "bf11743a918a72f308a4241aa0a118cd5ca25ae76b1fa0aba67a12bd3979c8f7",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_1.obj",
+      "sha256": "477ee5dca2d2627d37bfd024c938b968c25bbe9f871de9e405894ac86b674fdd",
+      "size": 8160,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/screwdriver_servo_holder_with_camera_mount_v1.2.stl",
+      "upstream_sha256": "bf11743a918a72f308a4241aa0a118cd5ca25ae76b1fa0aba67a12bd3979c8f7",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_10.obj",
+      "sha256": "f09ee205a1f8d721c748d448fd4a4ad3891715ac518bbd3e0fe61aa56dcc118f",
+      "size": 6467,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/screwdriver_servo_holder_with_camera_mount_v1.2.stl",
+      "upstream_sha256": "bf11743a918a72f308a4241aa0a118cd5ca25ae76b1fa0aba67a12bd3979c8f7",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_11.obj",
+      "sha256": "2ee1e844ed412496c690f5d38c4bc07f0b46b4cc667abf1510963ef28af746a3",
+      "size": 4120,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/screwdriver_servo_holder_with_camera_mount_v1.2.stl",
+      "upstream_sha256": "bf11743a918a72f308a4241aa0a118cd5ca25ae76b1fa0aba67a12bd3979c8f7",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_12.obj",
+      "sha256": "99e5c74173a4d7f6935780ff9b676557f9fdc27c63050f64ef02e4435b26706b",
+      "size": 2796,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/screwdriver_servo_holder_with_camera_mount_v1.2.stl",
+      "upstream_sha256": "bf11743a918a72f308a4241aa0a118cd5ca25ae76b1fa0aba67a12bd3979c8f7",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_13.obj",
+      "sha256": "19cf4450943657fb1045bfbc98dbcdf32904079393450517a1cb084a3d69f572",
+      "size": 1347,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/screwdriver_servo_holder_with_camera_mount_v1.2.stl",
+      "upstream_sha256": "bf11743a918a72f308a4241aa0a118cd5ca25ae76b1fa0aba67a12bd3979c8f7",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_14.obj",
+      "sha256": "7e9d1de4c47940b7143eda059c8287833dd849d0e2154decb42cae9d8f9cdc2e",
+      "size": 3671,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/screwdriver_servo_holder_with_camera_mount_v1.2.stl",
+      "upstream_sha256": "bf11743a918a72f308a4241aa0a118cd5ca25ae76b1fa0aba67a12bd3979c8f7",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_15.obj",
+      "sha256": "fbeffb909fa2bc92bac377f360fdee271dda943c1d3f0f21fc45086fe6cb9d03",
+      "size": 4954,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/screwdriver_servo_holder_with_camera_mount_v1.2.stl",
+      "upstream_sha256": "bf11743a918a72f308a4241aa0a118cd5ca25ae76b1fa0aba67a12bd3979c8f7",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_2.obj",
+      "sha256": "ca3e358226569a3d7fda47af70ceb539adc13f66acb5c8ece2a2c4c69809a18c",
+      "size": 3976,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/screwdriver_servo_holder_with_camera_mount_v1.2.stl",
+      "upstream_sha256": "bf11743a918a72f308a4241aa0a118cd5ca25ae76b1fa0aba67a12bd3979c8f7",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_3.obj",
+      "sha256": "5152df4341a6cbb17354daa78fa052222ba62538bb1dbf9ac8c966c1b77cf245",
+      "size": 3803,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/screwdriver_servo_holder_with_camera_mount_v1.2.stl",
+      "upstream_sha256": "bf11743a918a72f308a4241aa0a118cd5ca25ae76b1fa0aba67a12bd3979c8f7",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_4.obj",
+      "sha256": "dd3890dfd36cb626f64e70d23db66493078ce078b90754ce3216de4136e7d979",
+      "size": 4179,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/screwdriver_servo_holder_with_camera_mount_v1.2.stl",
+      "upstream_sha256": "bf11743a918a72f308a4241aa0a118cd5ca25ae76b1fa0aba67a12bd3979c8f7",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_5.obj",
+      "sha256": "7a07ac025457a9c9194d1fd85d7ae54df087fa3fecffc4d3d34202eeafa53168",
+      "size": 6394,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/screwdriver_servo_holder_with_camera_mount_v1.2.stl",
+      "upstream_sha256": "bf11743a918a72f308a4241aa0a118cd5ca25ae76b1fa0aba67a12bd3979c8f7",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_6.obj",
+      "sha256": "a4bf2fdb005c26cf679ab34a4672f797a9f0a4228f5ce2625ceb539f56733b22",
+      "size": 1618,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/screwdriver_servo_holder_with_camera_mount_v1.2.stl",
+      "upstream_sha256": "bf11743a918a72f308a4241aa0a118cd5ca25ae76b1fa0aba67a12bd3979c8f7",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_7.obj",
+      "sha256": "87f0d5289bdfdbd67e33535e4e69b790c61fb2c626175fafb86d17fc5f01ab85",
+      "size": 6613,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/screwdriver_servo_holder_with_camera_mount_v1.2.stl",
+      "upstream_sha256": "bf11743a918a72f308a4241aa0a118cd5ca25ae76b1fa0aba67a12bd3979c8f7",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_8.obj",
+      "sha256": "9912f389ec20ea56cd2d64209fe4015600f037a71e850ecae644e36f7561245d",
+      "size": 6026,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/screwdriver_servo_holder_with_camera_mount_v1.2.stl",
+      "upstream_sha256": "bf11743a918a72f308a4241aa0a118cd5ca25ae76b1fa0aba67a12bd3979c8f7",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_9.obj",
+      "sha256": "55daf744e9220d1dc18ed42fcbb138f8ac27b6863a7937fe8a2a8c4a778bc245",
+      "size": 7862,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/screwdriver_servo_holder_with_camera_mount_v1.2.stl",
+      "upstream_sha256": "bf11743a918a72f308a4241aa0a118cd5ca25ae76b1fa0aba67a12bd3979c8f7",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-screwdriver-servo/sim/tool-screwdriver-servo.xml",
+      "sha256": "63fea4a45ecb93bc20a5b11f80e54607466d76697239d96c726cd4ea7e88199a",
+      "size": 4705,
+      "role": "derived",
+      "upstream_url": "https://github.com/jackvial/assembler0",
+      "upstream_commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+      "upstream_path": "packages/assembler0-hardware/stl/screwdriver_servo_holder_with_camera_mount_v1.2.stl",
+      "upstream_sha256": "bf11743a918a72f308a4241aa0a118cd5ca25ae76b1fa0aba67a12bd3979c8f7",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Jack Vial",
+      "changes": [
+        "a rigid simulation proxy generated by Effector Lab from the part's own mesh: rigid proxy: 32 convex pieces (CoACD threshold 0.02, seed 0); PLA at 1.24 g/cm3 x 0.4 infill (assumed)"
+      ],
+      "rating": "green"
+    }
+  ],
+  "skipped": [],
+  "preview": {
+    "path": "web/public/data/library/glb/tool-screwdriver-servo.glb",
+    "sha256": "6e8689e80283972ac93813606ab92bff5101e51c7cb7bf2515bbc5af3eded76b",
+    "size": 62868,
+    "license": "MIT",
+    "derived_from": [
+      "packages/assembler0-hardware/stl/screwdriver_servo_holder_with_camera_mount_v1.2.stl",
+      "packages/assembler0-hardware/stl/so101_screwdriver_bit_holder.stl"
+    ],
+    "changes": [
+      "drawn from the item's own geometry in its reference pose, simplified by vertex clustering",
+      "re-encoded as GLB (Y up, metres) in one flat grey, with generic node names"
+    ]
+  }
+}

@@ -1,0 +1,193 @@
+{
+  "format": "rtt-library-source",
+  "version": 1,
+  "key": "gripper-2f-air-mini",
+  "display_name": "Air-actuated mini parallel gripper",
+  "summary": "A small pneumatic parallel gripper for a desktop cobot: two short fingers, a few millimetres of travel each.",
+  "kind": "parallel_gripper",
+  "class": "sim_model",
+  "capabilities": [
+    "pinch"
+  ],
+  "upstream": {
+    "repository": "https://github.com/google-deepmind/mujoco_menagerie",
+    "commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35"
+  },
+  "licence": [
+    {
+      "spdx": "BSD-3-Clause",
+      "covers": "the simulation model (MJCF and meshes)"
+    }
+  ],
+  "copyright": "Copyright (c) 2018, UFACTORY Inc.",
+  "attribution": "\"UFACTORY Lite 6 gripper MJCF model\" by UFACTORY Inc. and MuJoCo Menagerie contributors, https://github.com/google-deepmind/mujoco_menagerie (commit 62ab00f), licensed BSD-3-Clause (https://spdx.org/licenses/BSD-3-Clause.html); MJCF from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie)",
+  "chain": [
+    {
+      "spdx": "BSD-3-Clause",
+      "relation": "licensed",
+      "what": "ufactory_lite6/LICENSE",
+      "source": "https://github.com/google-deepmind/mujoco_menagerie/blob/62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35/ufactory_lite6/LICENSE"
+    }
+  ],
+  "reviewed": {
+    "by": "Effector Lab licence gate, against the 2026-10-18 licence audit",
+    "date": "2026-10-18"
+  },
+  "mount": {
+    "interface": "the desktop cobot's tool flange",
+    "iso_pattern": "ISO 9409-1-50-4-M6",
+    "status": "assumed",
+    "adapter": "plate-iso50-4-m6",
+    "source": "",
+    "notes": [
+      "the maker states ISO 9409-1-50 (licence audit of 2026-10-18); the hole count was not read today"
+    ]
+  },
+  "specs": [
+    {
+      "name": "Finger travel in the model",
+      "value": "2 x 8",
+      "unit": "mm",
+      "tag": "derived",
+      "source": ""
+    },
+    {
+      "name": "Actuator force limit in the model",
+      "value": "10",
+      "unit": "N",
+      "tag": "derived",
+      "source": ""
+    }
+  ],
+  "sim": {
+    "status": "native",
+    "source": "upstream MJCF (narrow fingers; the gripper of the arm model)",
+    "fidelity": "rigid",
+    "model_file": "sim/gripper-2f-air-mini.xml",
+    "n_bodies": 3,
+    "n_joints": 2,
+    "n_actuators": 1,
+    "mass_kg": 0.308
+  },
+  "notes": [],
+  "ingest": {
+    "licence_files": [
+      {
+        "path": "ufactory_lite6/LICENSE",
+        "license": "BSD-3-Clause"
+      }
+    ],
+    "sim": {
+      "type": "mjcf",
+      "entry": "ufactory_lite6/lite6_gripper_narrow.xml",
+      "root": "gripper_body",
+      "license": "BSD-3-Clause"
+    },
+    "preview": {
+      "from": "mjcf",
+      "entry": "ufactory_lite6/lite6_gripper_narrow.xml",
+      "root": "gripper_body",
+      "license": "BSD-3-Clause"
+    }
+  },
+  "files": [
+    {
+      "path": "assets/effectors/library/gripper-2f-air-mini/LICENSES/LICENSE",
+      "sha256": "4fe659325706d0fc41592c8743d085a0bdf778056249f2a108943d22be916fb2",
+      "size": 1522,
+      "role": "licence",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "ufactory_lite6/LICENSE",
+      "upstream_sha256": "4fe659325706d0fc41592c8743d085a0bdf778056249f2a108943d22be916fb2",
+      "license": "BSD-3-Clause",
+      "copyright": "Copyright (c) 2018, UFACTORY Inc.",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-air-mini/sim/gripper-2f-air-mini.xml",
+      "sha256": "3b0e1505fa34397811c8a2f9cb965c8ed431c082967e8acff14571f5cbf2093f",
+      "size": 2882,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "ufactory_lite6/lite6_gripper_narrow.xml",
+      "upstream_sha256": "f2ecb61b8c2bf87bbad2e53a8f6e4d45b6b6aae5ae70de47ef34503a7f7e2dd4",
+      "license": "BSD-3-Clause",
+      "copyright": "Copyright (c) 2018, UFACTORY Inc.",
+      "changes": [
+        "the effector subtree from body 'gripper_body' written as one MJCF by MuJoCo 3.15.0",
+        "every body's mass, centre of mass and inertia pinned at the upstream model's compiled values",
+        "1 visual-only geoms removed (the catalog preview draws the upstream visuals)",
+        "1 element or class names carrying a maker's or product's name renamed"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-air-mini/sim/meshes/gripper_lite_body_c.obj",
+      "sha256": "ca05db6923ffcdf465959214c6f09d19219ed9dd7a89edf15030ce65ed61b239",
+      "size": 15214,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "ufactory_lite6/assets/collision/gripper_lite_body.stl",
+      "upstream_sha256": "7bf001d6ec55a653bd1b91fa5cb7b37fcb908176cb8719f3ff1104472072a183",
+      "license": "BSD-3-Clause",
+      "copyright": "Copyright (c) 2018, UFACTORY Inc.",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-air-mini/sim/meshes/gripper_lite_left_finger_narrow.obj",
+      "sha256": "757b0cf36b303a8b13009356f6495db0e09cd1b969fd644d7f52152eabb24664",
+      "size": 4838,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "ufactory_lite6/assets/visual/gripper_lite_left_finger_narrow.stl",
+      "upstream_sha256": "4c064e68c7a23865495ec5b3d7b4813759afb20f8f63d20c9ddd60bebe1cc799",
+      "license": "BSD-3-Clause",
+      "copyright": "Copyright (c) 2018, UFACTORY Inc.",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-air-mini/sim/meshes/gripper_lite_right_finger_narrow.obj",
+      "sha256": "0d17aebf04d0975635dedc3afb3b8c209476bc381f169e44e1843c9c51dcee4d",
+      "size": 4778,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "ufactory_lite6/assets/visual/gripper_lite_right_finger_narrow.stl",
+      "upstream_sha256": "a2d69e2903802dd65dcea5a995262f8d5de5011b65040a12d772c88115614588",
+      "license": "BSD-3-Clause",
+      "copyright": "Copyright (c) 2018, UFACTORY Inc.",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    }
+  ],
+  "skipped": [],
+  "preview": {
+    "path": "web/public/data/library/glb/gripper-2f-air-mini.glb",
+    "sha256": "78c836021bcf757a91e74c5521ddb391444aed2ff8901bf78cf0dec2137a90b6",
+    "size": 136748,
+    "license": "BSD-3-Clause",
+    "derived_from": [
+      "ufactory_lite6/lite6_gripper_narrow.xml"
+    ],
+    "changes": [
+      "drawn from the item's own geometry in its reference pose, simplified by vertex clustering",
+      "re-encoded as GLB (Y up, metres) in one flat grey, with generic node names"
+    ]
+  }
+}
