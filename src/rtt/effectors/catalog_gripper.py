@@ -61,8 +61,8 @@ class CatalogGripperFamily(EffectorFamilyImpl):
 
     def _model(self, spec: EffectorSpec):  # type: ignore[no-untyped-def]
         cm = catalog_model(spec.model)
-        if cm.kind != "gripper":
-            raise ValueError(f"{spec.model} is not a gripper")
+        if cm.kind not in ("gripper", "tool"):  # a library tool (hook, pusher, spindle) builds here too
+            raise ValueError(f"{spec.model} is not a gripper or tool")
         return cm, cm.synergy(spec.primitive)
 
     def build(self, ctx: BuildContext) -> EffectorBuild:

@@ -104,8 +104,15 @@ def vendored_keys() -> tuple[str, ...]:
 
 @cache
 def read_model(key: str) -> VendoredModel:
-    """Parse ``assets/effectors/catalog/<key>/SOURCE.json`` (licence rules checked on load)."""
+    """Parse ``assets/effectors/catalog/<key>/SOURCE.json`` (licence rules checked on load).
+
+    A key that is not in the catalog but is an item of the open effector library
+    (``assets/effectors/library/<key>/``, :mod:`rtt.library.records`) is read from there: its
+    simulation files become the model's licence records (:func:`library_model`).
+    """
     directory = CATALOG_DIR / key
+    if not (directory / "SOURCE.json").is_file():
+        return library_model(key)
     raw = json.loads((directory / "SOURCE.json").read_text(encoding="utf-8"))
     if raw.get("format") != SOURCE_FORMAT or raw.get("version") != SOURCE_VERSION:
         raise ValueError(f"{key}: SOURCE.json is not {SOURCE_FORMAT} version {SOURCE_VERSION}")
@@ -134,12 +141,73 @@ def read_model(key: str) -> VendoredModel:
     )
 
 
+def library_model(key: str) -> VendoredModel:
+    """A library item with a simulation model, seen as a vendored catalog model.
+
+    The item's MJCF already carries what the catalog loader would derive (hull meshes, pinned
+    inertials), so ``mesh_files`` and ``inertials`` are empty. Licence records
+    (:class:`AssetSource`) are made for the simulation, derived and licence files whose SPDX id
+    the contract allows; files under other green licences (CERN-OHL-P-2.0, for example) are
+    credited in the item's ``SOURCE.json`` and named in the build notes.
+    """
+    from rtt.effectors.types import ALLOWED_LICENSES
+    from rtt.library.records import read_item
+
+    item = read_item(key)
+    model_file = item.sim.get("model_file")
+    if not model_file:
+        raise ValueError(f"library item {key} has no simulation model file")
+    sources = []
+    for f in item.files:
+        if f.role not in ("sim", "derived", "licence") or f.license not in ALLOWED_LICENSES:
+            continue
+        if f.upstream_commit == "generated":
+            continue
+        sources.append(
+            AssetSource(
+                path=f.path,
+                sha256=f.sha256,
+                upstream_url=f.upstream_url,
+                upstream_commit=f.upstream_commit,
+                upstream_path=f.upstream_path,
+                upstream_sha256=f.upstream_sha256,
+                license=f.license,
+                copyright=f.copyright,
+                attribution=item.attribution,
+                changes=f.changes,
+            )
+        )
+    sim_licences = sorted({f.license for f in item.files if f.role in ("sim", "derived")})
+    return VendoredModel(
+        key=key,
+        directory=item.directory,
+        display_name=item.display_name,
+        upstream={
+            "repository": item.upstream["repository"],
+            "commit": item.upstream["commit"],
+            "directory": "",
+            "model_file": str(model_file),
+        },
+        license=" + ".join(sim_licences) or item.licence[0]["spdx"],
+        copyright=item.copyright,
+        attribution=item.attribution,
+        status="green",
+        note="",
+        sources=tuple(sources),
+        raw=item.raw,
+    )
+
+
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def verify_model(key: str) -> list[str]:
     """Problems with a vendored model's files (empty: every file re-hashes to its record)."""
+    if not (CATALOG_DIR / key / "SOURCE.json").is_file():
+        from rtt.library.records import verify_item
+
+        return verify_item(key)
     vm = read_model(key)
     problems = []
     listed = set()
