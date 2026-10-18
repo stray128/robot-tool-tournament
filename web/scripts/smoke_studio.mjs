@@ -155,7 +155,9 @@ async function screenshot(page, file) {
   const { width, height } = await page.evaluate(() => ({ width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight }));
   for (let i = 0, y = 0; y < height; i++, y += CHUNK) {
     const name = i === 0 ? file : file.replace(/\.png$/, `-${i + 1}.png`);
-    await page.screenshot({ path: name, fullPage: true, clip: { x: 0, y, width, height: Math.min(CHUNK, height - y) } });
+    const opts = { path: name, fullPage: true, clip: { x: 0, y, width, height: Math.min(CHUNK, height - y) } };
+    // A capture of a tall WebGL page can time out on a loaded host: retry once with more time.
+    await page.screenshot(opts).catch(() => page.screenshot({ ...opts, timeout: 90_000 }));
   }
 }
 
