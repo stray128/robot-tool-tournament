@@ -54,6 +54,7 @@ from rtt.api.service import (
     TargetUnavailableError,
     UploadError,
 )
+from rtt.studio.engineer.api import studio_router
 
 __all__ = ["SessionRequest", "create_app", "sse_format"]
 
@@ -264,4 +265,5 @@ def create_app(settings: ApiSettings | None = None, *, service: AgentService | N
             raise HTTPException(404, "no such print pack") from None
         return FileResponse(path, media_type="application/zip", filename=f"{pack_id}.zip")
 
+    app.include_router(studio_router(svc))
     return app

@@ -394,7 +394,7 @@ otherwise an upstream link).
 **Owns:** `src/rtt/studio/engineer/` (prompts, the forced `submit_task_plan` call through the
 existing LLM client, validators on top of `TaskSpec`, one repair round, refusals, the
 `upload:` part resolver via `rtt.studio.templates.part.register_part_resolver`), recorded
-responses under `tests/fixtures/studio_engineer/`, `tests/test_studio_engineer.py`,
+responses under `src/rtt/studio/engineer/recorded/`, `tests/test_studio_engineer.py`,
 `web/app/studio/new/**`, `web/components/studio/intake/**`.
 
 **Builds:** Nemotron 3 Super with `submit_task_plan_tool()`; parse with `task_spec_from_tool_args`
