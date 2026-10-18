@@ -249,13 +249,6 @@ def _stage_mjcf(fetcher: Fetcher, repo: str, commit: str, entry: str) -> tuple[m
     return spec, sources
 
 
-def _subtree(body: mujoco.MjsBody) -> list[mujoco.MjsBody]:
-    out = [body]
-    for child in body.bodies:
-        out.extend(_subtree(child))
-    return out
-
-
 def _compile(spec_or_path: Any) -> mujoco.MjModel:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -602,18 +595,6 @@ def _check_equivalent(up: mujoco.MjModel, model: mujoco.MjModel, renames: Mappin
             problems.append(f"actuator {name}: gain, bias or range differs")
     if problems:
         raise ValueError("the written model differs from the upstream subtree: " + "; ".join(problems))
-
-
-def _defaults(spec: mujoco.MjSpec) -> list[Any]:
-    out = []
-    names = set()
-    for kind in ("bodies", "geoms", "joints", "sites", "actuators", "tendons", "meshes", "materials"):
-        for e in getattr(spec, kind):
-            d = getattr(e, "classname", None)
-            if d is not None and getattr(d, "name", None) and d.name not in names:
-                names.add(d.name)
-                out.append(d)
-    return out
 
 
 # --------------------------------------------------------------------------- URDF

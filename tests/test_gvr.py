@@ -18,6 +18,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import subprocess
 import zipfile
 from pathlib import Path
@@ -175,22 +176,25 @@ def test_the_maker_is_named_only_in_the_credit_files() -> None:
         "assets/gripper/so_arm_102/SOURCE.md",
         "assets/gripper/so_arm_102/lock.json",
         "web/scripts/smoke_v2.mjs",
+        "src/rtt/library/brands.py",  # the open library's brand list (it names makers to keep them off screen)
     }
+    # the open effector library's provenance (SOURCE.json, lock.json, upstream licence texts)
+    allowed_prefixes = ("tests/", "assets/effectors/library/")
     files = subprocess.run(
         ["git", "ls-files"], cwd=REPO, capture_output=True, text=True, check=True
     ).stdout.split()
-    # the upstream repository URL (a source pin in asset metadata) is not an on-screen credit
-    url = LOCK["repository"].split("//", 1)[1].lower()
+    # upstream repository URLs (source pins in asset metadata and page data) are not on-screen credits
+    url = re.compile(r"https?://[^\s\"')>\]]+")
     hits = []
     for rel in files:
         path = REPO / rel
-        if rel.startswith("tests/") or not path.is_file():
+        if rel.startswith(allowed_prefixes) or not path.is_file():
             continue
         try:
             text = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
             continue
-        if MAKER.lower() in text.lower().replace(url, "") and rel not in allowed:
+        if MAKER.lower() in url.sub(" ", text).lower() and rel not in allowed:
             hits.append(rel)
     assert hits == []
 
