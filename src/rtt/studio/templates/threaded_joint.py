@@ -153,6 +153,7 @@ class ThreadedJointBuilder(TemplateBuilder):
             damping=0.5,
             solref_friction=list(ctx.task.physics.limit_solref),
             solimp_friction=list(FRICTION_SOLIMP),
+            solimp_limit=list(FRICTION_SOLIMP),  # a near-hard seat
         )
         body.add_joint(
             name=f"{p}hinge",
@@ -222,6 +223,7 @@ class ThreadedJointBuilder(TemplateBuilder):
         tendon.limited = mujoco.mjtLimited.mjLIMITED_TRUE
         tendon.range = [-1.0, lead]
         tendon.solref_limit = list(ctx.task.physics.limit_solref)
+        tendon.solimp_limit = list(FRICTION_SOLIMP)  # a near-hard flank
         ctx.spec.add_exclude(bodyname1=f"{p}seat", bodyname2=f"{p}member")
         final = float(prm["final_torque_nm"])
         act = ctx.spec.add_actuator(name=f"{p}ramp", target=f"{p}hinge", trntype=mujoco.mjtTrn.mjTRN_JOINT)

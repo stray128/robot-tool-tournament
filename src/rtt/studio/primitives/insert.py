@@ -126,7 +126,7 @@ def _depth_observed(ctx: StepContext, data: mujoco.MjData, run: Mapping[str, Any
 def _held(ctx: StepContext, model: mujoco.MjModel, data: mujoco.MjData) -> bool:
     con = contacts(model, data, tool_geoms(ctx.scene), ctx.obj.geom_ids)
     if ctx.obj.kind is TemplateKind.PORT_PLUG:
-        lifted = float(ctx.obj.site_pos(data, "plug_tip")[2]) > ctx.task.physics.table_top_z + 0.003
+        lifted = float(ctx.observe_site(data, "plug_tip")[2]) > ctx.task.physics.table_top_z + 0.003
         return con.n > 0 and lifted
     return len(con.bodies) >= 2
 

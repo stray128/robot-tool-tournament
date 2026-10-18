@@ -78,6 +78,7 @@ from rtt.studio.primitives._common import (
     contacts,
     criterion_bounds,
     heading_for_axis,
+    observed_state,
     rot_z,
     safe_palm_z,
     schedule,
@@ -277,7 +278,7 @@ class TwistController:
         self, ctx: StepContext, data: mujoco.MjData, sign: float, w: float, info: Mapping[str, float]
     ) -> tuple[float, float | None]:
         """(how far to turn the object, rad; the torque to stop at, N m or ``None``)."""
-        state = ctx.object_state(ctx.scene.model, data)
+        state = observed_state(ctx, data)
         theta = math.radians(state["angle_deg"])
         along = sign * w > 0  # the commanded direction is the object's working sense
         kind = ctx.obj.kind

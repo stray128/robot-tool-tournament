@@ -10,7 +10,9 @@ shared closure ramp (:meth:`GraspPrimitive.command` through a
 sealed, a soft arm pulls its cable. Then:
 
 * with a ``target`` bin: carry the part over the bin (its bottom 20 mm above the bin's rim),
-  lower it until its bottom is 12 mm above the bin floor, open over 0.5 s, wait 0.4 s, retract;
+  lower it until its bottom is 12 mm above the bin floor, or until it lands on something there
+  (a guarded move: it stops when the tool pushes the part down by more than 5 N), open over
+  0.5 s, wait 0.4 s, retract;
 * without a target and without ``hold_after``: put it back where it was, open, retract;
 * with ``hold_after``: the step ends holding it (the next step uses the same tool).
 
@@ -38,7 +40,7 @@ from typing import TYPE_CHECKING
 import mujoco
 import numpy as np
 
-from rtt.sim.controller import Phase
+from rtt.sim.controller import Phase, min_jerk
 from rtt.sim.objects import Placement
 from rtt.studio.plan import (
     PrimitiveCommand,
@@ -48,6 +50,7 @@ from rtt.studio.plan import (
     criteria_verdict,
 )
 from rtt.studio.primitives._common import (
+    Guarded,
     Path,
     contacts,
     move_time,
@@ -163,7 +166,9 @@ class PickController:
             transit(path, above, safe)
             down = above.copy()
             down[2] = float(floor[2]) + BIN_DROP + tip - float(tool.tip[2])
-            t_release = path.to(down, max(0.6, move_time(above, down)))
+            lower_t = max(0.6, move_time(above, down))
+            sch.values["guard"] = Guarded(above.copy(), down.copy(), path.end, lower_t)  # type: ignore[assignment]
+            t_release = path.to(down, lower_t)
         elif not step.hold_after:
             down = grasp + np.array([0.0, 0.0, 0.002, 0.0, 0.0])
             t_release = path.to(down, c.lift_time)
@@ -196,6 +201,18 @@ class PickController:
         else:
             phase = Phase.HOLD
         u = sch.tool.controls(t, closure, model, data, phase)
+        guard = v.get("guard")
+        if isinstance(guard, Guarded) and t >= guard.t0:
+            # lowering into the bin stops when the carried part lands on something (the tool
+            # starts pushing it down); the release and the retract follow from there
+            if t <= guard.end:
+                con = contacts(model, data, tool_geoms(ctx.scene), ctx.obj.geom_ids)
+                wrist = guard.at(t, -float(con.net[2]))
+            else:
+                wrist = guard.at(guard.end, 1e9)
+                up = min_jerk(min(1.0, max(0.0, (t - guard.end - RELEASE_S - RELEASE_WAIT_S) / 0.6)))
+                wrist = wrist + np.array([0.0, 0.0, RETRACT * up, 0.0, 0.0])
+            return PrimitiveCommand(wrist, u)
         return PrimitiveCommand(plan.values["path"].at(t), u)
 
 
