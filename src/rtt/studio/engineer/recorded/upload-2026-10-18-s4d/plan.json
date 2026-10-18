@@ -1,0 +1,249 @@
+{
+  "format": "rtt-studio-plan",
+  "version": 1,
+  "contract": "rtt-effectors/2",
+  "label": "Product mode: not part of the pre-registered experiment",
+  "model": "nvidia/nemotron-3-super-120b-a12b",
+  "use_case": "Kitting: open the hinged lid of the kit tote, pick the small plastic tub I uploaded off the bench and put it in the tote, then close the lid.",
+  "status": "valid",
+  "first_try": false,
+  "repaired": true,
+  "problems": [],
+  "warnings": [],
+  "notes": [
+    "Null written as text was read as null (refusal)."
+  ],
+  "uploads": [
+    {
+      "upload_id": "stl-575c1d026461",
+      "ref": "upload:stl-575c1d026461",
+      "name": "rounded_tub",
+      "size_mm": [
+        70.0,
+        40.0,
+        50.0
+      ],
+      "mass_g": 36.6,
+      "material": "plastic",
+      "n_pieces": 13,
+      "notes": []
+    }
+  ],
+  "plan": {
+    "contract": "rtt-effectors/2",
+    "label": "Product mode: not part of the pre-registered experiment",
+    "task_id": "c33189d8c62da35cbaed0adad03bff8b6f5b1a8c3cbfedaa5a588185c88b8192",
+    "source": "nemotron",
+    "title": "Kit tote kitting",
+    "description": "Open the hinged lid of the kit tote, pick the small plastic tub from the bench and place it inside the tote, then close the lid.",
+    "objects": [
+      {
+        "name": "kit_tote",
+        "kind": "bin",
+        "params": {
+          "fixed": true,
+          "height_mm": 120,
+          "length_mm": 200,
+          "wall_mm": 4,
+          "width_mm": 150
+        },
+        "pose": {
+          "x_mm": 0.0,
+          "y_mm": 0.0,
+          "yaw_deg": 0.0
+        },
+        "ref": null,
+        "label": "Kit tote"
+      },
+      {
+        "name": "kit_lid",
+        "kind": "hinged_lid",
+        "params": {
+          "damping_nms": 0.05,
+          "depth_mm": 200,
+          "feature": "lip",
+          "feature_mm": 15,
+          "max_angle_deg": 110,
+          "open_torque_nm": 0.3,
+          "orientation": "lid",
+          "thickness_mm": 6,
+          "width_mm": 250
+        },
+        "pose": {
+          "x_mm": 0.0,
+          "y_mm": 0.0,
+          "yaw_deg": 0.0
+        },
+        "ref": null,
+        "label": "Kit lid"
+      },
+      {
+        "name": "rounded_tub",
+        "kind": "part",
+        "params": {
+          "mass_g": 36.6,
+          "shape": "mesh",
+          "size_x_mm": 70,
+          "size_y_mm": 40,
+          "size_z_mm": 50
+        },
+        "pose": {
+          "x_mm": 200.0,
+          "y_mm": 100.0,
+          "yaw_deg": 0.0
+        },
+        "ref": "upload:stl-575c1d026461",
+        "label": "Rounded tub"
+      }
+    ],
+    "steps": [
+      {
+        "id": "open_lid",
+        "primitive": "hook_pull",
+        "object": "kit_lid",
+        "handle": "handle",
+        "target": null,
+        "params": {
+          "approach": "top",
+          "speed_mm_s": 50
+        },
+        "constraints": {
+          "max_force_n": 20.0,
+          "max_torque_nm": null,
+          "precision_mm": null,
+          "precision_deg": null
+        },
+        "success": [
+          {
+            "quantity": "angle_deg",
+            "at_least": 80.0,
+            "at_most": 100.0
+          }
+        ],
+        "after": [],
+        "hold_after": false,
+        "description": "Hook the lid's lip and pull the lid open to about 90 degrees."
+      },
+      {
+        "id": "pick_tub",
+        "primitive": "grasp",
+        "object": "rounded_tub",
+        "handle": "part",
+        "target": "kit_tote",
+        "params": {
+          "hold_s": 1,
+          "lift_mm": 100
+        },
+        "constraints": {
+          "max_force_n": null,
+          "max_torque_nm": null,
+          "precision_mm": null,
+          "precision_deg": null
+        },
+        "success": [
+          {
+            "quantity": "in_target",
+            "at_least": 1.0,
+            "at_most": null
+          },
+          {
+            "quantity": "tilt_deg",
+            "at_least": null,
+            "at_most": 30.0
+          }
+        ],
+        "after": [
+          "open_lid"
+        ],
+        "hold_after": false,
+        "description": "Pick the rounded tub from the bench and place it inside the kit tote."
+      },
+      {
+        "id": "close_lid",
+        "primitive": "push",
+        "object": "kit_lid",
+        "handle": "lid",
+        "target": null,
+        "params": {
+          "speed_mm_s": 20
+        },
+        "constraints": {
+          "max_force_n": 20.0,
+          "max_torque_nm": null,
+          "precision_mm": null,
+          "precision_deg": null
+        },
+        "success": [
+          {
+            "quantity": "angle_deg",
+            "at_least": null,
+            "at_most": 10.0
+          }
+        ],
+        "after": [
+          "pick_tub"
+        ],
+        "hold_after": false,
+        "description": "Push the lid shut until it is nearly closed."
+      }
+    ],
+    "assumptions": [
+      "The lid lip provides enough clearance for the hook to engage.",
+      "The tote dimensions are typical for a small parts kit.",
+      "The tub rests flat on the bench before pickup."
+    ],
+    "clarifications": [],
+    "unsupported": [],
+    "refusal": null,
+    "fidelity": {
+      "open_lid": "rigid",
+      "pick_tub": "rigid",
+      "close_lid": "rigid"
+    }
+  },
+  "attempts": [
+    {
+      "stage": "main",
+      "outcome": "invalid",
+      "problems": [
+        "objects[1] (kit_lid): a lip lid is opened by a hook under its free edge, so it overhangs its bin by feature_mm (15 mm) on every side: at least 330 x 230 mm over the bin 'kit_tote' (300 x 200 mm), it is 300 x 200 mm; make it larger or give it a handle",
+        "objects[2] (rounded_tub): its footprint overlaps the footprint of objects[0] (kit_tote); keep them at least 20 mm apart; a part picked into a bin starts outside it",
+        "objects[2] (rounded_tub): its footprint overlaps the footprint of objects[1] (kit_lid); keep them at least 20 mm apart"
+      ],
+      "request_hash": "de1b53e4d45a8a0408938b6b32c10386cb06858e1e643ac4c0f4ff694ab41059",
+      "cached": false,
+      "prompt_tokens": 20377,
+      "completion_tokens": 8000,
+      "reasoning_tokens": 574,
+      "cost_usd": 0.013313099999999998,
+      "latency_s": 51.3277,
+      "finish_reason": "length",
+      "notes": [
+        "finish_reason_length"
+      ],
+      "error": null
+    },
+    {
+      "stage": "repair",
+      "outcome": "valid",
+      "problems": [],
+      "request_hash": "e635672a6db97fe3d0d99b434c017ca4aa9cd4674f167c5bce07645a4bfb9aa0",
+      "cached": false,
+      "prompt_tokens": 21444,
+      "completion_tokens": 1815,
+      "reasoning_tokens": 696,
+      "cost_usd": 0.0080667,
+      "latency_s": 25.7148,
+      "finish_reason": "tool_calls",
+      "notes": [],
+      "error": null
+    }
+  ],
+  "cost_usd": 0.02138,
+  "template_hashes": {
+    "system.md": "69589cf14a708eb214576522923c7193695f0e3189fffae1195c9ecadb386edb",
+    "user.md": "9eeadc86596227a22bcbe63a4be3f061cffc0de96d0f9d1b0c89801e40214cd1",
+    "repair.md": "215ddfaa29d5893f95760f4f36e56798831e846290069d3e3699b0ea411cf454"
+  },
+  "tool_sha256": "d5ac5d4361ab8f61ccff4a3c3919298be5d00a84134fe85e5bd2fe2ec35cd702"
+}

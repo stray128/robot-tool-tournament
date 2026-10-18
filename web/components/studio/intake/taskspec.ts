@@ -1001,11 +1001,31 @@ function lidProblems(catalog: Catalog, objects: PlanObject[]): string[] {
     for (const b of objects) {
       if (b.kind !== "bin") continue;
       const same = Math.abs(b.pose.x_mm - o.pose.x_mm) < 1 && Math.abs(b.pose.y_mm - o.pose.y_mm) < 1;
+      if (!same) continue;
       const height = Number(b.params.height_mm);
-      if (same && Math.abs(height - hinge) > 1) {
+      if (Math.abs(height - hinge) > 1) {
         out.push(
           `objects[${i}] (${o.name}): the lid template's hinge height is fixed at ${num(hinge)} mm, so the bin ${pyRepr(b.name)} it covers must be ${num(hinge)} mm tall (it is ${num(height)} mm); if the use case states another height, put that lid on that bin in unsupported (not modelled) instead of changing it`,
         );
+      }
+      if (o.params.feature === "lip") {
+        const rel = (b.pose.yaw_deg - o.pose.yaw_deg) * (Math.PI / 180);
+        const c = Math.abs(Math.cos(rel));
+        const sn = Math.abs(Math.sin(rel));
+        const length = Number(b.params.length_mm);
+        const width = Number(b.params.width_mm);
+        const ex = length * c + width * sn;
+        const ey = length * sn + width * c;
+        const lip = Number(o.params.feature_mm);
+        const needX = ex + 2 * lip;
+        const needY = ey + 2 * lip;
+        const w = Number(o.params.width_mm);
+        const d = Number(o.params.depth_mm);
+        if (w < needX - 1e-9 || d < needY - 1e-9) {
+          out.push(
+            `objects[${i}] (${o.name}): a lip lid is opened by a hook under its free edge, so it overhangs its bin by feature_mm (${num(lip)} mm) on every side: at least ${num(needX)} x ${num(needY)} mm over the bin ${pyRepr(b.name)} (${num(ex)} x ${num(ey)} mm), it is ${num(w)} x ${num(d)} mm; make it larger or give it a handle`,
+          );
+        }
       }
     }
   });

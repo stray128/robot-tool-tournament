@@ -60,6 +60,11 @@ page before anything runs.
      names a training part; `scan:` is not resolvable here;
    * a lid over a bin (the same position) needs the bin 120 mm tall, the lid's fixed hinge height;
      a use case that states another height has that lid-on-bin combination in `unsupported`;
+   * a lid with feature `lip` over a bin overhangs it by `feature_mm` on every side (S2b's hook
+     slides under the free edge, CR-S2b-1): `width_mm` at least the bin's x extent + 2 x
+     `feature_mm`, `depth_mm` at least its y extent + 2 x `feature_mm` (the extents of the bin as
+     turned relative to the lid); a lid with feature `handle` may match its bin. The check and the
+     prompt state the rule; neither picks the feature for the planner;
    * layout (`layout.py`, section 1b): plan-view footprints and swings at least 20 mm apart
      [assumed], except a lid at its bin's position and the plug of a port (one object); so a part
      picked into a bin starts outside it, and nothing stands in a lid's, door's or drawer's swing;
@@ -87,7 +92,7 @@ The prompt, the checks and the intake page follow S2's models ([STUDIO_PRIMITIVE
 
 | Template | How S2 models it | What a plan must do |
 |---|---|---|
-| `hinged_lid` | lid: closed underside 120 mm above the table (no hinge-height parameter), stays open only past vertical; door: vertical, hinged on its left edge; `angle_deg` 0 closed, positive open | open with `hook_pull`, close with `push` (`angle_deg` at_most); a bin under a lid is 120 mm tall |
+| `hinged_lid` | lid: closed underside 120 mm above the table (no hinge-height parameter), stays open only past vertical; door: vertical, hinged on its left edge; `angle_deg` 0 closed, positive open | open with `hook_pull`, close with `push` (`angle_deg` at_most); a bin under a lid is 120 mm tall; a `lip` lid overhangs its bin by `feature_mm` on every side, a `handle` lid need not |
 | `drawer` | starts closed; `travel_mm` positive open | `hook_pull` out, `push` shut |
 | `quarter_turn_latch` | starts locked at its stop; opens counter-clockwise from above; `angle_deg` ccw from locked | twist `ccw`; no `torque_nm` at_least |
 | `handwheel_valve` | starts closed at its stop; opens counter-clockwise; `angle_deg` ccw from closed | twist `ccw`; closing a valve that starts closed is not modelled |
@@ -231,73 +236,91 @@ all three files and compares them with the committed copies.
 
 ## 6. Gate (design S4) and spend
 
-Recorded live on 2026-10-18 with S2's conventions, the layout, window and lid-on-bin rules in the
-prompt (`recorded/gate-2026-10-18-s4c/`, 19 calls, $0.143):
+Recorded live on 2026-10-18 with S2's conventions, the layout, window, lid-on-bin and lip-overhang
+rules in the prompt (`recorded/gate-2026-10-18-s4d/`, 18 calls, $0.144):
 
 | case | setting | result | calls | steps produced | $ |
 |---|---|---|---|---|---|
-| h1_tote | warehouse | valid after repair | 2 | hook_pull tote_lid, grasp carton -> tote_bin, grasp pack -> tote_bin, push tote_lid | 0.0156 |
-| h2_coupling | construction | valid after repair | 2 | insert pipe_coupling, twist pipe_coupling (cw) | 0.0150 |
-| h3_cabinet | maintenance | valid after repair | 2 | twist latch (ccw), hook_pull door, twist valve (ccw), insert port | 0.0160 |
-| e1_drawer_kitting | warehouse | valid after repair | 2 | hook_pull shelf_drawer, grasp cube_part -> kit_tray, grasp rod_part -> kit_tray, push shelf_drawer | 0.0156 |
-| e2_rod_nut | construction | valid after repair | 2 | insert m10_nut_on_rod, twist m10_nut_on_rod (cw) | 0.0143 |
+| h1_tote | warehouse | valid after repair | 2 | hook_pull tote_lid, grasp carton -> tote, grasp pack -> tote, push tote_lid | 0.0161 |
+| h2_coupling | construction | valid after repair | 2 | insert pipe_coupling, twist pipe_coupling (cw) | 0.0144 |
+| h3_cabinet | maintenance | valid after repair | 2 | twist latch (ccw), hook_pull door, twist valve (ccw), insert port | 0.0167 |
+| e1_drawer_kitting | warehouse | valid after repair | 2 | hook_pull shelf_drawer, grasp cube_part -> kit_tray, grasp rod_part -> kit_tray, push shelf_drawer | 0.0161 |
+| e2_rod_nut | construction | valid first try | 1 | insert m10_nut_on_rod, twist m10_nut_on_rod (cw) | 0.0076 |
 | e3_isolation_valve | maintenance | valid after repair | 2 | hook_pull meter_hatch, twist iso_valve (ccw), push meter_hatch | 0.0153 |
-| e4_vial_holder | lab | valid after repair | 2 | hook_pull instrument_cover, grasp instrument_holder, insert instrument_holder, push instrument_cover | 0.0172 |
-| e5_fridge_restock | retail | valid first try | 1 | hook_pull fridge_door, grasp drink_can -> basket, push fridge_door | 0.0074 |
-| u1_fold_shirt | unsupported | refused (nearest: grasp) | 2 | none | 0.0133 |
-| u2_pour | unsupported | refused (nearest: grasp) | 2 | none | 0.0129 |
+| e4_vial_holder | lab | valid after repair | 2 | hook_pull instrument_lid, insert vial_holder, push instrument_lid | 0.0226 |
+| e5_fridge_restock | retail | valid after repair | 2 | hook_pull fridge_door, grasp drink_can -> storage_basket, push fridge_door | 0.0154 |
+| u1_fold_shirt | unsupported | refused (nearest: grasp, wrap) | 1 | none | 0.0068 |
+| u2_pour | unsupported | refused (nearest: grasp) | 2 | none | 0.0130 |
 
-Plans valid 8/8 (1 on the first call, 7 after the repair); unsupported 2/2 refused with a reason
-and a nearest primitive. What the repairs fixed: parts inside their tote or tray (h1, e1), the
-latch and the valve inside the door's footprint and zero-wide windows (h3), the valve inside the
-meter box with a `torque_nm` at_least (e3), the vial and holder against the cover (e4), a step
-left holding while the next acted on another object (h3, e3, e4), inserts of a thread left
-holding (h2, e2), refusals with no nearest primitive (u1, u2).
+The recorded set has plans valid 8/8 (1 on the first call, 7 after the repair) and unsupported
+2/2 refused with a reason and a nearest primitive, **but it is assembled from three draws, and a
+single run did not pass the gate**: the first live run of all ten cases left 6 of 8 plans valid
+(75 %, under the 90 % gate). What the repairs fixed: the lip lid as large as its tote (h1, twice,
+and the upload plan), parts inside or within 20 mm of their tote, tray or drawer (h1, e1), the
+can and basket in the fridge door's swing (e5), zero-wide windows and a `torque_nm` at_least on
+the latch and the valve twists (h3, e3), steps left holding while the next acted on another
+object (e3, e4), an insert of a thread left holding (h2), a refusal with no nearest primitive (u2).
 
-How the run was assembled (`manifest.json` `runs`): a first live run of all ten cases ($0.120 of
-the recorded calls) left e3 and e5 invalid after the repair, both nesting one object in another
-(a valve inside the valve box under its hatch, cans inside a crate under the fridge door's
-swing), which the templates cannot represent; e3 and e5 were reworded to say where things stand
-(the isolation valve **beside** the meter box; the can on the **bench beside** the fridge, the
-basket **behind** the door) and re-run live ($0.023). The other eight cases are the first run's
-calls.
+How the run was assembled (`manifest.json` `runs`): `gate_d1`, all ten cases live ($0.155),
+left h1 and e3 invalid after the repair, both by layout alone (h1's carton and pack 10 mm into
+the tote; e3's valve at the meter box's corner); in both, and in every other plan, the lip lid had
+its overhang after the repair. `gate_d2` re-sampled h1 and e3 live with an empty cache (the same
+requests, a new draw, $0.032): e3 valid after the repair, h1 invalid again (the pack 5 mm from the
+grown lid's footprint), so that draw is not used. `gate_d3` re-sampled h1 once more ($0.016):
+valid after the repair. So h1 was valid on 1 of 3 draws; the larger lip lid (340 x 240 mm over a
+300 x 200 mm tote) leaves less room around the tote for the two parts, and the planner's first
+placements (+-200 or +-250 mm on x) keep landing within 20 mm of it. Nothing was tuned between
+draws: the prompt, the text and the sampling are the same.
 
 The three hero plans, as recorded (positions in mm, plan-view extents x and y of each
 footprint and swing):
 
-* **h1_tote**: tote 300 x 200 x 120 mm at (0, 0) [x -150..150, y -100..100]; lid 300 x 200 mm,
-  lip, stop 110 deg, at (0, 0) [footprint y -100..114, swing y 100..174]; carton 120 x 80 x 60 mm,
-  300 g at (250, 0) [x 190..310]; pack 150 x 100 x 20 mm, 150 g at (-250, 0) [x -325..-175].
-  Steps: hook_pull the lid (lip, top, `angle_deg` at_least 90, 20 N); grasp the carton into the
-  tote (lift 150 mm, `in_target` at_least 1, `tilt_deg` at_most 20); grasp the pack into the tote
-  (the same); push the lid shut (`angle_deg` at_most 10, 20 N).
-* **h2_coupling**: coupling 40 mm across, 45 mm long, pitch 1.5 mm, 3 turns, 0.2 to 8 N m, at
-  (0, 0) [base x and y -32..32]. Steps: insert to the thread start (`depth_mm` 3.5 to 4.5 around
-  the 4 mm start, 30 N, releases); twist `cw` at 60 deg/s until snug (`torque_nm` 2 to 8,
-  `max_torque_nm` 15). The planner set the thread's seated torque (`final_torque_nm`) to the
-  8 N m limit the description gives, and the twist stops at 2 N m, before the thread seats.
-* **h3_cabinet**: latch (wing, 25 mm head, 0.8 N m, 90 deg) at (-200, 0) [x -220..-180, y
-  -20..20], beside the door's hinge side; door 200 mm wide, 200 mm tall, handle, stop 110 deg, at
-  (0, 0) [footprint x -115..100, y -35..26; swing x -169..103, y -202..0]; valve (3 spokes,
-  120 mm, 3 N m, 90 deg) at (200, 0) [x 140..260]; port with its 8 mm connector at (300, 0)
-  [x 289..359]. Steps: twist the latch `ccw` (`angle_deg` 85 to 95, 5 N m); hook_pull the door
-  (handle, front, `angle_deg` 70 to 110, 30 N); twist the valve `ccw` (`angle_deg` 80 to 100,
-  5 N m); insert the connector (`depth_mm` 13 to 17 of the 15 mm socket, 20 N).
+* **h1_tote**: tote 300 x 200 x 120 mm at (0, 0) [x -150..150, y -100..100]; lid 340 x 240 mm,
+  lip 15 mm (so 20 mm over the tote on every side, 5 mm more than the rule asks), stop 110 deg,
+  at (0, 0) [footprint x -170..170, y -120..134, swing y 120..208]; carton 120 x 80 x 60 mm,
+  300 g at (-250, -250) [x -310..-190, y -290..-210]; pack 150 x 100 x 20 mm, 150 g at
+  (250, -250) [x 175..325, y -300..-200]. Steps: hook_pull the lid (lip, top, `angle_deg`
+  at_least 30, 20 N); grasp the carton into the tote (lift 100 mm, hold 1 s, `in_target`
+  at_least 1, `tilt_deg` at_most 15); grasp the pack into the tote (the same); push the lid shut
+  (`angle_deg` at_most 5, 20 N). The planner kept the lip and grew the lid; it was not told which.
+* **h2_coupling**: coupling 40 mm across, 45 mm long, pitch 1.5 mm, 2 engaged turns, 0.2 to
+  8 N m, at (0, 0) [x and y -32..32]. Steps: insert to the thread start (`depth_mm` 4 to 6; the thread
+  starts at 4 mm, 50 N, releases); twist `cw` at 60 deg/s until snug (`torque_nm` 5 to 8,
+  `max_torque_nm` 10). As in S4c the planner sets the seated torque (`final_torque_nm`) to the
+  8 N m limit the description gives.
+* **h3_cabinet**: latch (wing, 20 mm head, 0.8 N m, 90 deg) at (-300, 0) [x -320..-280, y
+  -20..20]; door 300 mm wide, 400 mm tall, handle, stop 110 deg, at (0, 0) [footprint x
+  -165..150, y -32..24; swing x -311..152, y -301..0]; valve (3 spokes, 100 mm, 2 N m, 90 deg) at
+  (300, 0) [x 250..350]; port with a 5 mm plug in a 10 mm socket at (0, 200) [x -10..55, y
+  190..210], behind the door. Steps: twist the latch `ccw` (`angle_deg` 85 to 95, at most
+  2 N m); hook_pull the door (handle, front, `angle_deg` 60 to 110, 30 N); twist the valve `ccw`
+  (`angle_deg` 85 to 95, at most 3 N m); insert the plug (`depth_mm` 9 to 11, 20 N). The latch
+  keeps its 0.8 N m; the connector, 8 mm in the S4c draw, is 5 mm in this one (the description
+  gives no size, and nothing was tuned).
 
-One more recorded plan (`recorded/upload-2026-10-18-s4c/`, $0.0157, valid after the repair) plans
+One more recorded plan (`recorded/upload-2026-10-18-s4d/`, $0.0214, valid after the repair) plans
 a use case with an uploaded STL (`assets/parts/rounded_tub.stl`) and uses it as
-`upload:stl-575c1d026461`.
+`upload:stl-575c1d026461`. Its first call made the lip lid as large as its tote; the repair kept
+the lip and shrank the tote to 200 x 150 x 120 mm under a 250 x 200 mm lid (25 mm over on every
+side). The first run's $0.03 cap refused the repair call; a second run replayed the first call
+from its cache and made the repair live, so the plan's `cost_usd` is the sum of both live calls.
 
-Token Factory spend: S4 $0.149 (cap $0.50); S4b $0.175 (cap $0.20); S4c $0.196 (cap $0.25):
-$0.143 of recorded gate calls, $0.038 of first-run calls that the e3 and e5 rewording made stale,
-and $0.016 for the upload plan.
+Token Factory spend: S4 $0.149 (cap $0.50); S4b $0.175 (cap $0.20); S4c $0.196 (cap $0.25);
+S4d $0.224 (cap $0.25): $0.144 of recorded gate calls, $0.059 of the h1 and e3 draws not used,
+and $0.021 for the upload plan. 4 of the 26 S4d calls ran to `max_tokens` (8000) after a complete
+tool call (the provider drops the extra output, which is billed), about $0.006 each over a normal
+call; none of the S4c calls did.
 
 ## 7. Open issues
 
-* **First calls rarely lay a scene out right.** With the footprints and the rule in the prompt,
-  1 of 8 plans passed on the first call; the repair, which names each overlapping pair, fixed
-  every one. A worked example with a lid and a door, or a layout helper the planner calls, could
-  raise the first-call rate.
+* **First calls rarely lay a scene out right, and one repair is not always enough.** With the
+  footprints and the rule in the prompt, 1 of 8 plans passed on the first call (S4c and S4d
+  alike). In S4c the repair fixed every layout; in S4d's first run two plans kept an overlap
+  after it, and h1 needed three draws (section 6). A worked example with a lid on a bin and a
+  door, or a layout helper the planner calls, could raise both rates.
+* **The lip rule grows h1's lid.** The planner meets the overhang by enlarging the lid (h1) or
+  shrinking the tote (upload); a larger lid crowds the bench around the tote, which is where h1's
+  remaining layout misses are.
 * **Nested scenes are not modelled.** The templates stand side by side on one table: a valve in
   a box under a hatch, cans in a crate, a latch on a door are separate objects that must stand
   20 mm apart. The h3 latch now stands beside the door's hinge side, where a real latch would sit
