@@ -1168,6 +1168,7 @@
   "torque_share": 0.9,
   "wrist_torque_share": 0.95,
   "lid_hinge_mm": 120.0,
+  "lid_open_deg": 95.0,
   "depth_tolerance_mm": 0.5,
   "window_min": {
    "depth_mm": 1.0,

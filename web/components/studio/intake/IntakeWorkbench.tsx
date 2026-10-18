@@ -23,7 +23,13 @@ export interface RecordedPlans {
   recorded_at: string;
   model: string;
   label: string;
-  gate: { passed: boolean; summary: { plans: { n: number; valid: number; valid_first_try: number }; refusals: { n: number; refused_with_nearest: number } } };
+  gate: {
+    passed: boolean;
+    summary: {
+      plans: { n: number; valid: number; valid_first_call: number; valid_after_repair: number; valid_after_layout_fix: number; failed: number };
+      refusals: { n: number; refused_with_nearest: number };
+    };
+  };
   examples: RecordedExample[];
 }
 
@@ -456,7 +462,7 @@ export default function IntakeWorkbench({ catalog, recorded }: { catalog: Catalo
                     {a.problems.length && a.outcome === "invalid" ? (
                       <details className="mt-1">
                         <summary className="cursor-pointer text-xs text-ink-3">
-                          {a.problems.length} problem{a.problems.length === 1 ? "" : "s"} sent back
+                          {a.problems.length} problem{a.problems.length === 1 ? "" : "s"} {a.stage === "main" ? "sent back" : "left after the repair"}
                         </summary>
                         <ul className="mt-1 grid gap-0.5 text-xs text-ink-2">
                           {a.problems.map((p) => (
@@ -478,10 +484,25 @@ export default function IntakeWorkbench({ catalog, recorded }: { catalog: Catalo
                     <span className="text-ink">{STATUS[result.status].text}</span>
                   </p>
                   <p className="mt-1 text-xs text-ink-3">
-                    {result.first_try ? "Valid on the first call." : result.repaired ? "Valid after one repair call." : ""}{" "}
+                    {result.first_try
+                      ? "Valid on the first call."
+                      : result.layout_fixed
+                        ? "Valid after one repair call and the layout fix (code moved objects; see the assumptions)."
+                        : result.repaired
+                          ? "Valid after one repair call."
+                          : ""}{" "}
                     {shown!.source === "recorded" ? `Recorded live on ${recorded.recorded_at.slice(0, 10)}; replayed, no model called.` : "Planned live."}{" "}
                     {shown!.spend ?? ""}
                   </p>
+                  {result.layout_moves?.length ? (
+                    <ul className="mt-1 grid gap-0.5 text-xs text-ink-2" aria-label="Layout fix">
+                      {result.layout_moves.map((m) => (
+                        <li key={m} className="break-words">
+                          Layout fix: {m}.
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
                   {result.notes.length ? <p className="mt-1 text-xs text-ink-3">{result.notes.join(" ")}</p> : null}
                 </div>
               ) : null}

@@ -80,6 +80,7 @@ export interface Catalog {
     torque_share: number;
     wrist_torque_share: number;
     lid_hinge_mm: number;
+    lid_open_deg: number;
     depth_tolerance_mm: number;
     window_min: Record<string, number>;
     layout: {
@@ -787,6 +788,7 @@ function checkParts(catalog: Catalog, objects: PlanObject[], steps: PlanStep[], 
       }
     }
   });
+  out.push(...lidOpenProblems(catalog, objects, steps));
   return out;
 }
 
@@ -1027,6 +1029,61 @@ function lidProblems(catalog: Catalog, objects: PlanObject[]): string[] {
           );
         }
       }
+    }
+  });
+  return out;
+}
+
+/** `_lid_open_problems`: a pick into a bin under a lid needs an earlier hook pull of that lid past vertical, and no push in between. */
+function lidOpenProblems(catalog: Catalog, objects: PlanObject[], steps: PlanStep[]): string[] {
+  const out: string[] = [];
+  const openDeg = catalog.sim.lid_open_deg;
+  const need = num(openDeg);
+  const lids = new Map<string, PlanObject[]>();
+  for (const b of objects) {
+    if (b.kind !== "bin") continue;
+    lids.set(
+      b.name,
+      objects.filter(
+        (o) =>
+          o.kind === "hinged_lid" &&
+          o.params.orientation === "lid" &&
+          Math.abs(b.pose.x_mm - o.pose.x_mm) < 1 &&
+          Math.abs(b.pose.y_mm - o.pose.y_mm) < 1,
+      ),
+    );
+  }
+  const seen = new Set<string>();
+  steps.forEach((s, i) => {
+    if (!catalog.sim.picks.includes(s.primitive) || s.target === null) return;
+    for (const lid of lids.get(s.target) ?? []) {
+      const pulls: number[] = [];
+      for (let j = 0; j < i; j++) if ((steps[j] as PlanStep).object === lid.name && (steps[j] as PlanStep).primitive === "hook_pull") pulls.push(j);
+      if (!pulls.length) {
+        out.push(
+          `steps[${i}] (${s.id}): it picks into ${pyRepr(s.target)}, which the lid ${pyRepr(lid.name)} covers, and no earlier step opens that lid; hook_pull ${pyRepr(lid.name)} first with angle_deg at_least ${need} (past vertical: a lid opened less falls shut)`,
+        );
+        continue;
+      }
+      const k = pulls[pulls.length - 1] as number;
+      const pull = steps[k] as PlanStep;
+      const pushes: number[] = [];
+      for (let j = k + 1; j < i; j++) if ((steps[j] as PlanStep).object === lid.name && (steps[j] as PlanStep).primitive === "push") pushes.push(j);
+      if (pushes.length) {
+        out.push(
+          `steps[${i}] (${s.id}): ${pyRepr((steps[pushes[0] as number] as PlanStep).id)} pushes the lid ${pyRepr(lid.name)} shut after ${pyRepr(pull.id)} opened it, so this pick into ${pyRepr(s.target)} meets a closed lid; hook_pull it open again (angle_deg at_least ${need}) after that push`,
+        );
+        continue;
+      }
+      const opened = pull.success.filter((c) => c.quantity === "angle_deg" && c.at_least !== null).map((c) => c.at_least as number);
+      if (opened.length && Math.max(...opened) >= openDeg - 1e-9) continue;
+      const key = `${k}\u0000${lid.name}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const asks = opened.length ? `it asks for ${num(Math.max(...opened))}` : "it asks for no angle_deg at_least";
+      out.push(
+        `steps[${k}] (${pull.id}): ${pyRepr(s.id)} picks into ${pyRepr(s.target)} under this lid later, so open it past vertical: angle_deg at_least ${need} (${asks}); a lid opened less falls shut when the tool lets go`,
+      );
     }
   });
   return out;

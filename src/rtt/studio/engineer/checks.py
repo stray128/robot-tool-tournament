@@ -29,7 +29,9 @@ simulator's own conventions (track S2, ``docs/STUDIO_PRIMITIVES.md``):
 
 Problems carry a path (``objects[2] (tote): ...``, ``steps[1] (open_lid): ...``) so a repair
 prompt and the intake page can point at the entry. A lid over a bin (the same position) needs the
-bin to be as tall as the lid's fixed hinge height (120 mm). Warnings never refuse a plan: objects
+bin to be as tall as the lid's fixed hinge height (120 mm), and a pick into that bin needs the lid
+opened past vertical (``angle_deg`` at_least 95) by an earlier hook pull that no push undoes before
+the pick. Warnings never refuse a plan: objects
 nothing touches, a lid that falls shut (its stop at or below vertical).
 
 :func:`nearest_primitive` maps free text (an unsupported action) to the closest primitive by
@@ -48,6 +50,7 @@ from rtt.studio.engineer.catalog import (
     DEFAULT_PUSH_N,
     FORCE_SHARE,
     LID_HINGE_MM,
+    LID_OPEN_DEG,
     NO_PICK,
     PICKS,
     THREAD_LEAD_EXTRA_MM,
@@ -441,6 +444,70 @@ def _lid_problems(objects: Sequence[ObjectInstance]) -> list[str]:
     return out
 
 
+def _lid_open_problems(objects: Sequence[ObjectInstance], steps: Sequence[Step]) -> list[str]:
+    """A pick into a bin under a lid needs an earlier hook pull of that lid past vertical
+    (``angle_deg`` at_least :data:`LID_OPEN_DEG`), and no push closing it in between: a lid opened
+    less falls shut when the tool lets go, and the pick then meets a closed lid."""
+    out: list[str] = []
+    lids: dict[str, list[ObjectInstance]] = {}
+    for b in objects:
+        if b.kind is TemplateKind.BIN:
+            lids[b.name] = [
+                o
+                for o in objects
+                if o.kind is TemplateKind.HINGED_LID
+                and o.params["orientation"] == "lid"
+                and abs(b.pose.x_mm - o.pose.x_mm) < 1.0
+                and abs(b.pose.y_mm - o.pose.y_mm) < 1.0
+            ]
+    seen: set[tuple[int, str]] = set()  # one problem per hook pull and lid, at its first pick
+    need = num(LID_OPEN_DEG)
+    for i, s in enumerate(steps):
+        if s.primitive not in PICKS or s.target is None:
+            continue
+        for lid in lids.get(s.target, []):
+            pulls = [
+                j
+                for j in range(i)
+                if steps[j].object == lid.name and steps[j].primitive is PrimitiveKind.HOOK_PULL
+            ]
+            if not pulls:
+                out.append(
+                    f"{_where_step(i, s)}: it picks into {s.target!r}, which the lid {lid.name!r} covers, and no "
+                    f"earlier step opens that lid; hook_pull {lid.name!r} first with angle_deg at_least {need} "
+                    "(past vertical: a lid opened less falls shut)"
+                )
+                continue
+            k = pulls[-1]
+            pull = steps[k]
+            pushes = [
+                j
+                for j in range(k + 1, i)
+                if steps[j].object == lid.name and steps[j].primitive is PrimitiveKind.PUSH
+            ]
+            if pushes:
+                out.append(
+                    f"{_where_step(i, s)}: {steps[pushes[0]].id!r} pushes the lid {lid.name!r} shut after "
+                    f"{pull.id!r} opened it, so this pick into {s.target!r} meets a closed lid; hook_pull it open "
+                    f"again (angle_deg at_least {need}) after that push"
+                )
+                continue
+            opened = [
+                c.at_least for c in pull.success if c.quantity == "angle_deg" and c.at_least is not None
+            ]
+            if opened and max(opened) >= LID_OPEN_DEG - 1e-9:
+                continue
+            if (k, lid.name) in seen:
+                continue
+            seen.add((k, lid.name))
+            asks = f"it asks for {num(max(opened))}" if opened else "it asks for no angle_deg at_least"
+            out.append(
+                f"{_where_step(k, pull)}: {s.id!r} picks into {s.target!r} under this lid later, so open it past "
+                f"vertical: angle_deg at_least {need} ({asks}); a lid opened less falls shut when the tool lets go"
+            )
+    return out
+
+
 def check_parts(
     objects: Sequence[ObjectInstance],
     steps: Sequence[Step],
@@ -456,6 +523,7 @@ def check_parts(
         + _lid_problems(objects)
         + layout_problems(objects, steps)
         + _step_problems(objects, steps)
+        + _lid_open_problems(objects, steps)
     )
 
 
