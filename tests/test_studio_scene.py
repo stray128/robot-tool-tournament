@@ -267,11 +267,28 @@ def test_contract_checks_refuse_broken_tools_and_objects(spec: TaskSpec, task: A
         build_studio_scene(Setup.single(gripper(), ("pick",)), wide, 0, task=task)
 
 
-def test_templates_without_physics_and_primitives_without_controllers_are_not_simulated(task: Any) -> None:
+def _hide(monkeypatch: pytest.MonkeyPatch, module: str, registry: dict[Any, Any], key: Any) -> None:
+    """Make ``module`` unimportable and drop its registration (S2's modules exist now)."""
+    import sys
+
+    monkeypatch.setitem(sys.modules, module, None)
+    if key in registry:
+        monkeypatch.delitem(registry, key)
+
+
+def test_templates_without_physics_and_primitives_without_controllers_are_not_simulated(
+    task: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from rtt.studio import plan as plan_mod
+    from rtt.studio import templates as templates_mod
+    from rtt.studio.types import PrimitiveKind, TemplateKind
+
+    _hide(monkeypatch, "rtt.studio.templates.drawer", templates_mod._BUILDERS, TemplateKind.DRAWER)
+    _hide(monkeypatch, "rtt.studio.primitives.push", plan_mod._SETS["default"], PrimitiveKind.PUSH)
     with pytest.raises(TemplateUnavailable):
         get_template_builder("drawer")
     with pytest.raises(PrimitiveNotSimulated):
-        get_primitive("twist")  # the real controllers are S2's
+        get_primitive("push")
     with pytest.raises(PrimitiveNotSimulated):
         get_primitive("grasp", "reference")
     drawer = ObjectInstance.of("drawer", "drawer", "Drawer")

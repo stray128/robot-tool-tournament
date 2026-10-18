@@ -513,9 +513,9 @@ def _check_compiled(
     def owner_ok(name: str, bodies: set[int]) -> bool:
         if name.startswith(NAME_PREFIX):
             return bool(bodies) and bodies <= eff
-        for inst, own in owners.items():
-            if name.startswith(object_prefix(inst)):
-                return bodies <= own | {0}
+        matches = [inst for inst in owners if name.startswith(object_prefix(inst))]
+        if matches:  # the longest prefix: "obj_tote_lid_x" belongs to tote_lid, not tote
+            return bodies <= owners[max(matches, key=len)] | {0}
         return False
 
     trn = mujoco.mjtTrn

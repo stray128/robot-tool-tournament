@@ -220,7 +220,9 @@ class DesignedPrimitive:
     """The designed family's grasp primitive (module docstring).
 
     ``upright``: per actuator index, the (digit, joint) pairs whose measured angles it cancels.
-    Joint addresses are resolved from the model on first use.
+    Joint addresses are resolved from the model on first use. Actuator ids come from the scene
+    (``scene.ids.effector_actuators``), so the count of wrist actuators in front of them does not
+    matter: 4 in the v1 scene, 5 with the Studio's wrist roll.
     """
 
     name: str
@@ -231,6 +233,7 @@ class DesignedPrimitive:
     upright: tuple[tuple[int, tuple[tuple[int, int], ...]], ...] = ()
     prefix: str = "eff_"
     _addr: dict[int, tuple[np.ndarray, float, float]] | None = field(default=None, repr=False)
+    _addr_model: mujoco.MjModel | None = field(default=None, repr=False)
 
     def plan(self, part: PartSpec, placement: Placement, task: TaskV2, build: EffectorBuild) -> PrimitivePlan:
         if len(self.ctrl_open) != build.n_actuators:
@@ -238,14 +241,15 @@ class DesignedPrimitive:
         tip = max(task.controller.min_tip_clearance, self.grip_height_frac * part_height(part))
         return PrimitivePlan(tip_height=tip, yaw_offset=self.yaw_offset, note=f"designed {self.name}")
 
-    def _resolve(self, model: mujoco.MjModel) -> dict[int, tuple[np.ndarray, float, float]]:
+    def _resolve(self, model: mujoco.MjModel, scene: Any) -> dict[int, tuple[np.ndarray, float, float]]:
+        acts = scene.ids.effector_actuators
         out = {}
         for a, pairs in self.upright:
             adr = np.array(
                 [model.jnt_qposadr[model.joint(gen.joint_name(self.prefix, d, j)).id] for d, j in pairs],
                 dtype=np.int64,
             )
-            act = model.actuator(4 + a)
+            act = model.actuator(int(acts[a]))
             out[a] = (adr, float(act.ctrlrange[0]), float(act.ctrlrange[1]))
         return out
 
@@ -255,8 +259,9 @@ class DesignedPrimitive:
         a = np.asarray(self.ctrl_open, dtype=np.float64)
         u = a + closure * (np.asarray(self.ctrl_closed, dtype=np.float64) - a)
         if self.upright:
-            if self._addr is None:
-                self._addr = self._resolve(model)
+            if self._addr is None or self._addr_model is not model:
+                self._addr = self._resolve(model, scene)
+                self._addr_model = model
             for idx, (adr, lo, hi) in self._addr.items():
                 u[idx] = min(max(-float(data.qpos[adr].sum()), lo), hi)
         return u
