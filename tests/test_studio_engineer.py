@@ -261,14 +261,14 @@ def test_checks_need_a_goal_and_keep_targets_and_holding_consistent() -> None:
     assert warnings == ["objects[1] (tote): no step acts on it or places into it"]
 
 
-def test_insert_needs_a_held_member_and_criteria_must_be_reachable() -> None:
+def test_a_plug_insert_picks_its_plug_and_criteria_must_be_reachable() -> None:
     port = ObjectInstance.of("port", "port_plug", "Port", ObjectPose(0, 0, 0), depth_mm=15)
     insert = Step.of("plug_in", "insert", "port", "plug", "Plug it in.", [_crit("depth_mm", 12)])
     grasp = Step.of(
         "take", "grasp", "port", "plug", "Take the plug.", [_crit("lift_mm", 20)], hold_after=True
     )
-    assert "insert pushes a member the tool holds" in check_plan(_spec([port], [insert]))[0][0]
-    assert check_plan(_spec([port], [grasp, insert])) == ([], [])
+    assert check_plan(_spec([port], [insert])) == ([], [])  # S2's insert picks the plug itself
+    assert check_plan(_spec([port], [grasp, insert])) == ([], [])  # or uses the held plug
     deep = Step.of("plug_in", "insert", "port", "plug", "Plug it in.", [_crit("depth_mm", 20)])
     assert "cannot be reached" in check_plan(_spec([port], [grasp, deep]))[0][0]
     lid = ObjectInstance.of("lid", "hinged_lid", "Lid", ObjectPose(0, 0, 0), max_angle_deg=100)
@@ -276,8 +276,10 @@ def test_insert_needs_a_held_member_and_criteria_must_be_reachable() -> None:
         step = Step.of("open", "hook_pull", "lid", "handle", "Open it.", [_crit("angle_deg", value)])
         assert len(check_plan(_spec([lid], [step]))[0]) == n
     latch = ObjectInstance.of("latch", "quarter_turn_latch", "Latch", ObjectPose(0, 0, 0), turn_deg=90)
-    ccw = Step.of("turn", "twist", "latch", "head", "Turn it.", [_crit("angle_deg", hi=-120)])
-    assert "120 cannot be reached" in check_plan(_spec([latch], [ccw]))[0][0]
+    far = Step.of(
+        "turn", "twist", "latch", "head", "Turn it.", [_crit("angle_deg", 120)], params={"direction": "ccw"}
+    )
+    assert "120 cannot be reached" in check_plan(_spec([latch], [far]))[0][0]
     drawer = ObjectInstance.of(
         "drawer", "drawer", "Drawer", ObjectPose(0, 0, 0), travel_mm=200, pull_force_n=30
     )
@@ -294,47 +296,198 @@ def test_insert_needs_a_held_member_and_criteria_must_be_reachable() -> None:
     assert problems == [
         "steps[0] (open): max_force_n 20 is below the 30 N it takes (the drawer's pull_force_n)"
     ]
+    shut = Step.of("shut", "push", "drawer", "drawer", "Shut it.", [_crit("travel_mm", hi=5)])
+    assert check_plan(_spec([drawer], [shut]))[0] == []  # 30 N fits the default 30 N push
+    heavy = ObjectInstance.of("drawer", "drawer", "Drawer", ObjectPose(0, 0, 0), pull_force_n=35)
+    assert "without a max_force_n the push stops at 30 N" in check_plan(_spec([heavy], [shut]))[0][0]
+    capped = Step.of(
+        "shut",
+        "push",
+        "drawer",
+        "drawer",
+        "Shut it.",
+        [_crit("travel_mm", hi=5)],
+        constraints=StepConstraints(max_force_n=40),
+    )
+    assert "lets the push reach 32 N (80 %)" in check_plan(_spec([heavy], [capped]))[0][0]
 
 
-def test_twist_torque_is_checked_against_the_wrist_the_cap_and_the_criterion() -> None:
-    thread = ObjectInstance.of(
-        "nut",
-        "threaded_joint",
-        "Nut",
-        ObjectPose(0, 0, 0),
-        engage_turns=3,
-        start_torque_nm=0.2,
-        final_torque_nm=6,
+def _thread(**params: Any) -> ObjectInstance:
+    base = {"engage_turns": 3, "start_torque_nm": 0.2, "final_torque_nm": 6, "pitch_mm": 1.5, "chamfer_mm": 1}
+    return ObjectInstance.of("nut", "threaded_joint", "Nut", ObjectPose(0, 0, 0), **{**base, **params})
+
+
+def _insert(**kwargs: Any) -> Step:
+    return Step.of(
+        "start", "insert", "nut", "member", "Push it onto the thread.", [_crit("depth_mm", 4)], **kwargs
     )
-    start = Step.of(
-        "start",
-        "twist",
-        "nut",
-        "member",
-        "Start it.",
-        [_crit("turns", 1)],
-        constraints=StepConstraints(max_torque_nm=1),
+
+
+def _turn(rows: Sequence[SuccessCriterion], direction: str = "cw", **kwargs: Any) -> Step:
+    return Step.of(
+        "tighten", "twist", "nut", "member", "Run it down.", rows, params={"direction": direction}, **kwargs
     )
-    assert check_plan(_spec([thread], [start])) == ([], [])  # starting needs only the start torque
-    seat = Step.of(
-        "seat",
-        "twist",
-        "nut",
-        "member",
-        "Seat it.",
-        [_crit("turns", 3), _crit("torque_nm", hi=4)],
-        constraints=StepConstraints(max_torque_nm=5),
-    )
-    problems = check_plan(_spec([thread], [seat]))[0]
+
+
+def test_a_threaded_member_is_inserted_then_twisted_clockwise_and_never_picked() -> None:
+    nut = _thread()
+    assert check_plan(_spec([nut], [_insert(), _turn([_crit("turns", 3)])])) == ([], [])
+    pick = Step.of("take", "grasp", "nut", "member", "Take the nut.", [_crit("lift_mm", 20)])
+    problems = check_plan(_spec([nut], [pick, _insert(), _turn([_crit("turns", 3)])]))[0]
     assert problems == [
-        "steps[0] (seat): max_torque_nm 5 is below the 6 N m it takes (the thread's final_torque_nm (seating it))",
-        "steps[0] (seat): torque_nm at_most 4 is below the 6 N m it takes (the thread's final_torque_nm (seating it))",
+        (
+            "steps[0] (take): a threaded member lives on its stub and cannot be picked up or moved; leave the pick "
+            "out (insert and twist grip the member in place)"
+        )
+    ]
+    alone = check_plan(_spec([nut], [_turn([_crit("turns", 3)])]))[0]
+    assert alone == [
+        (
+            "steps[0] (tighten): a threaded member starts on its lead-in, free of the thread; insert 'nut' to the "
+            "thread start before this twist"
+        )
+    ]
+    backwards = check_plan(_spec([nut], [_insert(), _turn([_crit("turns", 3)], "ccw")]))[0]
+    assert backwards == [
+        (
+            "steps[1] (tighten): a threaded member tightens clockwise from its start; twist it cw (ccw meets the "
+            "thread start)"
+        )
+    ]
+    held = check_plan(_spec([nut], [_insert(hold_after=True), _turn([_crit("turns", 3)])]))[0]
+    assert held == [
+        (
+            "steps[0] (start): end the insert of a threaded member with hold_after false; the twist grips it "
+            "again in place"
+        )
+    ]
+    deep = Step.of("start", "insert", "nut", "member", "Push it.", [_crit("depth_mm", 6)])
+    assert check_plan(_spec([nut], [deep]))[0] == [
+        (
+            "steps[0] (start): depth_mm 6 cannot be reached; 'nut' stops at 4 (the thread start, chamfer_mm + 3 mm; "
+            "a twist runs it further)"
+        )
+    ]
+    seated = _turn([_crit("depth_mm", 8.5)])  # 4 mm lead-in + 3 turns x 1.5 mm
+    assert check_plan(_spec([nut], [_insert(), seated])) == ([], [])
+    snug = _turn([_crit("torque_nm", 5)])  # tighten until snug: a goal on its own
+    assert check_plan(_spec([nut], [_insert(), snug])) == ([], [])
+
+
+def test_latches_and_valves_open_counter_clockwise_and_take_no_torque_stop() -> None:
+    latch = ObjectInstance.of("latch", "quarter_turn_latch", "Latch", ObjectPose(0, 0, 0), torque_nm=0.8)
+    opens = Step.of(
+        "open", "twist", "latch", "head", "Open it.", [_crit("angle_deg", 85)], params={"direction": "ccw"}
+    )
+    assert check_plan(_spec([latch], [opens])) == ([], [])
+    wrong = Step.of(
+        "open", "twist", "latch", "head", "Open it.", [_crit("angle_deg", 85)], params={"direction": "cw"}
+    )
+    assert check_plan(_spec([latch], [wrong]))[0] == [
+        (
+            "steps[0] (open): a latch starts closed at its stop and opens counter-clockwise; twist it ccw (cw "
+            "meets the stop)"
+        )
+    ]
+    back = Step.of(
+        "lock",
+        "twist",
+        "latch",
+        "head",
+        "Lock it again.",
+        [_crit("angle_deg", hi=5)],
+        params={"direction": "cw"},
+    )
+    assert check_plan(_spec([latch], [opens, back])) == ([], [])  # turning back what an earlier twist opened
+    stop = Step.of(
+        "open",
+        "twist",
+        "latch",
+        "head",
+        "Open it.",
+        [_crit("angle_deg", 85), _crit("torque_nm", 0.8)],
+        params={"direction": "ccw"},
+    )
+    assert (
+        "a twist stops as soon as the roll torque reaches a torque_nm at_least"
+        in check_plan(_spec([latch], [stop]))[0][0]
+    )
+    valve = ObjectInstance.of("valve", "handwheel_valve", "Valve", ObjectPose(0, 0, 0), travel_deg=90)
+    shut = Step.of(
+        "shut", "twist", "valve", "wheel", "Close it.", [_crit("angle_deg", hi=5)], params={"direction": "cw"}
+    )
+    assert "a valve starts closed at its stop" in check_plan(_spec([valve], [shut]))[0][0]
+
+
+def test_twist_torque_is_checked_against_its_share_the_wrist_and_the_criterion() -> None:
+    nut = _thread()
+    start = _turn([_crit("turns", 1)], constraints=StepConstraints(max_torque_nm=3))
+    # one turn of three: 0.2 + (6 - 0.2) / 3 = 2.13 N m, under 90 % of 3 N m
+    assert check_plan(_spec([nut], [_insert(), start])) == ([], [])
+    seat = _turn([_crit("turns", 3), _crit("torque_nm", hi=4)], constraints=StepConstraints(max_torque_nm=6))
+    problems = check_plan(_spec([nut], [_insert(), seat]))[0]
+    why = "the thread's torque there, start_torque_nm rising to final_torque_nm"
+    assert problems == [
+        f"steps[1] (tighten): max_torque_nm 6 lets the twist turn up to 5.4 N m (90 %), below the 6 N m it takes ({why})",
+        f"steps[1] (tighten): torque_nm at_most 4 is below the 6 N m it takes ({why})",
     ]
     valve = ObjectInstance.of(
-        "valve", "handwheel_valve", "Valve", ObjectPose(0, 0, 0), torque_nm=18, travel_deg=360
+        "valve", "handwheel_valve", "Valve", ObjectPose(0, 0, 0), torque_nm=14.5, travel_deg=360
     )
-    turn = Step.of("turn", "twist", "valve", "wheel", "Turn it.", [_crit("angle_deg", 360)])
-    assert "the wrist roll gives at most 15 N m" in check_plan(_spec([valve], [turn]))[0][0]
+    turn = Step.of(
+        "turn", "twist", "valve", "wheel", "Turn it.", [_crit("angle_deg", 360)], params={"direction": "ccw"}
+    )
+    assert (
+        "but a twist turns at most 14.25 N m (95 % of the wrist roll's 15 N m)"
+        in check_plan(_spec([valve], [turn]))[0][0]
+    )
+
+
+def test_lids_that_fall_shut_or_sit_on_another_bin_height_are_warned_about() -> None:
+    tote = ObjectInstance.of("tote", "bin", "Tote", ObjectPose(0, 0, 0), height_mm=200)
+    lid = ObjectInstance.of("lid", "hinged_lid", "Lid", ObjectPose(0, 0, 0), max_angle_deg=85)
+    open_lid = Step.of("open", "hook_pull", "lid", "handle", "Open it.", [_crit("angle_deg", 80)])
+    problems, warnings = check_plan(_spec([tote, lid], [open_lid]))
+    assert problems == [] and warnings == [
+        "objects[0] (tote): no step acts on it or places into it",
+        (
+            "objects[1] (lid): a lid stays open only past vertical; with max_angle_deg 85 it falls shut when the "
+            "tool lets go"
+        ),
+        (
+            "objects[1] (lid): a lid's closed underside is 120 mm above the table; the bin 'tote' under it is 200 "
+            "mm tall"
+        ),
+    ]
+
+
+def test_the_simulator_numbers_match_the_template_and_primitive_modules() -> None:
+    from types import SimpleNamespace
+
+    from rtt.studio.engineer import catalog as cat
+    from rtt.studio.engineer.checks import DEPTH_TOLERANCE_MM
+    from rtt.studio.primitives import insert, push, twist
+    from rtt.studio.primitives._common import force_limit, torque_limit
+    from rtt.studio.templates.handwheel_valve import WHEEL_Z
+    from rtt.studio.templates.hinged_lid import LID_HINGE_HEIGHT
+    from rtt.studio.templates.threaded_joint import lead_of
+
+    for kind, (_, _, w) in twist.AXIS_SITE.items():
+        assert cat.TWIST_SENSE[kind] == ("ccw" if w > 0 else "cw"), kind
+    assert set(cat.TWIST_SENSE) == set(twist.AXIS_SITE)
+    assert lead_of(0.0) * 1000.0 == pytest.approx(cat.THREAD_LEAD_EXTRA_MM)
+    assert insert.PUSH_N == push.PUSH_N == cat.DEFAULT_PUSH_N
+    ctx = SimpleNamespace(
+        step=SimpleNamespace(constraints=StepConstraints(max_force_n=10, max_torque_nm=10)),
+        scene=SimpleNamespace(wrist=SimpleNamespace(roll_torque_nm=15.0)),
+    )
+    assert force_limit(ctx, 30.0) == pytest.approx(cat.FORCE_SHARE * 10)  # type: ignore[arg-type]
+    assert torque_limit(ctx) == pytest.approx(cat.TORQUE_SHARE * 10)  # type: ignore[arg-type]
+    ctx.step.constraints = StepConstraints()
+    assert torque_limit(ctx) == pytest.approx(cat.wrist_twist_limit())  # type: ignore[arg-type]
+    assert LID_HINGE_HEIGHT * 1000.0 == pytest.approx(cat.LID_HINGE_MM)
+    assert WHEEL_Z * 1000.0 == pytest.approx(cat.WHEEL_HEIGHT_MM)
+    assert web_catalog()["sim"]["depth_tolerance_mm"] == DEPTH_TOLERANCE_MM
 
 
 def test_refs_and_refusals() -> None:
@@ -717,7 +870,9 @@ def test_parity_cases_cover_valid_refused_and_every_kind_of_problem() -> None:
         "still held",
         "must be unique",
         "at most 12 steps",
-        "insert pushes",
+        "opens counter-clockwise",
+        "lives on its stub",
+        "before this twist",
         "label is longer",
     ):
         assert fragment in joined, fragment
@@ -880,10 +1035,14 @@ def test_api_validates_edited_plans(api: Any) -> None:
     client, _, _ = api
     args = hero_args("h3_cabinet")
     res = client.post("/studio/validate", json={"plan": args}).json()
-    assert res["status"] == "valid" and res["task_id"] and res["fidelity"]["unlock_latch"] == "approximation"
-    args["steps"].insert(0, args["steps"].pop(4))
+    assert (
+        res["status"] == "valid"
+        and res["task_id"]
+        and res["fidelity"][args["steps"][0]["id"]] == "approximation"
+    )
+    args["steps"][0]["params"]["direction"] = "cw"
     res = client.post("/studio/validate", json={"plan": args}).json()
-    assert res["status"] == "invalid" and any("insert pushes" in p for p in res["problems"])
+    assert res["status"] == "invalid" and any("twist it ccw" in p for p in res["problems"])
     big = {"plan": {"title": "x" * (300 * 1024)}}
     assert client.post("/studio/validate", json=big).status_code == 413
     assert PRIMITIVES  # the contract is importable next to the router

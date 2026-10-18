@@ -30,7 +30,7 @@ from rtt.studio.types import CONTRACT_VERSION
 
 __all__ = ["RECORDED_UPLOAD", "parity_cases", "recorded_plans", "write_web_data"]
 
-RECORDED_UPLOAD: Final = Path(__file__).with_name("recorded") / "upload-2026-10-18"
+RECORDED_UPLOAD: Final = Path(__file__).with_name("recorded") / "upload-2026-10-18-s2"
 FILES: Final = ("catalog.json", "recorded.json", "parity.json")
 
 
@@ -183,6 +183,64 @@ def _edits() -> list[tuple[str, str, Callable[[dict[str, Any]], None]]]:
             extra["id"] = f"extra_{i}"
             a["steps"].append(extra)
 
+    def nth(primitive: str, n: int, key: str, value: Any) -> Callable[[dict[str, Any]], None]:
+        return lambda a: [x for x in a["steps"] if x["primitive"] == primitive][n].__setitem__(key, value)
+
+    def nth_param(primitive: str, n: int, key: str, value: Any) -> Callable[[dict[str, Any]], None]:
+        return lambda a: [x for x in a["steps"] if x["primitive"] == primitive][n]["params"].__setitem__(
+            key, value
+        )
+
+    def add_step(index: int, step: dict[str, Any]) -> Callable[[dict[str, Any]], None]:
+        return lambda a: a["steps"].insert(index if index >= 0 else len(a["steps"]), copy.deepcopy(step))
+
+    def no_cons(primitive: str) -> Callable[[dict[str, Any]], None]:
+        return lambda a: _step(a, primitive).__setitem__(
+            "constraints",
+            {k: None for k in ("max_force_n", "max_torque_nm", "precision_mm", "precision_deg")},
+        )
+
+    none_cons = {"max_force_n": None, "max_torque_nm": None, "precision_mm": None, "precision_deg": None}
+    grasp_coupling = {
+        "id": "pick_coupling",
+        "primitive": "grasp",
+        "object": "pipe_coupling",
+        "handle": "member",
+        "target": None,
+        "description": "Pick the coupling up.",
+        "params": {"lift_mm": 30, "hold_s": 1},
+        "constraints": none_cons,
+        "success": [{"quantity": "lift_mm", "at_least": 20, "at_most": None}],
+        "after": [],
+        "hold_after": False,
+    }
+    close_valve = {
+        "id": "close_valve",
+        "primitive": "twist",
+        "object": "handwheel",
+        "handle": "wheel",
+        "target": None,
+        "description": "Turn the handwheel back shut.",
+        "params": {"direction": "cw", "speed_deg_s": 60},
+        "constraints": none_cons,
+        "success": [{"quantity": "angle_deg", "at_least": None, "at_most": 5}],
+        "after": [],
+        "hold_after": False,
+    }
+    grasp_plug = {
+        "id": "take_plug",
+        "primitive": "grasp",
+        "object": "service_port",
+        "handle": "plug",
+        "target": None,
+        "description": "Take the test connector.",
+        "params": {"lift_mm": 60, "hold_s": 0.5},
+        "constraints": none_cons,
+        "success": [{"quantity": "lift_mm", "at_least": 40, "at_most": None}],
+        "after": [],
+        "hold_after": True,
+    }
+    angle = {"quantity": "angle_deg", "at_least": 70, "at_most": None}
     return [
         ("valid_h1", "h1_tote", lambda a: None),
         ("valid_h2", "h2_coupling", lambda a: None),
@@ -232,11 +290,7 @@ def _edits() -> list[tuple[str, str, Callable[[dict[str, Any]], None]]]:
         ),
         ("criteria_none", "h1_tote", crit("push", [])),
         ("constraint_high", "h3_cabinet", cons("insert", "max_force_n", 900)),
-        (
-            "in_target_without_target",
-            "h3_cabinet",
-            crit("grasp", [{"quantity": "in_target", "at_least": 1, "at_most": None}]),
-        ),
+        ("in_target_without_target", "h1_tote", sfield("grasp", "target", None)),
         ("target_not_bin", "h1_tote", sfield("grasp", "target", "tote_lid")),
         ("target_unknown", "h1_tote", sfield("grasp", "target", "nowhere")),
         ("target_and_hold", "h1_tote", sfield("grasp", "hold_after", True)),
@@ -245,10 +299,7 @@ def _edits() -> list[tuple[str, str, Callable[[dict[str, Any]], None]]]:
         ("description_empty", "h1_tote", sfield("push", "description", "")),
         ("description_long", "h1_tote", sfield("push", "description", "x" * 201)),
         ("object_deleted", "h1_tote", drop_object("bin")),
-        ("step_deleted_insert_unheld", "h2_coupling", drop_step("grasp")),
-        ("steps_reordered", "h2_coupling", move(1, 0)),
-        ("grasp_moved_first", "h3_cabinet", move(3, 0)),
-        ("insert_moved_first", "h3_cabinet", move(4, 0)),
+        ("steps_reordered", "h1_tote", move(3, 0)),
         ("after_later_step", "h1_tote", sfield("hook_pull", "after", ["close_lid"])),
         ("duplicate_step", "h1_tote", dup_step("push")),
         ("too_many_steps", "e3_isolation_valve", many_steps),
@@ -262,7 +313,11 @@ def _edits() -> list[tuple[str, str, Callable[[dict[str, Any]], None]]]:
             "h2_coupling",
             crit("twist", [{"quantity": "turns", "at_least": 9, "at_most": None}]),
         ),
-        ("wrist_torque", "e3_isolation_valve", setp("handwheel_valve", "torque_nm", 18)),
+        (
+            "wrist_torque",
+            "e3_isolation_valve",
+            chain(setp("handwheel_valve", "torque_nm", 18), no_cons("twist")),
+        ),
         ("torque_cap_low", "e3_isolation_valve", cons("twist", "max_torque_nm", 1)),
         (
             "force_cap_low",
@@ -270,14 +325,68 @@ def _edits() -> list[tuple[str, str, Callable[[dict[str, Any]], None]]]:
             chain(setp("port_plug", "insert_force_n", 30), cons("insert", "max_force_n", 10)),
         ),
         (
-            "lift_over_param",
+            "force_default_low",
             "h3_cabinet",
-            crit("grasp", [{"quantity": "lift_mm", "at_least": 150, "at_most": None}]),
+            chain(setp("port_plug", "insert_force_n", 40), cons("insert", "max_force_n", None)),
+        ),
+        (
+            "lift_over_param",
+            "h1_tote",
+            crit("grasp", [{"quantity": "lift_mm", "at_least": 200, "at_most": None}]),
         ),
         ("label_long", "h1_tote", lambda a: _object(a, "bin").__setitem__("label", "L" * 61)),
         ("label_empty", "h1_tote", lambda a: _object(a, "bin").__setitem__("label", "")),
         ("title_empty", "h1_tote", lambda a: a.__setitem__("title", "")),
-        ("last_step_holds", "h3_cabinet", chain(drop_step("insert"))),
+        ("last_step_holds", "h2_coupling", sfield("twist", "hold_after", True)),
+        # the simulator's conventions (S2)
+        ("twist_cw_latch", "h3_cabinet", nth_param("twist", 0, "direction", "cw")),
+        ("twist_cw_valve", "h3_cabinet", nth_param("twist", 1, "direction", "cw")),
+        ("twist_back_after_open", "h3_cabinet", add_step(3, close_valve)),
+        ("twist_ccw_thread", "h2_coupling", sparam("twist", "direction", "ccw")),
+        ("grasp_on_thread", "h2_coupling", add_step(0, grasp_coupling)),
+        ("twist_without_insert", "h2_coupling", drop_step("insert")),
+        (
+            "insert_too_deep",
+            "h2_coupling",
+            crit("insert", [{"quantity": "depth_mm", "at_least": 10, "at_most": None}]),
+        ),
+        ("insert_holds_thread", "h2_coupling", sfield("insert", "hold_after", True)),
+        ("thread_torque_capped", "h2_coupling", setp("threaded_joint", "final_torque_nm", 12)),
+        (
+            "thread_torque_wrist",
+            "h2_coupling",
+            chain(
+                setp("threaded_joint", "final_torque_nm", 18),
+                no_cons("twist"),
+                crit("twist", [{"quantity": "turns", "at_least": 3, "at_most": None}]),
+            ),
+        ),
+        (
+            "latch_torque_stop",
+            "h3_cabinet",
+            nth("twist", 0, "success", [angle, {"quantity": "torque_nm", "at_least": 0.5, "at_most": None}]),
+        ),
+        (
+            "snug_goal",
+            "h2_coupling",
+            crit("twist", [{"quantity": "torque_nm", "at_least": 5, "at_most": None}]),
+        ),
+        (
+            "push_drawer_default",
+            "e1_drawer_kitting",
+            chain(setp("drawer", "pull_force_n", 40), no_cons("push")),
+        ),
+        (
+            "push_drawer_share",
+            "e1_drawer_kitting",
+            chain(setp("drawer", "pull_force_n", 20), cons("push", "max_force_n", 20)),
+        ),
+        ("plug_grasped_first", "h3_cabinet", add_step(3, grasp_plug)),
+        (
+            "lid_low_stop",
+            "h1_tote",
+            chain(setp("hinged_lid", "max_angle_deg", 80), crit("hook_pull", [angle])),
+        ),
     ]
 
 

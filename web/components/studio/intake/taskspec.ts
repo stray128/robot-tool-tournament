@@ -69,6 +69,19 @@ export interface Catalog {
   quantities: QuantityDesc[];
   handles: Record<string, string>;
   library_parts: string[];
+  /** The simulator's conventions (track S2): directions, captive threads, force and torque shares. */
+  sim: {
+    twist_sense: Record<string, "cw" | "ccw">;
+    no_pick: string[];
+    picks: string[];
+    thread_lead_extra_mm: number;
+    force_share: number;
+    default_push_n: number;
+    torque_share: number;
+    wrist_torque_share: number;
+    lid_hinge_mm: number;
+    depth_tolerance_mm: number;
+  };
   limit_quantities: string[];
   goal_extra: string[];
   limits: {
@@ -582,42 +595,56 @@ function demand(c: Criterion): number | null {
   return out;
 }
 
-function ceiling(kind: string, p: Record<string, ParamValue>, q: string): [number, string] | null {
+const TWIST_NAMES: Record<string, string> = { quarter_turn_latch: "latch", handwheel_valve: "valve", threaded_joint: "threaded member" };
+
+function lead(catalog: Catalog, p: Record<string, ParamValue>): number {
+  return Number(p.chamfer_mm) + catalog.sim.thread_lead_extra_mm;
+}
+
+function ceiling(catalog: Catalog, kind: string, p: Record<string, ParamValue>, q: string, prim: string): [number, string] | null {
   const n = (k: string) => Number(p[k]);
   if (kind === "hinged_lid" && q === "angle_deg") return [n("max_angle_deg"), "its hinge stop max_angle_deg"];
   if (kind === "drawer" && q === "travel_mm") return [n("travel_mm"), "its travel_mm"];
   if (kind === "quarter_turn_latch" && q === "angle_deg") return [n("turn_deg"), "its turn_deg"];
   if (kind === "handwheel_valve" && q === "angle_deg") return [n("travel_deg"), "its travel_deg"];
   if (kind === "threaded_joint" && q === "turns") return [n("engage_turns"), "its engage_turns"];
-  if (kind === "threaded_joint" && q === "depth_mm") return [n("engage_turns") * n("pitch_mm") + 0.5, "its seated depth engage_turns x pitch_mm"];
+  if (kind === "threaded_joint" && q === "depth_mm") {
+    if (prim === "insert") return [lead(catalog, p), "the thread start, chamfer_mm + 3 mm; a twist runs it further"];
+    const seated = lead(catalog, p) + n("engage_turns") * n("pitch_mm");
+    return [seated + catalog.sim.depth_tolerance_mm, "seated, chamfer_mm + 3 mm + engage_turns x pitch_mm"];
+  }
   if (kind === "threaded_joint" && q === "angle_deg") return [360 * n("engage_turns"), "its engage_turns x 360 deg"];
   if (kind === "port_plug" && q === "depth_mm") return [n("depth_mm"), "the socket's depth_mm"];
   return null;
 }
 
-function torqueNeeded(kind: string, p: Record<string, ParamValue>, s: PlanStep): [number, string] | null {
+function torqueNeeded(catalog: Catalog, kind: string, p: Record<string, ParamValue>, s: PlanStep): [number, string] | null {
   if (s.primitive !== "twist") return null;
   if (kind === "quarter_turn_latch") return [Number(p.torque_nm), "the latch's torque_nm"];
   if (kind === "handwheel_valve") return [Number(p.torque_nm), "the valve's torque_nm"];
   if (kind === "threaded_joint") {
     const engage = Number(p.engage_turns);
-    const seated = engage * Number(p.pitch_mm);
-    let seats = false;
+    const seat = engage * Number(p.pitch_mm);
+    let share = 0;
     for (const c of s.success) {
       const d = demand(c);
       if (d === null) continue;
-      if (c.quantity === "turns" && d >= 0.9 * engage) seats = true;
-      if (c.quantity === "angle_deg" && d >= 0.9 * 360 * engage) seats = true;
-      if (c.quantity === "depth_mm" && d >= 0.9 * seated) seats = true;
+      if (c.quantity === "turns") share = Math.max(share, d / engage);
+      else if (c.quantity === "angle_deg") share = Math.max(share, d / (360 * engage));
+      else if (c.quantity === "depth_mm") share = Math.max(share, (d - lead(catalog, p)) / seat);
     }
-    return seats ? [Number(p.final_torque_nm), "the thread's final_torque_nm (seating it)"] : [Number(p.start_torque_nm), "the thread's start_torque_nm"];
+    share = Math.min(1, Math.max(0, share));
+    const start = Number(p.start_torque_nm);
+    const final = Number(p.final_torque_nm);
+    return [start + (final - start) * share, "the thread's torque there, start_torque_nm rising to final_torque_nm"];
   }
   return null;
 }
 
-function forceNeeded(kind: string, p: Record<string, ParamValue>, s: PlanStep): [number, string] | null {
-  if (kind === "drawer" && (s.primitive === "hook_pull" || s.primitive === "push")) return [Number(p.pull_force_n), "the drawer's pull_force_n"];
-  if (kind === "port_plug" && s.primitive === "insert") return [Number(p.insert_force_n), "the plug's insert_force_n"];
+function forceNeeded(kind: string, p: Record<string, ParamValue>, s: PlanStep): [number, string, boolean] | null {
+  if (kind === "drawer" && s.primitive === "hook_pull") return [Number(p.pull_force_n), "the drawer's pull_force_n", false];
+  if (kind === "drawer" && s.primitive === "push") return [Number(p.pull_force_n), "the drawer's pull_force_n", true];
+  if (kind === "port_plug" && s.primitive === "insert") return [Number(p.insert_force_n), "the plug's insert_force_n", true];
   return null;
 }
 
@@ -645,25 +672,48 @@ function checkParts(catalog: Catalog, objects: PlanObject[], steps: PlanStep[], 
     if (!used.has(key)) out.push(`objects: the uploaded part upload:${key} is not used; model it as a part with shape mesh and ref upload:${key}`);
   }
   const byName = new Map<string, PlanObject>(objects.map((o) => [o.name, o]));
-  const wrist = catalog.limits.roll_torque_nm;
+  const sim = catalog.sim;
+  const wrist = sim.wrist_torque_share * catalog.limits.roll_torque_nm;
   steps.forEach((s, i) => {
     const where = `steps[${i}] (${s.id})`;
     const obj = byName.get(s.object);
     const info = primitive(catalog, s.primitive) as PrimitiveDesc;
     if (!obj || !info.objects.includes(obj.kind)) return;
     const t = template(catalog, obj.kind) as TemplateDesc;
+    const kind = obj.kind;
+    const twist = s.primitive === "twist";
     const goals = goalQuantities(catalog, t);
-    if (!s.success.some((c) => goals.has(c.quantity))) {
+    const snug = twist && s.success.some((c) => c.quantity === "torque_nm" && c.at_least !== null);
+    if (!snug && !s.success.some((c) => goals.has(c.quantity))) {
       const usable = [...goals].filter((q) => t.quantities.includes(q) || info.quantities.includes(q)).sort();
+      if (twist) usable.push("torque_nm at_least");
       out.push(`${where}: add a criterion on what the step achieves (${usable.join(", ")}); force, torque, slip and penetration limits alone do not say when it succeeded`);
     }
     if (s.success.some((c) => c.quantity === "in_target") && s.target === null) out.push(`${where}: in_target needs a target bin`);
     if (s.target !== null && s.hold_after) out.push(`${where}: placing ${pyRepr(s.object)} in ${pyRepr(s.target)} releases it; set hold_after false`);
-    if (s.primitive === "insert") {
-      const prev = i > 0 ? steps[i - 1] : undefined;
-      if (!prev || prev.object !== s.object || !prev.hold_after) {
-        out.push(`${where}: insert pushes a member the tool holds; put a grasp of ${pyRepr(s.object)} with hold_after true right before it`);
+    if (sim.picks.includes(s.primitive) && sim.no_pick.includes(kind)) {
+      out.push(`${where}: a threaded member lives on its stub and cannot be picked up or moved; leave the pick out (insert and twist grip the member in place)`);
+    }
+    const sense = sim.twist_sense[kind];
+    if (twist && sense && s.params.direction !== sense) {
+      const back = steps.slice(0, i).some((p) => p.primitive === "twist" && p.object === s.object && p.params.direction === sense);
+      if (!back) {
+        const name = TWIST_NAMES[kind] as string;
+        out.push(
+          sense === "ccw"
+            ? `${where}: a ${name} starts closed at its stop and opens counter-clockwise; twist it ccw (cw meets the stop)`
+            : `${where}: a ${name} tightens clockwise from its start; twist it cw (ccw meets the thread start)`,
+        );
       }
+    }
+    if (s.primitive === "insert" && kind === "threaded_joint" && s.hold_after) {
+      out.push(`${where}: end the insert of a threaded member with hold_after false; the twist grips it again in place`);
+    }
+    if (twist && (kind === "quarter_turn_latch" || kind === "handwheel_valve") && s.success.some((c) => c.quantity === "torque_nm" && c.at_least !== null)) {
+      out.push(`${where}: a twist stops as soon as the roll torque reaches a torque_nm at_least, and a ${TWIST_NAMES[kind]} resists most before it turns; drop torque_nm at_least here (it tightens a thread until snug)`);
+    }
+    if (twist && kind === "threaded_joint" && !steps.slice(0, i).some((p) => p.primitive === "insert" && p.object === s.object)) {
+      out.push(`${where}: a threaded member starts on its lead-in, free of the thread; insert ${pyRepr(s.object)} to the thread start before this twist`);
     }
     for (const c of s.success) {
       const d = demand(c);
@@ -673,25 +723,64 @@ function checkParts(catalog: Catalog, objects: PlanObject[], steps: PlanStep[], 
         if (d > own) out.push(`${where}: ${c.quantity} at_least ${num(d)} is more than the step's own ${c.quantity} param (${num(own)}); raise the param or lower the criterion`);
         continue;
       }
-      const ceil = ceiling(obj.kind, obj.params, c.quantity);
+      const ceil = ceiling(catalog, kind, obj.params, c.quantity, s.primitive);
       if (ceil && d > ceil[0] + 1e-9) out.push(`${where}: ${c.quantity} ${num(d)} cannot be reached; ${pyRepr(s.object)} stops at ${num(ceil[0])} (${ceil[1]})`);
     }
-    const tq = torqueNeeded(obj.kind, obj.params, s);
+    const tq = torqueNeeded(catalog, kind, obj.params, s);
     if (tq) {
-      const [torque, why] = tq;
-      if (torque > wrist) out.push(`${where}: it takes ${num(torque)} N m (${why}) but the wrist roll gives at most ${num(wrist)} N m; lower the torque or refuse the step`);
-      const cap = s.constraints.max_torque_nm;
-      if (cap !== null && cap < torque) out.push(`${where}: max_torque_nm ${num(cap)} is below the ${num(torque)} N m it takes (${why})`);
+      let [torque, why] = tq;
       for (const c of s.success) {
-        if (c.quantity === "torque_nm" && c.at_most !== null && c.at_most < torque) {
-          out.push(`${where}: torque_nm at_most ${num(c.at_most)} is below the ${num(torque)} N m it takes (${why})`);
+        if (c.quantity === "torque_nm" && c.at_least !== null && c.at_least > torque) {
+          torque = c.at_least;
+          why = "its torque_nm at_least criterion";
+        }
+      }
+      const cap = s.constraints.max_torque_nm;
+      const allowed = cap !== null ? Math.min(wrist, sim.torque_share * cap) : wrist;
+      if (torque > allowed + 1e-9) {
+        if (cap !== null && sim.torque_share * cap < wrist) {
+          out.push(`${where}: max_torque_nm ${num(cap)} lets the twist turn up to ${num(sim.torque_share * cap)} N m (${num(100 * sim.torque_share)} %), below the ${num(torque)} N m it takes (${why})`);
+        } else {
+          out.push(`${where}: it takes ${num(torque)} N m (${why}) but a twist turns at most ${num(wrist)} N m (95 % of the wrist roll's 15 N m); lower the torque or refuse the step`);
+        }
+      }
+      for (const c of s.success) {
+        if (c.quantity === "torque_nm" && c.at_most !== null && c.at_most < tq[0]) {
+          out.push(`${where}: torque_nm at_most ${num(c.at_most)} is below the ${num(tq[0])} N m it takes (${tq[1]})`);
         }
       }
     }
-    const fq = forceNeeded(obj.kind, obj.params, s);
+    const fq = forceNeeded(kind, obj.params, s);
     if (fq) {
+      const [force, why, shared] = fq;
       const cap = s.constraints.max_force_n;
-      if (cap !== null && cap < fq[0]) out.push(`${where}: max_force_n ${num(cap)} is below the ${num(fq[0])} N it takes (${fq[1]})`);
+      if (!shared) {
+        if (cap !== null && cap < force) out.push(`${where}: max_force_n ${num(cap)} is below the ${num(force)} N it takes (${why})`);
+      } else if (cap !== null && sim.force_share * cap < force) {
+        out.push(`${where}: max_force_n ${num(cap)} lets the push reach ${num(sim.force_share * cap)} N (${num(100 * sim.force_share)} %), below the ${num(force)} N it takes (${why})`);
+      } else if (cap === null && sim.default_push_n < force) {
+        out.push(`${where}: without a max_force_n the push stops at ${num(sim.default_push_n)} N, below the ${num(force)} N it takes (${why}); set max_force_n`);
+      }
+    }
+  });
+  return out;
+}
+
+/** `_layout_warnings`: lids the simulator cannot keep open, and lids over a bin of another height. */
+function layoutWarnings(catalog: Catalog, objects: PlanObject[], steps: PlanStep[]): string[] {
+  const out: string[] = [];
+  const opened = new Set(steps.filter((s) => s.primitive === "hook_pull").map((s) => s.object));
+  const hinge = catalog.sim.lid_hinge_mm;
+  objects.forEach((o, i) => {
+    if (o.kind !== "hinged_lid" || o.params.orientation !== "lid") return;
+    const where = `objects[${i}] (${o.name})`;
+    const stop = Number(o.params.max_angle_deg);
+    if (opened.has(o.name) && stop <= 90) out.push(`${where}: a lid stays open only past vertical; with max_angle_deg ${num(stop)} it falls shut when the tool lets go`);
+    for (const b of objects) {
+      if (b.kind !== "bin") continue;
+      const same = Math.abs(b.pose.x_mm - o.pose.x_mm) < 1 && Math.abs(b.pose.y_mm - o.pose.y_mm) < 1;
+      const height = Number(b.params.height_mm);
+      if (same && Math.abs(height - hinge) > 1) out.push(`${where}: a lid's closed underside is ${num(hinge)} mm above the table; the bin ${pyRepr(b.name)} under it is ${num(height)} mm tall`);
     }
   });
   return out;
@@ -731,6 +820,7 @@ export function validatePlan(catalog: Catalog, raw: PlanArgs, uploads: string[] 
     parsed.objects.forEach((o, i) => {
       if (!touched.has(o.name)) warnings.push(`objects[${i}] (${o.name}): no step acts on it or places into it`);
     });
+    warnings.push(...layoutWarnings(catalog, parsed.objects, parsed.steps));
   }
   const status = problems.length ? "invalid" : refused ? "refused" : "valid";
   return { status, problems, warnings, notes, objects: parsed.objects, steps: parsed.steps, constructed: true };
@@ -898,8 +988,9 @@ export function deleteObject(plan: PlanArgs, index: number): PlanArgs {
 export function addStep(catalog: Catalog, plan: PlanArgs, prim: string): PlanArgs {
   const info = primitive(catalog, prim);
   if (!info) return plan;
-  const obj = plan.objects.find((o) => info.objects.includes(o.kind));
-  const kind = obj?.kind ?? info.objects[0] ?? "part";
+  const allowed = info.objects.filter((k) => !(catalog.sim.picks.includes(prim) && catalog.sim.no_pick.includes(k)));
+  const obj = plan.objects.find((o) => allowed.includes(o.kind));
+  const kind = obj?.kind ?? allowed[0] ?? "part";
   const t = template(catalog, kind);
   const goal = [...(t?.quantities ?? []), ...catalog.goal_extra].find((q) => measurable(catalog, prim, kind).includes(q)) ?? info.quantities[0] ?? "force_n";
   const q = quantity(catalog, goal);
@@ -912,7 +1003,7 @@ export function addStep(catalog: Catalog, plan: PlanArgs, prim: string): PlanArg
     handle: handlesFor(catalog, prim, kind)[0] ?? info.handles[0] ?? "",
     target: null,
     description: `${prim.replace("_", " ")} the ${(obj?.label ?? "object").toLowerCase()}.`.replace(/^./, (c) => c.toUpperCase()),
-    params: defaults(info.params),
+    params: { ...defaults(info.params), ...(prim === "twist" && catalog.sim.twist_sense[kind] ? { direction: catalog.sim.twist_sense[kind] } : {}) },
     constraints: { max_force_n: null, max_torque_nm: null, precision_mm: null, precision_deg: null },
     success,
     after: [],

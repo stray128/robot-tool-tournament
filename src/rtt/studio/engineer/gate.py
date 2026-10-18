@@ -42,7 +42,7 @@ __all__ = ["GATE_VALID_RATE", "RECORDED_GATE", "case_row", "gate_manifest", "run
 #: Share of the plan cases that must give a valid TaskSpec after at most one repair.
 GATE_VALID_RATE: Final = 0.9
 #: The recorded live gate run (scrubbed cache, ledger, manifest).
-RECORDED_GATE: Final = Path(__file__).with_name("recorded") / "gate-2026-10-18"
+RECORDED_GATE: Final = Path(__file__).with_name("recorded") / "gate-2026-10-18-s2"
 
 
 def run_gate(

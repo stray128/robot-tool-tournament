@@ -25,32 +25,42 @@ page before anything runs.
 2. **Prompt** (`prompts/system.md`, `user.md`; every table rendered from the contract by
    `catalog.py`, so it cannot drift from the validator): the use case, any uploaded part, every
    object template (params with range and default, handles, state quantities, fidelity and
-   caveat), every primitive (what it acts on, through which handles, its "how" params, what it
+   caveat, and how the simulator models it, section 1a), every primitive (what it acts on, through which handles, its "how" params, what it
    observes, whether it may hold), the quantities, every rule the checks enforce, a table mapping
    everyday verbs to primitives (deformables, liquids and processes go to `unsupported` or a
    refusal), the wrist and table limits, and one worked example of a *different* use case (a
    drawer and a small box, built from the contract, so it is always valid).
 3. **One forced call** of `submit_task_plan` on `nvidia/nemotron-3-super-120b-a12b` through
    `rtt.llm.LLMClient` (cache, ledger, spend cap, retries; temperature 0.6, top_p 0.95,
-   max_tokens 12,000, thinking on).
+   max_tokens 8,000, thinking on).
 4. **Judge.** `task_spec_from_tool_args` (structure, bounds, cross-references, every problem
    with its path), then `check_plan` (`checks.py`):
-   * every step has a goal criterion (a state quantity of its object, or `lift_mm`, `hold_s`,
-     `in_target`), not only force or torque limits;
+   * every step has a goal criterion (a state quantity of its object, `lift_mm`, `hold_s` or
+     `in_target` for a pick, or `torque_nm` at_least for a twist that tightens until snug), not
+     only limits;
    * `in_target` needs a target, and a step that places its object releases it;
-   * an `insert` directly follows a step that holds the same object;
+   * directions (section 1a): a twist on a latch or a valve is `ccw`, on a thread `cw`; the other
+     way only turns back an object an earlier twist turned the working way; a twist on a latch or
+     a valve takes no `torque_nm` at_least (the twist stops at that torque, which a latch or valve
+     reaches before it turns);
+   * a threaded member: no pick acts on it; a twist on it comes after an insert of it; that
+     insert ends with `hold_after` false and pushes it no deeper than the thread start
+     (`chamfer_mm` + 3 mm);
    * criteria are reachable: a lid within `max_angle_deg`, a drawer within `travel_mm`, a latch
      within `turn_deg`, a valve within `travel_deg`, a thread within `engage_turns` (depth within
-     `engage_turns x pitch_mm`), a plug within the socket's `depth_mm`, a pick within its own
-     `lift_mm` and `hold_s`;
-   * a twist's torque (latch or valve `torque_nm`; a thread's `final_torque_nm` when the step
-     seats it, else `start_torque_nm`) is within the wrist roll's 15 N m, the step's
-     `max_torque_nm` and any `torque_nm` bound; a drawer's `pull_force_n` and a plug's
-     `insert_force_n` are within the step's `max_force_n`;
+     `chamfer_mm` + 3 mm + `engage_turns x pitch_mm` when seated), a plug within the socket's
+     `depth_mm`, a pick within its own `lift_mm` and `hold_s`;
+   * a twist's torque (a latch's or valve's `torque_nm`; a thread's torque where the step stops,
+     on its ramp from `start_torque_nm` to `final_torque_nm`; any `torque_nm` at_least) fits what
+     the twist allows itself, 90 % of `max_torque_nm`, else 95 % of the wrist roll's 15 N m
+     (14.25 N m), and any `torque_nm` at_most; a hook pull on a drawer needs its `pull_force_n`
+     within `max_force_n`, a push on a drawer and an insert of a plug push with at most 80 % of
+     `max_force_n`, else 30 N;
    * refs: `upload:<id>` names an upload that exists, and an uploaded part is used; `library:`
      names a training part; `scan:` is not resolvable here;
    * a refusal lists what is not simulated with at least one nearest primitive.
-   Objects nothing touches are warnings, never problems. When the spec as a whole does not
+   Warnings never refuse a plan: objects nothing touches, a lid whose stop is at or below
+   vertical (it falls shut), a lid over a bin that is not 120 mm tall. When the spec as a whole does not
    construct, the checks still run on every object and step that does, so one repair prompt
    lists every problem.
 5. **One repair call** if anything is wrong: the same messages plus the previous call (scrubbed)
@@ -59,6 +69,31 @@ page before anything runs.
    one from a keyword table (`nearest_primitive`), and the plan says so.
 6. **Status**: `valid`, `refused` (a valid refusal), `invalid`, or `failed` (no usable call:
    transport, unreadable answer, spend cap).
+
+### 1a. The simulator's conventions (track S2)
+
+The prompt, the checks and the intake page follow S2's models ([STUDIO_PRIMITIVES.md](STUDIO_PRIMITIVES.md));
+`catalog.py` holds the numbers and a test compares them with the template and primitive modules.
+
+| Template | How S2 models it | What a plan must do |
+|---|---|---|
+| `hinged_lid` | lid: closed underside 120 mm above the table (no hinge-height parameter), stays open only past vertical; door: vertical, hinged on its left edge; `angle_deg` 0 closed, positive open | open with `hook_pull`, close with `push` (`angle_deg` at_most) |
+| `drawer` | starts closed; `travel_mm` positive open | `hook_pull` out, `push` shut |
+| `quarter_turn_latch` | starts locked at its stop; opens counter-clockwise from above; `angle_deg` ccw from locked | twist `ccw`; no `torque_nm` at_least |
+| `handwheel_valve` | starts closed at its stop; opens counter-clockwise; `angle_deg` ccw from closed | twist `ccw`; closing a valve that starts closed is not modelled |
+| `threaded_joint` | the member rests loose on its stub, captive on the stub's axis; a lead-in of `chamfer_mm` + 3 mm to the thread start; tightens clockwise, `engage_turns` to seated, torque ramp `start_torque_nm` to `final_torque_nm`; `depth_mm` down from the stub top | no pick; insert (`hold_after` false) to the thread start, then twist `cw` |
+| `port_plug` | one object: the socket and the plug standing 40 mm beside it; `depth_mm` the tip below the mouth | `insert` (it picks the plug itself; a grasp with `hold_after` before it is optional) |
+
+**Not modelled (S2 limitation):** picking a loose coupling, cap or nut and starting it on a
+stub (the member starts on its stub), closing a valve or locking a latch that starts closed. The
+planner puts such actions in `unsupported` (nearest primitive `insert` or `twist`) or, when they are
+the whole use case, refuses. H2's description was reworded to the modelled task (the coupling
+sits loosely on the stub; push it onto the thread start and turn it on until snug, under
+8 N m); see section 6 for E2, E3 and H3.
+
+Object parameters stay what the description says or a stated assumption: nothing is tuned toward
+what passes in physics (S2's default 0.8 N m latch and 12 mm plug slip or jam with catalog
+grippers; the plans keep them where the description implies them).
 
 **Null written as text.** Nemotron writes `"refusal": "None"` (Python's null) in most plans; a
 first trial lost an otherwise valid cabinet plan to it. `normalise_nulls` reads `"None"`,
@@ -105,11 +140,11 @@ description that is not in it stops with exit code 2. `--live` reads `NEBIUS_API
 `--env-file` on the first call (never printed) and caps everything recorded in the run's ledger
 at `--budget`.
 
-## 4. HTTP routes (for the integrator)
+## 4. HTTP routes
 
 `studio_router(svc)` (`src/rtt/studio/engineer/api.py`) is an `APIRouter` over the existing
-`AgentService`: its passcode gate, its daily spend book and its part store. **Integrator: add one
-line to `create_app` in `src/rtt/api/app.py`, after the existing routes:**
+`AgentService`: its passcode gate, its daily spend book and its part store. `create_app` in
+`src/rtt/api/app.py` mounts it after the existing routes:
 
 ```python
 from rtt.studio.engineer.api import studio_router
@@ -162,50 +197,71 @@ all three files and compares them with the committed copies.
 
 ## 6. Gate (design S4) and spend
 
-Recorded live on 2026-10-18 (`recorded/gate-2026-10-18/`, 11 calls, $0.098):
+Recorded live on 2026-10-18 with S2's conventions in the prompt (`recorded/gate-2026-10-18-s2/`,
+16 calls, $0.122):
 
 | case | setting | result | calls | steps produced | $ |
 |---|---|---|---|---|---|
-| h1_tote | warehouse | valid first try | 1 | hook_pull tote_lid, grasp carton -> tote_bin, grasp shrink_pack -> tote_bin, push tote_lid | 0.0079 |
-| h2_coupling | construction | valid first try | 1 | grasp coupling, insert coupling, twist coupling | 0.0074 |
-| h3_cabinet | maintenance | valid after repair | 2 | twist latch_qtr, hook_pull door_cab, twist valve_hw, grasp port_test, insert port_test | 0.0241 |
-| e1_drawer_kitting | warehouse | valid first try | 1 | hook_pull parts_drawer, grasp cube_part -> kit_tray, grasp rod_part -> kit_tray, push parts_drawer | 0.0073 |
-| e2_rod_nut | construction | valid first try | 1 | grasp m10_nut, twist m10_nut, grasp m10_nut -> tray | 0.0076 |
-| e3_isolation_valve | maintenance | valid first try | 1 | hook_pull valve_hatch, twist iso_valve, push valve_hatch | 0.0164 |
-| e4_vial_holder | lab | valid first try | 1 | hook_pull hinged_cover, grasp instrument_holder, insert instrument_holder, push hinged_cover | 0.0080 |
-| e5_fridge_restock | retail | valid first try | 1 | hook_pull fridge_door, grasp drink_can -> basket, push fridge_door | 0.0073 |
-| u1_fold_shirt | unsupported | refused (nearest: wrap) | 1 | none | 0.0059 |
-| u2_pour | unsupported | refused (nearest: grasp) | 1 | none | 0.0060 |
+| h1_tote | warehouse | valid first try | 1 | hook_pull tote_lid, grasp carton -> tote_bin, grasp pack -> tote_bin, push tote_lid | 0.0081 |
+| h2_coupling | construction | valid after repair | 2 | insert pipe_coupling, twist pipe_coupling (cw) | 0.0145 |
+| h3_cabinet | maintenance | valid after repair | 2 | twist qtr_latch (ccw), hook_pull cab_door, twist handwheel (ccw), insert service_port | 0.0212 |
+| e1_drawer_kitting | warehouse | valid first try | 1 | hook_pull shelf_drawer, grasp cube_part -> kit_tray, grasp rod_part -> kit_tray, push shelf_drawer | 0.0075 |
+| e2_rod_nut | construction | valid after repair | 2 | insert m10_nut_on_rod, twist m10_nut_on_rod (cw) | 0.0145 |
+| e3_isolation_valve | maintenance | valid after repair | 2 | hook_pull valve_hatch, twist isolation_valve (ccw), push valve_hatch | 0.0150 |
+| e4_vial_holder | lab | valid after repair | 2 | hook_pull instrument_cover, insert vial_holder, push instrument_cover | 0.0154 |
+| e5_fridge_restock | retail | valid first try | 1 | hook_pull fridge_door, grasp can -> basket, push fridge_door | 0.0074 |
+| u1_fold_shirt | unsupported | refused (nearest: grasp) | 1 | none | 0.0063 |
+| u2_pour | unsupported | refused (nearest: grasp) | 2 | none | 0.0127 |
 
-Plans valid 8/8 (7 on the first call, 1 after the repair); unsupported 2/2 refused with a reason
-and a nearest primitive. The cabinet's first call ended two steps with `hold_after: true` while
-the next step acted on another object; the repair fixed both. One more recorded plan
-(`recorded/upload-2026-10-18/`, $0.0068) plans a use case with an uploaded STL
-(`assets/parts/rounded_tub.stl`) and uses it as `upload:stl-575c1d026461`.
+Plans valid 8/8 (3 on the first call, 5 after the repair); unsupported 2/2 refused with a reason
+and a nearest primitive. What the repairs fixed: h2 and e2 ended the insert holding the member;
+h3 and e3 asked a latch or valve twist for `torque_nm` at_least; e4 ended a pick holding the vial
+before inserting another object; u2's refusal named no nearest primitive.
 
-Token Factory spend of the whole track: $0.044 (three tuning calls on the cabinet, cloth and nut
-cases) + $0.098 (gate) + $0.007 (upload plan) = **$0.149**, under the $0.50 cap.
+How the run was assembled (`manifest.json` `runs`): a first live run of all ten cases ($0.065
+of the recorded calls; it refused e2 and e3 as then worded); e2 and e3 were reworded to the
+modelled tasks (an M10 nut **sits loose on top of** the rod; the isolation valve is **opened**
+one full turn counter-clockwise) and h3 got "(90 degrees)" after "a quarter turn", because the
+model read a quarter turn as 22 to 45 degrees; those were re-run live, and h2 was repaired live
+after the insert-release rule was added ($0.037); h3 and e3 were repaired live after the rule on
+`torque_nm` at_least ($0.021). The unchanged requests of the earlier runs are reused, so the
+recorded cache holds exactly the 16 calls the manifest replays.
 
-## 7. Conventions proposed to S2, and open issues
+The three hero plans, as recorded:
 
-* **Signs of state quantities** (the contract says "from its start" only). The prompt tells the
-  model: a lid's or door's `angle_deg` and a drawer's `travel_mm` count from the start, positive
-  toward open (so a closing step bounds them from above); for a twist, `angle_deg` and `turns`
-  are positive in the step's own direction (a quarter turn is `angle_deg at_least 85`, either
-  way); `depth_mm` is positive going in. S2's predicates should report them that way, or the
-  prompt changes (and the gate is re-recorded). The checks compare magnitudes, so they hold
-  either way.
-* **Semantics beyond the rules are not checked.** The nut plan (e2) ends with a grasp that puts
-  the nut back in its tray, because its twist ended holding and the last step must release;
-  layouts are not checked for overlapping footprints (S2 decides each template's footprint). The
-  user edits these on the page.
-* **Runaway completions.** Two of the eleven recorded calls (h3 main, e3) ran to the 12,000-token
-  limit after a complete tool call (about $0.009 each). A lower `max_tokens` (6,000; the largest
-  useful completion was 2,700 tokens) would save that, at the price of re-recording the gate.
+* **h1_tote**: hook_pull the lid (lip, top, `angle_deg` 90 to 110, 20 N), grasp the carton
+  (120 x 80 x 60 mm, 300 g) into the tote, grasp the pack (150 x 100 x 20 mm, 150 g) into the tote,
+  push the lid shut (`angle_deg` at_most 10, 20 N). Warning: the tote is 200 mm tall, the lid's
+  hinge 120 mm.
+* **h2_coupling**: insert the coupling (40 mm, 45 mm long, pitch 1.5 mm, 3 turns, 0.2 to 6 N m) to
+  the thread start (`depth_mm` 4 = 1 mm chamfer + 3 mm, 30 N, releases), twist `cw` at 60 deg/s to
+  `turns` at_least 3 with `torque_nm` at_most 8 (`max_torque_nm` 10).
+* **h3_cabinet**: twist the wing latch (0.8 N m, 90 deg) `ccw` to `angle_deg` at_least 80;
+  hook_pull the door (handle, front) to at_least 80 deg (30 N); twist the 3-spoke 120 mm handwheel
+  (3 N m, 90 deg travel) `ccw` to at_least 80 deg; insert the 8 mm connector into the 15 mm port
+  to `depth_mm` at_least 15 (20 N).
+
+One more recorded plan (`recorded/upload-2026-10-18-s2/`, $0.0073) plans a use case with an
+uploaded STL (`assets/parts/rounded_tub.stl`) and uses it as `upload:stl-575c1d026461`.
+
+Token Factory spend: S4 $0.149 (cap $0.50); S4b $0.167 (cap $0.20): $0.065 + $0.037 + $0.021 of
+recorded gate calls, $0.038 of first-run calls that the rewording made stale (old e2 and e3, the
+first h3 attempt chain), and $0.007 for the upload plan.
+
+## 7. Open issues
+
+* **Semantics beyond the rules are not checked.** Layouts are not checked for overlapping
+  footprints; the model may still misread a quantity (it read "a quarter turn" as 22 to 45 deg
+  before h3 said 90 degrees). The user edits these on the page.
+* **Runaway completions.** S4's run had two calls that kept generating after a complete tool call
+  up to the 12,000-token limit; `max_tokens` is now 8,000 (the largest useful completion was
+  2,700 tokens). No S4b call hit the limit.
 * **Recorded replays are tied to the prompt.** Any change to the prompt templates, the catalog
-  rendering, the worked example, the tool schema or the sampling is a different request: the
-  replay tests then fail with a cache miss, and the gate must be re-recorded
-  (`gate --out ... --live`, about $0.10), then `export-web`.
+  rendering (including the S2 conventions in `catalog.py`), the worked example, the tool schema
+  or the sampling is a different request: the replay tests then fail with a cache miss, and the
+  gate must be re-recorded (`gate --out ... --live`, about $0.10), then `export-web`.
 * The upload path inherits the part intake's gripper-sized limits (79 mm, 2 kg); larger parts in
   a Studio use case need a Studio intake.
-* The API's `plan_task` agent tool and the Studio pages' navigation entry belong to S7.
+* S2's limits stay limits of the plans: a loose member cannot be started on a stub, a valve or
+  latch that starts closed cannot be closed, a lid's hinge height is fixed at 120 mm, and an insert
+  held into a twist on a thread is not exercised by S2's tests (so the checks forbid it).

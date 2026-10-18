@@ -22,7 +22,7 @@ Each step has 1 to 4 criteria. A criterion bounds one quantity when the step end
 
 $quantities
 
-State quantities count from where the object starts. A lid's or door's angle_deg and a drawer's travel_mm are positive toward open, so a step that closes what an earlier step opened bounds them from above (angle_deg at_most 5). For a twist, angle_deg and turns are positive in the step's own direction (a quarter turn is angle_deg at_least 85, whichever way it turns). depth_mm is positive going in.
+State quantities count from where the object starts. A lid's or door's angle_deg and a drawer's travel_mm are 0 closed and positive open. A latch's or valve's angle_deg counts counter-clockwise (opening) from its closed stop. A threaded member's turns and angle_deg count clockwise (tightening) from its start, and its depth_mm down from the stub top. A plug's depth_mm is its tip below the socket mouth. A step that closes what an earlier step opened bounds the quantity from above (angle_deg at_most 5).
 
 # Rules (code checks every one)
 
