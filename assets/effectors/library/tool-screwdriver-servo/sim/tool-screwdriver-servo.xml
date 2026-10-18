@@ -1,0 +1,82 @@
+<mujoco model="tool-screwdriver-servo">
+  <compiler angle="radian"/>
+  <asset>
+    <mesh name="holder_0" file="pieces/holder_0.obj"/>
+    <mesh name="holder_1" file="pieces/holder_1.obj"/>
+    <mesh name="holder_2" file="pieces/holder_2.obj"/>
+    <mesh name="holder_3" file="pieces/holder_3.obj"/>
+    <mesh name="holder_4" file="pieces/holder_4.obj"/>
+    <mesh name="holder_5" file="pieces/holder_5.obj"/>
+    <mesh name="holder_6" file="pieces/holder_6.obj"/>
+    <mesh name="holder_7" file="pieces/holder_7.obj"/>
+    <mesh name="holder_8" file="pieces/holder_8.obj"/>
+    <mesh name="holder_9" file="pieces/holder_9.obj"/>
+    <mesh name="holder_10" file="pieces/holder_10.obj"/>
+    <mesh name="holder_11" file="pieces/holder_11.obj"/>
+    <mesh name="holder_12" file="pieces/holder_12.obj"/>
+    <mesh name="holder_13" file="pieces/holder_13.obj"/>
+    <mesh name="holder_14" file="pieces/holder_14.obj"/>
+    <mesh name="holder_15" file="pieces/holder_15.obj"/>
+    <mesh name="bit_0" file="pieces/bit_0.obj"/>
+    <mesh name="bit_1" file="pieces/bit_1.obj"/>
+    <mesh name="bit_2" file="pieces/bit_2.obj"/>
+    <mesh name="bit_3" file="pieces/bit_3.obj"/>
+    <mesh name="bit_4" file="pieces/bit_4.obj"/>
+    <mesh name="bit_5" file="pieces/bit_5.obj"/>
+    <mesh name="bit_6" file="pieces/bit_6.obj"/>
+    <mesh name="bit_7" file="pieces/bit_7.obj"/>
+    <mesh name="bit_8" file="pieces/bit_8.obj"/>
+    <mesh name="bit_9" file="pieces/bit_9.obj"/>
+    <mesh name="bit_10" file="pieces/bit_10.obj"/>
+    <mesh name="bit_11" file="pieces/bit_11.obj"/>
+    <mesh name="bit_12" file="pieces/bit_12.obj"/>
+    <mesh name="bit_13" file="pieces/bit_13.obj"/>
+    <mesh name="bit_14" file="pieces/bit_14.obj"/>
+    <mesh name="bit_15" file="pieces/bit_15.obj"/>
+  </asset>
+  <worldbody>
+    <body name="holder">
+      <inertial pos="-0.00329031783 0.0192090562 -0.019658793" mass="0.00519055615" fullinertia="2.59142987e-06 1.21996798e-06 2.43951562e-06 -3.88247425e-07 8.27992147e-08 7.12446544e-07"/>
+      <geom type="mesh" mesh="holder_0"/>
+      <geom type="mesh" mesh="holder_1"/>
+      <geom type="mesh" mesh="holder_2"/>
+      <geom type="mesh" mesh="holder_3"/>
+      <geom type="mesh" mesh="holder_4"/>
+      <geom type="mesh" mesh="holder_5"/>
+      <geom type="mesh" mesh="holder_6"/>
+      <geom type="mesh" mesh="holder_7"/>
+      <geom type="mesh" mesh="holder_8"/>
+      <geom type="mesh" mesh="holder_9"/>
+      <geom type="mesh" mesh="holder_10"/>
+      <geom type="mesh" mesh="holder_11"/>
+      <geom type="mesh" mesh="holder_12"/>
+      <geom type="mesh" mesh="holder_13"/>
+      <geom type="mesh" mesh="holder_14"/>
+      <geom type="mesh" mesh="holder_15"/>
+      <site name="tcp" pos="0 0 -0.0770123482" size="0.003"/>
+      <body name="bit" pos="-4.0851593e-05 0.0219807491 -0.0642123489">
+        <inertial pos="-4.25816705e-11 3.46944695e-18 -0.00390655542" mass="0.00108631957" fullinertia="8.05863817e-08 8.05863818e-08 3.67739238e-08 3.80632329e-24 -8.6429291e-17 4.10281584e-22"/>
+        <joint name="spindle" type="hinge" axis="0 0 1" damping="0.001" armature="0.0001"/>
+        <geom type="mesh" mesh="bit_0" pos="4.0851593e-05 -0.0219807491 0.0642123489"/>
+        <geom type="mesh" mesh="bit_1" pos="4.0851593e-05 -0.0219807491 0.0642123489"/>
+        <geom type="mesh" mesh="bit_2" pos="4.0851593e-05 -0.0219807491 0.0642123489"/>
+        <geom type="mesh" mesh="bit_3" pos="4.0851593e-05 -0.0219807491 0.0642123489"/>
+        <geom type="mesh" mesh="bit_4" pos="4.0851593e-05 -0.0219807491 0.0642123489"/>
+        <geom type="mesh" mesh="bit_5" pos="4.0851593e-05 -0.0219807491 0.0642123489"/>
+        <geom type="mesh" mesh="bit_6" pos="4.0851593e-05 -0.0219807491 0.0642123489"/>
+        <geom type="mesh" mesh="bit_7" pos="4.0851593e-05 -0.0219807491 0.0642123489"/>
+        <geom type="mesh" mesh="bit_8" pos="4.0851593e-05 -0.0219807491 0.0642123489"/>
+        <geom type="mesh" mesh="bit_9" pos="4.0851593e-05 -0.0219807491 0.0642123489"/>
+        <geom type="mesh" mesh="bit_10" pos="4.0851593e-05 -0.0219807491 0.0642123489"/>
+        <geom type="mesh" mesh="bit_11" pos="4.0851593e-05 -0.0219807491 0.0642123489"/>
+        <geom type="mesh" mesh="bit_12" pos="4.0851593e-05 -0.0219807491 0.0642123489"/>
+        <geom type="mesh" mesh="bit_13" pos="4.0851593e-05 -0.0219807491 0.0642123489"/>
+        <geom type="mesh" mesh="bit_14" pos="4.0851593e-05 -0.0219807491 0.0642123489"/>
+        <geom type="mesh" mesh="bit_15" pos="4.0851593e-05 -0.0219807491 0.0642123489"/>
+      </body>
+    </body>
+  </worldbody>
+  <actuator>
+    <velocity name="spindle_speed" joint="spindle" kv="0.05" ctrlrange="-10 10" forcerange="-0.5 0.5"/>
+  </actuator>
+</mujoco>

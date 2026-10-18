@@ -1,0 +1,162 @@
+{
+  "format": "rtt-library-source",
+  "version": 1,
+  "key": "gripper-2f-servo-110",
+  "display_name": "Industrial servo parallel gripper, 110 mm stroke",
+  "summary": "A servo-electric industrial parallel gripper; the model was drawn from the maker's catalogue drawing, not from vendor CAD.",
+  "kind": "parallel_gripper",
+  "class": "sim_model",
+  "capabilities": [
+    "pinch"
+  ],
+  "upstream": {
+    "repository": "https://github.com/RobotLocomotion/models",
+    "commit": "f85076b4d95a8bdfec70153015e723e92312e4e2"
+  },
+  "licence": [
+    {
+      "spdx": "BSD-3-Clause",
+      "covers": "the simulation model, drawn from scratch"
+    }
+  ],
+  "copyright": "Copyright 2020 Toyota Research Institute",
+  "attribution": "\"Schunk WSG 50 model (Drake models repository)\" by Toyota Research Institute, https://github.com/RobotLocomotion/models (commit f85076b), licensed BSD-3-Clause (https://spdx.org/licenses/BSD-3-Clause.html)",
+  "chain": [
+    {
+      "spdx": "BSD-3-Clause",
+      "relation": "licensed",
+      "what": "wsg_50_description/LICENSE",
+      "source": "https://github.com/RobotLocomotion/models/blob/f85076b4d95a8bdfec70153015e723e92312e4e2/wsg_50_description/LICENSE"
+    }
+  ],
+  "reviewed": {
+    "by": "Effector Lab licence gate, against the 2026-10-18 licence audit",
+    "date": "2026-10-18"
+  },
+  "mount": {
+    "interface": "the maker's own interface; adapter plates to ISO patterns are sold separately",
+    "iso_pattern": null,
+    "status": "unknown",
+    "adapter": null,
+    "source": "",
+    "notes": []
+  },
+  "specs": [
+    {
+      "name": "Stroke",
+      "value": "110",
+      "unit": "mm",
+      "tag": "sourced",
+      "source": "https://github.com/RobotLocomotion/models/blob/f85076b4d95a8bdfec70153015e723e92312e4e2/wsg_50_description/sdf/schunk_wsg_50.sdf"
+    },
+    {
+      "name": "Finger force limit in the model",
+      "value": "80",
+      "unit": "N",
+      "tag": "sourced",
+      "source": "https://github.com/RobotLocomotion/models/blob/f85076b4d95a8bdfec70153015e723e92312e4e2/wsg_50_description/sdf/schunk_wsg_50.sdf"
+    }
+  ],
+  "sim": {
+    "status": "native",
+    "source": "converted from the upstream SDF (box primitives)",
+    "fidelity": "rigid",
+    "note": "dimensions accurate only to the published drawing (stated upstream)",
+    "model_file": "sim/gripper-2f-servo-110.xml",
+    "n_bodies": 3,
+    "n_joints": 2,
+    "n_actuators": 1,
+    "mass_kg": 1.088882
+  },
+  "notes": [],
+  "ingest": {
+    "licence_files": [
+      {
+        "path": "wsg_50_description/LICENSE",
+        "license": "BSD-3-Clause"
+      }
+    ],
+    "sim": {
+      "type": "sdf_boxes",
+      "entry": "wsg_50_description/sdf/schunk_wsg_50.sdf",
+      "root": "body",
+      "couple": [
+        {
+          "joint1": "right_finger_sliding_joint",
+          "joint2": "left_finger_sliding_joint",
+          "multiplier": -1
+        }
+      ],
+      "actuators": [
+        {
+          "name": "fingers",
+          "joint": "left_finger_sliding_joint",
+          "kp": 2000,
+          "kv": 40,
+          "ctrlrange": [
+            -0.055,
+            0.0
+          ],
+          "forcerange": [
+            -80,
+            80
+          ]
+        }
+      ],
+      "conversion_notes": [
+        "one position servo (kp 2000 N/m) at the model's 80 N effort limit drives the left finger; the right finger mirrors it (Drake actuates both)"
+      ],
+      "license": "BSD-3-Clause"
+    },
+    "preview": {
+      "from": "model",
+      "license": "BSD-3-Clause"
+    }
+  },
+  "files": [
+    {
+      "path": "assets/effectors/library/gripper-2f-servo-110/LICENSES/LICENSE",
+      "sha256": "9873a83dddefdf6d63f1c713a81eab1a5d3a3dd53cb9958de997cf9d254effa5",
+      "size": 1470,
+      "role": "licence",
+      "upstream_url": "https://github.com/RobotLocomotion/models",
+      "upstream_commit": "f85076b4d95a8bdfec70153015e723e92312e4e2",
+      "upstream_path": "wsg_50_description/LICENSE",
+      "upstream_sha256": "9873a83dddefdf6d63f1c713a81eab1a5d3a3dd53cb9958de997cf9d254effa5",
+      "license": "BSD-3-Clause",
+      "copyright": "Copyright 2020 Toyota Research Institute",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-servo-110/sim/gripper-2f-servo-110.xml",
+      "sha256": "2860d54febdecc0c4d9bf60c87d2edfac29fb4550773218ee9ba07e71936dcdc",
+      "size": 1300,
+      "role": "derived",
+      "upstream_url": "https://github.com/RobotLocomotion/models",
+      "upstream_commit": "f85076b4d95a8bdfec70153015e723e92312e4e2",
+      "upstream_path": "wsg_50_description/sdf/schunk_wsg_50.sdf",
+      "upstream_sha256": "8c9085c58eec348f991a7ff57419f42e45741e6157814644bef063e72e38e7f7",
+      "license": "BSD-3-Clause",
+      "copyright": "Copyright 2020 Toyota Research Institute",
+      "changes": [
+        "converted from the upstream SDF (schunk_wsg_50.sdf) to MJCF: the same boxes, poses, masses and joint limits",
+        "rotational inertia computed from each collision box at the declared mass (the upstream inertia values are placeholders)",
+        "one position servo (kp 2000 N/m) at the model's 80 N effort limit drives the left finger; the right finger mirrors it (Drake actuates both)"
+      ],
+      "rating": "green"
+    }
+  ],
+  "skipped": [],
+  "preview": {
+    "path": "web/public/data/library/glb/gripper-2f-servo-110.glb",
+    "sha256": "98a66be73018fb7c6ef9de199c5aa8d2eb2f5a51463c0d0dd5285ce76aa29d8c",
+    "size": 2172,
+    "license": "BSD-3-Clause",
+    "derived_from": [],
+    "changes": [
+      "drawn from the item's own geometry in its reference pose, simplified by vertex clustering",
+      "re-encoded as GLB (Y up, metres) in one flat grey, with generic node names"
+    ]
+  }
+}

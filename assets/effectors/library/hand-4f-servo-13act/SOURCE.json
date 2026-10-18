@@ -1,0 +1,144 @@
+{
+  "format": "rtt-library-source",
+  "version": 1,
+  "key": "hand-4f-servo-13act",
+  "display_name": "Servo-driven four-finger hand, 13 actuators",
+  "summary": "A buildable dexterous hand with smart servos in the palm and linkage-driven fingertips.",
+  "kind": "multi_finger_hand",
+  "class": "open_hardware",
+  "capabilities": [
+    "pinch",
+    "power"
+  ],
+  "upstream": {
+    "repository": "https://github.com/midas-hand-org/midas_hand_mujoco",
+    "commit": "6c7d17f4a8cb5414e81653aa2795acc9610e1730"
+  },
+  "licence": [
+    {
+      "spdx": "MIT",
+      "covers": "the simulation model"
+    },
+    {
+      "spdx": "CERN-OHL-P-2.0",
+      "covers": "the hardware design (stated on the project's licensing page), linked"
+    }
+  ],
+  "copyright": "Copyright (c) 2026 MIDAS Hand Contributors",
+  "attribution": "\"MIDAS hand MuJoCo model\" by MIDAS Hand Contributors (UCLA RoMeLa), https://github.com/midas-hand-org/midas_hand_mujoco (commit 6c7d17f), licensed MIT (https://spdx.org/licenses/MIT.html)",
+  "chain": [
+    {
+      "spdx": "MIT",
+      "relation": "licensed",
+      "what": "simulation LICENSE",
+      "source": "https://github.com/midas-hand-org/midas_hand_mujoco/blob/6c7d17f4a8cb5414e81653aa2795acc9610e1730/LICENSE"
+    },
+    {
+      "spdx": "CERN-OHL-P-2.0",
+      "relation": "derived_from",
+      "what": "the hardware design (project licensing page)",
+      "source": "https://midas-hand.com/citation.html"
+    }
+  ],
+  "reviewed": {
+    "by": "Effector Lab licence gate, against the 2026-10-18 licence audit",
+    "date": "2026-10-18"
+  },
+  "mount": {
+    "interface": "to confirm: no arm interface is published with the model",
+    "iso_pattern": null,
+    "status": "unknown",
+    "adapter": null,
+    "source": "",
+    "notes": []
+  },
+  "specs": [
+    {
+      "name": "Actuators",
+      "value": "13 position servos",
+      "unit": "",
+      "tag": "derived",
+      "source": ""
+    }
+  ],
+  "sim": {
+    "status": "native",
+    "source": "upstream MJCF",
+    "fidelity": "rigid",
+    "model_file": "sim/hand-4f-servo-13act.xml",
+    "n_bodies": 20,
+    "n_joints": 19,
+    "n_actuators": 13,
+    "mass_kg": 0.501975
+  },
+  "notes": [],
+  "ingest": {
+    "licence_files": [
+      {
+        "path": "LICENSE",
+        "license": "MIT"
+      }
+    ],
+    "sim": {
+      "type": "mjcf",
+      "entry": "assets/midas_description/midas_whole_hand.xml",
+      "root": "palm_base",
+      "license": "MIT"
+    },
+    "preview": {
+      "from": "mjcf",
+      "entry": "assets/midas_description/midas_whole_hand.xml",
+      "root": "palm_base",
+      "license": "MIT",
+      "max_faces": 16000
+    }
+  },
+  "files": [
+    {
+      "path": "assets/effectors/library/hand-4f-servo-13act/LICENSES/LICENSE",
+      "sha256": "77b9fe5e48aab1f811599f07bb39a0ee948787ac71dc9d3da2264b80d24a4cd8",
+      "size": 1080,
+      "role": "licence",
+      "upstream_url": "https://github.com/midas-hand-org/midas_hand_mujoco",
+      "upstream_commit": "6c7d17f4a8cb5414e81653aa2795acc9610e1730",
+      "upstream_path": "LICENSE",
+      "upstream_sha256": "77b9fe5e48aab1f811599f07bb39a0ee948787ac71dc9d3da2264b80d24a4cd8",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2026 MIDAS Hand Contributors",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-4f-servo-13act/sim/hand-4f-servo-13act.xml",
+      "sha256": "f02bbc87750c3eed7ab694ccf70e6ae62b309095727a920eeab9f6d113210398",
+      "size": 18674,
+      "role": "derived",
+      "upstream_url": "https://github.com/midas-hand-org/midas_hand_mujoco",
+      "upstream_commit": "6c7d17f4a8cb5414e81653aa2795acc9610e1730",
+      "upstream_path": "assets/midas_description/midas_whole_hand.xml",
+      "upstream_sha256": "a9a52de8a419d9db22720c2f7f68e648ea4e1e4312f78afebf4dda906d5a4dea",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2026 MIDAS Hand Contributors",
+      "changes": [
+        "the effector subtree from body 'palm_base' written as one MJCF by MuJoCo 3.15.0",
+        "every body's mass, centre of mass and inertia pinned at the upstream model's compiled values",
+        "21 visual-only geoms removed (the catalog preview draws the upstream visuals)"
+      ],
+      "rating": "green"
+    }
+  ],
+  "skipped": [],
+  "preview": {
+    "path": "web/public/data/library/glb/hand-4f-servo-13act.glb",
+    "sha256": "c08da66f229f79113a528d9cb5f34ba477f5863b05ed5bba042af3164e5586a3",
+    "size": 192496,
+    "license": "MIT",
+    "derived_from": [
+      "assets/midas_description/midas_whole_hand.xml"
+    ],
+    "changes": [
+      "drawn from the item's own geometry in its reference pose, simplified by vertex clustering",
+      "re-encoded as GLB (Y up, metres) in one flat grey, with generic node names"
+    ]
+  }
+}

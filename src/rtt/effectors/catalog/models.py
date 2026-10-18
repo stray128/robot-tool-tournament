@@ -64,7 +64,7 @@ class CatalogModel:
     """One vendored model as the catalog families use it (module docstring)."""
 
     key: str
-    kind: Literal["hand", "gripper"]
+    kind: Literal["hand", "gripper", "tool"]
     display_name: str
     root: str | None
     down: tuple[float, float, float]
@@ -509,14 +509,26 @@ CATALOG_MODELS: Final[Mapping[str, CatalogModel]] = MappingProxyType(
 )
 
 
+def _library_models() -> Mapping[str, CatalogModel]:
+    from rtt.effectors.catalog.library_models import LIBRARY_MODELS
+
+    return LIBRARY_MODELS
+
+
 def card_note(key: str) -> str | None:
     """The note a page must print beside the model ``key`` (``None``: none, or not a vendored model)."""
-    cm = CATALOG_MODELS.get(key)
+    cm = CATALOG_MODELS.get(key) or _library_models().get(key)
     return (cm.card_note or None) if cm is not None else None
 
 
 def catalog_model(key: str) -> CatalogModel:
-    try:
+    """The catalog model ``key``: a vendored catalog model, else an open-library entrant
+    (:data:`rtt.effectors.catalog.library_models.LIBRARY_MODELS`, never a default preset)."""
+    if key in CATALOG_MODELS:
         return CATALOG_MODELS[key]
-    except KeyError:
-        raise KeyError(f"no catalog model {key!r}; known: {sorted(CATALOG_MODELS)}") from None
+    library = _library_models()
+    if key in library:
+        return library[key]
+    raise KeyError(
+        f"no catalog model {key!r}; known: {sorted(CATALOG_MODELS)} and {len(library)} library entrants"
+    )

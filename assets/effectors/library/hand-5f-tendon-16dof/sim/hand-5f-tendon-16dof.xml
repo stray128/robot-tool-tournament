@@ -1,0 +1,236 @@
+<mujoco model="MuJoCo Model">
+  <compiler angle="radian"/>
+
+  <default>
+    <default class="upstream">
+      <mesh scale="0.001 0.001 0.001"/>
+      <joint margin="0.01" armature="0.001" damping="0.1" frictionloss="0.001" limited="true"/>
+      <geom type="mesh" friction="1 0.005 0.001" margin="0.0005"/>
+      <general ctrllimited="true" forcelimited="true" forcerange="-1 1" biastype="affine" gainprm="2" biasprm="0 -2"/>
+      <default class="visual_base">
+        <geom contype="0" conaffinity="0" condim="1" group="2" friction="1 0.005 0.0001" margin="0"/>
+        <default class="skin">
+          <geom material="white"/>
+        </default>
+        <default class="bone">
+          <geom material="black"/>
+        </default>
+      </default>
+      <default class="collision">
+        <geom group="1" friction="1 0.005 0.0001" margin="0" material="invisible"/>
+      </default>
+    </default>
+  </default>
+
+  <asset>
+    <material name="groundplane" texrepeat="5 5" texuniform="true" reflectance="0.2"/>
+    <material name="white" specular="0.005" shininess="0.02"/>
+    <material name="black" specular="0.1" rgba="0.1569 0.1569 0.1569 1"/>
+    <material name="invisible" specular="0" shininess="0" rgba="1 1 1 0"/>
+    <mesh name="right_R-T-AP" content_type="model/stl" file="meshes/right_R-T-AP.obj"/>
+    <mesh name="right_P-AP" content_type="model/stl" file="meshes/right_P-AP.obj"/>
+    <mesh name="right_ForeArmStructure-Model" content_type="model/obj" file="meshes/right_ForeArmStructure-Model.obj"/>
+    <mesh name="right_TopTower-Model" content_type="model/stl" file="meshes/right_TopTower-Model.obj"/>
+    <mesh name="right_I-AP-R" content_type="model/stl" file="meshes/right_I-AP-R.obj"/>
+    <mesh name="right_T-TP-R" content_type="model/stl" file="meshes/right_T-TP-R.obj"/>
+    <mesh name="right_R-Carpals" content_type="model/stl" file="meshes/right_R-Carpals.obj"/>
+    <mesh name="right_M-AP" content_type="model/stl" file="meshes/right_M-AP.obj"/>
+    <mesh name="right_P-IP_IP" content_type="model/stl" file="meshes/right_P-IP_IP.obj"/>
+    <mesh name="right_M-PP_PP" content_type="model/stl" file="meshes/right_M-PP_PP.obj"/>
+    <mesh name="right_T-PP_PP" content_type="model/stl" file="meshes/right_T-PP_PP.obj"/>
+    <mesh name="right_I-IP_IP" content_type="model/stl" file="meshes/right_I-IP_IP.obj"/>
+    <mesh name="right_T-DP_T-DP" content_type="model/stl" file="meshes/right_T-DP_T-DP.obj"/>
+    <mesh name="right_I-PP_PP" content_type="model/stl" file="meshes/right_I-PP_PP.obj"/>
+    <mesh name="right_P-PP_PP" content_type="model/stl" file="meshes/right_P-PP_PP.obj"/>
+    <mesh name="right_M-IP_IP" content_type="model/stl" file="meshes/right_M-IP_IP.obj"/>
+  </asset>
+
+  <worldbody>
+    <body name="right_tower">
+      <inertial pos="0 0 0" mass="0" diaginertia="0 0 0"/>
+      <body name="right_ForeArmStructure-Model_e18f2368">
+        <inertial pos="-0.00947489 -0.00149451 -4.65995e-06" quat="0.706809 0.707212 -0.0158582 -0.00457631" mass="0.993948" diaginertia="0.00167434 0.00166049 0.00132915"/>
+        <geom quat="1 0 0 0" type="mesh" friction="1 0.005 0.001" material="black" mesh="right_ForeArmStructure-Model"/>
+        <body name="right_TopTower-Model_4a80d30e" pos="-0.01 0.0523 0" quat="-0.5 0.5 -0.5 -0.5">
+          <inertial pos="2.67559e-09 -1.12526e-05 0.0147727" quat="0.49999 0.50001 -0.500047 0.499954" mass="0.283849" diaginertia="0.000289785 0.000178034 0.00016007"/>
+          <geom quat="1 0 0 0" type="mesh" friction="1 0.005 0.001" material="black" mesh="right_TopTower-Model"/>
+          <body name="right_R-Carpals_8d1f1041" pos="-0.00187708 0.005 0.0895" quat="-0.707107 0 0 0.707107">
+            <inertial pos="0.0068991 0.00343633 -0.0155499" quat="0.683552 -0.105437 -0.125767 0.711212" mass="0.280342" diaginertia="0.000221735 0.000140547 0.000104141"/>
+            <geom quat="1 0 0 0" type="mesh" friction="1 0.005 0.001" material="black" mesh="right_R-Carpals"/>
+            <body name="right_T-TP-R_1c2b802d" pos="-0.0212134 0.0143325 -0.0217248" quat="0.659119 0.359511 -0.0724731 -0.656553">
+              <inertial pos="-0.00157624 -0.000826573 0.00397182" quat="0.994604 -0.00836795 0.0547355 -0.0877345" mass="0.0162091" diaginertia="2.04843e-06 1.85514e-06 1.02341e-06"/>
+              <joint name="right_t-cmc" range="-0.785398 0.575959" margin="0.01" armature="0.001" damping="0.1" frictionloss="0.001" pos="0 0 0.00385" axis="0 0 -1" limited="true"/>
+              <geom quat="1 0 0 0" type="mesh" friction="1 0.005 0.001" material="black" mesh="right_T-TP-R"/>
+              <body name="right_R-T-AP_a9723101" pos="-0.036 0 0" quat="0.819152 -0.573576 0 0">
+                <inertial pos="0.0146243 2.43921e-05 7.8463e-05" quat="-0.0525106 0.706113 -0.0504944 0.704342" mass="0.0126836" diaginertia="1.69762e-06 1.6022e-06 5.63032e-07"/>
+                <joint name="right_t-abd" range="-0.314159 0.959931" margin="0.01" armature="0.001" damping="0.1" frictionloss="0.001" pos="0.028 0 0" axis="0 0.34202 0.939693" limited="true"/>
+                <geom quat="1 0 0 0" type="mesh" friction="1 0.005 0.001" material="black" mesh="right_R-T-AP"/>
+                <body name="right_T-PP_68395e98" quat="0 0.707107 0 -0.707107">
+                  <inertial pos="0.00192204 5.10521e-06 0.016315" quat="0.999873 0.000503738 0.0159128 0.000138593" mass="0.0158615" diaginertia="1.96525e-06 1.91636e-06 6.87399e-07"/>
+                  <joint name="right_t-mcp" range="-0.436332 1.74533" margin="0.01" armature="0.001" damping="0.1" frictionloss="0.001" axis="0 -1 0" limited="true"/>
+                  <geom type="mesh" friction="1 0.005 0.001" material="black" mesh="right_T-PP_PP"/>
+                  <body name="right_T-DP_b7429e50" pos="0.001 0 0.032">
+                    <inertial pos="0.00141412 4.38229e-05 0.0133554" quat="0.999808 0.00730862 -0.0107488 0.0146867" mass="0.00852712" diaginertia="7.2911e-07 6.97461e-07 2.90064e-07"/>
+                    <joint name="right_t-pip" range="-0.261799 1.8675" margin="0.01" armature="0.001" damping="0.1" frictionloss="0.001" axis="0 -1 0" limited="true"/>
+                    <geom type="mesh" friction="1 0.005 0.001" material="black" mesh="right_T-DP_T-DP"/>
+                  </body>
+                </body>
+              </body>
+            </body>
+            <body name="right_I-AP-R_d95d02d1" pos="-0.0255755 0.000680925 0.0383573" quat="0.519647 0.566724 0.43173 -0.471593">
+              <inertial pos="0.00851783 9.682e-06 0.000582422" quat="-0.000908798 0.677594 0.00202173 0.735433" mass="0.00890722" diaginertia="7.68916e-07 7.10555e-07 3.56467e-07"/>
+              <joint name="right_i-abd" range="-0.436332 0.523599" margin="0.01" armature="0.001" damping="0.1" frictionloss="0.001" pos="0.01875 0 0.001" limited="true"/>
+              <geom quat="1 0 0 0" type="mesh" friction="1 0.005 0.001" material="black" mesh="right_I-AP-R"/>
+              <body name="right_I-PP_bacbd481" pos="-0.000400968 0 0" quat="0.707107 0 -0.707107 0">
+                <inertial pos="0.00219938 -1.74388e-06 0.0193331" quat="0.705679 0.0120895 0.0123 0.708322" mass="0.0171491" diaginertia="2.45401e-06 2.42468e-06 7.06056e-07"/>
+                <joint name="right_i-mcp" range="-0.436332 1.74533" margin="0.01" armature="0.001" damping="0.1" frictionloss="0.001" axis="0 -1 0" limited="true"/>
+                <geom quat="1 0 0 0" type="mesh" friction="1 0.005 0.001" material="black" mesh="right_I-PP_PP"/>
+                <body name="right_I-FingerTipAssembly_ec49c16c" pos="0.0015 0 0.037">
+                  <inertial pos="0.000409921 2.7186e-05 0.0211663" quat="0.713719 -0.0645127 -0.069604 0.693973" mass="0.0133506" diaginertia="2.04046e-06 1.98252e-06 4.22331e-07"/>
+                  <joint name="right_i-pip" range="-0.261799 1.8675" margin="0.01" armature="0.001" damping="0.1" frictionloss="0.001" axis="0 -1 0" limited="true"/>
+                  <geom quat="1 0 0 0" type="mesh" friction="1 0.005 0.001" material="black" mesh="right_I-IP_IP"/>
+                </body>
+              </body>
+            </body>
+            <body name="right_M-AP_e04a96f2" pos="-0.00075673 -0.00114633 0.0482518" quat="-0.500654 -0.500654 -0.499345 0.499345">
+              <inertial pos="0.00844104 -9.32731e-07 0.000583799" quat="7.79464e-05 0.677744 1.74423e-05 0.735298" mass="0.00961376" diaginertia="8.65538e-07 8.11263e-07 4.00856e-07"/>
+              <joint name="right_m-abd" range="-0.471239 0.471239" margin="0.01" armature="0.001" damping="0.1" frictionloss="0.001" pos="0.01925 0 0.001" limited="true"/>
+              <geom quat="1 0 0 0" type="mesh" friction="1 0.005 0.001" material="black" mesh="right_M-AP"/>
+              <body name="right_M-PP_08efa608" pos="-0.000616968 0 0" quat="-0.707107 0 0.707107 0">
+                <inertial pos="0.00245274 -1.09462e-06 0.0207048" quat="0.706015 0.016483 0.0167232 0.707807" mass="0.0192592" diaginertia="3.09985e-06 3.03105e-06 8.20332e-07"/>
+                <joint name="right_m-mcp" range="-0.436332 1.74533" margin="0.01" armature="0.001" damping="0.1" frictionloss="0.001" axis="0 -1 0" limited="true"/>
+                <geom quat="1 0 0 0" type="mesh" friction="1 0.005 0.001" material="black" mesh="right_M-PP_PP"/>
+                <body name="right_M-FingerTipAssembly_34afb748" pos="0.002 0 0.04">
+                  <inertial pos="0.000422009 2.84696e-05 0.0211493" quat="0.713395 -0.0645677 -0.0696126 0.6943" mass="0.0133702" diaginertia="2.0427e-06 1.98472e-06 4.22484e-07"/>
+                  <joint name="right_m-pip" range="-0.261799 1.8675" margin="0.01" armature="0.001" damping="0.1" frictionloss="0.001" axis="0 -1 0" limited="true"/>
+                  <geom quat="1 0 0 0" type="mesh" friction="1 0.005 0.001" material="black" mesh="right_M-IP_IP"/>
+                </body>
+              </body>
+            </body>
+            <body name="right_M-AP_6ec59111" pos="0.0230054 -0.00010145 0.0408507" quat="-0.485171 -0.438492 -0.554729 0.514401">
+              <inertial pos="0.00844104 -9.32731e-07 0.000583799" quat="7.79464e-05 0.677744 1.74423e-05 0.735298" mass="0.00961376" diaginertia="8.65538e-07 8.11263e-07 4.00856e-07"/>
+              <joint name="right_r-abd" range="-0.471239 0.471239" margin="0.01" armature="0.001" damping="0.1" frictionloss="0.001" pos="0.01925 0 0.001" limited="true"/>
+              <geom quat="1 0 0 0" type="mesh" friction="1 0.005 0.001" material="black" mesh="right_M-AP"/>
+              <body name="right_M-PP_8660a1eb" pos="-0.000616968 0 0" quat="-0.707107 0 0.707107 0">
+                <inertial pos="0.00245274 -1.09462e-06 0.0207048" quat="0.706015 0.016483 0.0167232 0.707807" mass="0.0192592" diaginertia="3.09985e-06 3.03105e-06 8.20332e-07"/>
+                <joint name="right_r-mcp" range="-0.436332 1.74533" margin="0.01" armature="0.001" damping="0.1" frictionloss="0.001" axis="0 -1 0" limited="true"/>
+                <geom quat="1 0 0 0" type="mesh" friction="1 0.005 0.001" material="black" mesh="right_M-PP_PP"/>
+                <body name="right_M-FingerTipAssembly_424a8e75" pos="0.002 0 0.04">
+                  <inertial pos="0.000422009 2.84696e-05 0.0211493" quat="0.713395 -0.0645677 -0.0696126 0.6943" mass="0.0133702" diaginertia="2.0427e-06 1.98472e-06 4.22484e-07"/>
+                  <joint name="right_r-pip" range="-0.261799 1.8675" margin="0.01" armature="0.001" damping="0.1" frictionloss="0.001" axis="0 -1 0" limited="true"/>
+                  <geom quat="1 0 0 0" type="mesh" friction="1 0.005 0.001" material="black" mesh="right_M-IP_IP"/>
+                </body>
+              </body>
+            </body>
+            <body name="right_P-AP_f5e42b61" pos="0.0466688 0.00500098 0.0291014" quat="-0.457318 -0.340199 -0.613869 0.546159">
+              <inertial pos="0.00874355 -1.34578e-06 0.000616812" quat="7.79238e-05 0.675769 2.63087e-05 0.737114" mass="0.00753187" diaginertia="5.78133e-07 5.31965e-07 2.71177e-07"/>
+              <joint name="right_p-abd" range="-0.523599 0.523599" margin="0.01" armature="0.001" damping="0.1" frictionloss="0.001" pos="0.01775 0 0.001" limited="true"/>
+              <geom quat="1 0 0 0" type="mesh" friction="1 0.005 0.001" material="black" mesh="right_P-AP"/>
+              <body name="right_P-PP_1d411b9b" quat="-0.707107 0 0.707107 0">
+                <inertial pos="0.00187371 -4.59702e-06 0.0166259" quat="0.999617 -0.0006847 0.00964385 -0.0259181" mass="0.0119561" diaginertia="1.27879e-06 1.27682e-06 4.19909e-07"/>
+                <joint name="right_p-mcp" range="-0.436332 1.74533" margin="0.01" armature="0.001" damping="0.1" frictionloss="0.001" axis="0 -1 0" limited="true"/>
+                <geom type="mesh" friction="1 0.005 0.001" material="black" mesh="right_P-PP_PP"/>
+                <body name="right_P-FingerTipAssembly_cd219176" pos="0.001 0 0.031">
+                  <inertial pos="-0.000593923 2.25145e-05 0.017692" quat="0.707249 -0.0993091 -0.104843 0.692058" mass="0.00935032" diaginertia="1.06655e-06 1.01637e-06 2.60079e-07"/>
+                  <joint name="right_p-pip" range="-0.261799 1.8675" margin="0.01" armature="0.001" damping="0.1" frictionloss="0.001" axis="0 -1 0" limited="true"/>
+                  <geom quat="1 0 0 0" type="mesh" friction="1 0.005 0.001" material="black" mesh="right_P-IP_IP"/>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <contact>
+    <exclude body1="right_ForeArmStructure-Model_e18f2368" body2="right_TopTower-Model_4a80d30e"/>
+    <exclude body1="right_ForeArmStructure-Model_e18f2368" body2="right_R-Carpals_8d1f1041"/>
+    <exclude body1="right_ForeArmStructure-Model_e18f2368" body2="right_T-TP-R_1c2b802d"/>
+    <exclude body1="right_ForeArmStructure-Model_e18f2368" body2="right_R-T-AP_a9723101"/>
+    <exclude body1="right_ForeArmStructure-Model_e18f2368" body2="right_T-PP_68395e98"/>
+    <exclude body1="right_ForeArmStructure-Model_e18f2368" body2="right_T-DP_b7429e50"/>
+    <exclude body1="right_ForeArmStructure-Model_e18f2368" body2="right_I-AP-R_d95d02d1"/>
+    <exclude body1="right_ForeArmStructure-Model_e18f2368" body2="right_I-PP_bacbd481"/>
+    <exclude body1="right_ForeArmStructure-Model_e18f2368" body2="right_I-FingerTipAssembly_ec49c16c"/>
+    <exclude body1="right_ForeArmStructure-Model_e18f2368" body2="right_M-AP_e04a96f2"/>
+    <exclude body1="right_ForeArmStructure-Model_e18f2368" body2="right_M-PP_08efa608"/>
+    <exclude body1="right_ForeArmStructure-Model_e18f2368" body2="right_M-FingerTipAssembly_34afb748"/>
+    <exclude body1="right_ForeArmStructure-Model_e18f2368" body2="right_M-AP_6ec59111"/>
+    <exclude body1="right_ForeArmStructure-Model_e18f2368" body2="right_M-PP_8660a1eb"/>
+    <exclude body1="right_ForeArmStructure-Model_e18f2368" body2="right_M-FingerTipAssembly_424a8e75"/>
+    <exclude body1="right_ForeArmStructure-Model_e18f2368" body2="right_P-AP_f5e42b61"/>
+    <exclude body1="right_ForeArmStructure-Model_e18f2368" body2="right_P-PP_1d411b9b"/>
+    <exclude body1="right_ForeArmStructure-Model_e18f2368" body2="right_P-FingerTipAssembly_cd219176"/>
+    <exclude body1="right_TopTower-Model_4a80d30e" body2="right_R-Carpals_8d1f1041"/>
+    <exclude body1="right_TopTower-Model_4a80d30e" body2="right_T-TP-R_1c2b802d"/>
+    <exclude body1="right_TopTower-Model_4a80d30e" body2="right_R-T-AP_a9723101"/>
+    <exclude body1="right_TopTower-Model_4a80d30e" body2="right_T-PP_68395e98"/>
+    <exclude body1="right_TopTower-Model_4a80d30e" body2="right_T-DP_b7429e50"/>
+    <exclude body1="right_TopTower-Model_4a80d30e" body2="right_I-AP-R_d95d02d1"/>
+    <exclude body1="right_TopTower-Model_4a80d30e" body2="right_I-PP_bacbd481"/>
+    <exclude body1="right_TopTower-Model_4a80d30e" body2="right_I-FingerTipAssembly_ec49c16c"/>
+    <exclude body1="right_TopTower-Model_4a80d30e" body2="right_M-AP_e04a96f2"/>
+    <exclude body1="right_TopTower-Model_4a80d30e" body2="right_M-PP_08efa608"/>
+    <exclude body1="right_TopTower-Model_4a80d30e" body2="right_M-FingerTipAssembly_34afb748"/>
+    <exclude body1="right_TopTower-Model_4a80d30e" body2="right_M-AP_6ec59111"/>
+    <exclude body1="right_TopTower-Model_4a80d30e" body2="right_M-PP_8660a1eb"/>
+    <exclude body1="right_TopTower-Model_4a80d30e" body2="right_M-FingerTipAssembly_424a8e75"/>
+    <exclude body1="right_TopTower-Model_4a80d30e" body2="right_P-AP_f5e42b61"/>
+    <exclude body1="right_TopTower-Model_4a80d30e" body2="right_P-PP_1d411b9b"/>
+    <exclude body1="right_TopTower-Model_4a80d30e" body2="right_P-FingerTipAssembly_cd219176"/>
+    <exclude body1="right_R-Carpals_8d1f1041" body2="right_T-TP-R_1c2b802d"/>
+    <exclude body1="right_R-Carpals_8d1f1041" body2="right_R-T-AP_a9723101"/>
+    <exclude body1="right_R-Carpals_8d1f1041" body2="right_T-PP_68395e98"/>
+    <exclude body1="right_R-Carpals_8d1f1041" body2="right_T-DP_b7429e50"/>
+    <exclude body1="right_R-Carpals_8d1f1041" body2="right_I-AP-R_d95d02d1"/>
+    <exclude body1="right_R-Carpals_8d1f1041" body2="right_I-PP_bacbd481"/>
+    <exclude body1="right_R-Carpals_8d1f1041" body2="right_I-FingerTipAssembly_ec49c16c"/>
+    <exclude body1="right_R-Carpals_8d1f1041" body2="right_M-AP_e04a96f2"/>
+    <exclude body1="right_R-Carpals_8d1f1041" body2="right_M-PP_08efa608"/>
+    <exclude body1="right_R-Carpals_8d1f1041" body2="right_M-FingerTipAssembly_34afb748"/>
+    <exclude body1="right_R-Carpals_8d1f1041" body2="right_M-AP_6ec59111"/>
+    <exclude body1="right_R-Carpals_8d1f1041" body2="right_M-PP_8660a1eb"/>
+    <exclude body1="right_R-Carpals_8d1f1041" body2="right_M-FingerTipAssembly_424a8e75"/>
+    <exclude body1="right_R-Carpals_8d1f1041" body2="right_P-AP_f5e42b61"/>
+    <exclude body1="right_R-Carpals_8d1f1041" body2="right_P-PP_1d411b9b"/>
+    <exclude body1="right_R-Carpals_8d1f1041" body2="right_P-FingerTipAssembly_cd219176"/>
+    <exclude body1="right_T-TP-R_1c2b802d" body2="right_R-T-AP_a9723101"/>
+    <exclude body1="right_T-TP-R_1c2b802d" body2="right_T-PP_68395e98"/>
+    <exclude body1="right_T-TP-R_1c2b802d" body2="right_T-DP_b7429e50"/>
+    <exclude body1="right_R-T-AP_a9723101" body2="right_T-PP_68395e98"/>
+    <exclude body1="right_R-T-AP_a9723101" body2="right_T-DP_b7429e50"/>
+    <exclude body1="right_T-PP_68395e98" body2="right_T-DP_b7429e50"/>
+    <exclude body1="right_I-AP-R_d95d02d1" body2="right_I-PP_bacbd481"/>
+    <exclude body1="right_I-AP-R_d95d02d1" body2="right_I-FingerTipAssembly_ec49c16c"/>
+    <exclude body1="right_I-PP_bacbd481" body2="right_I-FingerTipAssembly_ec49c16c"/>
+    <exclude body1="right_M-AP_e04a96f2" body2="right_M-PP_08efa608"/>
+    <exclude body1="right_M-AP_e04a96f2" body2="right_M-FingerTipAssembly_34afb748"/>
+    <exclude body1="right_M-PP_08efa608" body2="right_M-FingerTipAssembly_34afb748"/>
+    <exclude body1="right_M-AP_6ec59111" body2="right_M-PP_8660a1eb"/>
+    <exclude body1="right_M-AP_6ec59111" body2="right_M-FingerTipAssembly_424a8e75"/>
+    <exclude body1="right_M-PP_8660a1eb" body2="right_M-FingerTipAssembly_424a8e75"/>
+    <exclude body1="right_P-AP_f5e42b61" body2="right_P-PP_1d411b9b"/>
+    <exclude body1="right_P-AP_f5e42b61" body2="right_P-FingerTipAssembly_cd219176"/>
+    <exclude body1="right_P-PP_1d411b9b" body2="right_P-FingerTipAssembly_cd219176"/>
+  </contact>
+
+  <actuator>
+    <general name="right_p-abd_actuator" joint="right_p-abd" ctrlrange="-0.523599 0.523599" ctrllimited="true" forcelimited="true" forcerange="-1 1" biastype="affine" gainprm="2" biasprm="0 -2"/>
+    <general name="right_p-mcp_actuator" joint="right_p-mcp" ctrlrange="-0.436332 1.74533" ctrllimited="true" forcelimited="true" forcerange="-1 1" biastype="affine" gainprm="2" biasprm="0 -2"/>
+    <general name="right_p-pip_actuator" joint="right_p-pip" ctrlrange="-0.261799 1.8675" ctrllimited="true" forcelimited="true" forcerange="-1 1" biastype="affine" gainprm="2" biasprm="0 -2"/>
+    <general name="right_r-abd_actuator" joint="right_r-abd" ctrlrange="-0.471239 0.471239" ctrllimited="true" forcelimited="true" forcerange="-1 1" biastype="affine" gainprm="2" biasprm="0 -2"/>
+    <general name="right_r-mcp_actuator" joint="right_r-mcp" ctrlrange="-0.436332 1.74533" ctrllimited="true" forcelimited="true" forcerange="-1 1" biastype="affine" gainprm="2" biasprm="0 -2"/>
+    <general name="right_r-pip_actuator" joint="right_r-pip" ctrlrange="-0.261799 1.8675" ctrllimited="true" forcelimited="true" forcerange="-1 1" biastype="affine" gainprm="2" biasprm="0 -2"/>
+    <general name="right_m-abd_actuator" joint="right_m-abd" ctrlrange="-0.471239 0.471239" ctrllimited="true" forcelimited="true" forcerange="-1 1" biastype="affine" gainprm="2" biasprm="0 -2"/>
+    <general name="right_m-mcp_actuator" joint="right_m-mcp" ctrlrange="-0.436332 1.74533" ctrllimited="true" forcelimited="true" forcerange="-1 1" biastype="affine" gainprm="2" biasprm="0 -2"/>
+    <general name="right_m-pip_actuator" joint="right_m-pip" ctrlrange="-0.261799 1.8675" ctrllimited="true" forcelimited="true" forcerange="-1 1" biastype="affine" gainprm="2" biasprm="0 -2"/>
+    <general name="right_i-abd_actuator" joint="right_i-abd" ctrlrange="-0.436332 0.523599" ctrllimited="true" forcelimited="true" forcerange="-1 1" biastype="affine" gainprm="2" biasprm="0 -2"/>
+    <general name="right_i-mcp_actuator" joint="right_i-mcp" ctrlrange="-0.436332 1.74533" ctrllimited="true" forcelimited="true" forcerange="-1 1" biastype="affine" gainprm="2" biasprm="0 -2"/>
+    <general name="right_i-pip_actuator" joint="right_i-pip" ctrlrange="-0.261799 1.8675" ctrllimited="true" forcelimited="true" forcerange="-1 1" biastype="affine" gainprm="2" biasprm="0 -2"/>
+    <general name="right_t-cmc_actuator" joint="right_t-cmc" ctrlrange="-0.785398 0.575959" ctrllimited="true" forcelimited="true" forcerange="-1 1" biastype="affine" gainprm="2" biasprm="0 -2"/>
+    <general name="right_t-abd_actuator" joint="right_t-abd" ctrlrange="-0.314159 0.959931" ctrllimited="true" forcelimited="true" forcerange="-1 1" biastype="affine" gainprm="2" biasprm="0 -2"/>
+    <general name="right_t-mcp_actuator" joint="right_t-mcp" ctrlrange="-0.436332 1.74533" ctrllimited="true" forcelimited="true" forcerange="-1 1" biastype="affine" gainprm="2" biasprm="0 -2"/>
+    <general name="right_t-pip_actuator" joint="right_t-pip" ctrlrange="-0.261799 1.8675" ctrllimited="true" forcelimited="true" forcerange="-1 1" biastype="affine" gainprm="2" biasprm="0 -2"/>
+  </actuator>
+</mujoco>

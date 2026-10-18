@@ -1,0 +1,43 @@
+<mujoco model="MuJoCo Model">
+  <compiler angle="radian"/>
+
+  <default>
+    <default class="upstream">
+      <default class="n1">
+        <joint armature="0.01" damping="0.2"/>
+        <general ctrlrange="-0.0235 0" forcerange="-50 50" biastype="affine" gainprm="1000" biasprm="0 -1000"/>
+      </default>
+    </default>
+  </default>
+
+  <asset>
+    <mesh name="gripper" content_type="model/obj" file="meshes/gripper.obj"/>
+    <mesh name="jaw1" content_type="model/obj" file="meshes/jaw1.obj"/>
+    <mesh name="jaw2" content_type="model/obj" file="meshes/jaw2.obj"/>
+  </asset>
+
+  <worldbody>
+    <body name="gripper">
+      <inertial pos="-6.7987e-05 0.0001694 -0.077391" quat="0.464161 0.46546 -0.535128 0.530603" mass="0.374" diaginertia="0.00014808 0.000127124 5.86313e-05"/>
+      <geom quat="1 0 0 0" type="mesh" rgba="0.79216 0.81961 0.93333 1" mesh="gripper"/>
+      <body name="jaw1" pos="0 0 -0.11745" quat="1.34924e-11 3.67321e-06 1 3.67321e-06">
+        <inertial pos="0.0033269 0.029197 -0.0097237" quat="0.427918 0.661892 -0.405093 0.463342" mass="0.02" diaginertia="4.64011e-06 3.93984e-06 1.21885e-06"/>
+        <joint name="jaw1_JOINT" class="n1" type="slide" range="-0.0235 0" axis="0 -1 0"/>
+        <geom quat="1 0 0 0" type="mesh" friction="1.2 0.3 0.001" solref="0.002" rgba="0.29804 0.29804 0.29804 1" mesh="jaw1"/>
+      </body>
+      <body name="jaw2" pos="0 0 -0.11745" quat="1.34924e-11 3.67321e-06 1 3.67321e-06">
+        <inertial pos="-0.0033269 -0.029197 -0.0097237" quat="0.405093 0.463342 -0.427918 0.661892" mass="0.02" diaginertia="4.64011e-06 3.93984e-06 1.21885e-06"/>
+        <joint name="jaw2_JOINT" class="n1" type="slide" range="0 0.0235" axis="0 -1 0"/>
+        <geom quat="1 0 0 0" type="mesh" friction="1.2 0.3 0.001" solref="0.002" rgba="0.29804 0.29804 0.29804 1" mesh="jaw2"/>
+      </body>
+    </body>
+  </worldbody>
+
+  <equality>
+    <joint joint1="jaw2_JOINT" joint2="jaw1_JOINT" polycoef="0 -1 0 0 0"/>
+  </equality>
+
+  <actuator>
+    <general name="actuator_jaw" class="n1" joint="jaw1_JOINT"/>
+  </actuator>
+</mujoco>

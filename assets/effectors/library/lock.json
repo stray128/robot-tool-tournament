@@ -1,0 +1,701 @@
+{
+  "catalog_sha256": "8cf4a71de86e16949a326ecd123142aa1a7d169f78b9f06cb5ad202c7a9ed87d",
+  "format": "rtt-library-lock",
+  "items": {
+    "adapter-iso50-4-m6-to-iso31p5-4-m5": {
+      "files": {
+        "assets/effectors/library/adapter-iso50-4-m6-to-iso31p5-4-m5/LICENSES/LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "assets/effectors/library/adapter-iso50-4-m6-to-iso31p5-4-m5/doc/adapter-iso50-4-m6-to-iso31p5-4-m5.json": "8255a8d25e8eb8697b95e208149d87bcea5c7773e188c8f961c200d69dfa0ca7",
+        "assets/effectors/library/adapter-iso50-4-m6-to-iso31p5-4-m5/print/adapter-iso50-4-m6-to-iso31p5-4-m5.stl": "75262d1504456d42efcfb6abe20abc6e3c7470fd97fea6961df43b61fb2ca6f2",
+        "assets/effectors/library/adapter-iso50-4-m6-to-iso31p5-4-m5/sim/adapter-iso50-4-m6-to-iso31p5-4-m5.xml": "5424ab6a65166c902b024ad4e0cd42a19657ea02b281fe01a7c2ce4243a3cfa4"
+      },
+      "licence_files": {
+        "LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+      },
+      "preview": "67a0847c1dbdeff5646acaede4353ac6f020b51475228be24489dec3858d1bec",
+      "source_json_sha256": "2a13f297514f8bc9dbc9351a435cf03ce2f18941413f25f4730584a86f7e364a",
+      "upstream": {
+        "commit": "generated",
+        "extra": [],
+        "repository": "https://github.com/stray128/robot-tool-tournament"
+      }
+    },
+    "finger-fin-tpu": {
+      "files": {
+        "assets/effectors/library/finger-fin-tpu/LICENSES/LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+        "assets/effectors/library/finger-fin-tpu/print/soft_fin.stl": "4125201fffaca5f9e5ee354a11ff80328c08e7ccb4676661442a937b7a79b121"
+      },
+      "licence_files": {
+        "LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+      },
+      "preview": "96262d29b031f6dc5388d0a4961db5a1ae00240bb85204e4f820e062a412114a",
+      "source_json_sha256": "eac1b72882813a29f9debd914c5a3105912e0426ef2c47c4b073ae332d0ec783",
+      "upstream": {
+        "commit": "b017b5e6354bd9f61f4247a920c72622ca0aade0",
+        "extra": [],
+        "repository": "https://github.com/Vector-Wangel/XLeRobot"
+      }
+    },
+    "finger-soft-codesign": {
+      "files": {
+        "assets/effectors/library/finger-soft-codesign/LICENSES/LICENSE": "e2fc8d41be1fa35480b7fed391519549027f71754c8fdbc48cbe0580a4a937a8",
+        "assets/effectors/library/finger-soft-codesign/print/cobot_hand_mount.stl": "373308f478c3b4d092e0ca4babef4c5d2c5019a290a4520ca660cbaff2d249f9",
+        "assets/effectors/library/finger-soft-codesign/print/motor_horn.stl": "d2086ff45482c71acabf6ecbcde075e7a0505e7d24f06e58af16ff8cc829828d",
+        "assets/effectors/library/finger-soft-codesign/print/soft_finger.3mf": "0f9f0d5e606699dc3280249adeebf7dfca567c45f8693e41b0c33c785fb39daa"
+      },
+      "licence_files": {
+        "LICENSE": "e2fc8d41be1fa35480b7fed391519549027f71754c8fdbc48cbe0580a4a937a8"
+      },
+      "preview": "26a49532a4f25981490474a3221f251ff2146e6783ae21b160a7b28fccc87c91",
+      "source_json_sha256": "f4d98e932f769db4b1726247252f0a989b915535d2ee1e34c5bde937b4213377",
+      "upstream": {
+        "commit": "64c886dfd28934264d52c84eafe5f65e1423480e",
+        "extra": [],
+        "repository": "https://github.com/yswhynot/codesign-soft-gripper"
+      }
+    },
+    "gripper-2f-adaptive-85": {
+      "files": {
+        "assets/effectors/library/gripper-2f-adaptive-85/LICENSES/LICENSE": "3d5edd18d1e22a17666e9bb84270171ed5ac90b192d24e0177fd171708ea2316",
+        "assets/effectors/library/gripper-2f-adaptive-85/sim/gripper-2f-adaptive-85.xml": "c1c77f862df9751ee0800af882e86d55ec69b7ccd75f7755543b9e2d18af033e",
+        "assets/effectors/library/gripper-2f-adaptive-85/sim/meshes/base.obj": "6639c2189c8b079ad37a88231ec49e775164d09263ad8cad82d257c6eca9846b",
+        "assets/effectors/library/gripper-2f-adaptive-85/sim/meshes/coupler.obj": "550554299ed7e2c3eead9a20dd4c48f6e161fe2f63d345aea2bc0207967fd4a2",
+        "assets/effectors/library/gripper-2f-adaptive-85/sim/meshes/driver.obj": "90a6b59d8b5065bc991652327df30a9e717f9ef34d47dd57b2f2a0f7737e851e",
+        "assets/effectors/library/gripper-2f-adaptive-85/sim/meshes/follower.obj": "ce995a16445087127a6c333e77fa702c3594994ad6198b68efa548bea9c8def9",
+        "assets/effectors/library/gripper-2f-adaptive-85/sim/meshes/spring_link.obj": "ef7396ba39309b279b1c2967429569843dc289996d712139aa1606c893e80c84",
+        "assets/effectors/library/gripper-2f-adaptive-85/sim/meshes/tongue.obj": "3d49ad2f1e5f8f878130ab8d5a746000244f2772c1bf18e704c865417b0b71ce"
+      },
+      "licence_files": {
+        "robotiq_2f85_v4/LICENSE": "3d5edd18d1e22a17666e9bb84270171ed5ac90b192d24e0177fd171708ea2316"
+      },
+      "preview": "e401be5cefd926a0b1578562f90bb7718f27f7b178fa32899cb4881b3449b2ad",
+      "source_json_sha256": "16712858f943636564939270acb74da326e2d474ecf8d7c07abe5f4427c1c4b9",
+      "upstream": {
+        "commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+        "extra": [],
+        "repository": "https://github.com/google-deepmind/mujoco_menagerie"
+      }
+    },
+    "gripper-2f-air-mini": {
+      "files": {
+        "assets/effectors/library/gripper-2f-air-mini/LICENSES/LICENSE": "4fe659325706d0fc41592c8743d085a0bdf778056249f2a108943d22be916fb2",
+        "assets/effectors/library/gripper-2f-air-mini/sim/gripper-2f-air-mini.xml": "3b0e1505fa34397811c8a2f9cb965c8ed431c082967e8acff14571f5cbf2093f",
+        "assets/effectors/library/gripper-2f-air-mini/sim/meshes/gripper_lite_body_c.obj": "ca05db6923ffcdf465959214c6f09d19219ed9dd7a89edf15030ce65ed61b239",
+        "assets/effectors/library/gripper-2f-air-mini/sim/meshes/gripper_lite_left_finger_narrow.obj": "757b0cf36b303a8b13009356f6495db0e09cd1b969fd644d7f52152eabb24664",
+        "assets/effectors/library/gripper-2f-air-mini/sim/meshes/gripper_lite_right_finger_narrow.obj": "0d17aebf04d0975635dedc3afb3b8c209476bc381f169e44e1843c9c51dcee4d"
+      },
+      "licence_files": {
+        "ufactory_lite6/LICENSE": "4fe659325706d0fc41592c8743d085a0bdf778056249f2a108943d22be916fb2"
+      },
+      "preview": "78c836021bcf757a91e74c5521ddb391444aed2ff8901bf78cf0dec2137a90b6",
+      "source_json_sha256": "5f0cdc937258176c47f802b84a0730d18a1901e0132ac8748227688de63aab01",
+      "upstream": {
+        "commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+        "extra": [],
+        "repository": "https://github.com/google-deepmind/mujoco_menagerie"
+      }
+    },
+    "gripper-2f-camera-holder": {
+      "files": {
+        "assets/effectors/library/gripper-2f-camera-holder/LICENSES/LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+        "assets/effectors/library/gripper-2f-camera-holder/doc/README.md": "cc48e0d66dc7b3cbe9886d5291e14ffc34aeb077a5c657d19623e6eeb3f8bc38",
+        "assets/effectors/library/gripper-2f-camera-holder/print/base.stl": "c2a0d14df2a2775862da931b032fe1f026e320e058227ee3f20c9c3c36450632",
+        "assets/effectors/library/gripper-2f-camera-holder/print/base_shield.stl": "364785792d6be82d0c24c29e18df54030747a277161bfcf6ac1363a0beb6838d",
+        "assets/effectors/library/gripper-2f-camera-holder/print/camera_mount.stl": "55b34f1f25cb0e1862861a4ca7f87a393aba1a915e16734ef1fb8aa6e8f2bdc9",
+        "assets/effectors/library/gripper-2f-camera-holder/print/gear.stl": "966bb466a7437463666b60084257a6744d3cefe0973effc0db9ca54a907e25f2",
+        "assets/effectors/library/gripper-2f-camera-holder/print/jaw.stl": "f3c7766cbcb61a8ff4ffb5d4588ded441c701e445f7cbc6487a2903d7a98ed46",
+        "assets/effectors/library/gripper-2f-camera-holder/print/wiring_bracket.stl": "333dd417b6e66a3bb86723e0f4431b4ec806095384901ffa5088aec2316fd7b3"
+      },
+      "licence_files": {
+        "hardware/pgripper/LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+      },
+      "preview": "61fcf20db97041fda48182b35bef62d5816b742e3727567a72e75fc36ef81a72",
+      "source_json_sha256": "97f0c24388e90be2984d9493ea905efc842a0cde1ff95d61bfd762f2167172ca",
+      "upstream": {
+        "commit": "0d17bb300d712eeb5437d41ddb95ce380b5384e6",
+        "extra": [],
+        "repository": "https://github.com/norma-core/norma-core"
+      }
+    },
+    "gripper-2f-cobot-hand-80": {
+      "files": {
+        "assets/effectors/library/gripper-2f-cobot-hand-80/LICENSES/LICENSE": "a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9",
+        "assets/effectors/library/gripper-2f-cobot-hand-80/sim/gripper-2f-cobot-hand-80.xml": "e9a2978528d750b93226a4a3de918fae8650fb7a98d13002a7f78e03ce6552c5",
+        "assets/effectors/library/gripper-2f-cobot-hand-80/sim/meshes/finger_0.obj": "26b3c0a309802130ffb5202f9d1273c7b093cb107fb85962d97bd38378fe85f7",
+        "assets/effectors/library/gripper-2f-cobot-hand-80/sim/meshes/hand_c.obj": "2bad15dcee9d42e096c170b3949d16c574dd8fb201cf53927396715841ce82f8"
+      },
+      "licence_files": {
+        "franka_emika_panda/LICENSE": "a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9"
+      },
+      "preview": "c94e0e608699f918343c36460aa05f83b371ef3fd2704f379ab6fabd6f829049",
+      "source_json_sha256": "d8e6a52853736f31eefd0140b03961b37acaf23007932fda2116c321eb71a850",
+      "upstream": {
+        "commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+        "extra": [],
+        "repository": "https://github.com/google-deepmind/mujoco_menagerie"
+      }
+    },
+    "gripper-2f-force-48": {
+      "files": {
+        "assets/effectors/library/gripper-2f-force-48/LICENSES/LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+        "assets/effectors/library/gripper-2f-force-48/cad/cobot_coupler_plate.step": "371eb94dee2c1c3e62fa057c4236ad2839676072321c6d99636d58e185189ba5",
+        "assets/effectors/library/gripper-2f-force-48/cad/coupler_generic.step": "22f25b6f56cda35bc8a87ba0998988e3bab253d5d7e8ac3d7353e4136ff66f30",
+        "assets/effectors/library/gripper-2f-force-48/cad/jaw.step": "13fd5fda248f26a8c288ce7a1cf0a840dba7def0ea74afa14d4d0e81958aa8a1",
+        "assets/effectors/library/gripper-2f-force-48/cad/jaw_plate.step": "da02d618024b6e7958deaa286de446d03cf6db86010e8366f6fe72759ef1e551",
+        "assets/effectors/library/gripper-2f-force-48/cad/solid_jaws_pinch.step": "ee2f151ab9fab9e60d15df57c9e0796cb0c016a4558970da25ae35b0b01455d2",
+        "assets/effectors/library/gripper-2f-force-48/doc/BOM.md": "4cdb4dfbe3280b8ec5a43d28598c02ba06164fa580e68162233358137296a7a3",
+        "assets/effectors/library/gripper-2f-force-48/print/finger_1.stl": "5cf3ca52b54011f89672333b259b10cec6a78597ca768394b6b6d5d911c3914f",
+        "assets/effectors/library/gripper-2f-force-48/print/jaw_fin_ray_1.stl": "1e1169aac2c38be1699ed56192e0597aab2d56544d8fb3431388642404847ac7",
+        "assets/effectors/library/gripper-2f-force-48/print/jaw_fin_ray_3.stl": "e721b6fa94a531445e96e5a92f967f218b46553dc5cfce8c121b7063c76bede2",
+        "assets/effectors/library/gripper-2f-force-48/sim/gripper-2f-force-48.xml": "c23f646e58c8ec3f328f86d1f16f0a6ffe6458f83bce7e4c11f6ee8b01c7ea39",
+        "assets/effectors/library/gripper-2f-force-48/sim/meshes/gripper.obj": "21f41404f0c6b8c157d93e4b62357ccdd8ec0a5ed9b6aff1caf55ef013c9efe9",
+        "assets/effectors/library/gripper-2f-force-48/sim/meshes/jaw1.obj": "883c98ad0465454582f431251c9394840434dd1b1a208d85508675d9d894a9bb",
+        "assets/effectors/library/gripper-2f-force-48/sim/meshes/jaw2.obj": "e658e950bc5484eb009a216edb590e221597c512852e8450e18bc65eb662cca8"
+      },
+      "licence_files": {
+        "LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+      },
+      "preview": "eab8c6e51b651d79ed6a636e3b791cd27caae5d0800d8c930d3c5b9bdd25e05f",
+      "source_json_sha256": "f12a561daaa8d07ab58ee9cfb4c74259b6af46e1b52e0fbd1b90795298cdf579",
+      "upstream": {
+        "commit": "cb99f63e793e1887edfcfa8c07353b5c5bdedc51",
+        "extra": [],
+        "repository": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper"
+      }
+    },
+    "gripper-2f-hobby-parallel-84": {
+      "files": {
+        "assets/effectors/library/gripper-2f-hobby-parallel-84/LICENSES/DOCS-LICENSE.txt": "9ba9550ad48438d0836ddab3da480b3b69ffa0aac7b7878b5a0039e7ab429411",
+        "assets/effectors/library/gripper-2f-hobby-parallel-84/LICENSES/HARDWARE-LICENSE.txt": "6e471d647db50527d0c75ee5f1a55a74012ab177c73282bef0bdc7f6562b7ded",
+        "assets/effectors/library/gripper-2f-hobby-parallel-84/LICENSES/LICENSING.md": "e6494f67aae72c64191dba4810a50bba6a560546c31f9056aae577f575af588c",
+        "assets/effectors/library/gripper-2f-hobby-parallel-84/LICENSES/NOTICE": "cfeb6a263bedb0971392324ce019f39603d40fd3969f0674b38223a70d2ec1a2",
+        "assets/effectors/library/gripper-2f-hobby-parallel-84/LICENSES/SOFTWARE-LICENSE.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "assets/effectors/library/gripper-2f-hobby-parallel-84/print/camera_holder.stl": "82d9d5590e3cc336e8cd0393f5f41cb55ddb6080508856b291a8c6fc2c060e51",
+        "assets/effectors/library/gripper-2f-hobby-parallel-84/print/clamp.stl": "4470542147827f9cc839b10ef6e54bf5c7f64f08a654d7d751660daf2600de8e",
+        "assets/effectors/library/gripper-2f-hobby-parallel-84/print/gear.stl": "9f88db5828c1e26b7b15e3c0a4cfcea42805f0652b48beecca2ac57d037d8094",
+        "assets/effectors/library/gripper-2f-hobby-parallel-84/print/gear_rack_a.stl": "7d5fc2d18776725ececa88add05a28aa04c6153d3bf7ad0c52dbdee4690135b2",
+        "assets/effectors/library/gripper-2f-hobby-parallel-84/print/gear_rack_b.stl": "48a987bc9f216cf795ec8e056fc9a67eae5e14d1fad468dbf29848cbc04e003b",
+        "assets/effectors/library/gripper-2f-hobby-parallel-84/print/main_frame.stl": "fdd2b1273c9e8d03627316e1f35972cf97eeb77d30e280a0231e9c49d8c15e0e",
+        "assets/effectors/library/gripper-2f-hobby-parallel-84/print/nail.stl": "63e6615466ffc75e26843fd6de4895b8653f4afca017fe19f61ceeabf0dc8d96",
+        "assets/effectors/library/gripper-2f-hobby-parallel-84/sim/gripper-2f-hobby-parallel-84.xml": "4b8b662a093a502c8285e699d0b4f0cbde21e3d200f419b6228e5a6328102dc1",
+        "assets/effectors/library/gripper-2f-hobby-parallel-84/sim/meshes/m0.obj": "7916ca777e5f3475d6514cf4abdeb6c9a9144482cca145f5873c8bf91a8c458c",
+        "assets/effectors/library/gripper-2f-hobby-parallel-84/sim/meshes/m1.obj": "16159f7c705dbfe6e8a2057a625db3219596bfef9d8a9aa934c5e435f1872d14",
+        "assets/effectors/library/gripper-2f-hobby-parallel-84/sim/meshes/m2.obj": "fa801ddd514f11ec9d7ba4bcacfd70b6e1cfdfdb934f4c01120b080652330f99"
+      },
+      "licence_files": {
+        "DOCS-LICENSE.txt": "9ba9550ad48438d0836ddab3da480b3b69ffa0aac7b7878b5a0039e7ab429411",
+        "HARDWARE-LICENSE.txt": "6e471d647db50527d0c75ee5f1a55a74012ab177c73282bef0bdc7f6562b7ded",
+        "LICENSING.md": "e6494f67aae72c64191dba4810a50bba6a560546c31f9056aae577f575af588c",
+        "NOTICE": "cfeb6a263bedb0971392324ce019f39603d40fd3969f0674b38223a70d2ec1a2",
+        "SOFTWARE-LICENSE.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+      },
+      "preview": "fffb75c8a6834624faeaade133bb5b1c6fbf3f4ff9103c8448068a361e42d3e5",
+      "source_json_sha256": "a38a5440c32a44fc4cc06a5ca03f40727aaf7ad87d3c01135b97b222290b5efa",
+      "upstream": {
+        "commit": "305ad0f6e8f19e4e739616160cbdc7cae1ab153f",
+        "extra": [],
+        "repository": "https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper"
+      }
+    },
+    "gripper-2f-linkage-cobot": {
+      "files": {
+        "assets/effectors/library/gripper-2f-linkage-cobot/LICENSES/LICENSE": "4fe659325706d0fc41592c8743d085a0bdf778056249f2a108943d22be916fb2",
+        "assets/effectors/library/gripper-2f-linkage-cobot/sim/gripper-2f-linkage-cobot.xml": "a765e24d63df2e009fe9e189a8597431d38e84616346105ac31ca9ba7a292a37",
+        "assets/effectors/library/gripper-2f-linkage-cobot/sim/meshes/base_link.obj": "d03a740e3af6d4b5941f17742c29fc4d0e60a70dc6064fdfadc3857fd361449e",
+        "assets/effectors/library/gripper-2f-linkage-cobot/sim/meshes/left_inner_knuckle.obj": "8d9a1c8a1ef03e13539166478da57899d11457a570723126a3ed81fd6924f476",
+        "assets/effectors/library/gripper-2f-linkage-cobot/sim/meshes/left_outer_knuckle.obj": "9240964309262caaaa40e05566f03d13e68257dc4de39eded7e010d9dead6657",
+        "assets/effectors/library/gripper-2f-linkage-cobot/sim/meshes/right_inner_knuckle.obj": "a9f884861a3c513c9b808acdd342a782ede9becc79da04d86f488d0219dcd37a",
+        "assets/effectors/library/gripper-2f-linkage-cobot/sim/meshes/right_outer_knuckle.obj": "8d7077d007c5eaa83769692b65adc632a63e1638ff582da82b0cd2ddeb6f3de8"
+      },
+      "licence_files": {
+        "ufactory_xarm7/LICENSE": "4fe659325706d0fc41592c8743d085a0bdf778056249f2a108943d22be916fb2"
+      },
+      "preview": "0de1559b74437f78033e26b006cf4b1536e0b188ab695adca1c0bc96dc2a012b",
+      "source_json_sha256": "14b9985b268418daa2658954b0de2ddd821093e209ff7e5950dd98b81497f4fd",
+      "upstream": {
+        "commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+        "extra": [],
+        "repository": "https://github.com/google-deepmind/mujoco_menagerie"
+      }
+    },
+    "gripper-2f-rail-jaws": {
+      "files": {
+        "assets/effectors/library/gripper-2f-rail-jaws/LICENSES/LICENSE": "0eaac539dbc45ce2b7b696eb7e27c4aacc1939c64d8e673ffb014ac01d062e7d",
+        "assets/effectors/library/gripper-2f-rail-jaws/print/bottom.stl": "eb19a52205f53f1b0d7d1c4d24c92c74b896a4eec2fe0bcd412477f4c464d79c",
+        "assets/effectors/library/gripper-2f-rail-jaws/print/gear2.stl": "7115c1a585d5dbd8af295cbb8e5e427707170625ef85d556ef5798694b4eea39",
+        "assets/effectors/library/gripper-2f-rail-jaws/print/gear3.stl": "f2574dac6d114439346cd4ee82c959d8a0723d9ed5317b1bae87aa92035ffc4c",
+        "assets/effectors/library/gripper-2f-rail-jaws/print/gripper_left.stl": "28582afcc665e38d366140e90fe76c225d94df5cdffa803bc78bff304299cc4e",
+        "assets/effectors/library/gripper-2f-rail-jaws/print/gripper_right.stl": "81c409758b9816b93cb50830e635958ec51c86f4f61d29c5b4977a5cbb3a8f23",
+        "assets/effectors/library/gripper-2f-rail-jaws/print/panel_back.stl": "04445c844e742d1d4584cabb98374527e835e0b31796d8ab5deaacc39f2b451c",
+        "assets/effectors/library/gripper-2f-rail-jaws/print/panel_front.stl": "e69cc0237cbe5467fe911374c7dd1c61f4fcc8d2324e70e12568d9ccb5d62715"
+      },
+      "licence_files": {
+        "LICENSE": "0eaac539dbc45ce2b7b696eb7e27c4aacc1939c64d8e673ffb014ac01d062e7d"
+      },
+      "preview": "68e21d4776b45511de1d4d85f482b6b8ea72840b6fb4c62cb159d981b6ea2f71",
+      "source_json_sha256": "c2f3f941ea02b71bd84ed7b90ae6c12ce2fbf750590b98a77b81d35ca6ab5163",
+      "upstream": {
+        "commit": "8dd3a2328e7eee866abd5aa85895ca51c1c2a643",
+        "extra": [],
+        "repository": "https://github.com/XiujinLiu/Grip4SO101"
+      }
+    },
+    "gripper-2f-servo-110": {
+      "files": {
+        "assets/effectors/library/gripper-2f-servo-110/LICENSES/LICENSE": "9873a83dddefdf6d63f1c713a81eab1a5d3a3dd53cb9958de997cf9d254effa5",
+        "assets/effectors/library/gripper-2f-servo-110/sim/gripper-2f-servo-110.xml": "2860d54febdecc0c4d9bf60c87d2edfac29fb4550773218ee9ba07e71936dcdc"
+      },
+      "licence_files": {
+        "wsg_50_description/LICENSE": "9873a83dddefdf6d63f1c713a81eab1a5d3a3dd53cb9958de997cf9d254effa5"
+      },
+      "preview": "98a66be73018fb7c6ef9de199c5aa8d2eb2f5a51463c0d0dd5285ce76aa29d8c",
+      "source_json_sha256": "e2227398f72d4ba97a112f1ac2bcf6451490b0887b2e45f7949e7cf90d572d2b",
+      "upstream": {
+        "commit": "f85076b4d95a8bdfec70153015e723e92312e4e2",
+        "extra": [],
+        "repository": "https://github.com/RobotLocomotion/models"
+      }
+    },
+    "gripper-2f-teleop": {
+      "files": {
+        "assets/effectors/library/gripper-2f-teleop/LICENSES/LICENSE": "21868447315ac2b10e592d08958c1035b19a32cf39e9165b23033f68390098cb",
+        "assets/effectors/library/gripper-2f-teleop/LICENSES/LICENSE-fingers": "4666c312da313e6c46929f6695d06cf98a2e7359b9c7dcbb0ea232d01b32cd42",
+        "assets/effectors/library/gripper-2f-teleop/print/fingers_set_a_stl.zip": "bd8e5c8a86c2fee8b86820ef03e36a1d62b3d635d462bc935bcc43f2891dcca5",
+        "assets/effectors/library/gripper-2f-teleop/print/fingers_set_b_stl.zip": "9240e509574ace1d09a065eb688ae59748375cf19924328111bcad13f99ff2b2",
+        "assets/effectors/library/gripper-2f-teleop/sim/gripper-2f-teleop.xml": "2aeb4b1de91d684edc2e8cf1f7f01e65d88263849ab63fe99015c6839a53b2dd",
+        "assets/effectors/library/gripper-2f-teleop/sim/meshes/d405_solid.obj": "83becadcab02de05ae3408d46bd19fce7bb6d09e91e8af70c1faa17aa0a6afe5",
+        "assets/effectors/library/gripper-2f-teleop/sim/meshes/vx300s_7_gripper_bar.obj": "f649f3854021eb0a989b084ec12fd6e420cf98d80625e20c3bd6e3b98437bdb1",
+        "assets/effectors/library/gripper-2f-teleop/sim/meshes/vx300s_7_gripper_prop.obj": "5a6f1373bd30129460d89be538af97eda3dc9b514869dd1f657440237b680959",
+        "assets/effectors/library/gripper-2f-teleop/sim/meshes/vx300s_7_gripper_wrist_mount.obj": "c879008266fd7cf3b3dcb7600c39175e16ae8dbdec12d3af037bfa204f77cbe6",
+        "assets/effectors/library/gripper-2f-teleop/sim/meshes/vx300s_8_custom_finger_left.obj": "23fe9619ef24416bef852c6a745c0a7a1b311d9f166214151e9f4e26aa240a22",
+        "assets/effectors/library/gripper-2f-teleop/sim/meshes/vx300s_8_custom_finger_right.obj": "4e3276ca9bac00d8efda784251d419e665fa2e54022a264f2a3ba25ad7700f08"
+      },
+      "licence_files": {
+        "aloha/LICENSE": "21868447315ac2b10e592d08958c1035b19a32cf39e9165b23033f68390098cb",
+        "https://github.com/tonyzhaozh/aloha#LICENSE": "4666c312da313e6c46929f6695d06cf98a2e7359b9c7dcbb0ea232d01b32cd42"
+      },
+      "preview": "4e38532fd34cf09b0eee4715111093e0e5f88966ba74cca56dbc8a986fdea40a",
+      "source_json_sha256": "db399497b5c2606482a8c52f6a138885d5c414f23433bf05def7184f68b8df57",
+      "upstream": {
+        "commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+        "extra": [
+          {
+            "commit": "06369f03cd8e0a47e16d3a90167853fd33af7557",
+            "repository": "https://github.com/tonyzhaozh/aloha"
+          }
+        ],
+        "repository": "https://github.com/google-deepmind/mujoco_menagerie"
+      }
+    },
+    "gripper-angular-jaw-hobby": {
+      "files": {
+        "assets/effectors/library/gripper-angular-jaw-hobby/LICENSES/LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+        "assets/effectors/library/gripper-angular-jaw-hobby/LICENSES/LICENSE-arm": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+        "assets/effectors/library/gripper-angular-jaw-hobby/cad/moving_jaw.step": "dff53ace072470c9a6c84dbb68dd84f9fd0959429f181905d9d05fe3007549b5",
+        "assets/effectors/library/gripper-angular-jaw-hobby/print/moving_jaw.stl": "403763bbab8656cc7ce5ea6374741d0860bd19426b5b4b0041de3a2c1275f90b",
+        "assets/effectors/library/gripper-angular-jaw-hobby/sim/gripper-angular-jaw-hobby.xml": "de8da70227e949f048f3a8ecbcc8e31d8ae195c5fe81dcd27ccdedbee32ac53b",
+        "assets/effectors/library/gripper-angular-jaw-hobby/sim/meshes/Fixed_Jaw_Collision_1.obj": "e232d7924468a05d75ee2c181cb681522fb94434922c249dd19f4b85b1ace1f6",
+        "assets/effectors/library/gripper-angular-jaw-hobby/sim/meshes/Fixed_Jaw_Collision_2.obj": "36981788061f93c89262fcc4af65ade8b1e0d63f3cdb2f4115b0204a4c613dab",
+        "assets/effectors/library/gripper-angular-jaw-hobby/sim/meshes/Moving_Jaw_Collision_1.obj": "ed74c664d9066627ad50a02f4187ae353f4228dcb5395c7c28f91655ca668f9a",
+        "assets/effectors/library/gripper-angular-jaw-hobby/sim/meshes/Moving_Jaw_Collision_2.obj": "73a6f1648a708d6f8bb309fc1dc7e873126a8032aade5c7e0c5d9b0668491fd5",
+        "assets/effectors/library/gripper-angular-jaw-hobby/sim/meshes/Moving_Jaw_Collision_3.obj": "bd59cb6d17137e16f829d2d729d6f9be3f41ffa782a919755445ede5a68eba93"
+      },
+      "licence_files": {
+        "https://github.com/TheRobotStudio/SO-ARM100#LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+        "trs_so_arm100/LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+      },
+      "preview": "b203ed4a7c527815e06746100d63dba10384a7c3c678c465b814543bf7305558",
+      "source_json_sha256": "26e67c38d07d1100653dde3c070b19e4102b5fd03af692f68489a7437a12a64e",
+      "upstream": {
+        "commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+        "extra": [
+          {
+            "commit": "a758567c3978dfeefe282ede0500085a48fe8f78",
+            "repository": "https://github.com/TheRobotStudio/SO-ARM100"
+          }
+        ],
+        "repository": "https://github.com/google-deepmind/mujoco_menagerie"
+      }
+    },
+    "gripper-hobby-arm-twin-jaw": {
+      "files": {
+        "assets/effectors/library/gripper-hobby-arm-twin-jaw/LICENSES/LICENSE": "6d0323944039e416103ce14b47b940202990d85aaf2ded007f6da545bfb00680",
+        "assets/effectors/library/gripper-hobby-arm-twin-jaw/print/jaw_left.stl": "5bca365190633f9d3c14353114a9c870f5601fd91520d383969dae7106e88c11",
+        "assets/effectors/library/gripper-hobby-arm-twin-jaw/print/jaw_right.stl": "746ef654a9e92055e01c09861a09212e2b30b75c29ad6f6c0287a2b280e0091e"
+      },
+      "licence_files": {
+        "LICENSE": "6d0323944039e416103ce14b47b940202990d85aaf2ded007f6da545bfb00680"
+      },
+      "preview": "f4ee14e1aa82fd2995f49a5703dd139e74a11b24acff6f30b07364bc40f62263",
+      "source_json_sha256": "d1e853e726d564b66bd63989cb3c923903458c227e10d4f7167924b29baf69eb",
+      "upstream": {
+        "commit": "0866a92501277636f76000a195d8a16d44b5b476",
+        "extra": [],
+        "repository": "https://github.com/BCN3D/BCN3D-Moveo"
+      }
+    },
+    "hand-3f-12dof-industrial": {
+      "files": {
+        "assets/effectors/library/hand-3f-12dof-industrial/LICENSES/LICENSE": "d42cae9a0f292b7a713597ba26e1e1e23d50df906c488f0d36fd3538af200bc1",
+        "assets/effectors/library/hand-3f-12dof-industrial/sim/hand-3f-12dof-industrial.xml": "ca96d66db559d464f9b227c85237180309730fe4b855317f1f4f7cb85b0ad321",
+        "assets/effectors/library/hand-3f-12dof-industrial/sim/meshes/r3_config1_base_col.obj": "8f428c3f742a1c8a3daa41c95861e3dd604dfbe7de2572126dbb74c1ce287f5d",
+        "assets/effectors/library/hand-3f-12dof-industrial/sim/meshes/r3_config1_base_puck_col.obj": "297a8a410ab0a503dd69c0e5dc6778def9b98a0ebb77038fd50d62f8d931cce0",
+        "assets/effectors/library/hand-3f-12dof-industrial/sim/meshes/r3_finger_base_col.obj": "4a8e89af79d3fe70abfbda6c891c71ee35871d21d3d9a4c0a9b876d554b33b91",
+        "assets/effectors/library/hand-3f-12dof-industrial/sim/meshes/r3_finger_distal_col.obj": "267e83b2dc1e0944694cb2410fecc5ccba3e1c44e1391d89bda3edb3ab8d0b20",
+        "assets/effectors/library/hand-3f-12dof-industrial/sim/meshes/r3_finger_distal_tip_col.obj": "d9560f390503fe9f78c8b6019f65f08496dd76cc3a01d43d05326772efca9ab4",
+        "assets/effectors/library/hand-3f-12dof-industrial/sim/meshes/r3_finger_knuckle_col.obj": "d894997e5660308731843f898be44bdff39b31bd5da434eddd5c5d1d66c571d9",
+        "assets/effectors/library/hand-3f-12dof-industrial/sim/meshes/r3_finger_middle_col.obj": "b653cf5931b6444134b27c9932666231e4f58f4128d417655d03e2d6b5dd4111",
+        "assets/effectors/library/hand-3f-12dof-industrial/sim/meshes/r3_finger_proximal_col.obj": "702686ce313922b51f4453f01c53d2af21a5477e25b3246722c8f2a1383ec0bf"
+      },
+      "licence_files": {
+        "shadow_dexee/LICENSE": "d42cae9a0f292b7a713597ba26e1e1e23d50df906c488f0d36fd3538af200bc1"
+      },
+      "preview": "1981766b2eaf22cc26a2f4b51f7bbd3a46e19ac92a094bcfc9e90d9ebc10061a",
+      "source_json_sha256": "64f342e78c301575684f0c5cd1be583370d4d9282a5695ded0274ca0e6dbdd2a",
+      "upstream": {
+        "commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+        "extra": [],
+        "repository": "https://github.com/google-deepmind/mujoco_menagerie"
+      }
+    },
+    "hand-4f-8dof-printed": {
+      "files": {
+        "assets/effectors/library/hand-4f-8dof-printed/LICENSES/LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+        "assets/effectors/library/hand-4f-8dof-printed/LICENSES/README-licence-statement.md": "b0fb4bcb17034e2e4801275355b8482be24dffe3915a8d3ba3a6c618f7a91a86",
+        "assets/effectors/library/hand-4f-8dof-printed/cad/distal.step": "ae09a65851c28b787eec80f31879315f6e34fe7798ca586805a6387f6917ebdf",
+        "assets/effectors/library/hand-4f-8dof-printed/cad/finger_frame_1.step": "32f92268cd440cd742101b1716363ce32260c23f3f1513f79e9fcb5d662ad76a",
+        "assets/effectors/library/hand-4f-8dof-printed/cad/finger_frame_2.step": "aaf979d0bfd60702780d1b3ebf4c67e1a1d8cce9399c13e4c8db9c78ea72bfda",
+        "assets/effectors/library/hand-4f-8dof-printed/cad/gimbal.step": "460519cfe9251d671675709d1e64281581efbf432d92ba94a5eba1b38f8b32e6",
+        "assets/effectors/library/hand-4f-8dof-printed/cad/hand_plate_right.step": "933cc8a07883ce9b2549a1d4b63bc208ea4a991d0d2ab5041c316ca3269aeb53",
+        "assets/effectors/library/hand-4f-8dof-printed/cad/hobby_arm_interface.step": "328a8c0c8e375cda0649027c850d23dd910cd8df0acd3c7824211ff947108df4",
+        "assets/effectors/library/hand-4f-8dof-printed/cad/link.step": "682d87c9be4d2ac59f3996d6c2a98cb98c512b73698959d61d604a67a283ece6",
+        "assets/effectors/library/hand-4f-8dof-printed/cad/proximal.step": "979b42106da4a165b5731f92c9277bac7a038cc42d3dcb67721214c976078a1e",
+        "assets/effectors/library/hand-4f-8dof-printed/cad/wrist_interface_right.step": "6eb6f932d877948ef7fe3d23608fd02aaa9b2dfb8cefb5d3e2550b44c12f8b8f"
+      },
+      "licence_files": {
+        "LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+        "README.md": "b0fb4bcb17034e2e4801275355b8482be24dffe3915a8d3ba3a6c618f7a91a86"
+      },
+      "preview": "d442b5d8df3501864b23db455be67b023ed1d9887b6c684be882275f7ec61bbe",
+      "source_json_sha256": "ff492e1d4e892f7b983e99ec7f6b5273a66f277aae59faec5daa19866a21532a",
+      "upstream": {
+        "commit": "3e8241074df3436a3044ced4881e3bb2133aa725",
+        "extra": [],
+        "repository": "https://github.com/pollen-robotics/AmazingHand"
+      }
+    },
+    "hand-4f-servo-13act": {
+      "files": {
+        "assets/effectors/library/hand-4f-servo-13act/LICENSES/LICENSE": "77b9fe5e48aab1f811599f07bb39a0ee948787ac71dc9d3da2264b80d24a4cd8",
+        "assets/effectors/library/hand-4f-servo-13act/sim/hand-4f-servo-13act.xml": "f02bbc87750c3eed7ab694ccf70e6ae62b309095727a920eeab9f6d113210398"
+      },
+      "licence_files": {
+        "LICENSE": "77b9fe5e48aab1f811599f07bb39a0ee948787ac71dc9d3da2264b80d24a4cd8"
+      },
+      "preview": "c08da66f229f79113a528d9cb5f34ba477f5863b05ed5bba042af3164e5586a3",
+      "source_json_sha256": "d5731d82048cfad3b58731213d1f72f4c31945ece62e06bf341e58a5723864fc",
+      "upstream": {
+        "commit": "6c7d17f4a8cb5414e81653aa2795acc9610e1730",
+        "extra": [],
+        "repository": "https://github.com/midas-hand-org/midas_hand_mujoco"
+      }
+    },
+    "hand-5f-tendon-16dof": {
+      "files": {
+        "assets/effectors/library/hand-5f-tendon-16dof/LICENSES/LICENSE": "fbe1992f5485169984e944a26e5a7f5ef62bc1335b8c3946c715e645bc0c2624",
+        "assets/effectors/library/hand-5f-tendon-16dof/LICENSES/LICENSE-hardware": "a0d1cc4791072562651444fefd9522b251b5ef451565837bf78076ac4a24e7bd",
+        "assets/effectors/library/hand-5f-tendon-16dof/sim/hand-5f-tendon-16dof.xml": "c0aa85b6abb4ac93a8dcd75f90c700c4963da11d8200380ed17208cf8623c02b",
+        "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_ForeArmStructure-Model.obj": "3d4f4cd01fa200f3a5bce031e0fa43ad0d3d3ea62484be7f66421aee0485641b",
+        "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_I-AP-R.obj": "30754c976f975c4ea356c659a3b57a342ca803052aa8e46794677487ed48fbee",
+        "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_I-IP_IP.obj": "b714cd161f2bf5e8359eb2ca5eb55bcac876c92f0a9813b8c96ce38ea7560b6c",
+        "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_I-PP_PP.obj": "50ba362725ff4ed226a2087e96a0d1fc2e3cbad035a902a6508fba4010ee2a05",
+        "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_M-AP.obj": "9431cc80cd52b4d7df00ad7459a0c4ad3c50f5bfa71f7385d05f1df19839747f",
+        "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_M-IP_IP.obj": "fd2ac0ecdde0baf976469de99e2fa0db718c7a791e487e8e2b5ef3b7657345ea",
+        "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_M-PP_PP.obj": "e12b28df63e9e215a4b1afd09688a09073e3dcadf3044f694f6081f495246c8a",
+        "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_P-AP.obj": "9cab2e611565e1d682a623443b6f380ee4a1e3915abc311e0eba4ca04fe81a5d",
+        "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_P-IP_IP.obj": "c2a9909ecf19e11d8ee7503fc0d4443162b0c5d6276217d18fbcfb57207331a2",
+        "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_P-PP_PP.obj": "7d77cd70111ecff681f223ab173dc9e2b8ffe5dd1c2c85b207fd2e3f048d6ee6",
+        "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_R-Carpals.obj": "28ec1b3912a90288a7d302e8c6ee7449b74b265b9bdf4a34a2052746dab4befd",
+        "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_R-T-AP.obj": "74751ca8e1f6786f10a0e62a27472cd6a5a7dd2ddab31890607032367288fdcd",
+        "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_T-DP_T-DP.obj": "8091e58b82c2ad5dc56d31857616cb648ec9ff676c0453b68b12b1fe00ea18e3",
+        "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_T-PP_PP.obj": "dffee8a813ed3f1b81212f166e4f5b5b0a06bfc883ee91040dcc18b292187a74",
+        "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_T-TP-R.obj": "6d7e1f3185a19a347840aa70851b303e151fa351a8622c2a474f63bedd50e884",
+        "assets/effectors/library/hand-5f-tendon-16dof/sim/meshes/right_TopTower-Model.obj": "102be2aac581fce4df600ebc7a2b6c236b0838957b9932e913146a9fac50a037"
+      },
+      "licence_files": {
+        "LICENSE": "fbe1992f5485169984e944a26e5a7f5ef62bc1335b8c3946c715e645bc0c2624",
+        "https://github.com/orcahand/orcahand_hardware#LICENSE": "a0d1cc4791072562651444fefd9522b251b5ef451565837bf78076ac4a24e7bd"
+      },
+      "preview": "9b74eabbc24104b3582645a74029f714e74f928ae6a395b1090cb9d9baa9d02e",
+      "source_json_sha256": "1111ee03c669687c0fef3cc839a428c343adcb42d7ba529138c69afb30f1073f",
+      "upstream": {
+        "commit": "b9b349a21ee0238c62b6cf92ae7597027867adf8",
+        "extra": [
+          {
+            "commit": "37b71dc03d3f11e48b920cbf54562b33c025bc8c",
+            "repository": "https://github.com/orcahand/orcahand_hardware"
+          }
+        ],
+        "repository": "https://github.com/orcahand/orcahand_description"
+      }
+    },
+    "jaw-compliant-tpu": {
+      "files": {
+        "assets/effectors/library/jaw-compliant-tpu/LICENSES/LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+        "assets/effectors/library/jaw-compliant-tpu/print/compliant_moving_jaw.stl": "8bfc815bea4bc5aedcc4ca91f92dd1d94d58257f344853eb02e574fa75b48f7e",
+        "assets/effectors/library/jaw-compliant-tpu/print/compliant_wrist_part.stl": "d32dd612664b3746d194e90e576349f66c9da631e7b5f79ef6d6579c191ba366"
+      },
+      "licence_files": {
+        "LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+      },
+      "preview": "6b3cfbbee723e140eaabf7da4bb0475f2adbf04b044a20a2d467f6836de5a331",
+      "source_json_sha256": "6fd43a3547927f7fc3a98dce7e9baec8314a501ec08217e3023e225294c98441",
+      "upstream": {
+        "commit": "a758567c3978dfeefe282ede0500085a48fe8f78",
+        "extra": [],
+        "repository": "https://github.com/TheRobotStudio/SO-ARM100"
+      }
+    },
+    "jaw-magnetic-static": {
+      "files": {
+        "assets/effectors/library/jaw-magnetic-static/LICENSES/LICENSE": "a73af38bde2ed7671ed0028d7cc44403c0d7424683ab8fdb5f21dd1724c1f790",
+        "assets/effectors/library/jaw-magnetic-static/cad/magnetic_static_jaw.scad": "cfbe0f17052b2467c7d7796dc63ea0de4ac4e8e8eba8a040875e63945050edb5",
+        "assets/effectors/library/jaw-magnetic-static/print/magnetic_static_jaw.stl": "fc91cda19fc3ba194114b9a7b70eedaa1e3edc4e66941aa23bd8a0309943c308"
+      },
+      "licence_files": {
+        "LICENSE": "a73af38bde2ed7671ed0028d7cc44403c0d7424683ab8fdb5f21dd1724c1f790"
+      },
+      "preview": "011f9800517dca57f38126344347e7ff09cf9eea0736499021d8d9b1f1ecfd05",
+      "source_json_sha256": "28c7aa448b9881f356de02b1d31dc525dc59b8edf4786d116e9f99199f366b4c",
+      "upstream": {
+        "commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+        "extra": [],
+        "repository": "https://github.com/jackvial/assembler0"
+      }
+    },
+    "plate-iso31p5-4-m5": {
+      "files": {
+        "assets/effectors/library/plate-iso31p5-4-m5/LICENSES/LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "assets/effectors/library/plate-iso31p5-4-m5/doc/plate-iso31p5-4-m5.json": "7550d71bbc680e18fac9b4247e0185a469d579e210431d35ee34181933d34b09",
+        "assets/effectors/library/plate-iso31p5-4-m5/print/plate-iso31p5-4-m5.stl": "152272d173db1157996d08de27053926fdd69621cb8b2a3f9ae5031c1ffa6c9d",
+        "assets/effectors/library/plate-iso31p5-4-m5/sim/plate-iso31p5-4-m5.xml": "700dc58003d54110fdd8c346c035be7ad2a2dec8d48582c41618e5ab36413fda"
+      },
+      "licence_files": {
+        "LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+      },
+      "preview": "4315b52ee7485926ac3c6eecb84892c93cc248b23dbebdfccdf18d80e15ef617",
+      "source_json_sha256": "522ae28947be49c23cef08777591f90444b1c86646f585feadff93f9183ac397",
+      "upstream": {
+        "commit": "generated",
+        "extra": [],
+        "repository": "https://github.com/stray128/robot-tool-tournament"
+      }
+    },
+    "plate-iso50-4-m6": {
+      "files": {
+        "assets/effectors/library/plate-iso50-4-m6/LICENSES/LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+        "assets/effectors/library/plate-iso50-4-m6/doc/plate-iso50-4-m6.json": "004b7dcc23bde87fecfd8dc400a785aeea1560ef0af4fd84dd45c9bbdb1382d4",
+        "assets/effectors/library/plate-iso50-4-m6/print/plate-iso50-4-m6.stl": "ed3a4129910d17520090a94a5629185acd9afabe0a80f8aa5164274b72bd12fb",
+        "assets/effectors/library/plate-iso50-4-m6/sim/plate-iso50-4-m6.xml": "8a5b01fafc120435825519d82445a6bbc13c7a650da1a6feb240ab6a79693356"
+      },
+      "licence_files": {
+        "LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+      },
+      "preview": "562932390b66dbd5e86b37d1a439fb79becba0a3ff7fa01d3bc90acf6a31b526",
+      "source_json_sha256": "d8d4e505057e4b77cf1b8aa2eb53d14ba60698b1f936ad5e6d103de31093e8f2",
+      "upstream": {
+        "commit": "generated",
+        "extra": [],
+        "repository": "https://github.com/stray128/robot-tool-tournament"
+      }
+    },
+    "suction-cup-cobot": {
+      "files": {
+        "assets/effectors/library/suction-cup-cobot/LICENSES/LICENSE": "685e81e0cd30124e24e834ea2bf39bfead4efc9907d021bc9d1ae0f2dcea1431",
+        "assets/effectors/library/suction-cup-cobot/sim/vacuum_gripper_collision.stl": "26179bd32d360c0d404ae072973cdf4b0a543581fe179508a38b3801f8773915"
+      },
+      "licence_files": {
+        "LICENSE": "685e81e0cd30124e24e834ea2bf39bfead4efc9907d021bc9d1ae0f2dcea1431"
+      },
+      "preview": "229cddb14d639ecdec00f6a1340bfa562fb4841f3628e2b64d8cd3c66c3096e2",
+      "source_json_sha256": "d7ce227086bf8cd58c0c6dcc85bfe2a13025811177dde7cd05eea8084e4c9be3",
+      "upstream": {
+        "commit": "62936f7ea1846a85f7350de2c4c18f39e6d19715",
+        "extra": [],
+        "repository": "https://github.com/xArm-Developer/xarm_ros2"
+      }
+    },
+    "suction-primitive": {
+      "files": {
+        "assets/effectors/library/suction-primitive/LICENSES/LICENSE": "177978cbece0a4c454c2aaec5b3f145b39270814874c43109da9e829c39d9cba",
+        "assets/effectors/library/suction-primitive/sim/suction_gripper.xml": "681aba29b21c18b4f9d09f4c34d54ea63aa9f67c790e30d5d859ff6e370818f9"
+      },
+      "licence_files": {
+        "LICENSE": "177978cbece0a4c454c2aaec5b3f145b39270814874c43109da9e829c39d9cba"
+      },
+      "preview": "e5c33c657047dff0c9423f33da3faf81c8c42d4c0fd1d8f8aa0436ccf3d127c2",
+      "source_json_sha256": "1209e26ab8424178d7a0c694ada0471085a248ab1ff70e7c814c013a702d4d1f",
+      "upstream": {
+        "commit": "5ce6643f3092639d08f7b0f90ed1c6a84f50552c",
+        "extra": [],
+        "repository": "https://github.com/ARISE-Initiative/robosuite"
+      }
+    },
+    "tool-button-pusher": {
+      "files": {
+        "assets/effectors/library/tool-button-pusher/LICENSES/TOOL_LICENSE.md": "d031804eb24b7372a60773f5b57a9467f58c27182ae3e262a3e015c4452adf48",
+        "assets/effectors/library/tool-button-pusher/doc/README.md": "7118a625f02eef2a9503c1c047031e4eaa1a314ebd6ad37cfb3804f65524e942",
+        "assets/effectors/library/tool-button-pusher/print/button_pusher.stl": "1263871f77c6e13b270a257943c61a03760f50bc4b847437c8ff0f64bf7442e5",
+        "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_0.obj": "9657e4da744add91092db1fc2e80123b9358b1b7e77adcbcd3494282d2791d36",
+        "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_1.obj": "7d627df626d527c21df3af8739bab738fae384b1bac29a4cc7420e65d4c51e32",
+        "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_10.obj": "71881dc81250a9d5337d4da095090a564f30ea8a484dcbbd307959645d758aeb",
+        "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_11.obj": "17dcf405ab98bb7e75f6231509fb4e7a1ceeb6e097226b70c5e44cd065f7411b",
+        "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_12.obj": "10a633f5216054c68a8d012ca14a10eae0bb970f79a1985e314469da4801ce68",
+        "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_13.obj": "bf34047263845595d48958729cf68fe99ab0df4210c8985a69cb9789d507255f",
+        "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_14.obj": "a6966d6d717ca51e14154498fad7ca75eca65514380e378ffc50775258609fe0",
+        "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_15.obj": "1c5ef917545b3a6461e5cb51149973c63afbb6927fed05493ed0ad8f18f8dd52",
+        "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_2.obj": "9261f1f8c775a9a53c6240557b2f2e497554ae1cbc5eb822d222c3f16157876b",
+        "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_3.obj": "3d698a7c9adb05052364ee671a2bf178928f8dfe7d35b2e014a43b20d4de2ee0",
+        "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_4.obj": "274b7efafd1f609e2baf8ac461e43c154bed5c49c2edae2ac8195bf1ba9fc6e9",
+        "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_5.obj": "6a9c5f7f7fa8485fd0f4ad81f8d0499818de2d14823d04932cae30f3d40aa74e",
+        "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_6.obj": "57f5c89bc7057139234282a1c8bcbdc3d326fba4ba88fd361b78e1a794f3a397",
+        "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_7.obj": "19be0fad2fc9421ee6d337b7455074affe92a554ce55351ebe25a05dfd151e80",
+        "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_8.obj": "ab79ecadfc6f22302cadba20dbf1c69b65d754984068da316dfaed49cb7c1c41",
+        "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_9.obj": "42612bc68f53f8fc2b5ecd599f34cc04487273646dd3f6f22a22844d48b9e06e",
+        "assets/effectors/library/tool-button-pusher/sim/tool-button-pusher.xml": "fc3cbe7647396571f681140fa1a4f8463f7d042914c256e5c0500a642e19b09b"
+      },
+      "licence_files": {
+        "TOOL_LICENSE.md": "d031804eb24b7372a60773f5b57a9467f58c27182ae3e262a3e015c4452adf48"
+      },
+      "preview": "c86c4179bf570c5485ec6135f67c8a8cac14ee1e8d168919c9a356ef8637b23a",
+      "source_json_sha256": "bcdadc3f9466de8c260bf08bda7e0477ef8e13126730735d9af2e244a166f19c",
+      "upstream": {
+        "commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+        "extra": [],
+        "repository": "https://github.com/hello-robot/stretch_tool_share"
+      }
+    },
+    "tool-hook-drawer": {
+      "files": {
+        "assets/effectors/library/tool-hook-drawer/LICENSES/TOOL_LICENSE.md": "d031804eb24b7372a60773f5b57a9467f58c27182ae3e262a3e015c4452adf48",
+        "assets/effectors/library/tool-hook-drawer/doc/README.md": "655939e223e44f5de15175d2b78dfff317adab70cec69bfc0224211927d24159",
+        "assets/effectors/library/tool-hook-drawer/print/puller.stl": "89c0c46f70a6420eba2baeb12782fb413dfe0fc5c54a9333e8f237121b3e1dbb",
+        "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_0.obj": "20bc0847ded14a86da41c0b0e3abdb12ac4e8accb01550347d90fb7a664ac4f8",
+        "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_1.obj": "5854e4d4c85f288d6b83e120376670bc026829b01faac517c34c4f8bc349651d",
+        "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_10.obj": "a5e8da967b2e848f559da83d07e0cb883a77aca8317d1b74b4e6d589cd77b28e",
+        "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_11.obj": "8788e6e30b26379029c347b068319947ce944149b52bc0167e3502887dead4d9",
+        "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_12.obj": "f6206c96d7c7b84efaa3a15162acaa3a771b9a63e61b22add87f21d94b5c9d9e",
+        "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_13.obj": "0d7972acc3236085bd6824848e38baa634e519a2c5399eaf0438d644f62cc73c",
+        "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_14.obj": "3af3ca58f57dc471fb4b74a352502c24007d1067abdcfd367e7293e26ebc74a9",
+        "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_15.obj": "7c1d6ed24f4832e32e4e0c27ec147e598edeb284d4091b1d87117cb457f3608f",
+        "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_2.obj": "54ed8f7695d66a47b77e7bea39568becaaa446b58a55129b5d0652e4cc2d26e0",
+        "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_3.obj": "211e85791563bc47b1cc64ddc9a47ca641d8e1c1a0322eeb837dd67d9cecc417",
+        "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_4.obj": "7f2bb25a7247b4448418eb4b32585f5496f67f557607461be48f7352aaac79ea",
+        "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_5.obj": "559a44c384926c1a28a2b853d39ecc196a74e76eb05ff3de0422badca90e66e6",
+        "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_6.obj": "f5df3b95608bb62374b083ca6163c1d46fa065f74e202452ac43455b4573454f",
+        "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_7.obj": "9cd5806865aee5f689f69d29137898f3fa74d7db57b4a29c44122d2a658de12a",
+        "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_8.obj": "46c19aa42b815b75ac95a8100b0b2b2ff483495d949271fdaba4f7353c00d03e",
+        "assets/effectors/library/tool-hook-drawer/sim/pieces/hook_9.obj": "eb1723b5e8d34528ee4d2d68e9ac7ac1ef89ae60bce47eaa0edbdb50ce61099d",
+        "assets/effectors/library/tool-hook-drawer/sim/tool-hook-drawer.xml": "35cef09337ecfae37679abb8171a9378bc2786287f398b343c8eb41b7e6f2359"
+      },
+      "licence_files": {
+        "TOOL_LICENSE.md": "d031804eb24b7372a60773f5b57a9467f58c27182ae3e262a3e015c4452adf48"
+      },
+      "preview": "c2ceda2390bb73746623394ecb0028181d45d5156a5b8f865e78dd0eb6eea906",
+      "source_json_sha256": "dcac35111afd7d6fdf7f9866539811c6cfc5982bbfa608c053c94ae41b212afb",
+      "upstream": {
+        "commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+        "extra": [],
+        "repository": "https://github.com/hello-robot/stretch_tool_share"
+      }
+    },
+    "tool-marker-holder": {
+      "files": {
+        "assets/effectors/library/tool-marker-holder/LICENSES/TOOL_LICENSE.md": "d031804eb24b7372a60773f5b57a9467f58c27182ae3e262a3e015c4452adf48",
+        "assets/effectors/library/tool-marker-holder/doc/marker_holder.urdf.xacro": "d90cff79198d8735d1e007890cf4b1e6220f92e51779f157c74e25c51084ce37",
+        "assets/effectors/library/tool-marker-holder/print/marker_holder.stl": "803098b04c32b725cfb269409ef77e5fb219fa818e863c1515525b7f82674242",
+        "assets/effectors/library/tool-marker-holder/sim/pieces/holder_0.obj": "96c4e99364ae819d825196a27d363ca04e99a894da3831dc4b78ef4d68ed8121",
+        "assets/effectors/library/tool-marker-holder/sim/pieces/holder_1.obj": "315a29ffc3ccb67324b77a53895d157d99678557cf1dd61f5d55fbc0884d54fd",
+        "assets/effectors/library/tool-marker-holder/sim/pieces/holder_10.obj": "c3469ed6edf100aaea798bcc4bad2d4c220f598c6ba6e6401e0145e6a9331f05",
+        "assets/effectors/library/tool-marker-holder/sim/pieces/holder_11.obj": "8936f7a38198480aa319dcb452dad29254fad2574b26eb0aac2b3ab39d3c4ce2",
+        "assets/effectors/library/tool-marker-holder/sim/pieces/holder_12.obj": "c459ebe59616d534da4929e7542f15a3a73670c23ccab03174122502f23b1d54",
+        "assets/effectors/library/tool-marker-holder/sim/pieces/holder_13.obj": "20073881a30100515bdb683850e0cd6dd19efaf467870a10e12e1af6eba629dc",
+        "assets/effectors/library/tool-marker-holder/sim/pieces/holder_14.obj": "d876842d7dc638ad4f9ef09c0df016c6c2f25007449fbb63c6871987f31333e7",
+        "assets/effectors/library/tool-marker-holder/sim/pieces/holder_15.obj": "fd8aebb7e961bb335cbc20e2959007e9abb6a37d3450c3830a1ae428a9a7e556",
+        "assets/effectors/library/tool-marker-holder/sim/pieces/holder_2.obj": "d39a0fd460640db176aaa020b95e77eec5842e3eb83113cb2c8db161105af0d4",
+        "assets/effectors/library/tool-marker-holder/sim/pieces/holder_3.obj": "940888c3b7c22373106b40502fc9ae81f9e5ceb1ada9013c8ec06d897810d744",
+        "assets/effectors/library/tool-marker-holder/sim/pieces/holder_4.obj": "02ea0e398edee992952b3b36f0083e5cbf2d2a4389090fff13c2408f06ce329c",
+        "assets/effectors/library/tool-marker-holder/sim/pieces/holder_5.obj": "5076b59be663145fd22186755ebc9998c5820d44e714e3e726a5e0f781f5372a",
+        "assets/effectors/library/tool-marker-holder/sim/pieces/holder_6.obj": "794ae35cebb1401a5c190b4eb9df37f3c7be232c6eb1b9388979eda76c4404d6",
+        "assets/effectors/library/tool-marker-holder/sim/pieces/holder_7.obj": "e65b5ae508ebb2632d9efab7989737e6c9cf0b8edc40b9ed006b7575f7eec55b",
+        "assets/effectors/library/tool-marker-holder/sim/pieces/holder_8.obj": "2b99fae99c41bb75df35f33eb6afb7362e3654277ed471277d31fe39b42ac6c2",
+        "assets/effectors/library/tool-marker-holder/sim/pieces/holder_9.obj": "7c82da9aba29ddc73715e15fa5ec1ee22219adcd07fc5c62d1b5cbf02503c9f8",
+        "assets/effectors/library/tool-marker-holder/sim/tool-marker-holder.xml": "0f98e65362eaf5b3643253a0831921d10a5983aa40dd329e6f9a0cc8796f7ba5"
+      },
+      "licence_files": {
+        "TOOL_LICENSE.md": "d031804eb24b7372a60773f5b57a9467f58c27182ae3e262a3e015c4452adf48"
+      },
+      "preview": "fd662a8cea6e69d043623b6dc17338cd608503f70efa6816c1f3cca0e707ade4",
+      "source_json_sha256": "c94cc3cc2dbf1f138a9db3907390f984b98bf53d38cd76755e6965f9a1cde830",
+      "upstream": {
+        "commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+        "extra": [],
+        "repository": "https://github.com/hello-robot/stretch_tool_share"
+      }
+    },
+    "tool-screwdriver-servo": {
+      "files": {
+        "assets/effectors/library/tool-screwdriver-servo/LICENSES/LICENSE": "a73af38bde2ed7671ed0028d7cc44403c0d7424683ab8fdb5f21dd1724c1f790",
+        "assets/effectors/library/tool-screwdriver-servo/cad/bit_holder.scad": "1a70685d2cbadf9c7e9734367e13e4f1f1093cf6b7b3ded4a00ede609663941e",
+        "assets/effectors/library/tool-screwdriver-servo/cad/servo_holder.scad": "63167dd08d80db0130496f7149ded5c165172ac20548d983acc52301f9e0b898",
+        "assets/effectors/library/tool-screwdriver-servo/print/bit_holder.stl": "d27d238b82d23538630402493d8457eb064c861f677c089145234bb779a9e3d1",
+        "assets/effectors/library/tool-screwdriver-servo/print/servo_holder.stl": "bf11743a918a72f308a4241aa0a118cd5ca25ae76b1fa0aba67a12bd3979c8f7",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_0.obj": "b72cc2e24d1e6702a3abff0b495dff8a1d3388d0396ed6a5093764c0f93d0685",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_1.obj": "2594b436ed1f7814c2370d935d1b23388b0fe4703e3c0606e8ad37ded75283ae",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_10.obj": "d00fe985826e8ccc65f23bca2cbddafd740d424d45d17932ace1b28d6f61ff51",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_11.obj": "af86eadd302479e31e6f0732c3234fe829d378147b5584caf4b4f7ca92156161",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_12.obj": "a446dc1ef946273ae8bd42de3f4088e22bc35e6c84bb3284636769e856c6e89f",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_13.obj": "58652e089bdf40684460518c12992d119d1aed2688cffcc1c0ebafdb01cfe6e5",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_14.obj": "f93f6a45f88792a5e69e161e2330f846b886e946a5a0858858b93b4da7646d65",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_15.obj": "5b3778ca30d51082cd627cc370814643f7570287756d22e084098682f7ba3e66",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_2.obj": "d93aee091060f83d8b6c23c44db42e9e19ef630fd7a57eb4fff3013f525fd40f",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_3.obj": "b7d18c29cc89200f7f9b95a0bfa1caba0d22ac62119a3b7733402028e26c1e5d",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_4.obj": "5f041f2fb02b345c14218043db392d64326dafd4267bc7c9073192f6cded2be2",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_5.obj": "8f2c698f15484e79da1879f70795be66fb638ed72f4f13fe0160ee6cd4b99c41",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_6.obj": "f64c43737379684baa461aaeac9a3309b6f2fad6bc12d2abc817463873d31392",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_7.obj": "bc9e7224fdf945b81d659d65e0a421ff6e70d2d2b2fab835cbaf66e899f785a3",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_8.obj": "abeab7d1e760f244aa459bfc02e139d906e4dff7cc60b34e02eda717433b130e",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/bit_9.obj": "e887706918d82f24abfc73a387d1e31861ec1262b42f144889716c19a646e82d",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_0.obj": "8ea99f75470c932915209c01c0b0d753bc400e2ba0c473c3e19d6a7461d5c34e",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_1.obj": "477ee5dca2d2627d37bfd024c938b968c25bbe9f871de9e405894ac86b674fdd",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_10.obj": "f09ee205a1f8d721c748d448fd4a4ad3891715ac518bbd3e0fe61aa56dcc118f",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_11.obj": "2ee1e844ed412496c690f5d38c4bc07f0b46b4cc667abf1510963ef28af746a3",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_12.obj": "99e5c74173a4d7f6935780ff9b676557f9fdc27c63050f64ef02e4435b26706b",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_13.obj": "19cf4450943657fb1045bfbc98dbcdf32904079393450517a1cb084a3d69f572",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_14.obj": "7e9d1de4c47940b7143eda059c8287833dd849d0e2154decb42cae9d8f9cdc2e",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_15.obj": "fbeffb909fa2bc92bac377f360fdee271dda943c1d3f0f21fc45086fe6cb9d03",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_2.obj": "ca3e358226569a3d7fda47af70ceb539adc13f66acb5c8ece2a2c4c69809a18c",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_3.obj": "5152df4341a6cbb17354daa78fa052222ba62538bb1dbf9ac8c966c1b77cf245",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_4.obj": "dd3890dfd36cb626f64e70d23db66493078ce078b90754ce3216de4136e7d979",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_5.obj": "7a07ac025457a9c9194d1fd85d7ae54df087fa3fecffc4d3d34202eeafa53168",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_6.obj": "a4bf2fdb005c26cf679ab34a4672f797a9f0a4228f5ce2625ceb539f56733b22",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_7.obj": "87f0d5289bdfdbd67e33535e4e69b790c61fb2c626175fafb86d17fc5f01ab85",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_8.obj": "9912f389ec20ea56cd2d64209fe4015600f037a71e850ecae644e36f7561245d",
+        "assets/effectors/library/tool-screwdriver-servo/sim/pieces/holder_9.obj": "55daf744e9220d1dc18ed42fcbb138f8ac27b6863a7937fe8a2a8c4a778bc245",
+        "assets/effectors/library/tool-screwdriver-servo/sim/tool-screwdriver-servo.xml": "63fea4a45ecb93bc20a5b11f80e54607466d76697239d96c726cd4ea7e88199a"
+      },
+      "licence_files": {
+        "LICENSE": "a73af38bde2ed7671ed0028d7cc44403c0d7424683ab8fdb5f21dd1724c1f790"
+      },
+      "preview": "6e8689e80283972ac93813606ab92bff5101e51c7cb7bf2515bbc5af3eded76b",
+      "source_json_sha256": "c861c6c0966c0ef6e2ee1f5e41b7dc8af48cbcd6a00238ec7e5f2ebf8778b275",
+      "upstream": {
+        "commit": "841a758a12317220c6d13f30192f324aa3c5330d",
+        "extra": [],
+        "repository": "https://github.com/jackvial/assembler0"
+      }
+    }
+  },
+  "manifest_sha256": "32ec3092b3c226f86912794ae905c770107fa1f261884a7bd8d74921e88282c3",
+  "version": 1
+}

@@ -1,0 +1,180 @@
+{
+  "format": "rtt-library-source",
+  "version": 1,
+  "key": "finger-soft-codesign",
+  "display_name": "Co-designed soft finger for a cobot hand",
+  "summary": "A soft printed finger whose shape was optimised together with its grasp in a learned simulator (a 2025 research paper), with a mount for a cobot parallel hand.",
+  "kind": "compliant_finger",
+  "class": "open_hardware",
+  "capabilities": [
+    "pinch"
+  ],
+  "upstream": {
+    "repository": "https://github.com/yswhynot/codesign-soft-gripper",
+    "commit": "64c886dfd28934264d52c84eafe5f65e1423480e"
+  },
+  "licence": [
+    {
+      "spdx": "MIT",
+      "covers": "code and hardware files"
+    }
+  ],
+  "copyright": "Copyright (c) 2025 Yisha",
+  "attribution": "\"Co-design soft gripper (CoRL 2025)\" by Yisha and co-authors, https://github.com/yswhynot/codesign-soft-gripper (commit 64c886d), licensed MIT (https://spdx.org/licenses/MIT.html)",
+  "chain": [
+    {
+      "spdx": "MIT",
+      "relation": "licensed",
+      "what": "repository LICENSE",
+      "source": "https://github.com/yswhynot/codesign-soft-gripper/blob/64c886dfd28934264d52c84eafe5f65e1423480e/LICENSE"
+    }
+  ],
+  "reviewed": {
+    "by": "Effector Lab licence gate, against the 2026-10-18 licence audit",
+    "date": "2026-10-18"
+  },
+  "mount": {
+    "interface": "the fingers of a cobot parallel hand (a printed mount is included)",
+    "iso_pattern": null,
+    "status": "unknown",
+    "adapter": null,
+    "source": "",
+    "notes": []
+  },
+  "specs": [
+    {
+      "name": "Origin",
+      "value": "co-optimised soft finger, research paper 2025",
+      "unit": "",
+      "tag": "sourced",
+      "source": "https://github.com/yswhynot/codesign-soft-gripper/blob/64c886dfd28934264d52c84eafe5f65e1423480e/README.md"
+    }
+  ],
+  "sim": {
+    "status": "visual_only",
+    "reason": "the upstream model is a learned soft-body simulator, not a MuJoCo model; soft fingers are not modelled here yet"
+  },
+  "notes": [],
+  "ingest": {
+    "licence_files": [
+      {
+        "path": "LICENSE",
+        "license": "MIT"
+      }
+    ],
+    "files": [
+      {
+        "path": "hardware/sim_finger.3mf",
+        "out": "print/soft_finger.3mf",
+        "license": "MIT"
+      },
+      {
+        "path": "hardware/franka_mount.stl",
+        "out": "print/cobot_hand_mount.stl",
+        "license": "MIT"
+      },
+      {
+        "path": "hardware/motor_horn.stl",
+        "out": "print/motor_horn.stl",
+        "license": "MIT"
+      }
+    ],
+    "links": [
+      {
+        "path": "hardware/sim_finger.stl",
+        "size": 2286817,
+        "license": "MIT",
+        "reason": "the same finger as an STL (2.3 MB): the 3MF is shipped instead"
+      }
+    ],
+    "preview": {
+      "from": "files",
+      "license": "MIT",
+      "files": [
+        {
+          "path": "hardware/sim_finger.stl"
+        }
+      ]
+    }
+  },
+  "files": [
+    {
+      "path": "assets/effectors/library/finger-soft-codesign/LICENSES/LICENSE",
+      "sha256": "e2fc8d41be1fa35480b7fed391519549027f71754c8fdbc48cbe0580a4a937a8",
+      "size": 1062,
+      "role": "licence",
+      "upstream_url": "https://github.com/yswhynot/codesign-soft-gripper",
+      "upstream_commit": "64c886dfd28934264d52c84eafe5f65e1423480e",
+      "upstream_path": "LICENSE",
+      "upstream_sha256": "e2fc8d41be1fa35480b7fed391519549027f71754c8fdbc48cbe0580a4a937a8",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Yisha",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/finger-soft-codesign/print/cobot_hand_mount.stl",
+      "sha256": "373308f478c3b4d092e0ca4babef4c5d2c5019a290a4520ca660cbaff2d249f9",
+      "size": 528961,
+      "role": "print",
+      "upstream_url": "https://github.com/yswhynot/codesign-soft-gripper",
+      "upstream_commit": "64c886dfd28934264d52c84eafe5f65e1423480e",
+      "upstream_path": "hardware/franka_mount.stl",
+      "upstream_sha256": "373308f478c3b4d092e0ca4babef4c5d2c5019a290a4520ca660cbaff2d249f9",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Yisha",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/finger-soft-codesign/print/motor_horn.stl",
+      "sha256": "d2086ff45482c71acabf6ecbcde075e7a0505e7d24f06e58af16ff8cc829828d",
+      "size": 458784,
+      "role": "print",
+      "upstream_url": "https://github.com/yswhynot/codesign-soft-gripper",
+      "upstream_commit": "64c886dfd28934264d52c84eafe5f65e1423480e",
+      "upstream_path": "hardware/motor_horn.stl",
+      "upstream_sha256": "d2086ff45482c71acabf6ecbcde075e7a0505e7d24f06e58af16ff8cc829828d",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Yisha",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/finger-soft-codesign/print/soft_finger.3mf",
+      "sha256": "0f9f0d5e606699dc3280249adeebf7dfca567c45f8693e41b0c33c785fb39daa",
+      "size": 156812,
+      "role": "print",
+      "upstream_url": "https://github.com/yswhynot/codesign-soft-gripper",
+      "upstream_commit": "64c886dfd28934264d52c84eafe5f65e1423480e",
+      "upstream_path": "hardware/sim_finger.3mf",
+      "upstream_sha256": "0f9f0d5e606699dc3280249adeebf7dfca567c45f8693e41b0c33c785fb39daa",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2025 Yisha",
+      "changes": [],
+      "rating": "green"
+    }
+  ],
+  "skipped": [
+    {
+      "upstream_path": "hardware/sim_finger.stl",
+      "size": 2286817,
+      "license": "MIT",
+      "reason": "the same finger as an STL (2.3 MB): the 3MF is shipped instead",
+      "url": "https://github.com/yswhynot/codesign-soft-gripper/blob/64c886dfd28934264d52c84eafe5f65e1423480e/hardware/sim_finger.stl"
+    }
+  ],
+  "preview": {
+    "path": "web/public/data/library/glb/finger-soft-codesign.glb",
+    "sha256": "26a49532a4f25981490474a3221f251ff2146e6783ae21b160a7b28fccc87c91",
+    "size": 179948,
+    "license": "MIT",
+    "derived_from": [
+      "hardware/sim_finger.stl"
+    ],
+    "changes": [
+      "drawn from the item's own geometry in its reference pose, simplified by vertex clustering",
+      "re-encoded as GLB (Y up, metres) in one flat grey, with generic node names"
+    ]
+  }
+}

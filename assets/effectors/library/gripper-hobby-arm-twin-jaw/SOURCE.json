@@ -1,0 +1,153 @@
+{
+  "format": "rtt-library-source",
+  "version": 1,
+  "key": "gripper-hobby-arm-twin-jaw",
+  "display_name": "Hobby-arm servo gripper with twin jaws",
+  "summary": "The printed twin-jaw gripper of an open-source desktop arm.",
+  "kind": "parallel_gripper",
+  "class": "open_hardware",
+  "capabilities": [
+    "pinch"
+  ],
+  "upstream": {
+    "repository": "https://github.com/BCN3D/BCN3D-Moveo",
+    "commit": "0866a92501277636f76000a195d8a16d44b5b476"
+  },
+  "licence": [
+    {
+      "spdx": "MIT",
+      "covers": "CAD and STL files"
+    }
+  ],
+  "copyright": "Copyright (c) 2016 BCN3D Technologies",
+  "attribution": "\"BCN3D Moveo gripper\" by BCN3D Technologies, https://github.com/BCN3D/BCN3D-Moveo (commit 0866a92), licensed MIT (https://spdx.org/licenses/MIT.html)",
+  "chain": [
+    {
+      "spdx": "MIT",
+      "relation": "licensed",
+      "what": "repository LICENSE",
+      "source": "https://github.com/BCN3D/BCN3D-Moveo/blob/0866a92501277636f76000a195d8a16d44b5b476/LICENSE"
+    }
+  ],
+  "reviewed": {
+    "by": "Effector Lab licence gate, against the 2026-10-18 licence audit",
+    "date": "2026-10-18"
+  },
+  "mount": {
+    "interface": "the desktop arm's wrist",
+    "iso_pattern": null,
+    "status": "unknown",
+    "adapter": null,
+    "source": "",
+    "notes": []
+  },
+  "specs": [],
+  "sim": {
+    "status": "visual_only",
+    "reason": "articulated design without an upstream simulation model"
+  },
+  "notes": [],
+  "ingest": {
+    "licence_files": [
+      {
+        "path": "LICENSE",
+        "license": "MIT"
+      }
+    ],
+    "files": [
+      {
+        "path": "STL files/Machine - tool/Gripper Left.STL",
+        "out": "print/jaw_left.stl",
+        "license": "MIT"
+      },
+      {
+        "path": "STL files/Machine - tool/Gripper Right.STL",
+        "out": "print/jaw_right.stl",
+        "license": "MIT"
+      }
+    ],
+    "links": [
+      {
+        "path": "CAD files/Gripper B Assembly.SLDASM",
+        "size": 4161024,
+        "license": "MIT",
+        "reason": "proprietary-format assembly (4.2 MB): linked, not mirrored"
+      }
+    ],
+    "preview": {
+      "from": "files",
+      "license": "MIT",
+      "files": [
+        {
+          "path": "STL files/Machine - tool/Gripper Left.STL"
+        }
+      ]
+    }
+  },
+  "files": [
+    {
+      "path": "assets/effectors/library/gripper-hobby-arm-twin-jaw/LICENSES/LICENSE",
+      "sha256": "6d0323944039e416103ce14b47b940202990d85aaf2ded007f6da545bfb00680",
+      "size": 1085,
+      "role": "licence",
+      "upstream_url": "https://github.com/BCN3D/BCN3D-Moveo",
+      "upstream_commit": "0866a92501277636f76000a195d8a16d44b5b476",
+      "upstream_path": "LICENSE",
+      "upstream_sha256": "6d0323944039e416103ce14b47b940202990d85aaf2ded007f6da545bfb00680",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2016 BCN3D Technologies",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-hobby-arm-twin-jaw/print/jaw_left.stl",
+      "sha256": "5bca365190633f9d3c14353114a9c870f5601fd91520d383969dae7106e88c11",
+      "size": 1879384,
+      "role": "print",
+      "upstream_url": "https://github.com/BCN3D/BCN3D-Moveo",
+      "upstream_commit": "0866a92501277636f76000a195d8a16d44b5b476",
+      "upstream_path": "STL files/Machine - tool/Gripper Left.STL",
+      "upstream_sha256": "5bca365190633f9d3c14353114a9c870f5601fd91520d383969dae7106e88c11",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2016 BCN3D Technologies",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-hobby-arm-twin-jaw/print/jaw_right.stl",
+      "sha256": "746ef654a9e92055e01c09861a09212e2b30b75c29ad6f6c0287a2b280e0091e",
+      "size": 1879284,
+      "role": "print",
+      "upstream_url": "https://github.com/BCN3D/BCN3D-Moveo",
+      "upstream_commit": "0866a92501277636f76000a195d8a16d44b5b476",
+      "upstream_path": "STL files/Machine - tool/Gripper Right.STL",
+      "upstream_sha256": "746ef654a9e92055e01c09861a09212e2b30b75c29ad6f6c0287a2b280e0091e",
+      "license": "MIT",
+      "copyright": "Copyright (c) 2016 BCN3D Technologies",
+      "changes": [],
+      "rating": "green"
+    }
+  ],
+  "skipped": [
+    {
+      "upstream_path": "CAD files/Gripper B Assembly.SLDASM",
+      "size": 4161024,
+      "license": "MIT",
+      "reason": "proprietary-format assembly (4.2 MB): linked, not mirrored",
+      "url": "https://github.com/BCN3D/BCN3D-Moveo/blob/0866a92501277636f76000a195d8a16d44b5b476/CAD%20files/Gripper%20B%20Assembly.SLDASM"
+    }
+  ],
+  "preview": {
+    "path": "web/public/data/library/glb/gripper-hobby-arm-twin-jaw.glb",
+    "sha256": "f4ee14e1aa82fd2995f49a5703dd139e74a11b24acff6f30b07364bc40f62263",
+    "size": 284596,
+    "license": "MIT",
+    "derived_from": [
+      "STL files/Machine - tool/Gripper Left.STL"
+    ],
+    "changes": [
+      "drawn from the item's own geometry in its reference pose, simplified by vertex clustering",
+      "re-encoded as GLB (Y up, metres) in one flat grey, with generic node names"
+    ]
+  }
+}

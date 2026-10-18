@@ -1,0 +1,28 @@
+<mujoco model="gripper-2f-servo-110">
+  <compiler angle="radian"/>
+
+  <worldbody>
+    <body name="body">
+      <inertial pos="0 0 0" mass="0.988882" diaginertia="0.00063524 0.00195867 0.00218973"/>
+      <geom size="0.073 0.03625 0.0247605" type="box"/>
+      <body name="left_finger" pos="-0.008 0.074133 0">
+        <inertial pos="0 0 0" mass="0.05" diaginertia="2.51042e-05 2.73333e-06 2.45042e-05"/>
+        <joint name="left_finger_sliding_joint" type="slide" range="-0.055 0" axis="1 0 0" limited="true"/>
+        <geom size="0.008 0.0375 0.01" type="box"/>
+      </body>
+      <body name="right_finger" pos="0.008 0.074133 0">
+        <inertial pos="0 0 0" mass="0.05" diaginertia="2.51042e-05 2.73333e-06 2.45042e-05"/>
+        <joint name="right_finger_sliding_joint" type="slide" range="0 0.055" axis="1 0 0" limited="true"/>
+        <geom size="0.008 0.0375 0.01" type="box"/>
+      </body>
+    </body>
+  </worldbody>
+
+  <equality>
+    <joint joint1="right_finger_sliding_joint" joint2="left_finger_sliding_joint" polycoef="0 -1 0 0 0"/>
+  </equality>
+
+  <actuator>
+    <general name="fingers" joint="left_finger_sliding_joint" ctrlrange="-0.055 0" ctrllimited="true" forcelimited="true" forcerange="-80 80" biastype="affine" gainprm="2000" biasprm="0 -2000 -40"/>
+  </actuator>
+</mujoco>

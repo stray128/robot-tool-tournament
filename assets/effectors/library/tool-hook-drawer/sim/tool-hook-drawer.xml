@@ -1,0 +1,43 @@
+<mujoco model="tool-hook-drawer">
+  <compiler angle="radian"/>
+  <asset>
+    <mesh name="hook_0" file="pieces/hook_0.obj"/>
+    <mesh name="hook_1" file="pieces/hook_1.obj"/>
+    <mesh name="hook_2" file="pieces/hook_2.obj"/>
+    <mesh name="hook_3" file="pieces/hook_3.obj"/>
+    <mesh name="hook_4" file="pieces/hook_4.obj"/>
+    <mesh name="hook_5" file="pieces/hook_5.obj"/>
+    <mesh name="hook_6" file="pieces/hook_6.obj"/>
+    <mesh name="hook_7" file="pieces/hook_7.obj"/>
+    <mesh name="hook_8" file="pieces/hook_8.obj"/>
+    <mesh name="hook_9" file="pieces/hook_9.obj"/>
+    <mesh name="hook_10" file="pieces/hook_10.obj"/>
+    <mesh name="hook_11" file="pieces/hook_11.obj"/>
+    <mesh name="hook_12" file="pieces/hook_12.obj"/>
+    <mesh name="hook_13" file="pieces/hook_13.obj"/>
+    <mesh name="hook_14" file="pieces/hook_14.obj"/>
+    <mesh name="hook_15" file="pieces/hook_15.obj"/>
+  </asset>
+  <worldbody>
+    <body name="hook">
+      <inertial pos="2.94642322e-09 -5.66515617e-08 -0.00233176449" mass="0.00107638107" fullinertia="4.37886593e-08 4.378879e-08 8.33943732e-08 1.83017992e-13 -4.16385219e-15 8.6304718e-14"/>
+      <geom type="mesh" mesh="hook_0"/>
+      <geom type="mesh" mesh="hook_1"/>
+      <geom type="mesh" mesh="hook_2"/>
+      <geom type="mesh" mesh="hook_3"/>
+      <geom type="mesh" mesh="hook_4"/>
+      <geom type="mesh" mesh="hook_5"/>
+      <geom type="mesh" mesh="hook_6"/>
+      <geom type="mesh" mesh="hook_7"/>
+      <geom type="mesh" mesh="hook_8"/>
+      <geom type="mesh" mesh="hook_9"/>
+      <geom type="mesh" mesh="hook_10"/>
+      <geom type="mesh" mesh="hook_11"/>
+      <geom type="mesh" mesh="hook_12"/>
+      <geom type="mesh" mesh="hook_13"/>
+      <geom type="mesh" mesh="hook_14"/>
+      <geom type="mesh" mesh="hook_15"/>
+      <site name="tcp" pos="0 0 -0.005" size="0.003"/>
+    </body>
+  </worldbody>
+</mujoco>

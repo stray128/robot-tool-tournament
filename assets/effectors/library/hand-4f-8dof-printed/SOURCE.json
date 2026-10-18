@@ -1,0 +1,358 @@
+{
+  "format": "rtt-library-source",
+  "version": 1,
+  "key": "hand-4f-8dof-printed",
+  "display_name": "Low-cost printed four-finger hand, 8 actuators",
+  "summary": "A printable humanoid hand: four fingers, two small servos per finger in parallel, flexible shells, about 400 g.",
+  "kind": "multi_finger_hand",
+  "class": "open_hardware",
+  "capabilities": [
+    "pinch",
+    "power"
+  ],
+  "upstream": {
+    "repository": "https://github.com/pollen-robotics/AmazingHand",
+    "commit": "3e8241074df3436a3044ced4881e3bb2133aa725"
+  },
+  "licence": [
+    {
+      "spdx": "CC-BY-4.0",
+      "covers": "the mechanical design (stated in the README)"
+    },
+    {
+      "spdx": "Apache-2.0",
+      "covers": "code (LICENSE)"
+    }
+  ],
+  "copyright": "Copyright Pollen Robotics",
+  "attribution": "\"AmazingHand\" by Pollen Robotics, https://github.com/pollen-robotics/AmazingHand (commit 3e82410), licensed CC-BY-4.0 (https://creativecommons.org/licenses/by/4.0/); code Apache-2.0",
+  "chain": [
+    {
+      "spdx": "CC-BY-4.0",
+      "relation": "licensed",
+      "what": "README: mechanical design licence",
+      "source": "https://github.com/pollen-robotics/AmazingHand/blob/3e8241074df3436a3044ced4881e3bb2133aa725/README.md"
+    },
+    {
+      "spdx": "Apache-2.0",
+      "relation": "licensed",
+      "what": "LICENSE (code)",
+      "source": "https://github.com/pollen-robotics/AmazingHand/blob/3e8241074df3436a3044ced4881e3bb2133aa725/LICENSE"
+    }
+  ],
+  "reviewed": {
+    "by": "Effector Lab licence gate, against the 2026-10-18 licence audit",
+    "date": "2026-10-18"
+  },
+  "mount": {
+    "interface": "a humanoid wrist; an interface plate for a hobby arm is included",
+    "iso_pattern": null,
+    "status": "unknown",
+    "adapter": null,
+    "source": "",
+    "notes": [
+      "designed for a humanoid's wrist; easily adapted (stated upstream)"
+    ]
+  },
+  "specs": [
+    {
+      "name": "Actuated joints",
+      "value": "8 (2 per finger)",
+      "unit": "",
+      "tag": "sourced",
+      "source": "https://github.com/pollen-robotics/AmazingHand/blob/3e8241074df3436a3044ced4881e3bb2133aa725/README.md"
+    },
+    {
+      "name": "Mass",
+      "value": "400",
+      "unit": "g",
+      "tag": "sourced",
+      "source": "https://github.com/pollen-robotics/AmazingHand/blob/3e8241074df3436a3044ced4881e3bb2133aa725/README.md"
+    },
+    {
+      "name": "Parts cost",
+      "value": "under 200",
+      "unit": "EUR",
+      "tag": "sourced",
+      "source": "https://github.com/pollen-robotics/AmazingHand/blob/3e8241074df3436a3044ced4881e3bb2133aa725/README.md"
+    }
+  ],
+  "sim": {
+    "status": "visual_only",
+    "reason": "the upstream demo model includes servo and fastener meshes of unrecorded provenance; making it an entrant needs a per-mesh review first"
+  },
+  "notes": [],
+  "ingest": {
+    "licence_files": [
+      {
+        "path": "LICENSE",
+        "license": "Apache-2.0"
+      },
+      {
+        "path": "README.md",
+        "out": "README-licence-statement.md",
+        "license": "CC-BY-4.0"
+      }
+    ],
+    "files": [
+      {
+        "path": "cad/step/Amazing Hand Parts - Distal.step",
+        "out": "cad/distal.step",
+        "role": "cad",
+        "license": "CC-BY-4.0"
+      },
+      {
+        "path": "cad/step/Amazing Hand Parts - Proximal.step",
+        "out": "cad/proximal.step",
+        "role": "cad",
+        "license": "CC-BY-4.0"
+      },
+      {
+        "path": "cad/step/Amazing Hand Parts - Finger_Frame-1.step",
+        "out": "cad/finger_frame_1.step",
+        "role": "cad",
+        "license": "CC-BY-4.0"
+      },
+      {
+        "path": "cad/step/Amazing Hand Parts - Finger_Frame-2.step",
+        "out": "cad/finger_frame_2.step",
+        "role": "cad",
+        "license": "CC-BY-4.0"
+      },
+      {
+        "path": "cad/step/Amazing Hand Parts - Link.step",
+        "out": "cad/link.step",
+        "role": "cad",
+        "license": "CC-BY-4.0"
+      },
+      {
+        "path": "cad/step/Amazing Hand Parts - Gimbal.step",
+        "out": "cad/gimbal.step",
+        "role": "cad",
+        "license": "CC-BY-4.0"
+      },
+      {
+        "path": "cad/step/Amazing Hand Parts - R-Wrist_Interface.step",
+        "out": "cad/wrist_interface_right.step",
+        "role": "cad",
+        "license": "CC-BY-4.0"
+      },
+      {
+        "path": "cad/step/Amazing Hand Parts - R-Hand_Plate.step",
+        "out": "cad/hand_plate_right.step",
+        "role": "cad",
+        "license": "CC-BY-4.0"
+      },
+      {
+        "path": "cad/step/SO-ARM_Interface.step",
+        "out": "cad/hobby_arm_interface.step",
+        "role": "cad",
+        "license": "CC-BY-4.0"
+      }
+    ],
+    "links": [
+      {
+        "path": "cad/step/Amazing Hand base.STEP",
+        "size": 3498670,
+        "license": "CC-BY-4.0",
+        "reason": "full hand CAD (3.5 MB): linked, not mirrored"
+      }
+    ],
+    "preview": {
+      "from": "mjcf",
+      "entry": "Demo/AHSimulation/AHSimulation/AH_Right/mjcf/robot.xml",
+      "root": null,
+      "license": "CC-BY-4.0",
+      "skip_meshes": [
+        "scs0009",
+        "std00",
+        "screw",
+        "washer",
+        "pin",
+        "bushing",
+        "rod",
+        "spacer",
+        "horn"
+      ],
+      "max_faces": 16000
+    }
+  },
+  "files": [
+    {
+      "path": "assets/effectors/library/hand-4f-8dof-printed/LICENSES/LICENSE",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "size": 11357,
+      "role": "licence",
+      "upstream_url": "https://github.com/pollen-robotics/AmazingHand",
+      "upstream_commit": "3e8241074df3436a3044ced4881e3bb2133aa725",
+      "upstream_path": "LICENSE",
+      "upstream_sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "license": "Apache-2.0",
+      "copyright": "Copyright Pollen Robotics",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-4f-8dof-printed/LICENSES/README-licence-statement.md",
+      "sha256": "b0fb4bcb17034e2e4801275355b8482be24dffe3915a8d3ba3a6c618f7a91a86",
+      "size": 10279,
+      "role": "licence",
+      "upstream_url": "https://github.com/pollen-robotics/AmazingHand",
+      "upstream_commit": "3e8241074df3436a3044ced4881e3bb2133aa725",
+      "upstream_path": "README.md",
+      "upstream_sha256": "b0fb4bcb17034e2e4801275355b8482be24dffe3915a8d3ba3a6c618f7a91a86",
+      "license": "CC-BY-4.0",
+      "copyright": "Copyright Pollen Robotics",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-4f-8dof-printed/cad/distal.step",
+      "sha256": "ae09a65851c28b787eec80f31879315f6e34fe7798ca586805a6387f6917ebdf",
+      "size": 49811,
+      "role": "cad",
+      "upstream_url": "https://github.com/pollen-robotics/AmazingHand",
+      "upstream_commit": "3e8241074df3436a3044ced4881e3bb2133aa725",
+      "upstream_path": "cad/step/Amazing Hand Parts - Distal.step",
+      "upstream_sha256": "ae09a65851c28b787eec80f31879315f6e34fe7798ca586805a6387f6917ebdf",
+      "license": "CC-BY-4.0",
+      "copyright": "Copyright Pollen Robotics",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-4f-8dof-printed/cad/finger_frame_1.step",
+      "sha256": "32f92268cd440cd742101b1716363ce32260c23f3f1513f79e9fcb5d662ad76a",
+      "size": 29695,
+      "role": "cad",
+      "upstream_url": "https://github.com/pollen-robotics/AmazingHand",
+      "upstream_commit": "3e8241074df3436a3044ced4881e3bb2133aa725",
+      "upstream_path": "cad/step/Amazing Hand Parts - Finger_Frame-1.step",
+      "upstream_sha256": "32f92268cd440cd742101b1716363ce32260c23f3f1513f79e9fcb5d662ad76a",
+      "license": "CC-BY-4.0",
+      "copyright": "Copyright Pollen Robotics",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-4f-8dof-printed/cad/finger_frame_2.step",
+      "sha256": "aaf979d0bfd60702780d1b3ebf4c67e1a1d8cce9399c13e4c8db9c78ea72bfda",
+      "size": 19778,
+      "role": "cad",
+      "upstream_url": "https://github.com/pollen-robotics/AmazingHand",
+      "upstream_commit": "3e8241074df3436a3044ced4881e3bb2133aa725",
+      "upstream_path": "cad/step/Amazing Hand Parts - Finger_Frame-2.step",
+      "upstream_sha256": "aaf979d0bfd60702780d1b3ebf4c67e1a1d8cce9399c13e4c8db9c78ea72bfda",
+      "license": "CC-BY-4.0",
+      "copyright": "Copyright Pollen Robotics",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-4f-8dof-printed/cad/gimbal.step",
+      "sha256": "460519cfe9251d671675709d1e64281581efbf432d92ba94a5eba1b38f8b32e6",
+      "size": 45917,
+      "role": "cad",
+      "upstream_url": "https://github.com/pollen-robotics/AmazingHand",
+      "upstream_commit": "3e8241074df3436a3044ced4881e3bb2133aa725",
+      "upstream_path": "cad/step/Amazing Hand Parts - Gimbal.step",
+      "upstream_sha256": "460519cfe9251d671675709d1e64281581efbf432d92ba94a5eba1b38f8b32e6",
+      "license": "CC-BY-4.0",
+      "copyright": "Copyright Pollen Robotics",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-4f-8dof-printed/cad/hand_plate_right.step",
+      "sha256": "933cc8a07883ce9b2549a1d4b63bc208ea4a991d0d2ab5041c316ca3269aeb53",
+      "size": 393156,
+      "role": "cad",
+      "upstream_url": "https://github.com/pollen-robotics/AmazingHand",
+      "upstream_commit": "3e8241074df3436a3044ced4881e3bb2133aa725",
+      "upstream_path": "cad/step/Amazing Hand Parts - R-Hand_Plate.step",
+      "upstream_sha256": "933cc8a07883ce9b2549a1d4b63bc208ea4a991d0d2ab5041c316ca3269aeb53",
+      "license": "CC-BY-4.0",
+      "copyright": "Copyright Pollen Robotics",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-4f-8dof-printed/cad/hobby_arm_interface.step",
+      "sha256": "328a8c0c8e375cda0649027c850d23dd910cd8df0acd3c7824211ff947108df4",
+      "size": 71736,
+      "role": "cad",
+      "upstream_url": "https://github.com/pollen-robotics/AmazingHand",
+      "upstream_commit": "3e8241074df3436a3044ced4881e3bb2133aa725",
+      "upstream_path": "cad/step/SO-ARM_Interface.step",
+      "upstream_sha256": "328a8c0c8e375cda0649027c850d23dd910cd8df0acd3c7824211ff947108df4",
+      "license": "CC-BY-4.0",
+      "copyright": "Copyright Pollen Robotics",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-4f-8dof-printed/cad/link.step",
+      "sha256": "682d87c9be4d2ac59f3996d6c2a98cb98c512b73698959d61d604a67a283ece6",
+      "size": 20747,
+      "role": "cad",
+      "upstream_url": "https://github.com/pollen-robotics/AmazingHand",
+      "upstream_commit": "3e8241074df3436a3044ced4881e3bb2133aa725",
+      "upstream_path": "cad/step/Amazing Hand Parts - Link.step",
+      "upstream_sha256": "682d87c9be4d2ac59f3996d6c2a98cb98c512b73698959d61d604a67a283ece6",
+      "license": "CC-BY-4.0",
+      "copyright": "Copyright Pollen Robotics",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-4f-8dof-printed/cad/proximal.step",
+      "sha256": "979b42106da4a165b5731f92c9277bac7a038cc42d3dcb67721214c976078a1e",
+      "size": 80879,
+      "role": "cad",
+      "upstream_url": "https://github.com/pollen-robotics/AmazingHand",
+      "upstream_commit": "3e8241074df3436a3044ced4881e3bb2133aa725",
+      "upstream_path": "cad/step/Amazing Hand Parts - Proximal.step",
+      "upstream_sha256": "979b42106da4a165b5731f92c9277bac7a038cc42d3dcb67721214c976078a1e",
+      "license": "CC-BY-4.0",
+      "copyright": "Copyright Pollen Robotics",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-4f-8dof-printed/cad/wrist_interface_right.step",
+      "sha256": "6eb6f932d877948ef7fe3d23608fd02aaa9b2dfb8cefb5d3e2550b44c12f8b8f",
+      "size": 223822,
+      "role": "cad",
+      "upstream_url": "https://github.com/pollen-robotics/AmazingHand",
+      "upstream_commit": "3e8241074df3436a3044ced4881e3bb2133aa725",
+      "upstream_path": "cad/step/Amazing Hand Parts - R-Wrist_Interface.step",
+      "upstream_sha256": "6eb6f932d877948ef7fe3d23608fd02aaa9b2dfb8cefb5d3e2550b44c12f8b8f",
+      "license": "CC-BY-4.0",
+      "copyright": "Copyright Pollen Robotics",
+      "changes": [],
+      "rating": "green"
+    }
+  ],
+  "skipped": [
+    {
+      "upstream_path": "cad/step/Amazing Hand base.STEP",
+      "size": 3498670,
+      "license": "CC-BY-4.0",
+      "reason": "full hand CAD (3.5 MB): linked, not mirrored",
+      "url": "https://github.com/pollen-robotics/AmazingHand/blob/3e8241074df3436a3044ced4881e3bb2133aa725/cad/step/Amazing%20Hand%20base.STEP"
+    }
+  ],
+  "preview": {
+    "path": "web/public/data/library/glb/hand-4f-8dof-printed.glb",
+    "sha256": "d442b5d8df3501864b23db455be67b023ed1d9887b6c684be882275f7ec61bbe",
+    "size": 282856,
+    "license": "CC-BY-4.0",
+    "derived_from": [
+      "Demo/AHSimulation/AHSimulation/AH_Right/mjcf/robot.xml"
+    ],
+    "changes": [
+      "drawn from the item's own geometry in its reference pose, simplified by vertex clustering",
+      "re-encoded as GLB (Y up, metres) in one flat grey, with generic node names"
+    ]
+  }
+}

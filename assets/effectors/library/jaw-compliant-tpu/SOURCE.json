@@ -1,0 +1,145 @@
+{
+  "format": "rtt-library-source",
+  "version": 1,
+  "key": "jaw-compliant-tpu",
+  "display_name": "Compliant TPU moving jaw for a hobby-arm gripper",
+  "summary": "A TPU replacement for a hobby arm's moving jaw, with a matching wrist part, that conforms to what it grips.",
+  "kind": "compliant_finger",
+  "class": "open_hardware",
+  "capabilities": [
+    "pinch"
+  ],
+  "upstream": {
+    "repository": "https://github.com/TheRobotStudio/SO-ARM100",
+    "commit": "a758567c3978dfeefe282ede0500085a48fe8f78"
+  },
+  "licence": [
+    {
+      "spdx": "Apache-2.0",
+      "covers": "the print files"
+    }
+  ],
+  "copyright": "Copyright The Robot Studio and the SO-ARM100 contributors",
+  "attribution": "\"SO-101 compliant gripper\" by The Robot Studio, https://github.com/TheRobotStudio/SO-ARM100 (commit a758567), licensed Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)",
+  "chain": [
+    {
+      "spdx": "Apache-2.0",
+      "relation": "licensed",
+      "what": "repository LICENSE",
+      "source": "https://github.com/TheRobotStudio/SO-ARM100/blob/a758567c3978dfeefe282ede0500085a48fe8f78/LICENSE"
+    }
+  ],
+  "reviewed": {
+    "by": "Effector Lab licence gate, against the 2026-10-18 licence audit",
+    "date": "2026-10-18"
+  },
+  "mount": {
+    "interface": "the hobby arm's stock gripper (replaces the moving jaw)",
+    "iso_pattern": null,
+    "status": "unknown",
+    "adapter": null,
+    "source": "",
+    "notes": []
+  },
+  "specs": [
+    {
+      "name": "Material",
+      "value": "TPU (flexible)",
+      "unit": "",
+      "tag": "derived",
+      "source": ""
+    }
+  ],
+  "sim": {
+    "status": "visual_only",
+    "reason": "the jaw's compliance is not modelled yet (a pseudo-rigid finger chain is planned); a rigid copy would misstate it"
+  },
+  "notes": [],
+  "ingest": {
+    "licence_files": [
+      {
+        "path": "LICENSE",
+        "license": "Apache-2.0"
+      }
+    ],
+    "files": [
+      {
+        "path": "Optional/Compliant_Gripper/stl/Compliant_Moving_Jaw_SO101.stl",
+        "out": "print/compliant_moving_jaw.stl",
+        "license": "Apache-2.0"
+      },
+      {
+        "path": "Optional/Compliant_Gripper/stl/Compliant_Wrist_Roll_Follower_SO101.stl",
+        "out": "print/compliant_wrist_part.stl",
+        "license": "Apache-2.0"
+      }
+    ],
+    "preview": {
+      "from": "files",
+      "license": "Apache-2.0",
+      "files": [
+        {
+          "path": "Optional/Compliant_Gripper/stl/Compliant_Moving_Jaw_SO101.stl"
+        }
+      ]
+    }
+  },
+  "files": [
+    {
+      "path": "assets/effectors/library/jaw-compliant-tpu/LICENSES/LICENSE",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "size": 11357,
+      "role": "licence",
+      "upstream_url": "https://github.com/TheRobotStudio/SO-ARM100",
+      "upstream_commit": "a758567c3978dfeefe282ede0500085a48fe8f78",
+      "upstream_path": "LICENSE",
+      "upstream_sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "license": "Apache-2.0",
+      "copyright": "Copyright The Robot Studio and the SO-ARM100 contributors",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/jaw-compliant-tpu/print/compliant_moving_jaw.stl",
+      "sha256": "8bfc815bea4bc5aedcc4ca91f92dd1d94d58257f344853eb02e574fa75b48f7e",
+      "size": 586484,
+      "role": "print",
+      "upstream_url": "https://github.com/TheRobotStudio/SO-ARM100",
+      "upstream_commit": "a758567c3978dfeefe282ede0500085a48fe8f78",
+      "upstream_path": "Optional/Compliant_Gripper/stl/Compliant_Moving_Jaw_SO101.stl",
+      "upstream_sha256": "8bfc815bea4bc5aedcc4ca91f92dd1d94d58257f344853eb02e574fa75b48f7e",
+      "license": "Apache-2.0",
+      "copyright": "Copyright The Robot Studio and the SO-ARM100 contributors",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/jaw-compliant-tpu/print/compliant_wrist_part.stl",
+      "sha256": "d32dd612664b3746d194e90e576349f66c9da631e7b5f79ef6d6579c191ba366",
+      "size": 651784,
+      "role": "print",
+      "upstream_url": "https://github.com/TheRobotStudio/SO-ARM100",
+      "upstream_commit": "a758567c3978dfeefe282ede0500085a48fe8f78",
+      "upstream_path": "Optional/Compliant_Gripper/stl/Compliant_Wrist_Roll_Follower_SO101.stl",
+      "upstream_sha256": "d32dd612664b3746d194e90e576349f66c9da631e7b5f79ef6d6579c191ba366",
+      "license": "Apache-2.0",
+      "copyright": "Copyright The Robot Studio and the SO-ARM100 contributors",
+      "changes": [],
+      "rating": "green"
+    }
+  ],
+  "skipped": [],
+  "preview": {
+    "path": "web/public/data/library/glb/jaw-compliant-tpu.glb",
+    "sha256": "6b3cfbbee723e140eaabf7da4bb0475f2adbf04b044a20a2d467f6836de5a331",
+    "size": 235180,
+    "license": "Apache-2.0",
+    "derived_from": [
+      "Optional/Compliant_Gripper/stl/Compliant_Moving_Jaw_SO101.stl"
+    ],
+    "changes": [
+      "drawn from the item's own geometry in its reference pose, simplified by vertex clustering",
+      "re-encoded as GLB (Y up, metres) in one flat grey, with generic node names"
+    ]
+  }
+}

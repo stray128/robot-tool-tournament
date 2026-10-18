@@ -1,0 +1,92 @@
+<mujoco model="MuJoCo Model">
+  <compiler angle="radian"/>
+
+  <default>
+    <default class="upstream">
+      <default class="panda">
+        <material shininess="0.25"/>
+        <joint range="-2.8973 2.8973" armature="0.1" damping="1"/>
+        <general ctrlrange="-2.8973 2.8973" forcerange="-87 87" biastype="affine"/>
+        <default class="finger">
+          <joint type="slide" range="0 0.04" axis="0 1 0"/>
+        </default>
+        <default class="visual">
+          <geom type="mesh" contype="0" conaffinity="0" group="2"/>
+        </default>
+        <default class="collision">
+          <geom type="mesh" group="3"/>
+          <default class="fingertip_pad_collision_1">
+            <geom size="0.0085 0.004 0.0085" type="box"/>
+          </default>
+          <default class="fingertip_pad_collision_2">
+            <geom size="0.003 0.002 0.003" type="box"/>
+          </default>
+          <default class="fingertip_pad_collision_3">
+            <geom size="0.003 0.002 0.003" type="box"/>
+          </default>
+          <default class="fingertip_pad_collision_4">
+            <geom size="0.003 0.002 0.0035" type="box"/>
+          </default>
+          <default class="fingertip_pad_collision_5">
+            <geom size="0.003 0.002 0.0035" type="box"/>
+          </default>
+        </default>
+      </default>
+    </default>
+  </default>
+
+  <asset>
+    <material name="white" class="panda"/>
+    <material name="off_white" class="panda" rgba="0.901961 0.921569 0.929412 1"/>
+    <material name="black" class="panda" rgba="0.25 0.25 0.25 1"/>
+    <mesh name="hand_c" content_type="model/obj" file="meshes/hand_c.obj"/>
+    <mesh name="finger_0" content_type="model/obj" file="meshes/finger_0.obj"/>
+  </asset>
+
+  <worldbody>
+    <body name="hand" childclass="panda" quat="0 0 0 1">
+      <inertial pos="-0.01 0 0.03" mass="0.73" diaginertia="0.001 0.0025 0.0017"/>
+      <geom class="collision" quat="1 0 0 0" mesh="hand_c"/>
+      <body name="left_finger" pos="0 0 0.0584">
+        <inertial pos="0 0 0" mass="0.015" diaginertia="2.375e-06 2.375e-06 7.5e-07"/>
+        <joint name="finger_joint1" class="finger"/>
+        <geom class="collision" quat="1 0 0 0" mesh="finger_0"/>
+        <geom class="fingertip_pad_collision_1" pos="0 0.0055 0.0445"/>
+        <geom class="fingertip_pad_collision_2" pos="0.0055 0.002 0.05"/>
+        <geom class="fingertip_pad_collision_3" pos="-0.0055 0.002 0.05"/>
+        <geom class="fingertip_pad_collision_4" pos="0.0055 0.002 0.0395"/>
+        <geom class="fingertip_pad_collision_5" pos="-0.0055 0.002 0.0395"/>
+      </body>
+      <body name="right_finger" pos="0 0 0.0584" quat="0 0 0 1">
+        <inertial pos="0 0 0" mass="0.015" diaginertia="2.375e-06 2.375e-06 7.5e-07"/>
+        <joint name="finger_joint2" class="finger"/>
+        <geom class="collision" quat="1 0 0 0" mesh="finger_0"/>
+        <geom class="fingertip_pad_collision_1" pos="0 0.0055 0.0445"/>
+        <geom class="fingertip_pad_collision_2" pos="0.0055 0.002 0.05"/>
+        <geom class="fingertip_pad_collision_3" pos="-0.0055 0.002 0.05"/>
+        <geom class="fingertip_pad_collision_4" pos="0.0055 0.002 0.0395"/>
+        <geom class="fingertip_pad_collision_5" pos="-0.0055 0.002 0.0395"/>
+      </body>
+    </body>
+  </worldbody>
+
+  <contact>
+    <exclude body1="hand" body2="left_finger"/>
+    <exclude body1="hand" body2="right_finger"/>
+  </contact>
+
+  <tendon>
+    <fixed name="split">
+      <joint joint="finger_joint1" coef="0.5"/>
+      <joint joint="finger_joint2" coef="0.5"/>
+    </fixed>
+  </tendon>
+
+  <equality>
+    <joint joint1="finger_joint1" joint2="finger_joint2" solref="0.005" solimp="0.95 0.99"/>
+  </equality>
+
+  <actuator>
+    <general name="actuator8" class="panda" tendon="split" ctrlrange="0 255" forcerange="-100 100" gainprm="0.0156863" biasprm="0 -100 -10"/>
+  </actuator>
+</mujoco>

@@ -1,0 +1,613 @@
+{
+  "bolt": {
+    "bolt": "M6x10",
+    "clamp_mm": 3.5,
+    "engagement_mm": 6.5,
+    "length_mm": 10.0,
+    "max_thread_depth_mm": 8.0,
+    "min_engagement_mm": 6.0,
+    "ok": true,
+    "reasons": []
+  },
+  "claims_iso_conformance": false,
+  "dimensions": {
+    "density_g_cm3": {
+      "source": "typical PLA datasheet value",
+      "status": "assumed",
+      "value": 1.24
+    },
+    "max_thread_depth_mm": {
+      "source": "a cobot maker's rule recorded in rtt.library.mounts, not re-read today",
+      "status": "assumed",
+      "value": 8.0
+    },
+    "min_clamp_mm": {
+      "source": "generator assumption: least material under a screw head",
+      "status": "assumed",
+      "value": 2.0
+    },
+    "min_engagement_factor": {
+      "source": "rule of thumb: thread engagement as a multiple of the thread diameter",
+      "status": "assumed",
+      "value": 1.0
+    },
+    "outer_diameter_mm": {
+      "source": "generator assumption: largest pitch circle + 2 x 3 x thread diameter, rounded up",
+      "status": "assumed",
+      "value": 86.0
+    },
+    "print_allowance_mm": {
+      "source": "spec input; added to every hole and recess, taken off the spigot",
+      "status": "assumed",
+      "value": 0.1
+    },
+    "robot_clearance_hole_mm": {
+      "source": "ISO 273 medium series, standard table value we did not re-read today",
+      "status": "assumed",
+      "value": 6.6
+    },
+    "robot_counterbore_depth_mm": {
+      "source": "generator assumption: thread diameter + 0.5 mm",
+      "status": "assumed",
+      "value": 6.5
+    },
+    "robot_counterbore_mm": {
+      "source": "generator assumption: head diameter + 1.0 mm",
+      "status": "assumed",
+      "value": 11.0
+    },
+    "robot_d1_mm": {
+      "source": "cobot datasheets (several makers), gripper flange listings",
+      "status": "sourced",
+      "value": 50.0
+    },
+    "robot_d2_mm": {
+      "source": "secondary catalogue table (centring diameters); check against ISO 9409-1:2004",
+      "status": "secondary",
+      "value": 31.5
+    },
+    "robot_dowel_depth_mm": {
+      "source": "generator assumption: 6 mm blind from the robot face, less if the plate is thin",
+      "status": "assumed",
+      "value": 6.0
+    },
+    "robot_dowel_mm": {
+      "source": "cobot tool-flange drawings show a 6 mm dowel hole",
+      "status": "sourced",
+      "value": 6.0
+    },
+    "robot_hole_layout": {
+      "source": "generator assumption: positions not read from the standard",
+      "status": "assumed",
+      "value": "4 holes at 45 + k x 90 deg; dowel on the pitch circle at 0 deg"
+    },
+    "robot_n_holes": {
+      "source": "part of the designation ISO 9409-1-50-4-M6; cobot datasheets (several makers), gripper flange listings",
+      "status": "sourced",
+      "value": 4
+    },
+    "robot_screw_head_mm": {
+      "source": "ISO 4762 head diameter, standard table value we did not re-read today",
+      "status": "assumed",
+      "value": 10.0
+    },
+    "robot_thread": {
+      "source": "part of the designation ISO 9409-1-50-4-M6; cobot datasheets (several makers), gripper flange listings",
+      "status": "sourced",
+      "value": "M6"
+    },
+    "screw_lengths_mm": {
+      "source": "ISO 4762 lengths, standard table value we did not re-read today",
+      "status": "assumed",
+      "value": [
+        6.0,
+        8.0,
+        10.0,
+        12.0,
+        16.0,
+        20.0,
+        25.0,
+        30.0,
+        35.0,
+        40.0
+      ]
+    },
+    "spigot_height_mm": {
+      "source": "generator assumption: kept short to fit a shallow centring recess",
+      "status": "assumed",
+      "value": 2.0
+    },
+    "tool_grid_depth_mm": {
+      "source": "generator assumption: 6 mm blind, less if the plate is thin",
+      "status": "assumed",
+      "value": 6.0
+    },
+    "tool_grid_layout": {
+      "source": "generator assumption: holes kept 2 mm from every robot feature and the rim",
+      "status": "assumed",
+      "value": "31 holes on a centred 10 mm grid, clear of the robot holes"
+    },
+    "tool_grid_pilot_mm": {
+      "source": "M3 tap-drill size, standard table value we did not re-read today",
+      "status": "assumed",
+      "value": 2.5
+    },
+    "tool_grid_pitch_mm": {
+      "source": "generator assumption: centred square grid",
+      "status": "assumed",
+      "value": 10.0
+    },
+    "wall_min_mm": {
+      "source": "generator assumption: least wall between any two features",
+      "status": "assumed",
+      "value": 2.0
+    }
+  },
+  "features": [
+    {
+      "diameter_mm": 31.4,
+      "kind": "spigot",
+      "name": "robot_spigot",
+      "side": "robot",
+      "x_mm": 0.0,
+      "y_mm": 0.0,
+      "z_max_mm": 0.0,
+      "z_min_mm": -2.0
+    },
+    {
+      "diameter_mm": 6.7,
+      "kind": "through",
+      "name": "robot_bolt_0",
+      "side": "robot",
+      "x_mm": 17.67767,
+      "y_mm": 17.67767,
+      "z_max_mm": 10.0,
+      "z_min_mm": -2.0
+    },
+    {
+      "diameter_mm": 11.1,
+      "kind": "counterbore",
+      "name": "robot_counterbore_0",
+      "side": "robot",
+      "x_mm": 17.67767,
+      "y_mm": 17.67767,
+      "z_max_mm": 10.0,
+      "z_min_mm": 3.5
+    },
+    {
+      "diameter_mm": 6.7,
+      "kind": "through",
+      "name": "robot_bolt_1",
+      "side": "robot",
+      "x_mm": -17.67767,
+      "y_mm": 17.67767,
+      "z_max_mm": 10.0,
+      "z_min_mm": -2.0
+    },
+    {
+      "diameter_mm": 11.1,
+      "kind": "counterbore",
+      "name": "robot_counterbore_1",
+      "side": "robot",
+      "x_mm": -17.67767,
+      "y_mm": 17.67767,
+      "z_max_mm": 10.0,
+      "z_min_mm": 3.5
+    },
+    {
+      "diameter_mm": 6.7,
+      "kind": "through",
+      "name": "robot_bolt_2",
+      "side": "robot",
+      "x_mm": -17.67767,
+      "y_mm": -17.67767,
+      "z_max_mm": 10.0,
+      "z_min_mm": -2.0
+    },
+    {
+      "diameter_mm": 11.1,
+      "kind": "counterbore",
+      "name": "robot_counterbore_2",
+      "side": "robot",
+      "x_mm": -17.67767,
+      "y_mm": -17.67767,
+      "z_max_mm": 10.0,
+      "z_min_mm": 3.5
+    },
+    {
+      "diameter_mm": 6.7,
+      "kind": "through",
+      "name": "robot_bolt_3",
+      "side": "robot",
+      "x_mm": 17.67767,
+      "y_mm": -17.67767,
+      "z_max_mm": 10.0,
+      "z_min_mm": -2.0
+    },
+    {
+      "diameter_mm": 11.1,
+      "kind": "counterbore",
+      "name": "robot_counterbore_3",
+      "side": "robot",
+      "x_mm": 17.67767,
+      "y_mm": -17.67767,
+      "z_max_mm": 10.0,
+      "z_min_mm": 3.5
+    },
+    {
+      "diameter_mm": 6.1,
+      "kind": "blind",
+      "name": "robot_dowel",
+      "side": "robot",
+      "x_mm": 25.0,
+      "y_mm": 0.0,
+      "z_max_mm": 6.0,
+      "z_min_mm": 0.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_000",
+      "side": "tool",
+      "x_mm": -20.0,
+      "y_mm": -30.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_001",
+      "side": "tool",
+      "x_mm": -10.0,
+      "y_mm": -30.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_002",
+      "side": "tool",
+      "x_mm": 0.0,
+      "y_mm": -30.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_003",
+      "side": "tool",
+      "x_mm": 10.0,
+      "y_mm": -30.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_004",
+      "side": "tool",
+      "x_mm": 20.0,
+      "y_mm": -30.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_005",
+      "side": "tool",
+      "x_mm": -30.0,
+      "y_mm": -20.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_006",
+      "side": "tool",
+      "x_mm": 0.0,
+      "y_mm": -20.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_007",
+      "side": "tool",
+      "x_mm": 30.0,
+      "y_mm": -20.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_008",
+      "side": "tool",
+      "x_mm": -30.0,
+      "y_mm": -10.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_009",
+      "side": "tool",
+      "x_mm": -10.0,
+      "y_mm": -10.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_010",
+      "side": "tool",
+      "x_mm": 0.0,
+      "y_mm": -10.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_011",
+      "side": "tool",
+      "x_mm": 10.0,
+      "y_mm": -10.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_012",
+      "side": "tool",
+      "x_mm": 30.0,
+      "y_mm": -10.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_013",
+      "side": "tool",
+      "x_mm": -30.0,
+      "y_mm": 0.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_014",
+      "side": "tool",
+      "x_mm": -20.0,
+      "y_mm": 0.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_015",
+      "side": "tool",
+      "x_mm": -10.0,
+      "y_mm": 0.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_016",
+      "side": "tool",
+      "x_mm": 0.0,
+      "y_mm": 0.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_017",
+      "side": "tool",
+      "x_mm": 10.0,
+      "y_mm": 0.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_018",
+      "side": "tool",
+      "x_mm": -30.0,
+      "y_mm": 10.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_019",
+      "side": "tool",
+      "x_mm": -10.0,
+      "y_mm": 10.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_020",
+      "side": "tool",
+      "x_mm": 0.0,
+      "y_mm": 10.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_021",
+      "side": "tool",
+      "x_mm": 10.0,
+      "y_mm": 10.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_022",
+      "side": "tool",
+      "x_mm": 30.0,
+      "y_mm": 10.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_023",
+      "side": "tool",
+      "x_mm": -30.0,
+      "y_mm": 20.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_024",
+      "side": "tool",
+      "x_mm": 0.0,
+      "y_mm": 20.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_025",
+      "side": "tool",
+      "x_mm": 30.0,
+      "y_mm": 20.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_026",
+      "side": "tool",
+      "x_mm": -20.0,
+      "y_mm": 30.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_027",
+      "side": "tool",
+      "x_mm": -10.0,
+      "y_mm": 30.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_028",
+      "side": "tool",
+      "x_mm": 0.0,
+      "y_mm": 30.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_029",
+      "side": "tool",
+      "x_mm": 10.0,
+      "y_mm": 30.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    },
+    {
+      "diameter_mm": 2.6,
+      "kind": "blind",
+      "name": "grid_030",
+      "side": "tool",
+      "x_mm": 20.0,
+      "y_mm": 30.0,
+      "z_max_mm": 10.0,
+      "z_min_mm": 4.0
+    }
+  ],
+  "files": {
+    "mjcf": "plate-iso50-4-m6.xml",
+    "stl": "plate-iso50-4-m6.stl"
+  },
+  "generator": "rtt.library.adapters",
+  "key": "plate-iso50-4-m6",
+  "licence": "Apache-2.0",
+  "mass_kg": 0.068653,
+  "notes": [
+    "Not checked against a purchased copy of ISO 9409-1:2004; dimensions marked unverified must be measured before use.",
+    "This part does not claim conformance with ISO 9409-1.",
+    "Robot side: fit 4 x M6x10 socket head cap screws from the tool face; each engages 6.5 mm of the flange thread.",
+    "No standard M6 length gives 9 mm (1.5 x d) of engagement within the 8 mm depth limit, so the screw was chosen with the 1.0 x d rule for a steel screw in a steel thread. Check the flange material before use.",
+    "Blank tool face: 31 M3 pilot holes on a 10 mm grid so printed tools can be screwed on.",
+    "Mass assumes a uniform 100% fill of PLA at 1.24 g/cm3; real prints have denser walls."
+  ],
+  "outer_diameter_mm": 86.0,
+  "spec": {
+    "infill": 1.0,
+    "key": "plate-iso50-4-m6",
+    "material": "PLA",
+    "max_thread_depth_mm": 8.0,
+    "print_allowance_mm": 0.1,
+    "robot": "ISO 9409-1-50-4-M6",
+    "thickness_mm": 10.0,
+    "tool": null
+  },
+  "units": {
+    "mjcf": "m, kg",
+    "record": "mm, kg",
+    "stl": "mm"
+  },
+  "unverified": [
+    "density_g_cm3",
+    "max_thread_depth_mm",
+    "min_clamp_mm",
+    "min_engagement_factor",
+    "outer_diameter_mm",
+    "print_allowance_mm",
+    "robot_clearance_hole_mm",
+    "robot_counterbore_depth_mm",
+    "robot_counterbore_mm",
+    "robot_d2_mm",
+    "robot_dowel_depth_mm",
+    "robot_hole_layout",
+    "robot_screw_head_mm",
+    "screw_lengths_mm",
+    "spigot_height_mm",
+    "tool_grid_depth_mm",
+    "tool_grid_layout",
+    "tool_grid_pilot_mm",
+    "tool_grid_pitch_mm",
+    "wall_min_mm"
+  ],
+  "volume_mm3": 55365.223593
+}

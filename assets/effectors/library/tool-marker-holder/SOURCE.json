@@ -1,0 +1,450 @@
+{
+  "format": "rtt-library-source",
+  "version": 1,
+  "key": "tool-marker-holder",
+  "display_name": "Spring-loaded marker holder tool",
+  "summary": "A printed holder that keeps a dry-erase marker pressed on a board through a spring; modelled here as rigid.",
+  "kind": "passive_tool",
+  "class": "open_hardware",
+  "capabilities": [
+    "tool",
+    "push"
+  ],
+  "upstream": {
+    "repository": "https://github.com/hello-robot/stretch_tool_share",
+    "commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526"
+  },
+  "licence": [
+    {
+      "spdx": "Apache-2.0",
+      "covers": "the tool's mesh and description"
+    }
+  ],
+  "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+  "attribution": "\"Stretch Tool Share dry-erase marker holder (v1)\" by Hello Robot Inc., https://github.com/hello-robot/stretch_tool_share (commit 802e128), licensed Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)",
+  "chain": [
+    {
+      "spdx": "Apache-2.0",
+      "relation": "licensed",
+      "what": "TOOL_LICENSE.md (tool contents only; the robot's own parts are excluded)",
+      "source": "https://github.com/hello-robot/stretch_tool_share/blob/802e1287ea6a4ff7b513e7faf8cf8c468816a526/TOOL_LICENSE.md"
+    }
+  ],
+  "reviewed": {
+    "by": "Effector Lab licence gate, against the 2026-10-18 licence audit",
+    "date": "2026-10-18"
+  },
+  "mount": {
+    "interface": "a mobile manipulator's compliant gripper (the tool is held or screwed on)",
+    "iso_pattern": null,
+    "status": "unknown",
+    "adapter": null,
+    "source": "",
+    "notes": [
+      "the robot's own gripper is not part of this item (it is under a non-commercial licence)"
+    ]
+  },
+  "specs": [
+    {
+      "name": "Compliance",
+      "value": "spring-loaded marker (not modelled)",
+      "unit": "",
+      "tag": "derived",
+      "source": ""
+    }
+  ],
+  "sim": {
+    "status": "proxy",
+    "source": "rigid proxy from the description mesh (CoACD); the spring is not modelled",
+    "fidelity": "rigid",
+    "model_file": "sim/tool-marker-holder.xml",
+    "n_bodies": 1,
+    "n_joints": 0,
+    "n_actuators": 0,
+    "mass_kg": 0.018263,
+    "pieces": 16,
+    "reach_m": 0.031751
+  },
+  "notes": [],
+  "ingest": {
+    "licence_files": [
+      {
+        "path": "TOOL_LICENSE.md",
+        "license": "Apache-2.0"
+      }
+    ],
+    "sim": {
+      "type": "rigid_proxy",
+      "parts": [
+        {
+          "name": "holder",
+          "path": "tool_share/dry_erase_holder_V1/stretch_description/meshes/link_dry_erase_marker.STL",
+          "scale": 1.0
+        }
+      ],
+      "down": [
+        0,
+        0,
+        -1
+      ],
+      "forward": [
+        0,
+        1,
+        0
+      ],
+      "material": "PLA",
+      "infill": 0.4,
+      "license": "Apache-2.0"
+    },
+    "files": [
+      {
+        "path": "tool_share/dry_erase_holder_V1/stretch_description/meshes/link_dry_erase_marker.STL",
+        "out": "print/marker_holder.stl",
+        "license": "Apache-2.0"
+      },
+      {
+        "path": "tool_share/dry_erase_holder_V1/stretch_description/urdf/stretch_dry_erase_marker.xacro",
+        "out": "doc/marker_holder.urdf.xacro",
+        "role": "doc",
+        "license": "Apache-2.0"
+      }
+    ],
+    "preview": {
+      "from": "proxy",
+      "license": "Apache-2.0",
+      "sources": [
+        "tool_share/dry_erase_holder_V1/stretch_description/meshes/link_dry_erase_marker.STL"
+      ]
+    }
+  },
+  "files": [
+    {
+      "path": "assets/effectors/library/tool-marker-holder/LICENSES/TOOL_LICENSE.md",
+      "sha256": "d031804eb24b7372a60773f5b57a9467f58c27182ae3e262a3e015c4452adf48",
+      "size": 1289,
+      "role": "licence",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "TOOL_LICENSE.md",
+      "upstream_sha256": "d031804eb24b7372a60773f5b57a9467f58c27182ae3e262a3e015c4452adf48",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-marker-holder/doc/marker_holder.urdf.xacro",
+      "sha256": "d90cff79198d8735d1e007890cf4b1e6220f92e51779f157c74e25c51084ce37",
+      "size": 3190,
+      "role": "doc",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/dry_erase_holder_V1/stretch_description/urdf/stretch_dry_erase_marker.xacro",
+      "upstream_sha256": "d90cff79198d8735d1e007890cf4b1e6220f92e51779f157c74e25c51084ce37",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-marker-holder/print/marker_holder.stl",
+      "sha256": "803098b04c32b725cfb269409ef77e5fb219fa818e863c1515525b7f82674242",
+      "size": 409784,
+      "role": "print",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/dry_erase_holder_V1/stretch_description/meshes/link_dry_erase_marker.STL",
+      "upstream_sha256": "803098b04c32b725cfb269409ef77e5fb219fa818e863c1515525b7f82674242",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-marker-holder/sim/pieces/holder_0.obj",
+      "sha256": "96c4e99364ae819d825196a27d363ca04e99a894da3831dc4b78ef4d68ed8121",
+      "size": 10182,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/dry_erase_holder_V1/stretch_description/meshes/link_dry_erase_marker.STL",
+      "upstream_sha256": "803098b04c32b725cfb269409ef77e5fb219fa818e863c1515525b7f82674242",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-marker-holder/sim/pieces/holder_1.obj",
+      "sha256": "315a29ffc3ccb67324b77a53895d157d99678557cf1dd61f5d55fbc0884d54fd",
+      "size": 9254,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/dry_erase_holder_V1/stretch_description/meshes/link_dry_erase_marker.STL",
+      "upstream_sha256": "803098b04c32b725cfb269409ef77e5fb219fa818e863c1515525b7f82674242",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-marker-holder/sim/pieces/holder_10.obj",
+      "sha256": "c3469ed6edf100aaea798bcc4bad2d4c220f598c6ba6e6401e0145e6a9331f05",
+      "size": 5784,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/dry_erase_holder_V1/stretch_description/meshes/link_dry_erase_marker.STL",
+      "upstream_sha256": "803098b04c32b725cfb269409ef77e5fb219fa818e863c1515525b7f82674242",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-marker-holder/sim/pieces/holder_11.obj",
+      "sha256": "8936f7a38198480aa319dcb452dad29254fad2574b26eb0aac2b3ab39d3c4ce2",
+      "size": 5221,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/dry_erase_holder_V1/stretch_description/meshes/link_dry_erase_marker.STL",
+      "upstream_sha256": "803098b04c32b725cfb269409ef77e5fb219fa818e863c1515525b7f82674242",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-marker-holder/sim/pieces/holder_12.obj",
+      "sha256": "c459ebe59616d534da4929e7542f15a3a73670c23ccab03174122502f23b1d54",
+      "size": 4359,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/dry_erase_holder_V1/stretch_description/meshes/link_dry_erase_marker.STL",
+      "upstream_sha256": "803098b04c32b725cfb269409ef77e5fb219fa818e863c1515525b7f82674242",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-marker-holder/sim/pieces/holder_13.obj",
+      "sha256": "20073881a30100515bdb683850e0cd6dd19efaf467870a10e12e1af6eba629dc",
+      "size": 7237,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/dry_erase_holder_V1/stretch_description/meshes/link_dry_erase_marker.STL",
+      "upstream_sha256": "803098b04c32b725cfb269409ef77e5fb219fa818e863c1515525b7f82674242",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-marker-holder/sim/pieces/holder_14.obj",
+      "sha256": "d876842d7dc638ad4f9ef09c0df016c6c2f25007449fbb63c6871987f31333e7",
+      "size": 8410,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/dry_erase_holder_V1/stretch_description/meshes/link_dry_erase_marker.STL",
+      "upstream_sha256": "803098b04c32b725cfb269409ef77e5fb219fa818e863c1515525b7f82674242",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-marker-holder/sim/pieces/holder_15.obj",
+      "sha256": "fd8aebb7e961bb335cbc20e2959007e9abb6a37d3450c3830a1ae428a9a7e556",
+      "size": 5579,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/dry_erase_holder_V1/stretch_description/meshes/link_dry_erase_marker.STL",
+      "upstream_sha256": "803098b04c32b725cfb269409ef77e5fb219fa818e863c1515525b7f82674242",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-marker-holder/sim/pieces/holder_2.obj",
+      "sha256": "d39a0fd460640db176aaa020b95e77eec5842e3eb83113cb2c8db161105af0d4",
+      "size": 10934,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/dry_erase_holder_V1/stretch_description/meshes/link_dry_erase_marker.STL",
+      "upstream_sha256": "803098b04c32b725cfb269409ef77e5fb219fa818e863c1515525b7f82674242",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-marker-holder/sim/pieces/holder_3.obj",
+      "sha256": "940888c3b7c22373106b40502fc9ae81f9e5ceb1ada9013c8ec06d897810d744",
+      "size": 9657,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/dry_erase_holder_V1/stretch_description/meshes/link_dry_erase_marker.STL",
+      "upstream_sha256": "803098b04c32b725cfb269409ef77e5fb219fa818e863c1515525b7f82674242",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-marker-holder/sim/pieces/holder_4.obj",
+      "sha256": "02ea0e398edee992952b3b36f0083e5cbf2d2a4389090fff13c2408f06ce329c",
+      "size": 15791,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/dry_erase_holder_V1/stretch_description/meshes/link_dry_erase_marker.STL",
+      "upstream_sha256": "803098b04c32b725cfb269409ef77e5fb219fa818e863c1515525b7f82674242",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-marker-holder/sim/pieces/holder_5.obj",
+      "sha256": "5076b59be663145fd22186755ebc9998c5820d44e714e3e726a5e0f781f5372a",
+      "size": 5386,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/dry_erase_holder_V1/stretch_description/meshes/link_dry_erase_marker.STL",
+      "upstream_sha256": "803098b04c32b725cfb269409ef77e5fb219fa818e863c1515525b7f82674242",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-marker-holder/sim/pieces/holder_6.obj",
+      "sha256": "794ae35cebb1401a5c190b4eb9df37f3c7be232c6eb1b9388979eda76c4404d6",
+      "size": 11507,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/dry_erase_holder_V1/stretch_description/meshes/link_dry_erase_marker.STL",
+      "upstream_sha256": "803098b04c32b725cfb269409ef77e5fb219fa818e863c1515525b7f82674242",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-marker-holder/sim/pieces/holder_7.obj",
+      "sha256": "e65b5ae508ebb2632d9efab7989737e6c9cf0b8edc40b9ed006b7575f7eec55b",
+      "size": 7636,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/dry_erase_holder_V1/stretch_description/meshes/link_dry_erase_marker.STL",
+      "upstream_sha256": "803098b04c32b725cfb269409ef77e5fb219fa818e863c1515525b7f82674242",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-marker-holder/sim/pieces/holder_8.obj",
+      "sha256": "2b99fae99c41bb75df35f33eb6afb7362e3654277ed471277d31fe39b42ac6c2",
+      "size": 9732,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/dry_erase_holder_V1/stretch_description/meshes/link_dry_erase_marker.STL",
+      "upstream_sha256": "803098b04c32b725cfb269409ef77e5fb219fa818e863c1515525b7f82674242",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-marker-holder/sim/pieces/holder_9.obj",
+      "sha256": "7c82da9aba29ddc73715e15fa5ec1ee22219adcd07fc5c62d1b5cbf02503c9f8",
+      "size": 4539,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/dry_erase_holder_V1/stretch_description/meshes/link_dry_erase_marker.STL",
+      "upstream_sha256": "803098b04c32b725cfb269409ef77e5fb219fa818e863c1515525b7f82674242",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-marker-holder/sim/tool-marker-holder.xml",
+      "sha256": "0f98e65362eaf5b3643253a0831921d10a5983aa40dd329e6f9a0cc8796f7ba5",
+      "size": 1984,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/dry_erase_holder_V1/stretch_description/meshes/link_dry_erase_marker.STL",
+      "upstream_sha256": "803098b04c32b725cfb269409ef77e5fb219fa818e863c1515525b7f82674242",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "a rigid simulation proxy generated by Effector Lab from the part's own mesh: rigid proxy: 16 convex pieces (CoACD threshold 0.02, seed 0); PLA at 1.24 g/cm3 x 0.4 infill (assumed); mass from the convex pieces: the mesh does not enclose a volume"
+      ],
+      "rating": "green"
+    }
+  ],
+  "skipped": [],
+  "preview": {
+    "path": "web/public/data/library/glb/tool-marker-holder.glb",
+    "sha256": "fd662a8cea6e69d043623b6dc17338cd608503f70efa6816c1f3cca0e707ade4",
+    "size": 173488,
+    "license": "Apache-2.0",
+    "derived_from": [
+      "tool_share/dry_erase_holder_V1/stretch_description/meshes/link_dry_erase_marker.STL"
+    ],
+    "changes": [
+      "drawn from the item's own geometry in its reference pose, simplified by vertex clustering",
+      "re-encoded as GLB (Y up, metres) in one flat grey, with generic node names"
+    ]
+  }
+}

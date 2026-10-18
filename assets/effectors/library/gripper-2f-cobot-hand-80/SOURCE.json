@@ -1,0 +1,176 @@
+{
+  "format": "rtt-library-source",
+  "version": 1,
+  "key": "gripper-2f-cobot-hand-80",
+  "display_name": "Two-finger parallel cobot hand, 80 mm",
+  "summary": "The parallel hand most used in research labs: two flat fingers on coupled slides, about 80 mm open.",
+  "kind": "parallel_gripper",
+  "class": "sim_model",
+  "capabilities": [
+    "pinch"
+  ],
+  "upstream": {
+    "repository": "https://github.com/google-deepmind/mujoco_menagerie",
+    "commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35"
+  },
+  "licence": [
+    {
+      "spdx": "Apache-2.0",
+      "covers": "the simulation model (MJCF and meshes)"
+    }
+  ],
+  "copyright": "Copyright Franka Robotics GmbH (formerly Franka Emika GmbH); MJCF by the MuJoCo Menagerie contributors",
+  "attribution": "\"Franka Emika Panda hand MJCF model\" by Franka Robotics GmbH and MuJoCo Menagerie contributors, https://github.com/google-deepmind/mujoco_menagerie (commit 62ab00f), licensed Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0); MJCF from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie)",
+  "chain": [
+    {
+      "spdx": "Apache-2.0",
+      "relation": "licensed",
+      "what": "franka_emika_panda/LICENSE",
+      "source": "https://github.com/google-deepmind/mujoco_menagerie/blob/62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35/franka_emika_panda/LICENSE"
+    }
+  ],
+  "reviewed": {
+    "by": "Effector Lab licence gate, against the 2026-10-18 licence audit",
+    "date": "2026-10-18"
+  },
+  "mount": {
+    "interface": "the arm maker's tool flange",
+    "iso_pattern": "ISO 9409-1-50-4-M6",
+    "status": "assumed",
+    "adapter": "plate-iso50-4-m6",
+    "source": "",
+    "notes": [
+      "the arm maker's datasheet gives DIN ISO 9409-1-A50 (licence audit of 2026-10-18; not re-read today)"
+    ]
+  },
+  "specs": [
+    {
+      "name": "Opening in the model",
+      "value": "80",
+      "unit": "mm",
+      "tag": "derived",
+      "source": ""
+    },
+    {
+      "name": "Finger force limit in the model",
+      "value": "100",
+      "unit": "N",
+      "tag": "derived",
+      "source": ""
+    }
+  ],
+  "sim": {
+    "status": "native",
+    "source": "upstream MJCF",
+    "fidelity": "rigid",
+    "note": "a simulation model of a commercial hand, shipped under a generic name",
+    "model_file": "sim/gripper-2f-cobot-hand-80.xml",
+    "n_bodies": 3,
+    "n_joints": 2,
+    "n_actuators": 1,
+    "mass_kg": 0.76
+  },
+  "notes": [],
+  "ingest": {
+    "licence_files": [
+      {
+        "path": "franka_emika_panda/LICENSE",
+        "license": "Apache-2.0"
+      }
+    ],
+    "sim": {
+      "type": "mjcf",
+      "entry": "franka_emika_panda/hand.xml",
+      "root": "hand",
+      "license": "Apache-2.0"
+    },
+    "preview": {
+      "from": "mjcf",
+      "entry": "franka_emika_panda/hand.xml",
+      "root": "hand",
+      "license": "Apache-2.0"
+    }
+  },
+  "files": [
+    {
+      "path": "assets/effectors/library/gripper-2f-cobot-hand-80/LICENSES/LICENSE",
+      "sha256": "a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9",
+      "size": 10173,
+      "role": "licence",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "franka_emika_panda/LICENSE",
+      "upstream_sha256": "a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9",
+      "license": "Apache-2.0",
+      "copyright": "Copyright Franka Robotics GmbH (formerly Franka Emika GmbH); MJCF by the MuJoCo Menagerie contributors",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-cobot-hand-80/sim/gripper-2f-cobot-hand-80.xml",
+      "sha256": "e9a2978528d750b93226a4a3de918fae8650fb7a98d13002a7f78e03ce6552c5",
+      "size": 3848,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "franka_emika_panda/hand.xml",
+      "upstream_sha256": "d2a6539d0fd7c55c75c14f11c78f04505ee33f31d93e6112e3ad7120e5ee786a",
+      "license": "Apache-2.0",
+      "copyright": "Copyright Franka Robotics GmbH (formerly Franka Emika GmbH); MJCF by the MuJoCo Menagerie contributors",
+      "changes": [
+        "the effector subtree from body 'hand' written as one MJCF by MuJoCo 3.15.0",
+        "every body's mass, centre of mass and inertia pinned at the upstream model's compiled values",
+        "9 visual-only geoms removed (the catalog preview draws the upstream visuals)"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-cobot-hand-80/sim/meshes/finger_0.obj",
+      "sha256": "26b3c0a309802130ffb5202f9d1273c7b093cb107fb85962d97bd38378fe85f7",
+      "size": 3166,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "franka_emika_panda/assets/finger_0.obj",
+      "upstream_sha256": "215098c0fcdf7192f6c503a37cf49e3efecf8a9e1320f02b17c5584d89cc5b2c",
+      "license": "Apache-2.0",
+      "copyright": "Copyright Franka Robotics GmbH (formerly Franka Emika GmbH); MJCF by the MuJoCo Menagerie contributors",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/gripper-2f-cobot-hand-80/sim/meshes/hand_c.obj",
+      "sha256": "2bad15dcee9d42e096c170b3949d16c574dd8fb201cf53927396715841ce82f8",
+      "size": 6639,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "franka_emika_panda/assets/hand.stl",
+      "upstream_sha256": "94493e94f30fe940f2c8ca2f155c3bbe67bbff406d3edf5e261670d2f0f6e2ed",
+      "license": "Apache-2.0",
+      "copyright": "Copyright Franka Robotics GmbH (formerly Franka Emika GmbH); MJCF by the MuJoCo Menagerie contributors",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    }
+  ],
+  "skipped": [],
+  "preview": {
+    "path": "web/public/data/library/glb/gripper-2f-cobot-hand-80.glb",
+    "sha256": "c94e0e608699f918343c36460aa05f83b371ef3fd2704f379ab6fabd6f829049",
+    "size": 138396,
+    "license": "Apache-2.0",
+    "derived_from": [
+      "franka_emika_panda/hand.xml"
+    ],
+    "changes": [
+      "drawn from the item's own geometry in its reference pose, simplified by vertex clustering",
+      "re-encoded as GLB (Y up, metres) in one flat grey, with generic node names"
+    ]
+  }
+}

@@ -1,0 +1,449 @@
+{
+  "format": "rtt-library-source",
+  "version": 1,
+  "key": "tool-button-pusher",
+  "display_name": "Button-pusher tool",
+  "summary": "A printed concave pusher that a gripper holds to press buttons without blocking its camera view.",
+  "kind": "passive_tool",
+  "class": "open_hardware",
+  "capabilities": [
+    "push"
+  ],
+  "upstream": {
+    "repository": "https://github.com/hello-robot/stretch_tool_share",
+    "commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526"
+  },
+  "licence": [
+    {
+      "spdx": "Apache-2.0",
+      "covers": "the tool's print file"
+    }
+  ],
+  "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+  "attribution": "\"Stretch Tool Share button pusher (v2)\" by Hello Robot Inc. and Henry Evans, https://github.com/hello-robot/stretch_tool_share (commit 802e128), licensed Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0)",
+  "chain": [
+    {
+      "spdx": "Apache-2.0",
+      "relation": "licensed",
+      "what": "TOOL_LICENSE.md (tool contents only; the robot's own parts are excluded)",
+      "source": "https://github.com/hello-robot/stretch_tool_share/blob/802e1287ea6a4ff7b513e7faf8cf8c468816a526/TOOL_LICENSE.md"
+    }
+  ],
+  "reviewed": {
+    "by": "Effector Lab licence gate, against the 2026-10-18 licence audit",
+    "date": "2026-10-18"
+  },
+  "mount": {
+    "interface": "a mobile manipulator's compliant gripper (the tool is held or screwed on)",
+    "iso_pattern": null,
+    "status": "unknown",
+    "adapter": null,
+    "source": "",
+    "notes": [
+      "the robot's own gripper is not part of this item (it is under a non-commercial licence)"
+    ]
+  },
+  "specs": [
+    {
+      "name": "Material",
+      "value": "PLA, with a non-slip pad",
+      "unit": "",
+      "tag": "sourced",
+      "source": "https://github.com/hello-robot/stretch_tool_share/blob/802e1287ea6a4ff7b513e7faf8cf8c468816a526/tool_share/button_pusher_V2/README.md"
+    }
+  ],
+  "sim": {
+    "status": "proxy",
+    "source": "rigid proxy from the print file (CoACD)",
+    "fidelity": "rigid",
+    "model_file": "sim/tool-button-pusher.xml",
+    "n_bodies": 1,
+    "n_joints": 0,
+    "n_actuators": 0,
+    "mass_kg": 0.03637,
+    "pieces": 16,
+    "reach_m": 0.0508
+  },
+  "notes": [],
+  "ingest": {
+    "licence_files": [
+      {
+        "path": "TOOL_LICENSE.md",
+        "license": "Apache-2.0"
+      }
+    ],
+    "sim": {
+      "type": "rigid_proxy",
+      "parts": [
+        {
+          "name": "pusher",
+          "path": "tool_share/button_pusher_V2/CAD/button_pusher_V2.stl",
+          "scale": 0.001
+        }
+      ],
+      "down": [
+        0,
+        0,
+        -1
+      ],
+      "forward": [
+        0,
+        1,
+        0
+      ],
+      "material": "PLA",
+      "infill": 0.4,
+      "license": "Apache-2.0"
+    },
+    "files": [
+      {
+        "path": "tool_share/button_pusher_V2/CAD/button_pusher_V2.stl",
+        "out": "print/button_pusher.stl",
+        "license": "Apache-2.0"
+      },
+      {
+        "path": "tool_share/button_pusher_V2/README.md",
+        "out": "doc/README.md",
+        "role": "doc",
+        "license": "Apache-2.0"
+      }
+    ],
+    "preview": {
+      "from": "proxy",
+      "license": "Apache-2.0",
+      "sources": [
+        "tool_share/button_pusher_V2/CAD/button_pusher_V2.stl"
+      ]
+    }
+  },
+  "files": [
+    {
+      "path": "assets/effectors/library/tool-button-pusher/LICENSES/TOOL_LICENSE.md",
+      "sha256": "d031804eb24b7372a60773f5b57a9467f58c27182ae3e262a3e015c4452adf48",
+      "size": 1289,
+      "role": "licence",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "TOOL_LICENSE.md",
+      "upstream_sha256": "d031804eb24b7372a60773f5b57a9467f58c27182ae3e262a3e015c4452adf48",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-button-pusher/doc/README.md",
+      "sha256": "7118a625f02eef2a9503c1c047031e4eaa1a314ebd6ad37cfb3804f65524e942",
+      "size": 787,
+      "role": "doc",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/button_pusher_V2/README.md",
+      "upstream_sha256": "7118a625f02eef2a9503c1c047031e4eaa1a314ebd6ad37cfb3804f65524e942",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-button-pusher/print/button_pusher.stl",
+      "sha256": "1263871f77c6e13b270a257943c61a03760f50bc4b847437c8ff0f64bf7442e5",
+      "size": 2041884,
+      "role": "print",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/button_pusher_V2/CAD/button_pusher_V2.stl",
+      "upstream_sha256": "1263871f77c6e13b270a257943c61a03760f50bc4b847437c8ff0f64bf7442e5",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_0.obj",
+      "sha256": "9657e4da744add91092db1fc2e80123b9358b1b7e77adcbcd3494282d2791d36",
+      "size": 29907,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/button_pusher_V2/CAD/button_pusher_V2.stl",
+      "upstream_sha256": "1263871f77c6e13b270a257943c61a03760f50bc4b847437c8ff0f64bf7442e5",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_1.obj",
+      "sha256": "7d627df626d527c21df3af8739bab738fae384b1bac29a4cc7420e65d4c51e32",
+      "size": 28825,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/button_pusher_V2/CAD/button_pusher_V2.stl",
+      "upstream_sha256": "1263871f77c6e13b270a257943c61a03760f50bc4b847437c8ff0f64bf7442e5",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_10.obj",
+      "sha256": "71881dc81250a9d5337d4da095090a564f30ea8a484dcbbd307959645d758aeb",
+      "size": 19948,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/button_pusher_V2/CAD/button_pusher_V2.stl",
+      "upstream_sha256": "1263871f77c6e13b270a257943c61a03760f50bc4b847437c8ff0f64bf7442e5",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_11.obj",
+      "sha256": "17dcf405ab98bb7e75f6231509fb4e7a1ceeb6e097226b70c5e44cd065f7411b",
+      "size": 2545,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/button_pusher_V2/CAD/button_pusher_V2.stl",
+      "upstream_sha256": "1263871f77c6e13b270a257943c61a03760f50bc4b847437c8ff0f64bf7442e5",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_12.obj",
+      "sha256": "10a633f5216054c68a8d012ca14a10eae0bb970f79a1985e314469da4801ce68",
+      "size": 9992,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/button_pusher_V2/CAD/button_pusher_V2.stl",
+      "upstream_sha256": "1263871f77c6e13b270a257943c61a03760f50bc4b847437c8ff0f64bf7442e5",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_13.obj",
+      "sha256": "bf34047263845595d48958729cf68fe99ab0df4210c8985a69cb9789d507255f",
+      "size": 26025,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/button_pusher_V2/CAD/button_pusher_V2.stl",
+      "upstream_sha256": "1263871f77c6e13b270a257943c61a03760f50bc4b847437c8ff0f64bf7442e5",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_14.obj",
+      "sha256": "a6966d6d717ca51e14154498fad7ca75eca65514380e378ffc50775258609fe0",
+      "size": 1819,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/button_pusher_V2/CAD/button_pusher_V2.stl",
+      "upstream_sha256": "1263871f77c6e13b270a257943c61a03760f50bc4b847437c8ff0f64bf7442e5",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_15.obj",
+      "sha256": "1c5ef917545b3a6461e5cb51149973c63afbb6927fed05493ed0ad8f18f8dd52",
+      "size": 9049,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/button_pusher_V2/CAD/button_pusher_V2.stl",
+      "upstream_sha256": "1263871f77c6e13b270a257943c61a03760f50bc4b847437c8ff0f64bf7442e5",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_2.obj",
+      "sha256": "9261f1f8c775a9a53c6240557b2f2e497554ae1cbc5eb822d222c3f16157876b",
+      "size": 15146,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/button_pusher_V2/CAD/button_pusher_V2.stl",
+      "upstream_sha256": "1263871f77c6e13b270a257943c61a03760f50bc4b847437c8ff0f64bf7442e5",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_3.obj",
+      "sha256": "3d698a7c9adb05052364ee671a2bf178928f8dfe7d35b2e014a43b20d4de2ee0",
+      "size": 17362,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/button_pusher_V2/CAD/button_pusher_V2.stl",
+      "upstream_sha256": "1263871f77c6e13b270a257943c61a03760f50bc4b847437c8ff0f64bf7442e5",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_4.obj",
+      "sha256": "274b7efafd1f609e2baf8ac461e43c154bed5c49c2edae2ac8195bf1ba9fc6e9",
+      "size": 2324,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/button_pusher_V2/CAD/button_pusher_V2.stl",
+      "upstream_sha256": "1263871f77c6e13b270a257943c61a03760f50bc4b847437c8ff0f64bf7442e5",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_5.obj",
+      "sha256": "6a9c5f7f7fa8485fd0f4ad81f8d0499818de2d14823d04932cae30f3d40aa74e",
+      "size": 29670,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/button_pusher_V2/CAD/button_pusher_V2.stl",
+      "upstream_sha256": "1263871f77c6e13b270a257943c61a03760f50bc4b847437c8ff0f64bf7442e5",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_6.obj",
+      "sha256": "57f5c89bc7057139234282a1c8bcbdc3d326fba4ba88fd361b78e1a794f3a397",
+      "size": 10231,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/button_pusher_V2/CAD/button_pusher_V2.stl",
+      "upstream_sha256": "1263871f77c6e13b270a257943c61a03760f50bc4b847437c8ff0f64bf7442e5",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_7.obj",
+      "sha256": "19be0fad2fc9421ee6d337b7455074affe92a554ce55351ebe25a05dfd151e80",
+      "size": 226836,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/button_pusher_V2/CAD/button_pusher_V2.stl",
+      "upstream_sha256": "1263871f77c6e13b270a257943c61a03760f50bc4b847437c8ff0f64bf7442e5",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_8.obj",
+      "sha256": "ab79ecadfc6f22302cadba20dbf1c69b65d754984068da316dfaed49cb7c1c41",
+      "size": 3336,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/button_pusher_V2/CAD/button_pusher_V2.stl",
+      "upstream_sha256": "1263871f77c6e13b270a257943c61a03760f50bc4b847437c8ff0f64bf7442e5",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-button-pusher/sim/pieces/pusher_9.obj",
+      "sha256": "42612bc68f53f8fc2b5ecd599f34cc04487273646dd3f6f22a22844d48b9e06e",
+      "size": 20129,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/button_pusher_V2/CAD/button_pusher_V2.stl",
+      "upstream_sha256": "1263871f77c6e13b270a257943c61a03760f50bc4b847437c8ff0f64bf7442e5",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "convex piece of a rigid proxy (CoACD threshold 0.02, seed 0), in the mount frame, metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/tool-button-pusher/sim/tool-button-pusher.xml",
+      "sha256": "fc3cbe7647396571f681140fa1a4f8463f7d042914c256e5c0500a642e19b09b",
+      "size": 1986,
+      "role": "derived",
+      "upstream_url": "https://github.com/hello-robot/stretch_tool_share",
+      "upstream_commit": "802e1287ea6a4ff7b513e7faf8cf8c468816a526",
+      "upstream_path": "tool_share/button_pusher_V2/CAD/button_pusher_V2.stl",
+      "upstream_sha256": "1263871f77c6e13b270a257943c61a03760f50bc4b847437c8ff0f64bf7442e5",
+      "license": "Apache-2.0",
+      "copyright": "Copyright 2020-2024 Hello Robot Inc.",
+      "changes": [
+        "a rigid simulation proxy generated by Effector Lab from the part's own mesh: rigid proxy: 16 convex pieces (CoACD threshold 0.02, seed 0); PLA at 1.24 g/cm3 x 0.4 infill (assumed)"
+      ],
+      "rating": "green"
+    }
+  ],
+  "skipped": [],
+  "preview": {
+    "path": "web/public/data/library/glb/tool-button-pusher.glb",
+    "sha256": "c86c4179bf570c5485ec6135f67c8a8cac14ee1e8d168919c9a356ef8637b23a",
+    "size": 164900,
+    "license": "Apache-2.0",
+    "derived_from": [
+      "tool_share/button_pusher_V2/CAD/button_pusher_V2.stl"
+    ],
+    "changes": [
+      "drawn from the item's own geometry in its reference pose, simplified by vertex clustering",
+      "re-encoded as GLB (Y up, metres) in one flat grey, with generic node names"
+    ]
+  }
+}

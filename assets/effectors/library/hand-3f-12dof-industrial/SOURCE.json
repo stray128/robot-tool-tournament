@@ -1,0 +1,280 @@
+{
+  "format": "rtt-library-source",
+  "version": 1,
+  "key": "hand-3f-12dof-industrial",
+  "display_name": "Three-finger 12-joint industrial hand",
+  "summary": "A three-finger dexterous hand built for industrial handling: four joints per finger on a shared base.",
+  "kind": "three_finger_hand",
+  "class": "sim_model",
+  "capabilities": [
+    "pinch",
+    "power"
+  ],
+  "upstream": {
+    "repository": "https://github.com/google-deepmind/mujoco_menagerie",
+    "commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35"
+  },
+  "licence": [
+    {
+      "spdx": "Apache-2.0",
+      "covers": "the simulation model (MJCF and meshes), provided by the maker"
+    }
+  ],
+  "copyright": "Copyright The Shadow Robot Company",
+  "attribution": "\"Shadow DEX-EE MJCF model\" by The Shadow Robot Company and MuJoCo Menagerie contributors, https://github.com/google-deepmind/mujoco_menagerie (commit 62ab00f), licensed Apache-2.0 (https://www.apache.org/licenses/LICENSE-2.0); MJCF from MuJoCo Menagerie (Google DeepMind, https://github.com/google-deepmind/mujoco_menagerie)",
+  "chain": [
+    {
+      "spdx": "Apache-2.0",
+      "relation": "licensed",
+      "what": "shadow_dexee/LICENSE",
+      "source": "https://github.com/google-deepmind/mujoco_menagerie/blob/62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35/shadow_dexee/LICENSE"
+    }
+  ],
+  "reviewed": {
+    "by": "Effector Lab licence gate, against the 2026-10-18 licence audit",
+    "date": "2026-10-18"
+  },
+  "mount": {
+    "interface": "the maker's own base plate",
+    "iso_pattern": null,
+    "status": "unknown",
+    "adapter": null,
+    "source": "",
+    "notes": []
+  },
+  "specs": [
+    {
+      "name": "Joints",
+      "value": "12 (4 per finger)",
+      "unit": "",
+      "tag": "derived",
+      "source": ""
+    }
+  ],
+  "sim": {
+    "status": "native",
+    "source": "upstream MJCF (PID plugin actuators)",
+    "fidelity": "rigid",
+    "note": "its 12 actuators are PID plugin actuators of the simulator",
+    "model_file": "sim/hand-3f-12dof-industrial.xml",
+    "n_bodies": 20,
+    "n_joints": 12,
+    "n_actuators": 12,
+    "mass_kg": 4.139472
+  },
+  "notes": [],
+  "ingest": {
+    "licence_files": [
+      {
+        "path": "shadow_dexee/LICENSE",
+        "license": "Apache-2.0"
+      }
+    ],
+    "sim": {
+      "type": "mjcf",
+      "entry": "shadow_dexee/shadow_dexee.xml",
+      "root": "hand",
+      "wrap": {
+        "name": "hand",
+        "bodies": [
+          "hand_base",
+          "F0/",
+          "F1/",
+          "F2/"
+        ]
+      },
+      "license": "Apache-2.0"
+    },
+    "preview": {
+      "from": "mjcf",
+      "entry": "shadow_dexee/shadow_dexee.xml",
+      "root": null,
+      "license": "Apache-2.0",
+      "max_faces": 16000
+    }
+  },
+  "files": [
+    {
+      "path": "assets/effectors/library/hand-3f-12dof-industrial/LICENSES/LICENSE",
+      "sha256": "d42cae9a0f292b7a713597ba26e1e1e23d50df906c488f0d36fd3538af200bc1",
+      "size": 11355,
+      "role": "licence",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "shadow_dexee/LICENSE",
+      "upstream_sha256": "d42cae9a0f292b7a713597ba26e1e1e23d50df906c488f0d36fd3538af200bc1",
+      "license": "Apache-2.0",
+      "copyright": "Copyright The Shadow Robot Company",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-3f-12dof-industrial/sim/hand-3f-12dof-industrial.xml",
+      "sha256": "ca96d66db559d464f9b227c85237180309730fe4b855317f1f4f7cb85b0ad321",
+      "size": 16360,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "shadow_dexee/shadow_dexee.xml",
+      "upstream_sha256": "7d7ad518b01451f58d3e5f3e59e58719741efead2d7730c9cf800f7d766f267a",
+      "license": "Apache-2.0",
+      "copyright": "Copyright The Shadow Robot Company",
+      "changes": [
+        "the effector subtree from body 'hand' written as one MJCF by MuJoCo 3.15.0",
+        "every body's mass, centre of mass and inertia pinned at the upstream model's compiled values",
+        "81 visual-only geoms removed (the catalog preview draws the upstream visuals)"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-3f-12dof-industrial/sim/meshes/r3_config1_base_col.obj",
+      "sha256": "8f428c3f742a1c8a3daa41c95861e3dd604dfbe7de2572126dbb74c1ce287f5d",
+      "size": 56872,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "shadow_dexee/assets/Asm-MRH-HB1-Visual,00-Plastic.stl",
+      "upstream_sha256": "3343fb83814248c1c00f33dcd72d3cb9b9588d271425b691b367a75d07d8304a",
+      "license": "Apache-2.0",
+      "copyright": "Copyright The Shadow Robot Company",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-3f-12dof-industrial/sim/meshes/r3_config1_base_puck_col.obj",
+      "sha256": "297a8a410ab0a503dd69c0e5dc6778def9b98a0ebb77038fd50d62f8d931cce0",
+      "size": 71257,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "shadow_dexee/assets/Asm-MRH-HB1-Visual,00-Puck.stl",
+      "upstream_sha256": "c9ab2b56c19a073721663296494a4953fafd6402a590599d98c8cc46f81db8c7",
+      "license": "Apache-2.0",
+      "copyright": "Copyright The Shadow Robot Company",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-3f-12dof-industrial/sim/meshes/r3_finger_base_col.obj",
+      "sha256": "4a8e89af79d3fe70abfbda6c891c71ee35871d21d3d9a4c0a9b876d554b33b91",
+      "size": 5962,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "shadow_dexee/assets/r3_finger_base_col.stl",
+      "upstream_sha256": "4f879ab793303114c7008493c92249530d8cb0bad52da2e3004d0944b60c2127",
+      "license": "Apache-2.0",
+      "copyright": "Copyright The Shadow Robot Company",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-3f-12dof-industrial/sim/meshes/r3_finger_distal_col.obj",
+      "sha256": "267e83b2dc1e0944694cb2410fecc5ccba3e1c44e1391d89bda3edb3ab8d0b20",
+      "size": 54855,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "shadow_dexee/assets/MRH-F-Distal-Visual,00.stl",
+      "upstream_sha256": "61eea3a9b10828a67dd0aae88ae4f4a37ecf13a98f306a3273714b3fa50e8fba",
+      "license": "Apache-2.0",
+      "copyright": "Copyright The Shadow Robot Company",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-3f-12dof-industrial/sim/meshes/r3_finger_distal_tip_col.obj",
+      "sha256": "d9560f390503fe9f78c8b6019f65f08496dd76cc3a01d43d05326772efca9ab4",
+      "size": 57372,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "shadow_dexee/assets/MRH-F-Distal-Sensor-Visual,00.stl",
+      "upstream_sha256": "457401ba18149ae44a8fb4358c6f1ba56c90ea8f6b15dff1db5c6f5abf220876",
+      "license": "Apache-2.0",
+      "copyright": "Copyright The Shadow Robot Company",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-3f-12dof-industrial/sim/meshes/r3_finger_knuckle_col.obj",
+      "sha256": "d894997e5660308731843f898be44bdff39b31bd5da434eddd5c5d1d66c571d9",
+      "size": 42406,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "shadow_dexee/assets/MRH-F-J0Link-Visual,00.stl",
+      "upstream_sha256": "21b68779c4848eb9d279e1269584c6827d3bf80a8c158e84cdfac2d810ae041d",
+      "license": "Apache-2.0",
+      "copyright": "Copyright The Shadow Robot Company",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-3f-12dof-industrial/sim/meshes/r3_finger_middle_col.obj",
+      "sha256": "b653cf5931b6444134b27c9932666231e4f58f4128d417655d03e2d6b5dd4111",
+      "size": 133780,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "shadow_dexee/assets/Asm-MRH-F-Mid-Visual,00+MagTac,00.stl",
+      "upstream_sha256": "60e7693d7a7a2b0ea78b93daf124315a2f8a83993c64f5eeff230bb55a1de3ba",
+      "license": "Apache-2.0",
+      "copyright": "Copyright The Shadow Robot Company",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/hand-3f-12dof-industrial/sim/meshes/r3_finger_proximal_col.obj",
+      "sha256": "702686ce313922b51f4453f01c53d2af21a5477e25b3246722c8f2a1383ec0bf",
+      "size": 28597,
+      "role": "derived",
+      "upstream_url": "https://github.com/google-deepmind/mujoco_menagerie",
+      "upstream_commit": "62ab00f2bc44f6f20c1c9b7a13f3fb1dd41a4e35",
+      "upstream_path": "shadow_dexee/assets/Asm-MRH-F-Prox-Visual,00+Magtac,00.stl",
+      "upstream_sha256": "5637d7d1a96adca13ccbc3c9786e7616553fc4331b428278d4bd88dd236a8211",
+      "license": "Apache-2.0",
+      "copyright": "Copyright The Shadow Robot Company",
+      "changes": [
+        "replaced by its convex hull, the shape MuJoCo's collision detector uses (MuJoCo 3.15.0, qhull)",
+        "written as OBJ in the upstream file's frame, scaled to metres"
+      ],
+      "rating": "green"
+    }
+  ],
+  "skipped": [],
+  "preview": {
+    "path": "web/public/data/library/glb/hand-3f-12dof-industrial.glb",
+    "sha256": "1981766b2eaf22cc26a2f4b51f7bbd3a46e19ac92a094bcfc9e90d9ebc10061a",
+    "size": 294120,
+    "license": "Apache-2.0",
+    "derived_from": [
+      "shadow_dexee/shadow_dexee.xml"
+    ],
+    "changes": [
+      "drawn from the item's own geometry in its reference pose, simplified by vertex clustering",
+      "re-encoded as GLB (Y up, metres) in one flat grey, with generic node names"
+    ]
+  }
+}

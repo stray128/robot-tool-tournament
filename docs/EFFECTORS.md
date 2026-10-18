@@ -474,6 +474,13 @@ in Menagerie) are withheld: their makers' names match the project's private leak
 which `scripts/leak_check.sh` refuses in every file, so they cannot be vendored and credited
 here. The full audit rows for them are kept outside the repository.
 
+**Founder decision (2026-10-18):** both are now included, in the open effector library
+(`docs/LIBRARY.md`, `assets/effectors/library/gripper-2f-adaptive-85/` and
+`gripper-2f-cobot-hand-80/`). Their makers are named only in credits (`SOURCE.json`,
+`lock.json`, README, `NOTICE`, `docs/ATTRIBUTION.md`, the credits page); on screen they keep
+generic names. They are library entrants of the catalog families, not presets: the catalog
+group stays at 12 candidates.
+
 **Decision for B1:** vendor the green set: the 16-joint hand A, the 12-joint three-finger
 hand (if its plugin actuators load in the pinned MuJoCo, else the 20-actuator hand), the
 22-joint hand, the fin-ray gripper and the rigid-pad gripper A (B as the spare). Build the

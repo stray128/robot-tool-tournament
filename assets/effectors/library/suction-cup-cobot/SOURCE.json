@@ -1,0 +1,155 @@
+{
+  "format": "rtt-library-source",
+  "version": 1,
+  "key": "suction-cup-cobot",
+  "display_name": "Vacuum suction gripper, single cup",
+  "summary": "A cobot maker's vacuum gripper: one suction cup on a compact body with its own vacuum generator.",
+  "kind": "suction_gripper",
+  "class": "sim_model",
+  "capabilities": [
+    "suction"
+  ],
+  "upstream": {
+    "repository": "https://github.com/xArm-Developer/xarm_ros2",
+    "commit": "62936f7ea1846a85f7350de2c4c18f39e6d19715"
+  },
+  "licence": [
+    {
+      "spdx": "BSD-3-Clause",
+      "covers": "the robot description and meshes"
+    }
+  ],
+  "copyright": "Copyright (c) 2018, UFACTORY Inc.",
+  "attribution": "\"UFACTORY xArm vacuum gripper description\" by UFACTORY Inc., https://github.com/xArm-Developer/xarm_ros2 (commit 62936f7), licensed BSD-3-Clause (https://spdx.org/licenses/BSD-3-Clause.html)",
+  "chain": [
+    {
+      "spdx": "BSD-3-Clause",
+      "relation": "licensed",
+      "what": "repository LICENSE",
+      "source": "https://github.com/xArm-Developer/xarm_ros2/blob/62936f7ea1846a85f7350de2c4c18f39e6d19715/LICENSE"
+    }
+  ],
+  "reviewed": {
+    "by": "Effector Lab licence gate, against the 2026-10-18 licence audit",
+    "date": "2026-10-18"
+  },
+  "mount": {
+    "interface": "the arm maker's tool flange (6 x M6 and one 6 mm locating hole)",
+    "iso_pattern": null,
+    "status": "unknown",
+    "adapter": null,
+    "source": "",
+    "notes": []
+  },
+  "specs": [
+    {
+      "name": "Mass",
+      "value": "0.656",
+      "unit": "kg",
+      "tag": "sourced",
+      "source": "https://github.com/xArm-Developer/xarm_ros2/blob/62936f7ea1846a85f7350de2c4c18f39e6d19715/xarm_description/urdf/vacuum_gripper/xarm_vacuum_gripper.urdf.xacro"
+    },
+    {
+      "name": "Tool centre point from the flange",
+      "value": "126",
+      "unit": "mm",
+      "tag": "sourced",
+      "source": "https://github.com/xArm-Developer/xarm_ros2/blob/62936f7ea1846a85f7350de2c4c18f39e6d19715/xarm_description/urdf/vacuum_gripper/xarm_vacuum_gripper.urdf.xacro"
+    },
+    {
+      "name": "Cup lip diameter used in simulation",
+      "value": "40",
+      "unit": "mm",
+      "tag": "assumed",
+      "source": ""
+    }
+  ],
+  "sim": {
+    "status": "proxy",
+    "source": "the seal-gated suction family at its largest cup",
+    "fidelity": "approximation",
+    "note": "the description has no vacuum model and no cup dimensions: the suction family supplies the seal test and the capped vacuum, with its largest cup (40 mm, assumed)",
+    "family": "suction",
+    "params": {
+      "diameter_mm": 40.0
+    }
+  },
+  "notes": [],
+  "ingest": {
+    "licence_files": [
+      {
+        "path": "LICENSE",
+        "license": "BSD-3-Clause"
+      }
+    ],
+    "sim": {
+      "type": "family",
+      "family": "suction",
+      "params": {
+        "diameter_mm": 40.0
+      }
+    },
+    "files": [
+      {
+        "path": "xarm_description/meshes/vacuum_gripper/xarm/collision/vacuum_gripper.stl",
+        "out": "sim/vacuum_gripper_collision.stl",
+        "role": "sim",
+        "license": "BSD-3-Clause"
+      }
+    ],
+    "preview": {
+      "from": "files",
+      "license": "BSD-3-Clause",
+      "files": [
+        {
+          "path": "xarm_description/meshes/vacuum_gripper/xarm/visual/vacuum_gripper.stl",
+          "scale": 1.0
+        }
+      ]
+    }
+  },
+  "files": [
+    {
+      "path": "assets/effectors/library/suction-cup-cobot/LICENSES/LICENSE",
+      "sha256": "685e81e0cd30124e24e834ea2bf39bfead4efc9907d021bc9d1ae0f2dcea1431",
+      "size": 1538,
+      "role": "licence",
+      "upstream_url": "https://github.com/xArm-Developer/xarm_ros2",
+      "upstream_commit": "62936f7ea1846a85f7350de2c4c18f39e6d19715",
+      "upstream_path": "LICENSE",
+      "upstream_sha256": "685e81e0cd30124e24e834ea2bf39bfead4efc9907d021bc9d1ae0f2dcea1431",
+      "license": "BSD-3-Clause",
+      "copyright": "Copyright (c) 2018, UFACTORY Inc.",
+      "changes": [],
+      "rating": "green"
+    },
+    {
+      "path": "assets/effectors/library/suction-cup-cobot/sim/vacuum_gripper_collision.stl",
+      "sha256": "26179bd32d360c0d404ae072973cdf4b0a543581fe179508a38b3801f8773915",
+      "size": 35984,
+      "role": "sim",
+      "upstream_url": "https://github.com/xArm-Developer/xarm_ros2",
+      "upstream_commit": "62936f7ea1846a85f7350de2c4c18f39e6d19715",
+      "upstream_path": "xarm_description/meshes/vacuum_gripper/xarm/collision/vacuum_gripper.stl",
+      "upstream_sha256": "26179bd32d360c0d404ae072973cdf4b0a543581fe179508a38b3801f8773915",
+      "license": "BSD-3-Clause",
+      "copyright": "Copyright (c) 2018, UFACTORY Inc.",
+      "changes": [],
+      "rating": "green"
+    }
+  ],
+  "skipped": [],
+  "preview": {
+    "path": "web/public/data/library/glb/suction-cup-cobot.glb",
+    "sha256": "229cddb14d639ecdec00f6a1340bfa562fb4841f3628e2b64d8cd3c66c3096e2",
+    "size": 265048,
+    "license": "BSD-3-Clause",
+    "derived_from": [
+      "xarm_description/meshes/vacuum_gripper/xarm/visual/vacuum_gripper.stl"
+    ],
+    "changes": [
+      "drawn from the item's own geometry in its reference pose, simplified by vertex clustering",
+      "re-encoded as GLB (Y up, metres) in one flat grey, with generic node names"
+    ]
+  }
+}
