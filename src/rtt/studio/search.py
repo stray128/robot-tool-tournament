@@ -63,7 +63,7 @@ from rtt.effectors.types import (
     canonical_json,
 )
 from rtt.sim.task import TaskV2, default_task_v2
-from rtt.studio.episode import HOME_HEIGHT, StudioCondition, WorldState
+from rtt.studio.episode import StudioCondition, WorldState, home_pose
 from rtt.studio.plan import ControllerSet
 from rtt.studio.runner import (
     MAX_WORKERS,
@@ -1157,7 +1157,7 @@ def swept_volume_problems(
             "within the arm's last link"
         )
     segs = setup.segments(task_spec)
-    home = np.array([0.0, 0.0, table_z + HOME_HEIGHT])
+    home = home_pose(scene, task)[:3]  # as the episode starts it, in the scene's initial world state
     # 1. the head switch swings both heads (and the bracket) about the wrist at the home pose
     for prev, seg in itertools.pairwise(segs):
         a0, a1 = -a[prev.tool], -a[seg.tool]
