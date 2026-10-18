@@ -28,6 +28,7 @@ SUPPORTED = frozenset(
         "maxItems",
         "uniqueItems",
         "minLength",
+        "maxLength",
         "pattern",
         "minimum",
         "maximum",
@@ -143,6 +144,8 @@ class Validator:
         if isinstance(inst, str):
             if len(inst) < schema.get("minLength", 0):
                 errs.append(f"{path}: shorter than {schema['minLength']}")
+            if "maxLength" in schema and len(inst) > schema["maxLength"]:
+                errs.append(f"{path}: longer than {schema['maxLength']}")
             if "pattern" in schema and not re.search(schema["pattern"], inst):
                 errs.append(f"{path}: {inst!r} does not match {schema['pattern']}")
         if _is_type(inst, "number"):
