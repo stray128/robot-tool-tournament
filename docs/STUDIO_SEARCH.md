@@ -71,9 +71,11 @@ are never "off the shelf".
 | the tool alone is heavier than the arm payload limit (ruling 5) | "it weighs X kg; the arm carries at most 3 kg [assumed]" |
 | the mechanism cannot serve the step's primitive (table below) | e.g. "a suction cup has no hook or fingers to engage a handle or lip" |
 | the tool does not fit an object it touches (ruling 4, every object, not just the first part) | the family's own build refusal, or the cup, opening or feature check |
-| a tool that picks nothing in a chain is built against the library block (S1 rule) and its build refuses it | "built against the block: ..." |
+| a tool that picks nothing in a chain is built against the 10 mm probe cube (contract CR-S5-1) and its build refuses it | "built against the 10 mm probe: ..." |
 
-Capabilities by mechanism [assumed], unless the library item carries its own tags:
+Capabilities by mechanism [assumed]. A library item tagged with a grip (pinch, power, suction,
+wrap) adds its tags to its mechanism's; an item without one is a tool (hook, pusher, driver)
+and serves only its tags:
 
 | Mechanism | Families | Serves |
 |---|---|---|
@@ -323,11 +325,10 @@ turns in at least one screen condition, three of them in all three.
 
 ## 12. Open issues
 
-* **A tool that picks nothing is built against the library block** (S1 rule, STUDIO.md open
-  question 4). A designed hook gripper whose validators refuse the block cannot be screened on a
-  hook pull at all ("built against the block: ..."), although it might open a lip lid. A contract
-  change (build such tools against a neutral probe, or against the object they touch) would let it
-  compete.
+* **A tool that picks nothing** was built against the library block until contract CR-S5-1
+  (now the 10 mm probe cube), which kept the designed sliding hook gripper out of hook pulls in
+  the first hero gate (section 11). The fit of such a tool on the objects it touches is checked
+  by the search's fit rules, not by its family's grip checks.
 * **Screening is greedy in context.** Chain *j* is screened after the best tool of the earlier
   chains; a setup whose earlier tool leaves a different state is only measured in the full runs.
   Predictions multiply chain rates (independence), so finalists, not predictions, are the

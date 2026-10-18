@@ -491,3 +491,24 @@ def test_sensitivity_recomputes_cycle_times_and_reports_rank_changes() -> None:
     assert by[(12.0, 1.5)]["recommended"] == single.setup_id and by[(12.0, 1.5)]["changed"]
     assert math.isclose(by[(12.0, 0.75)]["cycle_time_s"][change.setup_id], 33.0)
     assert sens["recommendation_changes"] is True
+
+
+def test_library_tags_add_to_a_grippers_mechanism_and_are_all_a_tool_serves() -> None:
+    grip = candidate_of(gripper(), "library", tags=("pinch",), item="x")
+    assert PrimitiveKind.HOOK_PULL in grip.capabilities and grip.capabilities >= ACQUIRE
+    hook = candidate_of(gripper(), "library", tags=("hook", "push"), item="y")
+    assert hook.capabilities == {PrimitiveKind.HOOK_PULL, PrimitiveKind.PUSH}
+
+
+def test_a_tool_that_picks_nothing_is_checked_against_the_10_mm_probe() -> None:
+    """Contract CR-S5-1: the designed sliding hook gripper competes on a hook pull."""
+    from rtt.effectors.designed import reference_recipes, spec_from_recipe
+
+    hook = next(spec_from_recipe(r) for r in reference_recipes() if r.kind == "hook_gripper")
+    lid = ObjectInstance.of("lid", "hinged_lid", "Lid", ObjectPose(0.0, 0.0, 0.0), width_mm=150, depth_mm=100)
+    step = Step.of(
+        "open", "hook_pull", "lid", "handle", "Open the lid", [SuccessCriterion("angle_deg", at_least=30)]
+    )
+    task = TaskSpec("Lid", "", (lid,), (step,), source="test")
+    eligible, pruned, _ = prune(task, [candidate_of(hook, "designed")])
+    assert [c.effector_id for c in eligible[0]] == [hook.effector_id], [p.reason for p in pruned]
