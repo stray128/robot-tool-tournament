@@ -22,6 +22,7 @@ candidate effector, and each one is a named constant in its module.
 6. [Gate results](#6-gate-results)
 7. [Known limits](#7-known-limits)
 8. [S2b: the hero-task limits](#8-s2b-the-hero-task-limits)
+9. [S2c: tool stacks and the friction torques](#9-s2c-tool-stacks-and-the-friction-torques)
 
 ## 1. Rules every controller follows
 
@@ -114,7 +115,7 @@ Auxiliary sites beyond the handles exist only for controllers to observe geometr
 | Lead-in | the first `chamfer_mm + 3 mm` of depth is free of the thread [assumed]; the slide's friction loss (1.5 x the member's weight + 0.2 N) holds the member there until it is pushed |
 | Thread | a fixed tendon `depth - pitch/(2 pi) x angle` limited above at the lead: past the thread start the member cannot go deeper than the helix allows (pushing does not advance it; tightening with an axial feed does, one pitch per turn). One-sided (the load flank): lifting it off is free |
 | Seated | after `engage_turns` turns from the thread start: the slide's (near-hard) end stop |
-| Torque ramp | engaged: resisting torque rises linearly from `start_torque_nm` to `final_torque_nm` when seated, and stays at `final_torque_nm` past it (a tightening step stops on torque); the template's motor as a velocity-saturated friction (0.3 rad/s) plus 0.02 N m of dry friction always [assumed] |
+| Torque ramp | engaged: resisting torque rises linearly from `start_torque_nm` to `final_torque_nm` when seated, and stays at `final_torque_nm` past it (a tightening step stops on torque); a Coulomb friction (S2c): it holds the member until the applied torque exceeds the ramp, then lets it slide at the ramp; the template's actuator is a torsion spring (100 N m/rad, damped 0.05 N m s/rad [assumed]) to an anchor that each control tick moves only as far as keeps the spring within the ramp; plus 0.02 N m of dry friction always [assumed] |
 | Shapes | wall `max(1.5 mm, 15 % of d)` [assumed]: `coupling` 12-sided tube, `cap` the tube closed on top, `nut` a hexagon (`d` across corners) with a bore; contacts with the stub excluded |
 | Sites | `member` (top centre), `seat` (stub top, static), `flat` (aux: a flat's centre) |
 | State | `turns`, `angle_deg` (tightening from the start), `depth_mm` (from the stub top), read within the seat stop and the helical flank (`lead + pitch x turns`) |
@@ -125,7 +126,7 @@ Auxiliary sites beyond the handles exist only for controllers to observe geometr
 |---|---|
 | Body | static valve body, bonnet and stem; wheel mid-plane **110 mm** above the table [assumed] |
 | Wheel | hinge about the vertical, **opening counter-clockwise from above**, range `[0, travel_deg]`; hub `max(10 mm, 12 % of R)`; rim of 24 capsules `rim_section_mm` thick; `spokes` capsules 40 % of the section thick; `spokes = 0` a solid disc; density 2700 kg/m^3 [assumed] |
-| Torque curve | `c(angle) x torque_nm`, c = 1.0 closed, 0.6 after 20 % of the travel, rising to 0.8 over the last 10 % [assumed shape]; half of `torque_nm` is dry friction, the rest the template's motor (velocity saturated at 0.1 rad/s) |
+| Torque curve | `c(angle) x torque_nm`, c = 1.0 closed, 0.6 after 20 % of the travel, rising to 0.8 over the last 10 % [assumed shape]; half of `torque_nm` is dry friction, the rest the same Coulomb friction anchor as the thread's (S2c) |
 | Sites | `wheel` (hub top), `spoke0` (aux: spoke 0 at the rim centre line) |
 | State | `angle_deg` (counter-clockwise from closed), read within `[0, travel_deg]` |
 
@@ -476,3 +477,30 @@ head's own v1 primitive, closure 1); no re-grip can add force.
   the zero-wide `[4.0, 4.0]` window; S2b reads states within the joints' limits and a plug within
   0.1 mm of the floor as seated, so a criterion at the stop or the full depth is met by an
   object driven onto it.
+
+## 9. S2c: tool stacks and the friction torques
+
+**Heads on a changer or a bracket.** The 80 mm cobot hand turned H3's valve on the flange
+(83.7 deg at 1.96 N m) and never touched it on a tool changer with a 15 to 40 mm stack (0 N,
+0 deg, 170 deg slip). The vendored catalog grippers and hands level their housing at `MOUNT_Z`
+whatever `mount_z` they are given, so on a changer they sat inside the stack at one height for
+every stack, while `tool_of` placed their tip by the stack: on a 40 mm changer the planner put the
+tip 28 mm lower than it was (a 5 mm stack happened to be close). The scene now builds every head
+on a changer or a bracket adapter under a mount frame whose `MOUNT_Z` plane is the stack's tool
+face (docs/STUDIO.md 4.2), so every family hangs the stack height lower and the planned tip moves
+with it. Before, on a 40 mm changer: fin-ray grasp and wrap, rigid-pad insert, five-finger push
+and a library parallel gripper's twist all failed without touching the part (push and twist on the
+default 25 mm changer too); after, all 7 gate tasks with their references and these vendored tools
+end on 25 and 40 mm changers as on the flange (`test_a_gate_task_on_a_tool_changer_ends_as_on_the_flange`).
+A head on a bracket had the same error, 4 mm (adapter 8 mm against `MOUNT_Z` 12 mm).
+
+**Friction torques.** The thread's ramp and the valve's curve were explicit motors,
+`-T tanh(omega / omega_s)`: they hold nothing at rest and, with a light member, flipped sign every
+tick: 1 N m against a 4.1 N m ramp turned the coupling 389 deg in 2 s, 3 N m 1348 deg, and a stiff
+driver at 60 deg/s needed about 0 N m; the valve crept 86 deg in 1 s at 1.6 of its 1.8 N m. Both
+are now a Coulomb friction (an anchored torsion spring, section 2.4): below the ramp the member
+does not turn (0.001 deg/s after its elastic twist, under 1 deg per 1.7 N m), above it, it turns;
+a driver needs the ramp within 10 %; runs stay deterministic (the anchor is the actuator's control,
+in `MjData`). H2's tighten step is now a clean test of grip: the stock part jaw slips at its
+friction capacity, 0.6 N m, 0.1 turn in (before: 1.19 N m peaks from the motor's spikes); the
+fin-ray gripper at 0.36 N m.

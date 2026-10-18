@@ -20,7 +20,9 @@ Kinematic chain (names in :data:`WRIST_BODIES`)::
   wrist z = -12 mm, :data:`~rtt.effectors.scene.MOUNT_Z`), names ``eff_*``.
 * **tool_change:** the changer's master and tool plates (``eff_studio_changer``,
   ``ToolChanger.stack_mm`` tall, their masses) sit under the flange and the step's tool builds
-  under them. A segment's scene holds one tool; the next tool is a new scene (the mass swap).
+  under them, in a mount frame (``eff_studio_face``) whose ``MOUNT_Z`` plane is the tool plate's
+  face, with ``mount_z = MOUNT_Z`` as on the flange (a bracket's adapters likewise). A segment's
+  scene holds one tool; the next tool is a new scene (the mass swap).
 * **multi_head:** a generated bracket (``eff_studio_bracket``: a hub under the flange and one
   capsule arm per head, :class:`~rtt.studio.types.BracketSpec` density) carries both heads, each
   on its own adapter plate at its :class:`~rtt.studio.types.HeadMount` pose. Each head is built by
@@ -134,6 +136,11 @@ WRIST_JOINTS: Final[tuple[str, ...]] = (*PALM_JOINTS, ROLL_JOINT)
 #: Tool-stack elements the Studio itself adds (bracket, adapters, changer plates).
 STUDIO_PREFIX: Final = f"{NAME_PREFIX}studio_"
 _MOUNT = f"{STUDIO_PREFIX}mount"  # a multi-tool head's adapter body (one per head)
+#: A head's mount frame on a tool stack (the changer's tool plate, a bracket's adapter): placed so
+#: that its :data:`MOUNT_Z` plane is the stack's tool face. Every family builds under it with
+#: ``mount_z = MOUNT_Z``, the frame it gets on the bare flange (some families place their housing
+#: at ``MOUNT_Z`` whatever ``mount_z`` says; S2c).
+_FACE = f"{STUDIO_PREFIX}face"
 
 
 def idle_prefix(tool: int) -> str:
@@ -417,15 +424,17 @@ def _add_multi_head(
             density=br.density_kg_m3,
             rgba=[0.3, 0.32, 0.36, 1.0],
         )
-        build = _family_build(scratch, mount, -t_ad, effector, parts[k], task)
+        face = mount.add_body(name=_FACE, pos=[0.0, 0.0, -t_ad - MOUNT_Z])
+        build = _family_build(scratch, face, MOUNT_Z, effector, parts[k], task)
         prefix = "" if k == tool else idle_prefix(k)
         frame = bracket.add_frame(pos=in_bracket.tolist(), quat=_quat(rot @ r_spin))
         frame.attach_body(mount, prefix, "")
-        out[k] = (build, prefix, prefix + _MOUNT)
+        out[k] = (build, prefix, prefix + _FACE)
     return out
 
 
-def _add_changer(spec: mujoco.MjSpec, flange: mujoco.MjsBody, setup: Setup) -> tuple[mujoco.MjsBody, float]:
+def _add_changer(spec: mujoco.MjSpec, flange: mujoco.MjsBody, setup: Setup) -> mujoco.MjsBody:
+    """The changer's plates under the flange; returns the tool's mount frame (:data:`_FACE`)."""
     ch = setup.changer
     assert ch is not None
     stack = ch.stack_mm / 1000.0
@@ -442,7 +451,7 @@ def _add_changer(spec: mujoco.MjSpec, flange: mujoco.MjsBody, setup: Setup) -> t
             mass=mass,
             rgba=[0.45, 0.47, 0.5, 1.0],
         )
-    return body, -stack
+    return body.add_body(name=_FACE, pos=[0.0, 0.0, -stack - MOUNT_Z])
 
 
 #: What a tool that picks nothing is built against first: a 10 mm cube, so a family's opening and
@@ -671,11 +680,11 @@ def build_studio_scene(
     if setup.kind is SetupKind.SINGLE:
         heads_raw[0] = (_family_build(spec, flange, MOUNT_Z, setup.tools[0], parts[0], task), "", FLANGE_BODY)
     elif setup.kind is SetupKind.TOOL_CHANGE:
-        mount, mount_z = _add_changer(spec, flange, setup)
+        face = _add_changer(spec, flange, setup)
         heads_raw[tool] = (
-            _family_build(spec, mount, mount_z, setup.tools[tool], parts[tool], task),
+            _family_build(spec, face, MOUNT_Z, setup.tools[tool], parts[tool], task),
             "",
-            mount.name,
+            face.name,
         )
     else:
         heads_raw = _add_multi_head(spec, flange, setup, tool, parts, task)
@@ -827,4 +836,4 @@ def build_studio_scene(
 def _is_stack(model: mujoco.MjModel, body: int) -> bool:
     """A Studio tool-stack body (bracket, adapter, changer), under any head prefix."""
     name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, body) or ""
-    return name.startswith(STUDIO_PREFIX) or name.endswith(_MOUNT)
+    return name.startswith(STUDIO_PREFIX) or name.endswith((_MOUNT, _FACE))

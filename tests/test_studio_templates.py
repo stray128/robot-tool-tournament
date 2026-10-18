@@ -244,21 +244,95 @@ def test_threaded_joint_lead_in_flank_seat_and_torque_ramp(task: Any) -> None:
     assert pushed["depth_mm"] == pytest.approx(1000 * lead, abs=0.3) and pushed["turns"] == pytest.approx(
         0, abs=0.01
     )
-    # tightening while pushed advances one pitch per turn until seated
-    d = settle(scene, 4.0, applied={slide: 5.0, hinge: 0.6})
+    # tightening (above the final torque) while pushed advances one pitch per turn until seated
+    d = settle(scene, 4.0, applied={slide: 5.0, hinge: 1.2})
     st = builder.state(obj, m, d)
     assert st["depth_mm"] == pytest.approx(1000 * (lead + 0.004), abs=0.3)  # seated: the slide's stop
     assert st["turns"] >= 2.0
-    # the friction ramp: start torque at the thread start, final when seated
-    probe = mujoco.MjData(m)
-    probe.qvel[hinge] = 10.0
-    for depth, want in ((lead, 0.1), (lead + 0.002, 0.55), (lead + 0.004, 1.0)):
-        probe.qpos[obj.joint_qpos["slide"]] = depth
-        resist = -builder.passive(obj, m, probe)[0] + info["hold_nm"]
-        assert resist == pytest.approx(want, rel=1e-3), depth
+    # the friction ramp (start torque at the thread start, final when seated) is a Coulomb
+    # friction: under it the member holds (no creep), over it the member turns (S2c)
+    for depth, ramp in ((lead, 0.1), (lead + 0.002, 0.55), (lead + 0.004, 1.0)):
+        for factor, turns in ((0.85, False), (1.2, True)):
+            first, second = _turn_under(scene, depth, factor * ramp, info["pitch_m"])
+            if turns:
+                assert first + second > 10.0, (depth, factor)
+            else:
+                assert first < 1.0 and abs(second) < 0.5, (depth, factor, first, second)  # deg, <= 1 deg/s
     for member, geom in (("cap", "obj_c_top"), ("nut", "obj_c_piece05")):
         s = scene_of(one_object_task("c", kind="threaded_joint", member=member), task)
         assert geom in {s.model.geom(g).name for g in s.objects["c"].geom_ids}
+
+
+def _turn_under(scene: Any, depth: float, torque: float, pitch: float) -> tuple[float, float]:
+    """A threaded member set ``depth`` down its thread (on the flank) under a steady tightening
+    ``torque`` (ramped in over 0.2 s): how far it turns in the first and the second half second
+    (deg). The template's passive control runs every 2 ms tick, as in the Studio runner."""
+    m = scene.model
+    obj = next(iter(scene.objects.values()))
+    info = obj.handles.info
+    builder = next(iter(scene.builders.values()))
+    d = mujoco.MjData(m)
+    d.qpos[scene.ids.palm_qpos] = [0.0, 0.0, 0.45, 0.0]
+    d.qpos[obj.joint_qpos["slide"]] = depth
+    d.qpos[obj.joint_qpos["hinge"]] = max(0.0, depth - info["lead_m"]) / pitch * 2.0 * math.pi
+    mujoco.mj_forward(m, d)
+    ctrl = np.zeros(m.nu)
+    ctrl[:4] = [0.0, 0.0, 0.45, 0.0]
+    ctrl[scene.ids.effector_actuators] = scene.active.build.ctrl_open
+    hinge = int(obj.joint_dof["hinge"])
+    angles = [float(d.qpos[obj.joint_qpos["hinge"]])]
+    for tick in range(500):
+        ctrl[obj.actuator_ids] = builder.passive(obj, m, d)
+        d.ctrl[:] = ctrl
+        d.qfrc_applied[hinge] = torque * min(1.0, tick * 0.002 / 0.2)
+        mujoco.mj_step(m, d, nstep=2)
+        if tick in (249, 499):
+            angles.append(float(d.qpos[obj.joint_qpos["hinge"]]))
+    return math.degrees(angles[1] - angles[0]), math.degrees(angles[2] - angles[1])
+
+
+@pytest.mark.parametrize("depth_frac", [0.0, 0.5, 1.0])
+def test_a_driven_thread_resists_with_its_ramp_torque(depth_frac: float, task: Any) -> None:
+    """A stiff speed loop turns the member at 60 deg/s at a fixed depth down its thread: the torque
+    it needs is the ramp's (plus the dry hold), within 10 % (S2c)."""
+    spec = one_object_task(
+        "th", kind="threaded_joint", pitch_mm=1.5, engage_turns=2.0, start_torque_nm=0.4, final_torque_nm=4.0
+    )
+    scene = scene_of(spec, task)
+    m, obj = scene.model, scene.objects["th"]
+    info = obj.handles.info
+    builder = scene.builders["th"]
+    d = mujoco.MjData(m)
+    d.qpos[scene.ids.palm_qpos] = [0.0, 0.0, 0.45, 0.0]
+    depth = info["lead_m"] + depth_frac * info["seat_m"]
+    d.qpos[obj.joint_qpos["slide"]] = depth
+    d.qpos[obj.joint_qpos["hinge"]] = depth_frac * info["seat_m"] / info["pitch_m"] * 2.0 * math.pi
+    mujoco.mj_forward(m, d)
+    ctrl = np.zeros(m.nu)
+    ctrl[:4] = [0.0, 0.0, 0.45, 0.0]
+    ctrl[scene.ids.effector_actuators] = scene.active.build.ctrl_open
+    hinge, hq = int(obj.joint_dof["hinge"]), obj.joint_qpos["hinge"]
+    target = math.radians(60.0)
+    start = float(d.qpos[hq])
+    applied = []
+    for tick in range(750):  # 1.5 s; a PD loop on a ramped angle (stiff enough, explicit-stable)
+        ctrl[obj.actuator_ids] = builder.passive(obj, m, d)
+        d.ctrl[:] = ctrl
+        for _ in range(2):
+            want = start + target * float(d.time)
+            tau = 20.0 * (want - float(d.qpos[hq])) + 0.2 * (target - float(d.qvel[hinge]))
+            d.qfrc_applied[hinge] = tau
+            applied.append(tau)
+            mujoco.mj_step(m, d)
+    s = min(1.0, depth_frac)
+    ramp = info["start_nm"] + (info["final_nm"] - info["start_nm"]) * s
+    turning = np.array(applied[750:])  # the second half: steady turning
+    assert float(np.mean(turning)) == pytest.approx(ramp, rel=0.10), (
+        depth_frac,
+        float(np.mean(turning)),
+        ramp,
+    )
+    assert float(d.qvel[hinge]) == pytest.approx(target, rel=0.1)
 
 
 def test_handwheel_torque_curve_travel_and_geometry(task: Any) -> None:
@@ -275,9 +349,12 @@ def test_handwheel_torque_curve_travel_and_geometry(task: Any) -> None:
     assert m.dof_frictionloss[dof] == pytest.approx(1.0)
     names = {m.geom(g).name for g in obj.geom_ids}
     assert {f"obj_va_spoke{k}" for k in range(4)} <= names
-    # below half the breakaway torque the wheel holds; above the curve it turns open
-    held = settle(scene, 0.4, applied={dof: 0.8})
-    assert scene.builders["va"].state(obj, m, held)["angle_deg"] < 1.0
+    # below the curve the wheel holds (S2c: also between its dry half and the curve, where the
+    # old velocity-saturated motor let it creep open); above the curve it turns open
+    for torque in (0.8, 1.8):  # a suddenly applied torque: the friction spring's twist, then no creep
+        early = scene.builders["va"].state(obj, m, settle(scene, 0.3, applied={dof: torque}))["angle_deg"]
+        late = scene.builders["va"].state(obj, m, settle(scene, 0.6, applied={dof: torque}))["angle_deg"]
+        assert late < 2.0 and (late - early) / 0.3 < 1.0, (torque, early, late)  # deg, deg/s
     turned = settle(scene, 1.0, applied={dof: 2.6})
     assert scene.builders["va"].state(obj, m, turned)["angle_deg"] > 20.0
 
