@@ -78,8 +78,9 @@ GATE_CASES: Final[tuple[UseCase, ...]] = (
         "e3_isolation_valve",
         "maintenance",
         "Isolation valve",
-        "Plant maintenance round: open the hatch of a valve box, open the isolation valve inside by "
-        "turning its handwheel one full turn counter-clockwise against about 4 N m, then close the hatch.",
+        "Plant maintenance round: open the hatch of the meter box, open the isolation valve that stands "
+        "beside the box by turning its handwheel one full turn counter-clockwise against about 4 N m, "
+        "then close the hatch.",
     ),
     UseCase(
         "e4_vial_holder",
@@ -94,8 +95,8 @@ GATE_CASES: Final[tuple[UseCase, ...]] = (
         "retail",
         "Fridge restock",
         "Store back room: open the glass door of a drinks fridge, take a can (66 mm across, 115 mm "
-        "tall, 380 g) from the crate on the floor stand and put it in the basket on the fridge shelf, "
-        "then close the door.",
+        "tall, 380 g) from the bench beside the fridge and put it in the basket that stands behind the "
+        "door, then close the door.",
     ),
     UseCase(
         "u1_fold_shirt",
@@ -146,7 +147,7 @@ def worked_example() -> TaskSpec:
             "small_box",
             "part",
             "Small box",
-            ObjectPose(60.0, -80.0, 0.0),
+            ObjectPose(60.0, -140.0, 0.0),
             shape="box",
             size_x_mm=60,
             size_y_mm=40,

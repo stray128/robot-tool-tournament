@@ -5,6 +5,9 @@ quantities, order, holding). :func:`check_plan` adds what a run in the Studio's 
 the rules the prompt states (:func:`rtt.studio.engineer.catalog.render_rules`), on the
 simulator's own conventions (track S2, ``docs/STUDIO_PRIMITIVES.md``):
 
+* **layout** (:mod:`rtt.studio.engineer.layout`): footprints and swings 20 mm apart, a lid at
+  its bin's position and the plug of a port excepted, so a picked part starts outside its bin;
+* **windows**: a criterion with both bounds is at least :data:`WINDOW_MIN` wide;
 * every step has a **goal** criterion (a state quantity of its object, ``lift_mm``, ``hold_s`` or
   ``in_target`` for a pick, or ``torque_nm`` at_least for a twist), not only limits;
 * ``in_target`` needs a target, and a step that places its object releases it;
@@ -53,7 +56,9 @@ from rtt.studio.engineer.catalog import (
     num,
     wrist_twist_limit,
 )
+from rtt.studio.engineer.layout import layout_problems
 from rtt.studio.types import (
+    QUANTITIES,
     ObjectInstance,
     PrimitiveKind,
     Step,
@@ -64,6 +69,7 @@ from rtt.studio.types import (
 
 __all__ = [
     "DEPTH_TOLERANCE_MM",
+    "WINDOW_MIN",
     "check_parts",
     "check_plan",
     "library_part_names",
@@ -74,6 +80,24 @@ __all__ = [
 #: Slack on a threaded member's seated depth before a criterion is unreachable (also in
 #: ``web_catalog()["sim"]``).
 DEPTH_TOLERANCE_MM: Final = 0.5
+
+#: The narrowest window a criterion with both bounds may leave, per quantity (its unit) [assumed]:
+#: measurements never land exactly on a value. The flags ``in_target`` and ``jam`` are exempt.
+WINDOW_MIN: Final[dict[str, float]] = {
+    "depth_mm": 1.0,
+    "travel_mm": 1.0,
+    "lift_mm": 1.0,
+    "slip_mm": 1.0,
+    "penetration_mm": 1.0,
+    "angle_deg": 5.0,
+    "tilt_deg": 5.0,
+    "slip_deg": 5.0,
+    "turns": 0.25,
+    "torque_nm": 0.2,
+    "force_n": 1.0,
+    "lateral_force_n": 1.0,
+    "hold_s": 0.2,
+}
 
 _TWIST_NAMES: Final = {
     TemplateKind.QUARTER_TURN_LATCH: "latch",
@@ -233,6 +257,14 @@ def _step_problems(objects: Sequence[ObjectInstance], steps: Sequence[Step]) -> 
             out.append(
                 f"{where}: add a criterion on what the step achieves ({', '.join(usable)}); force, torque, "
                 "slip and penetration limits alone do not say when it succeeded"
+            )
+        for c in s.success:
+            least, lo, hi = WINDOW_MIN.get(c.quantity), c.at_least, c.at_most
+            if least is None or lo is None or hi is None or hi - lo >= least - 1e-9:
+                continue
+            out.append(
+                f"{where}: the {c.quantity} window {num(lo)} to {num(hi)} is narrower than {num(least)} "
+                f"{QUANTITIES[c.quantity].unit}; a measurement never lands exactly, so widen it or keep one bound"
             )
         if any(c.quantity == "in_target" for c in s.success) and s.target is None:
             out.append(f"{where}: in_target needs a target bin")
@@ -400,6 +432,7 @@ def check_parts(
     return (
         _ref_problems(objects, uploads, required_uploads, check_library)
         + _lid_problems(objects)
+        + layout_problems(objects, steps)
         + _step_problems(objects, steps)
     )
 

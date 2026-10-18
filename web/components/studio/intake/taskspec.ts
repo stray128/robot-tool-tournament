@@ -81,6 +81,21 @@ export interface Catalog {
     wrist_torque_share: number;
     lid_hinge_mm: number;
     depth_tolerance_mm: number;
+    window_min: Record<string, number>;
+    layout: {
+      clearance_mm: number;
+      door_jamb_mm: [number, number, number, number];
+      bar_diameter_mm: number;
+      drawer_front_mm: number;
+      knob_head_mm: number;
+      valve_body_mm: [number, number];
+      plate_min_mm: number;
+      port_wall_mm: number;
+      port_sides: number;
+      plug_gap_mm: number;
+      lid_back_wall_mm: number;
+      arc_step_deg: number;
+    };
   };
   limit_quantities: string[];
   goal_extra: string[];
@@ -672,6 +687,7 @@ function checkParts(catalog: Catalog, objects: PlanObject[], steps: PlanStep[], 
     if (!used.has(key)) out.push(`objects: the uploaded part upload:${key} is not used; model it as a part with shape mesh and ref upload:${key}`);
   }
   out.push(...lidProblems(catalog, objects));
+  out.push(...layoutProblems(catalog, objects, steps));
   const byName = new Map<string, PlanObject>(objects.map((o) => [o.name, o]));
   const sim = catalog.sim;
   const wrist = sim.wrist_torque_share * catalog.limits.roll_torque_nm;
@@ -689,6 +705,13 @@ function checkParts(catalog: Catalog, objects: PlanObject[], steps: PlanStep[], 
       const usable = [...goals].filter((q) => t.quantities.includes(q) || info.quantities.includes(q)).sort();
       if (twist) usable.push("torque_nm at_least");
       out.push(`${where}: add a criterion on what the step achieves (${usable.join(", ")}); force, torque, slip and penetration limits alone do not say when it succeeded`);
+    }
+    for (const c of s.success) {
+      const least = sim.window_min[c.quantity];
+      const lo = c.at_least;
+      const hi = c.at_most;
+      if (least === undefined || lo === null || hi === null || hi - lo >= least - 1e-9) continue;
+      out.push(`${where}: the ${c.quantity} window ${num(lo)} to ${num(hi)} is narrower than ${num(least)} ${quantity(catalog, c.quantity)?.unit}; a measurement never lands exactly, so widen it or keep one bound`);
     }
     if (s.success.some((c) => c.quantity === "in_target") && s.target === null) out.push(`${where}: in_target needs a target bin`);
     if (s.target !== null && s.hold_after) out.push(`${where}: placing ${pyRepr(s.object)} in ${pyRepr(s.target)} releases it; set hold_after false`);
@@ -762,6 +785,195 @@ function checkParts(catalog: Catalog, objects: PlanObject[], steps: PlanStep[], 
       } else if (cap === null && sim.default_push_n < force) {
         out.push(`${where}: without a max_force_n the push stops at ${num(sim.default_push_n)} N, below the ${num(force)} N it takes (${why}); set max_force_n`);
       }
+    }
+  });
+  return out;
+}
+
+/* ------------------------------------------------------------------ layout (rtt/studio/engineer/layout.py) */
+
+export type Polygon = [number, number][];
+export type Region = [string, Polygon];
+
+function rect(x0: number, y0: number, x1: number, y1: number): Polygon {
+  return [
+    [x0, y0],
+    [x1, y0],
+    [x1, y1],
+    [x0, y1],
+  ];
+}
+
+function place(poly: Polygon, o: PlanObject): Polygon {
+  const a = o.pose.yaw_deg * (Math.PI / 180); // as Python's math.radians
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  return poly.map(([x, y]) => [o.pose.x_mm + c * x - s * y, o.pose.y_mm + s * x + c * y]);
+}
+
+function localRegions(catalog: Catalog, o: PlanObject): Region[] {
+  const L = catalog.sim.layout;
+  const p = o.params;
+  const n = (k: string) => Number(p[k]);
+  switch (o.kind) {
+    case "bin": {
+      const hx = 0.5 * n("length_mm");
+      const hy = 0.5 * n("width_mm");
+      return [["footprint", rect(-hx, -hy, hx, hy)]];
+    }
+    case "part": {
+      const hx = 0.5 * n("size_x_mm");
+      const hy = p.shape === "cylinder" ? hx : 0.5 * n("size_y_mm");
+      return [["footprint", rect(-hx, -hy, hx, hy)]];
+    }
+    case "quarter_turn_latch": {
+      const h = 0.5 * Math.max(1.6 * n("head_diameter_mm"), L.plate_min_mm);
+      return [["footprint", rect(-h, -h, h, h)]];
+    }
+    case "threaded_joint": {
+      const h = 0.5 * Math.max(1.6 * n("diameter_mm"), L.plate_min_mm);
+      return [["footprint", rect(-h, -h, h, h)]];
+    }
+    case "handwheel_valve": {
+      const r = 0.5 * n("rim_diameter_mm");
+      const hx = Math.max(r, 0.5 * L.valve_body_mm[0]);
+      const hy = Math.max(r, 0.5 * L.valve_body_mm[1]);
+      return [["footprint", rect(-hx, -hy, hx, hy)]];
+    }
+    case "port_plug": {
+      const dia = n("plug_diameter_mm");
+      const chamfer = Math.min(n("chamfer_mm"), 0.8 * n("depth_mm"));
+      const rOut = 0.5 * (dia + n("clearance_mm")) + Math.max(L.port_wall_mm, 0.5 * dia) + chamfer;
+      const kOut = rOut / Math.cos(Math.PI / L.port_sides);
+      const offset = kOut + L.plug_gap_mm + 0.5 * dia;
+      const hy = Math.max(kOut, 0.5 * dia);
+      return [["footprint", rect(-kOut, -hy, offset + 0.5 * dia, hy)]];
+    }
+    case "drawer": {
+      const hw = 0.5 * n("width_mm");
+      const hd = 0.5 * n("depth_mm");
+      const ext = p.handle === "bar" ? n("handle_mm") + L.bar_diameter_mm : p.handle === "knob" ? n("handle_mm") + L.knob_head_mm : 0;
+      const front = hd + L.drawer_front_mm + ext;
+      const travel = n("travel_mm");
+      return [
+        ["footprint", rect(-hw, -front, hw, hd)],
+        ["swing", rect(-hw, -front - travel, hw, hd - travel)],
+      ];
+    }
+    case "hinged_lid": {
+      const w = n("width_mm");
+      const d = n("depth_mm");
+      const t = n("thickness_mm");
+      const stop = n("max_angle_deg") * (Math.PI / 180);
+      const handle = p.feature === "handle" ? n("feature_mm") + L.bar_diameter_mm : 0;
+      if (p.orientation === "lid") {
+        const out: Region[] = [["footprint", rect(-0.5 * w, -0.5 * d, 0.5 * w, 0.5 * d + t + L.lid_back_wall_mm)]];
+        const beyond = -Math.cos(stop) * (d + handle);
+        if (beyond > 0) out.push(["swing", rect(-0.5 * w, 0.5 * d, 0.5 * w, 0.5 * d + t + beyond)]);
+        return out;
+      }
+      const hx = -0.5 * d;
+      const [jBack, , , jY1] = L.door_jamb_mm;
+      const front = 0.5 * t + handle;
+      const body = rect(hx - jBack, -front, 0.5 * d, 0.5 * t + jY1);
+      const r = Math.hypot(d, front);
+      const sweep = Math.min(Math.PI, stop + Math.atan2(front, 0.5 * d));
+      const steps = Math.max(1, Math.ceil((sweep * (180 / Math.PI)) / L.arc_step_deg));
+      const arc: Polygon = [];
+      for (let i = steps; i >= 0; i--) arc.push([hx + r * Math.cos((-sweep * i) / steps), r * Math.sin((-sweep * i) / steps)]);
+      return [
+        ["footprint", body],
+        ["swing", [[hx, 0], ...arc]],
+      ];
+    }
+    default:
+      return [];
+  }
+}
+
+/** `regions`: the object's footprint and swing as convex polygons in table mm. */
+export function regions(catalog: Catalog, o: PlanObject): Region[] {
+  return localRegions(catalog, o).map(([name, poly]) => [name, place(poly, o)]);
+}
+
+function axes(poly: Polygon): [number, number][] {
+  return poly.map(([x0, y0], i) => {
+    const [x1, y1] = poly[(i + 1) % poly.length] as [number, number];
+    return [y0 - y1, x1 - x0];
+  });
+}
+
+function intersect(a: Polygon, b: Polygon): boolean {
+  for (const [ax, ay] of [...axes(a), ...axes(b)]) {
+    const pa = a.map(([x, y]) => ax * x + ay * y);
+    const pb = b.map(([x, y]) => ax * x + ay * y);
+    if (Math.max(...pa) < Math.min(...pb) || Math.max(...pb) < Math.min(...pa)) return false;
+  }
+  return true;
+}
+
+function pointSegment(px: number, py: number, x0: number, y0: number, x1: number, y1: number): number {
+  const dx = x1 - x0;
+  const dy = y1 - y0;
+  const den = dx * dx + dy * dy;
+  const u = den === 0 ? 0 : Math.max(0, Math.min(1, ((px - x0) * dx + (py - y0) * dy) / den));
+  return Math.hypot(px - (x0 + u * dx), py - (y0 + u * dy));
+}
+
+function distance(a: Polygon, b: Polygon): number {
+  if (intersect(a, b)) return 0;
+  let best = Number.POSITIVE_INFINITY;
+  for (const [p, q] of [
+    [a, b],
+    [b, a],
+  ] as [Polygon, Polygon][]) {
+    for (const [px, py] of p) {
+      q.forEach(([x0, y0], i) => {
+        const [x1, y1] = q[(i + 1) % q.length] as [number, number];
+        best = Math.min(best, pointSegment(px, py, x0, y0, x1, y1));
+      });
+    }
+  }
+  return best;
+}
+
+function lidOnBin(a: PlanObject, b: PlanObject): boolean {
+  const [lid, other] = a.kind === "hinged_lid" ? [a, b] : [b, a];
+  return (
+    lid.kind === "hinged_lid" &&
+    lid.params.orientation === "lid" &&
+    other.kind === "bin" &&
+    Math.abs(lid.pose.x_mm - other.pose.x_mm) < 1 &&
+    Math.abs(lid.pose.y_mm - other.pose.y_mm) < 1
+  );
+}
+
+/** `layout_problems`: pairs whose footprints or swings come within the clearance. */
+function layoutProblems(catalog: Catalog, objects: PlanObject[], steps: PlanStep[]): string[] {
+  const out: string[] = [];
+  const clear = catalog.sim.layout.clearance_mm;
+  const placed = objects.map((o) => regions(catalog, o));
+  const targets = new Set(steps.filter((s) => s.target !== null).map((s) => `${s.object}\u0000${s.target}`));
+  objects.forEach((b, j) => {
+    for (let i = 0; i < j; i++) {
+      const a = objects[i] as PlanObject;
+      if (a.name === b.name || lidOnBin(a, b)) continue;
+      let hit: [string, string, number] | null = null;
+      for (const [ra, pa] of placed[i] as Region[]) {
+        for (const [rb, pb] of placed[j] as Region[]) {
+          const dist = distance(pa, pb);
+          if (dist < clear) {
+            hit = [ra, rb, dist];
+            break;
+          }
+        }
+        if (hit) break;
+      }
+      if (!hit) continue;
+      const [ra, rb, dist] = hit;
+      const verb = dist === 0 ? "overlaps" : `comes within ${fmtG(clear)} mm of`;
+      const note = targets.has(`${b.name}\u0000${a.name}`) || targets.has(`${a.name}\u0000${b.name}`) ? "; a part picked into a bin starts outside it" : "";
+      out.push(`objects[${j}] (${b.name}): its ${rb} ${verb} the ${ra} of objects[${i}] (${a.name}); keep them at least ${fmtG(clear)} mm apart${note}`);
     }
   });
   return out;
@@ -990,8 +1202,21 @@ export function addObject(catalog: Catalog, plan: PlanArgs, kind: string): PlanA
   const params = defaults(t.params);
   if (kind === "part") params.shape = "box";
   const slot = plan.objects.length;
-  const pose: Pose = { x_mm: -240 + 120 * (slot % 5), y_mm: slot < 5 ? -220 : 220, yaw_deg: 0 };
-  return { ...plan, objects: [...plan.objects, { name, kind, label: t.display_name.slice(0, 60), params, pose, ref: null }], refusal: null };
+  const base: PlanObject = { name, kind, label: t.display_name.slice(0, 60), params, pose: { x_mm: -240 + 120 * (slot % 5), y_mm: slot < 5 ? -220 : 220, yaw_deg: 0 }, ref: null };
+  // the first spot on a 60 mm grid where its footprint and swing keep the clearance from every other object
+  const clear = catalog.sim.layout.clearance_mm;
+  const others = plan.objects.flatMap((o) => regions(catalog, o).map(([, poly]) => poly));
+  let pose: Pose = base.pose;
+  search: for (let y = -240; y <= 240; y += 60) {
+    for (let x = -240; x <= 240; x += 60) {
+      const mine = regions(catalog, { ...base, pose: { x_mm: x, y_mm: y, yaw_deg: 0 } }).map(([, poly]) => poly);
+      if (mine.every((a) => others.every((b) => distance(a, b) >= clear))) {
+        pose = { x_mm: x, y_mm: y, yaw_deg: 0 };
+        break search;
+      }
+    }
+  }
+  return { ...plan, objects: [...plan.objects, { ...base, pose }], refusal: null };
 }
 
 export function deleteObject(plan: PlanArgs, index: number): PlanArgs {

@@ -30,7 +30,7 @@ from rtt.studio.types import CONTRACT_VERSION
 
 __all__ = ["RECORDED_UPLOAD", "parity_cases", "recorded_plans", "write_web_data"]
 
-RECORDED_UPLOAD: Final = Path(__file__).with_name("recorded") / "upload-2026-10-18-s2"
+RECORDED_UPLOAD: Final = Path(__file__).with_name("recorded") / "upload-2026-10-18-s4c"
 FILES: Final = ("catalog.json", "recorded.json", "parity.json")
 
 
@@ -217,7 +217,7 @@ def _edits() -> list[tuple[str, str, Callable[[dict[str, Any]], None]]]:
     close_valve = {
         "id": "close_valve",
         "primitive": "twist",
-        "object": "handwheel",
+        "object": "valve",
         "handle": "wheel",
         "target": None,
         "description": "Turn the handwheel back shut.",
@@ -230,7 +230,7 @@ def _edits() -> list[tuple[str, str, Callable[[dict[str, Any]], None]]]:
     grasp_plug = {
         "id": "take_plug",
         "primitive": "grasp",
-        "object": "service_port",
+        "object": "port",
         "handle": "plug",
         "target": None,
         "description": "Take the test connector.",
@@ -241,6 +241,21 @@ def _edits() -> list[tuple[str, str, Callable[[dict[str, Any]], None]]]:
         "hold_after": True,
     }
     angle = {"quantity": "angle_deg", "at_least": 70, "at_most": None}
+
+    def near_bin(a: dict[str, Any]) -> None:
+        tote, part = _object(a, "bin"), _object(a, "part")
+        edge = tote["pose"]["x_mm"] + 0.5 * tote["params"]["length_mm"]
+        part["pose"].update(
+            {"x_mm": edge + 10 + 0.5 * part["params"]["size_x_mm"], "y_mm": tote["pose"]["y_mm"]}
+        )
+
+    def in_drawer_travel(a: dict[str, Any]) -> None:
+        drawer, part = _object(a, "drawer"), _object(a, "part")
+        front = drawer["pose"]["y_mm"] - 0.5 * drawer["params"]["depth_mm"]
+        part["pose"].update(
+            {"x_mm": drawer["pose"]["x_mm"], "y_mm": front - 0.5 * drawer["params"]["travel_mm"]}
+        )
+
     return [
         ("valid_h1", "h1_tote", lambda a: None),
         ("valid_h2", "h2_coupling", lambda a: None),
@@ -351,7 +366,20 @@ def _edits() -> list[tuple[str, str, Callable[[dict[str, Any]], None]]]:
             crit("insert", [{"quantity": "depth_mm", "at_least": 10, "at_most": None}]),
         ),
         ("insert_holds_thread", "h2_coupling", sfield("insert", "hold_after", True)),
-        ("thread_torque_capped", "h2_coupling", setp("threaded_joint", "final_torque_nm", 12)),
+        (
+            "thread_torque_capped",
+            "h2_coupling",
+            chain(
+                crit(
+                    "twist",
+                    [
+                        {"quantity": "turns", "at_least": 3, "at_most": None},
+                        {"quantity": "torque_nm", "at_least": None, "at_most": 6},
+                    ],
+                ),
+                cons("twist", "max_torque_nm", 6),
+            ),
+        ),
         (
             "thread_torque_wrist",
             "h2_coupling",
@@ -391,8 +419,47 @@ def _edits() -> list[tuple[str, str, Callable[[dict[str, Any]], None]]]:
                 crit("hook_pull", [angle]),
             ),
         ),
-        ("lid_on_a_120_mm_bin", "h1_tote", setp("bin", "height_mm", 120)),
-        ("lid_on_a_bin_moved_away", "h1_tote", pose("bin", "x_mm", 150)),
+        ("lid_on_a_200_mm_bin", "h1_tote", setp("bin", "height_mm", 200)),
+        ("lid_and_bin_apart", "h1_tote", chain(pose("bin", "y_mm", -200), setp("bin", "height_mm", 200))),
+        # layout and windows (S4c)
+        (
+            "layout_part_in_its_bin",
+            "h1_tote",
+            lambda a: _object(a, "part")["pose"].update({"x_mm": 0.0, "y_mm": 0.0}),
+        ),
+        ("layout_part_near_a_bin", "h1_tote", near_bin),
+        (
+            "layout_latch_in_the_door_swing",
+            "h3_cabinet",
+            lambda a: _object(a, "quarter_turn_latch")["pose"].update({"x_mm": 0.0, "y_mm": -100.0}),
+        ),
+        ("layout_part_in_a_drawer_travel", "e1_drawer_kitting", in_drawer_travel),
+        ("layout_yawed_door", "h3_cabinet", pose("hinged_lid", "yaw_deg", 180)),
+        (
+            "window_zero_depth",
+            "h2_coupling",
+            crit("insert", [{"quantity": "depth_mm", "at_least": 4, "at_most": 4}]),
+        ),
+        (
+            "window_narrow_turns",
+            "h2_coupling",
+            crit("twist", [{"quantity": "turns", "at_least": 2.9, "at_most": 3}]),
+        ),
+        (
+            "window_narrow_angle",
+            "h3_cabinet",
+            nth("twist", 0, "success", [{"quantity": "angle_deg", "at_least": 88, "at_most": 90}]),
+        ),
+        (
+            "window_wide_enough",
+            "h3_cabinet",
+            nth("twist", 0, "success", [{"quantity": "angle_deg", "at_least": 85, "at_most": 90}]),
+        ),
+        (
+            "window_flag_exempt",
+            "h1_tote",
+            crit("grasp", [{"quantity": "in_target", "at_least": 1, "at_most": 1}]),
+        ),
     ]
 
 
