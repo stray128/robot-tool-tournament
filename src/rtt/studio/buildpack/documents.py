@@ -304,6 +304,17 @@ def credits_text(records: Sequence[Mapping[str, Any]]) -> str:
     return "\n".join(out)
 
 
+def _brands(text: str) -> list[str]:
+    """Brand tokens in on-screen text: the contract's list, plus the open library's additions
+    when the library package is installed."""
+    hits = find_brand_tokens(text)
+    try:
+        from rtt.library.brands import find_library_brands  # type: ignore[import-not-found]
+    except ImportError:
+        return hits
+    return hits + [h for h in find_library_brands(text) if h not in hits]
+
+
 # --------------------------------------------------------------------------- certificate
 
 
@@ -593,7 +604,7 @@ def certificate_html(
     )
     parts.append(f'<p class="label">{_e(PRODUCT_MODE_LABEL)}. {_e(DISCLAIMER)}</p></main></body></html>')
     page = "\n".join(parts)
-    hits = find_brand_tokens(html.unescape(page))
+    hits = _brands(html.unescape(page))
     if hits:
         raise ValueError(f"the certificate would name a brand on screen: {sorted(set(hits))}")
     return page

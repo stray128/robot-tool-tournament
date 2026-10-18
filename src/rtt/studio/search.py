@@ -786,12 +786,20 @@ class Screen:
                         "failure_modes": dict(cell.failure_modes),
                     }
                 else:
-                    row["cells"][sid] = {
-                        "rate": None,
-                        "pruned": reasons.get((eid, sid)) or reasons.get((eid, None)) or "not screened",
-                    }
+                    row["cells"][sid] = {"rate": None, "pruned": self._why_not(eid, sid, reasons)}
             rows.append(row)
         return {"steps": steps, "rows": rows}
+
+    def _why_not(self, eid: str, sid: str, reasons: Mapping[tuple[str, str | None], str]) -> str:
+        if (eid, sid) in reasons:
+            return reasons[(eid, sid)]
+        if (eid, None) in reasons:
+            return reasons[(eid, None)]
+        chain = next(c for c in self.chains if sid in c)
+        for other in chain:
+            if (eid, other) in reasons:
+                return f"its hold chain is pruned at {other}: {reasons[(eid, other)]}"
+        return "not screened"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -1224,6 +1232,14 @@ def bracket_search(
     return found[0][1], []
 
 
+def _summary_of(reasons: Sequence[str]) -> str:
+    """Why no bracket layout works, by problem: ``"<problem> (n layouts); ..."``."""
+    problems = Counter(r.split(": ", 1)[-1] for r in reasons)
+    total = len(reasons)
+    parts = [f"{p} ({n} of {total} layouts)" for p, n in problems.most_common(3)]
+    return "no bracket layout clears: " + "; ".join(parts)
+
+
 # --------------------------------------------------------------------------- combinations
 
 
@@ -1456,7 +1472,12 @@ def combine(
             )
             if geo is None:
                 rejected.append(
-                    {"kind": "multi_head", "tools": names, "reason": reasons[0], "all": reasons[:8]}
+                    {
+                        "kind": "multi_head",
+                        "tools": names,
+                        "reason": _summary_of(reasons),
+                        "all": reasons[:24],
+                    }
                 )
                 continue
             setup = Setup(
@@ -1688,3 +1709,60 @@ def run_task_tournament(
         workers=pool.workers,
         payload_kg=payload_kg,
     )
+
+
+# --------------------------------------------------------------------------- command line
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    """``python -m rtt.studio.search TASK.json --out DIR [--workers 6] [--pack]``.
+
+    ``TASK.json``: a ``TaskSpec.to_dict()`` (or its tool-call form). Writes ``DIR/report.json``
+    and, with ``--pack``, ``DIR/build_pack/`` for the recommendation (or the best finalist when
+    there is none, labelled as such in its certificate).
+    """
+    import argparse
+    import json
+    from pathlib import Path
+
+    ap = argparse.ArgumentParser(prog="python -m rtt.studio.search", description=main.__doc__)
+    ap.add_argument("task", type=Path)
+    ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument("--workers", type=int, default=MAX_WORKERS)
+    ap.add_argument("--conditions", type=int, default=8)
+    ap.add_argument("--screen", type=int, default=N_SCREEN)
+    ap.add_argument("--finalists", type=int, default=N_FINALISTS)
+    ap.add_argument("--no-library", action="store_true")
+    ap.add_argument("--pack", action="store_true")
+    a = ap.parse_args(argv)
+    task = json.loads(a.task.read_text(encoding="utf-8"))
+    rep = run_task_tournament(
+        task,
+        workers=a.workers,
+        n_conditions=a.conditions,
+        n_screen=a.screen,
+        n_finalists=a.finalists,
+        library=not a.no_library,
+    )
+    a.out.mkdir(parents=True, exist_ok=True)
+    data = rep.to_dict()
+    (a.out / "report.json").write_text(json.dumps(data, indent=1) + "\n", encoding="utf-8")
+    rec = data["recommendation"]
+    pick = (rec.get("recommendation") or {}).get("setup_id") or (rec["ranking"] or [{}])[0].get("setup_id")
+    print(
+        json.dumps({"report": str(a.out / "report.json"), "recommendation": pick, "timings": data["timings"]})
+    )
+    if a.pack and pick:
+        from rtt.studio.buildpack import export_build_pack
+
+        bp = export_build_pack(data, a.out / "build_pack", setup_id=pick, overwrite=True)
+        print(
+            json.dumps(
+                {"build_pack": str(bp.out_dir), "zip": str(bp.zip_path), "files": len(bp.manifest.files)}
+            )
+        )
+    return 0
+
+
+if __name__ == "__main__":  # pragma: no cover
+    raise SystemExit(main())
