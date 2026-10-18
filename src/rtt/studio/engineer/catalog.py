@@ -5,6 +5,14 @@ templates with their bounded params, handles and state quantities; the primitive
 they act on, their "how" params and what they observe; the quantities; the rules the checks
 enforce; the action-to-primitive mapping; and the wrist and table limits. The prompt and the
 intake page (:func:`web_catalog`) therefore cannot drift from the code that validates a plan.
+
+The simulator's own conventions (track S2, ``docs/STUDIO_PRIMITIVES.md``) are stated next to the
+contract: which way each twistable object works (:data:`TWIST_SENSE`), that a threaded member is
+captive on its stub (no pick acts on it, :data:`NO_PICK`), the thread's lead-in
+(:data:`THREAD_LEAD_EXTRA_MM`), the force and torque shares a controller allows itself
+(:data:`FORCE_SHARE`, :data:`DEFAULT_PUSH_N`, :data:`TORQUE_SHARE`, :data:`WRIST_TORQUE_SHARE`) and
+the fixed heights of a lid and a handwheel. ``tests/test_studio_engineer.py`` checks these numbers
+against the template and primitive modules.
 """
 
 from __future__ import annotations
@@ -33,11 +41,20 @@ from rtt.studio.types import (
 )
 
 __all__ = [
+    "DEFAULT_PUSH_N",
+    "FORCE_SHARE",
     "GOAL_EXTRA",
     "HANDLE_TEXT",
+    "LID_HINGE_MM",
     "LIMIT_QUANTITIES",
     "MAPPING_ROWS",
+    "NO_PICK",
+    "PICKS",
     "SEPARATION_MM",
+    "THREAD_LEAD_EXTRA_MM",
+    "TORQUE_SHARE",
+    "TWIST_SENSE",
+    "WRIST_TORQUE_SHARE",
     "goal_quantities",
     "handles_for",
     "num",
@@ -50,13 +67,20 @@ __all__ = [
     "web_catalog",
 ]
 
+
+def num_static(value: float) -> str:
+    """A number for the prompt text: at most two decimals, no trailing zeros."""
+    text = f"{value:.2f}".rstrip("0").rstrip(".")
+    return "0" if text in ("-0", "") else text
+
+
 #: What each handle is, in words (the contract names handles only).
 HANDLE_TEXT: Final[Mapping[str, str]] = {
     "lid": "the panel itself (push it closed)",
     "handle": "the lip or handle at the free edge or front (hook it to pull open)",
     "drawer": "the drawer front (push it shut)",
     "head": "the latch head, a slot or a wing (twist it)",
-    "member": "the cap, coupling or nut (grasp, insert or twist it)",
+    "member": "the cap, coupling or nut, captive on its stub (insert or twist it)",
     "seat": "the fixed threaded seat (no primitive acts on it)",
     "wheel": "the handwheel rim (twist it)",
     "plug": "the free plug or connector (grasp, insert or push it)",
@@ -71,23 +95,116 @@ LIMIT_QUANTITIES: Final[frozenset[str]] = frozenset(
 )
 #: Pick quantities that say a step achieved something, besides the object's state quantities.
 GOAL_EXTRA: Final[frozenset[str]] = frozenset({"lift_mm", "hold_s", "in_target"})
+#: The pick primitives (they lift the object they act on).
+PICKS: Final[frozenset[PrimitiveKind]] = frozenset(
+    {PrimitiveKind.GRASP, PrimitiveKind.SUCTION, PrimitiveKind.WRAP}
+)
 #: Footprint gap the prompt asks for between separate objects (a layout hint, not a check).
 SEPARATION_MM: Final = 60.0
 
-#: Template notes the contract leaves to the reader (how the Engineer should use a kind).
+# --------------------------------------------------------------------------- the simulator's conventions (S2)
+
+#: The direction that moves each twistable object away from where it starts (seen from above):
+#: latches and valves start closed at a stop and open counter-clockwise; a thread tightens clockwise.
+TWIST_SENSE: Final[Mapping[TemplateKind, str]] = {
+    TemplateKind.QUARTER_TURN_LATCH: "ccw",
+    TemplateKind.HANDWHEEL_VALVE: "ccw",
+    TemplateKind.THREADED_JOINT: "cw",
+}
+#: Templates no pick (grasp, suction, wrap) acts on: a threaded member lives on its stub.
+NO_PICK: Final[frozenset[TemplateKind]] = frozenset({TemplateKind.THREADED_JOINT})
+#: The lead-in of a thread beyond its chamfer: the thread starts ``chamfer_mm`` + this far down.
+THREAD_LEAD_EXTRA_MM: Final = 3.0
+#: A push or an insert keeps its force under this share of ``max_force_n`` ...
+FORCE_SHARE: Final = 0.8
+#: ... or under this many newtons without one.
+DEFAULT_PUSH_N: Final = 30.0
+#: A twist keeps its roll torque under this share of ``max_torque_nm`` ...
+TORQUE_SHARE: Final = 0.9
+#: ... and under this share of the wrist roll's limit.
+WRIST_TORQUE_SHARE: Final = 0.95
+#: A lid's closed underside above the table (the simulator has no hinge-height parameter).
+LID_HINGE_MM: Final = 120.0
+#: A handwheel's mid-plane above the table.
+WHEEL_HEIGHT_MM: Final = 110.0
+
+
+def wrist_twist_limit() -> float:
+    """The most a twist turns without a ``max_torque_nm`` (N m): 95 % of the wrist roll's limit."""
+    return WRIST_TORQUE_SHARE * STUDIO_WRIST.roll_torque_nm
+
+
+#: Template notes the contract leaves to the reader: how the simulator models each kind.
 _TEMPLATE_NOTES: Final[Mapping[TemplateKind, str]] = {
-    TemplateKind.HINGED_LID: "A tote lid, a hatch or a cabinet door (orientation door).",
-    TemplateKind.DRAWER: "A drawer in a cabinet or shelf unit; it starts closed.",
-    TemplateKind.QUARTER_TURN_LATCH: "A panel fastener or cam lock; it starts locked.",
-    TemplateKind.THREADED_JOINT: (
-        "A pipe coupling, cap or nut and the stub, rod or neck it threads onto (the seat)."
+    TemplateKind.HINGED_LID: (
+        "A tote lid, a hatch, a cover or a cabinet door. orientation lid: a horizontal panel hinged "
+        f"along its back edge, its closed underside {num_static(LID_HINGE_MM)} mm above the table (there is "
+        f"no hinge-height parameter; {num_static(LID_HINGE_MM)} mm is a default bin's height, so a lid at a "
+        "bin's position covers a bin of that height); it stays open only past vertical. orientation "
+        "door: a vertical panel depth_mm wide and width_mm tall, 10 mm above the table, hinged on its "
+        "left edge, opening toward its front. It starts closed; angle_deg is 0 closed, positive open."
     ),
-    TemplateKind.HANDWHEEL_VALVE: "A valve or any round handwheel; angle_deg counts from where it starts.",
-    TemplateKind.PORT_PLUG: "A connector and its port, a peg and its hole, a vial and its holder.",
+    TemplateKind.DRAWER: (
+        "A drawer in a cabinet or shelf unit. It starts closed; travel_mm is 0 closed, positive open."
+    ),
+    TemplateKind.QUARTER_TURN_LATCH: (
+        "A panel fastener or cam lock on its own plate. It starts locked at its stop and opens "
+        "counter-clockwise seen from above (twist ccw); angle_deg counts counter-clockwise from locked. "
+        "Locking a latch that starts locked is not modelled."
+    ),
+    TemplateKind.THREADED_JOINT: (
+        "A pipe coupling, cap or nut (the member) and the fixed stub, rod or neck it threads onto (the "
+        "seat), in one object. The member starts resting loose on top of the stub, captive on the "
+        "stub's axis: it cannot be picked up, carried or placed, so no pick acts on it. insert grips it "
+        f"in place and pushes it down the lead-in to the thread start (chamfer_mm + "
+        f"{num_static(THREAD_LEAD_EXTRA_MM)} mm down); twist clockwise seen from above runs it down the "
+        "thread, engage_turns turns to seated, while the resisting torque rises from start_torque_nm to "
+        "final_torque_nm. depth_mm counts down from the stub top; turns and angle_deg count clockwise "
+        "from the start. Picking a loose member and starting it on a stub is not modelled."
+    ),
+    TemplateKind.HANDWHEEL_VALVE: (
+        f"A valve or any round handwheel on a vertical stem, the wheel {num_static(WHEEL_HEIGHT_MM)} mm above "
+        "the table. It starts closed at its stop and opens counter-clockwise seen from above (twist "
+        "ccw); angle_deg counts counter-clockwise from closed. Closing a valve that starts closed is "
+        "not modelled."
+    ),
+    TemplateKind.PORT_PLUG: (
+        "A connector and its port, a peg and its hole, a vial and its holder: one object holds both, the "
+        "plug standing free on the table 40 mm beside its socket (do not add the plug as a separate "
+        "part). depth_mm is the plug tip's depth below the socket mouth, seated at the socket's depth_mm."
+    ),
     TemplateKind.BIN: "A tote, tray, basket or box that picks drop into (fixed true unless it moves).",
     TemplateKind.PART: (
         "A rigid item: shape box or cylinder (cylinder: size_x_mm is the diameter, size_y_mm is ignored) "
         "with ref null; shape mesh only for an uploaded part, with ref upload:<id>."
+    ),
+}
+
+#: How the simulator runs each primitive, where the contract's one line is not enough.
+_PRIMITIVE_NOTES: Final[Mapping[PrimitiveKind, str]] = {
+    PrimitiveKind.GRASP: "Not on a threaded member (it lives on its stub).",
+    PrimitiveKind.HOOK_PULL: (
+        "It pulls past the criterion (8 deg or 15 mm more) and takes a lid that must stay open past "
+        "vertical when its stop allows."
+    ),
+    PrimitiveKind.TWIST: (
+        "direction ccw opens a latch or a valve, cw tightens a thread; the other way meets the object's "
+        "stop, so it only turns back an object an earlier twist turned. It stops at its criterion, at a "
+        "torque_nm at_least criterion's torque (tighten until snug), or when the torque limit stalls "
+        f"it: {num_static(100 * TORQUE_SHARE)} % of the step's max_torque_nm, else "
+        f"{num_static(100 * WRIST_TORQUE_SHARE)} % of the wrist roll's {num_static(STUDIO_WRIST.roll_torque_nm)} N m."
+    ),
+    PrimitiveKind.INSERT: (
+        "On a port_plug it picks the plug itself when the tool does not already hold it (a grasp with "
+        "hold_after before it is optional) and pushes it home to the socket's depth_mm. On a "
+        "threaded_joint it grips the member in place and pushes it to the thread start (depth_mm at most "
+        f"chamfer_mm + {num_static(THREAD_LEAD_EXTRA_MM)} mm); a twist then runs it down. The push force stays "
+        f"under {num_static(100 * FORCE_SHARE)} % of max_force_n, else {num_static(DEFAULT_PUSH_N)} N."
+    ),
+    PrimitiveKind.PUSH: (
+        f"The push force stays under {num_static(100 * FORCE_SHARE)} % of max_force_n, else "
+        f"{num_static(DEFAULT_PUSH_N)} N. A lid pushed shut from past vertical is let fall by its own weight "
+        "from 80 deg, then pressed home."
     ),
 }
 
@@ -156,7 +273,8 @@ def render_primitives() -> str:
     blocks = []
     for kind in PrimitiveKind:
         info = PRIMITIVES[kind]
-        acts = "; ".join(f"{k.value} via {' or '.join(handles_for(info, k))}" for k in info.objects)
+        kinds = [k for k in info.objects if not (k in NO_PICK and kind in PICKS)]
+        acts = "; ".join(f"{k.value} via {' or '.join(handles_for(info, k))}" for k in kinds)
         target = "a bin, or null" if info.targets else "always null"
         hold = (
             "yes (hold_after true keeps it for the next step)" if info.may_hold else "no (hold_after false)"
@@ -169,7 +287,8 @@ def render_primitives() -> str:
             f"Acts on: {acts}. Target: {target}. May end holding its object: {hold}. "
             f"Observes: {', '.join(info.quantities)}."
             + (" Drives the continuous wrist roll." if info.uses_roll else "")
-            + f" Fidelity {tier}.",
+            + f" Fidelity {tier}."
+            + (f" {_PRIMITIVE_NOTES[kind]}" if kind in _PRIMITIVE_NOTES else ""),
             "",
             _param_table(info.params),
         ]
@@ -210,8 +329,9 @@ def render_rules() -> str:
             ),
             (
                 "- Goal: every step has at least one criterion on what it achieves: a state quantity of its "
-                "object, or lift_mm, hold_s or in_target. Force, torque, slip, jam and penetration limits "
-                "alone do not say when a step succeeded."
+                "object, or lift_mm, hold_s or in_target (a pick), or torque_nm at_least (a twist that tightens "
+                "until snug). Force, torque at_most, slip, jam and penetration limits alone do not say when a "
+                "step succeeded."
             ),
             (
                 "- in_target needs a target bin. A step that places its object in a target releases it "
@@ -223,25 +343,36 @@ def render_rules() -> str:
                 "must release (hold_after false)."
             ),
             (
-                "- Insert pushes a member the tool already holds: the step right before an insert acts on the "
-                "same object with hold_after true (a grasp)."
+                "- Directions: a twist on a quarter_turn_latch or a handwheel_valve is ccw (it opens them from "
+                "their closed stop); a twist on a threaded_joint is cw (it tightens it). The other direction "
+                "only turns back an object an earlier twist step turned the working way."
+            ),
+            (
+                "- Threaded members: no pick (grasp, suction, wrap) acts on one, it lives on its stub; a twist "
+                "on one comes after an insert of it (insert it to the thread start with hold_after false, then "
+                "twist cw); an insert "
+                f"pushes it no deeper than the thread start, chamfer_mm + {num(THREAD_LEAD_EXTRA_MM)} mm."
             ),
             (
                 "- Reachable criteria: a lid's or door's angle within its max_angle_deg; a drawer's travel "
                 "within its travel_mm; a latch's angle within its turn_deg; a valve's angle within its "
-                "travel_deg; a threaded member's turns within its engage_turns and its depth within "
-                "engage_turns x pitch_mm; a plug's depth within the socket's depth_mm; a pick's lift_mm and "
-                "hold_s within the step's own lift_mm and hold_s params."
+                "travel_deg; a threaded member's turns within its engage_turns, its angle within "
+                f"engage_turns x 360 deg and its depth within chamfer_mm + {num(THREAD_LEAD_EXTRA_MM)} mm + "
+                "engage_turns x pitch_mm (seated); a plug's depth within the socket's depth_mm; a pick's "
+                "lift_mm and hold_s within the step's own lift_mm and hold_s params."
             ),
             (
-                "- Torque: a twist delivers the object's torque (a latch's or valve's torque_nm; a threaded "
-                "member's final_torque_nm to seat it, its start_torque_nm only to start it). That torque must "
-                f"not exceed {torque} N m (the wrist roll's limit), the step's max_torque_nm or a torque_nm "
-                "at_most criterion."
+                "- Torque: a twist needs the object's torque (a latch's or valve's torque_nm; a thread's torque "
+                "where the step stops, rising from start_torque_nm at the thread start to final_torque_nm when "
+                "seated) and any torque_nm at_least it asks for. That must fit what the twist allows itself, "
+                f"{num(100 * TORQUE_SHARE)} % of the step's max_torque_nm, else {num(100 * WRIST_TORQUE_SHARE)} % "
+                f"of the wrist roll's {torque} N m ({num(wrist_twist_limit())} N m), and a torque_nm at_most "
+                "criterion."
             ),
             (
-                "- Force: a drawer's pull_force_n and a plug's insert_force_n must not exceed the step's "
-                "max_force_n."
+                "- Force: a hook_pull on a drawer needs its pull_force_n within the step's max_force_n; a push "
+                "on a drawer (its pull_force_n) and an insert of a plug (its insert_force_n) push with at most "
+                f"{num(100 * FORCE_SHARE)} % of max_force_n, else {num(DEFAULT_PUSH_N)} N."
             ),
             (
                 f"- Constraints: max_force_n {num(b['max_force_n'][0])} to {num(b['max_force_n'][1])} N, "
@@ -274,18 +405,29 @@ MAPPING_ROWS: Final[tuple[tuple[str, str], ...]] = (
         "pick up, take, lift, move, place, put in, drop in",
         (
             "grasp (fingers on a rigid part), suction (a flat or smooth top face), wrap (a round or odd "
-            "shape); target the bin it goes into"
+            "shape); target the bin it goes into; never a threaded member"
         ),
     ),
     ("open a lid, hatch or door; pull a drawer or a handle", "hook_pull on its handle"),
     ("close a lid, door or drawer; press; slide shut", "push on the lid or drawer"),
+    ("open or unlock a latch, open a valve, turn a handwheel open", "twist ccw on its head or wheel"),
     (
-        "turn a latch, knob, valve, cap, nut or coupling; screw, unscrew, tighten, loosen",
-        "twist on its head, wheel or member (direction cw or ccw)",
+        "tighten, run down or screw on a cap, nut or coupling that sits on its thread",
+        "insert it to the thread start, then twist cw",
     ),
     (
-        "plug in, insert, seat, start a thread on a stub",
-        "grasp with hold_after true, then insert (then twist for a thread)",
+        "plug in, insert, seat a connector, peg or vial",
+        "insert (it picks the plug itself; a grasp with hold_after true first is optional)",
+    ),
+    (
+        (
+            "close a valve or lock a latch that starts closed; pick a loose cap, nut or coupling and start "
+            "it on a thread"
+        ),
+        (
+            "not modelled: an unsupported item (nearest primitive twist or insert); plan the rest, a "
+            "member resting on its stub where the use case allows it"
+        ),
     ),
     (
         (
@@ -400,6 +542,18 @@ def web_catalog() -> dict[str, Any]:
         ],
         "handles": dict(HANDLE_TEXT),
         "library_parts": list(_library_parts()),
+        "sim": {
+            "twist_sense": {k.value: v for k, v in TWIST_SENSE.items()},
+            "no_pick": sorted(k.value for k in NO_PICK),
+            "picks": sorted(k.value for k in PICKS),
+            "thread_lead_extra_mm": THREAD_LEAD_EXTRA_MM,
+            "force_share": FORCE_SHARE,
+            "default_push_n": DEFAULT_PUSH_N,
+            "torque_share": TORQUE_SHARE,
+            "wrist_torque_share": WRIST_TORQUE_SHARE,
+            "lid_hinge_mm": LID_HINGE_MM,
+            "depth_tolerance_mm": 0.5,
+        },
         "limit_quantities": sorted(LIMIT_QUANTITIES),
         "goal_extra": sorted(GOAL_EXTRA),
         "limits": {

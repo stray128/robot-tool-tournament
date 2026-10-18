@@ -112,9 +112,10 @@ __all__ = [
 ]
 
 ENGINEER_MODEL: Final = NEMOTRON_SUPER
-#: Thinking on (the model's default). A plan for 8 objects and 12 steps plus reasoning fits in
-#: 12,000 output tokens; with a ~15k-token prompt the worst case is about $0.016 a call.
-ENGINEER_SAMPLING: Final[dict[str, float | int]] = {"temperature": 0.6, "top_p": 0.95, "max_tokens": 12000}
+#: Thinking on (the model's default). The largest useful completion recorded was 2,700 tokens
+#: (reasoning included); 8,000 leaves room for 8 objects and 12 steps and bounds a call that keeps
+#: generating after a complete tool call. With a ~19k-token prompt the worst case is about $0.013.
+ENGINEER_SAMPLING: Final[dict[str, float | int]] = {"temperature": 0.6, "top_p": 0.95, "max_tokens": 8000}
 #: The default tool is the contract's own schema, descriptions included (module docstring).
 COMPACT_TOOL: Final = False
 MAX_USE_CASE_CHARS: Final = 2000

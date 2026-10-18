@@ -1,24 +1,33 @@
 """Checks on top of :class:`~rtt.studio.types.TaskSpec`: is the plan runnable, not only well formed?
 
 :class:`TaskSpec` checks structure and cross-references (names, kinds, handles, measured
-quantities, order, holding). :func:`check_plan` adds what a simulator run needs (the rules the
-prompt states, :func:`rtt.studio.engineer.catalog.render_rules`):
+quantities, order, holding). :func:`check_plan` adds what a run in the Studio's simulator needs:
+the rules the prompt states (:func:`rtt.studio.engineer.catalog.render_rules`), on the
+simulator's own conventions (track S2, ``docs/STUDIO_PRIMITIVES.md``):
 
-* every step has a **goal** criterion (a state quantity of its object, or ``lift_mm``,
-  ``hold_s``, ``in_target``), not only force or torque limits;
+* every step has a **goal** criterion (a state quantity of its object, ``lift_mm``, ``hold_s`` or
+  ``in_target`` for a pick, or ``torque_nm`` at_least for a twist), not only limits;
 * ``in_target`` needs a target, and a step that places its object releases it;
-* an **insert** follows a step that holds the same object;
+* **directions**: a twist opens a latch or a valve counter-clockwise and tightens a thread
+  clockwise; the other way only turns back an object an earlier twist turned the working way; a
+  twist stops at a ``torque_nm`` at_least, so that criterion only tightens a thread until snug;
+* **threaded members** live on their stub: no pick acts on one, a twist on one comes after an
+  insert of it, and an insert pushes it no deeper than the thread start (``chamfer_mm`` + 3 mm)
+  and lets go (``hold_after`` false: the twist grips the member again);
 * **reachable** criteria (a lid inside its hinge stop, a drawer inside its travel, a latch
   inside its turn, a valve inside its travel, a thread inside its engagement, a plug inside its
   socket, a pick inside its own lift and hold);
-* **torque** a twist needs within the wrist roll's limit, the step's ``max_torque_nm`` and any
-  ``torque_nm`` bound; **force** a drawer or plug needs within the step's ``max_force_n``;
+* **torque** a twist needs (the object's, a thread's on its ramp, a ``torque_nm`` at_least) within
+  what the twist allows itself (90 % of ``max_torque_nm``, else 95 % of the wrist roll's) and any
+  ``torque_nm`` at_most; **force**: a hook pull on a drawer within ``max_force_n``, a push on a
+  drawer or an insert of a plug within 80 % of ``max_force_n`` (else 30 N);
 * **refs**: uploads named exist and an uploaded part is used; library refs name training parts;
 * a **refusal** lists what is not simulated with at least one nearest primitive.
 
 Problems carry a path (``objects[2] (tote): ...``, ``steps[1] (open_lid): ...``) so a repair
-prompt and the intake page can point at the entry. Warnings (objects nothing touches) never
-refuse a plan.
+prompt and the intake page can point at the entry. A lid over a bin (the same position) needs the
+bin to be as tall as the lid's fixed hinge height (120 mm). Warnings never refuse a plan: objects
+nothing touches, a lid that falls shut (its stop at or below vertical).
 
 :func:`nearest_primitive` maps free text (an unsupported action) to the closest primitive by
 keyword; it backs a refusal whose nearest primitive the model left out.
@@ -31,9 +40,20 @@ from collections.abc import Collection, Sequence
 from functools import cache
 from typing import Final
 
-from rtt.studio.engineer.catalog import goal_quantities, num
+from rtt.studio.engineer.catalog import (
+    DEFAULT_PUSH_N,
+    FORCE_SHARE,
+    LID_HINGE_MM,
+    NO_PICK,
+    PICKS,
+    THREAD_LEAD_EXTRA_MM,
+    TORQUE_SHARE,
+    TWIST_SENSE,
+    goal_quantities,
+    num,
+    wrist_twist_limit,
+)
 from rtt.studio.types import (
-    STUDIO_WRIST,
     ObjectInstance,
     PrimitiveKind,
     Step,
@@ -51,10 +71,15 @@ __all__ = [
     "plan_problems",
 ]
 
-#: Slack on a threaded member's seated depth (engage_turns x pitch) before a criterion is unreachable.
+#: Slack on a threaded member's seated depth before a criterion is unreachable (also in
+#: ``web_catalog()["sim"]``).
 DEPTH_TOLERANCE_MM: Final = 0.5
-#: Share of engage_turns from which a twist counts as seating the thread (needs final_torque_nm).
-_SEATING_FRACTION: Final = 0.9
+
+_TWIST_NAMES: Final = {
+    TemplateKind.QUARTER_TURN_LATCH: "latch",
+    TemplateKind.HANDWHEEL_VALVE: "valve",
+    TemplateKind.THREADED_JOINT: "threaded member",
+}
 
 
 def _where_step(i: int, s: Step) -> str:
@@ -71,7 +96,14 @@ def _demand(c: SuccessCriterion) -> float | None:
     return out
 
 
-def _ceiling(kind: TemplateKind, params: dict, quantity: str) -> tuple[float, str] | None:
+def _lead(params: dict) -> float:
+    """A thread's start below the stub top (mm): the chamfer plus the free lead-in."""
+    return float(params["chamfer_mm"]) + THREAD_LEAD_EXTRA_MM
+
+
+def _ceiling(
+    kind: TemplateKind, params: dict, quantity: str, primitive: PrimitiveKind
+) -> tuple[float, str] | None:
     """The largest value ``quantity`` can reach on an object of ``kind`` and what limits it."""
     p = params
     if kind is TemplateKind.HINGED_LID and quantity == "angle_deg":
@@ -85,8 +117,10 @@ def _ceiling(kind: TemplateKind, params: dict, quantity: str) -> tuple[float, st
     if kind is TemplateKind.THREADED_JOINT and quantity == "turns":
         return float(p["engage_turns"]), "its engage_turns"
     if kind is TemplateKind.THREADED_JOINT and quantity == "depth_mm":
-        seated = float(p["engage_turns"]) * float(p["pitch_mm"])
-        return seated + DEPTH_TOLERANCE_MM, "its seated depth engage_turns x pitch_mm"
+        if primitive is PrimitiveKind.INSERT:
+            return _lead(p), "the thread start, chamfer_mm + 3 mm; a twist runs it further"
+        seated = _lead(p) + float(p["engage_turns"]) * float(p["pitch_mm"])
+        return seated + DEPTH_TOLERANCE_MM, "seated, chamfer_mm + 3 mm + engage_turns x pitch_mm"
     if kind is TemplateKind.THREADED_JOINT and quantity == "angle_deg":
         return 360.0 * float(p["engage_turns"]), "its engage_turns x 360 deg"
     if kind is TemplateKind.PORT_PLUG and quantity == "depth_mm":
@@ -95,7 +129,7 @@ def _ceiling(kind: TemplateKind, params: dict, quantity: str) -> tuple[float, st
 
 
 def _torque_needed(kind: TemplateKind, params: dict, step: Step) -> tuple[float, str] | None:
-    """The torque a twist step must deliver on ``kind``, and why."""
+    """The torque a twist step must deliver on ``kind`` (where it stops), and why."""
     if step.primitive is not PrimitiveKind.TWIST:
         return None
     if kind is TemplateKind.QUARTER_TURN_LATCH:
@@ -104,29 +138,34 @@ def _torque_needed(kind: TemplateKind, params: dict, step: Step) -> tuple[float,
         return float(params["torque_nm"]), "the valve's torque_nm"
     if kind is TemplateKind.THREADED_JOINT:
         engage = float(params["engage_turns"])
-        seated = engage * float(params["pitch_mm"])
-        seats = False
+        seat = engage * float(params["pitch_mm"])
+        share = 0.0
         for c in step.success:
             d = _demand(c)
             if d is None:
                 continue
-            if c.quantity == "turns" and d >= _SEATING_FRACTION * engage:
-                seats = True
-            if c.quantity == "angle_deg" and d >= _SEATING_FRACTION * 360.0 * engage:
-                seats = True
-            if c.quantity == "depth_mm" and d >= _SEATING_FRACTION * seated:
-                seats = True
-        if seats:
-            return float(params["final_torque_nm"]), "the thread's final_torque_nm (seating it)"
-        return float(params["start_torque_nm"]), "the thread's start_torque_nm"
+            if c.quantity == "turns":
+                share = max(share, d / engage)
+            elif c.quantity == "angle_deg":
+                share = max(share, d / (360.0 * engage))
+            elif c.quantity == "depth_mm":
+                share = max(share, (d - _lead(params)) / seat)
+        share = min(1.0, max(0.0, share))
+        start, final = float(params["start_torque_nm"]), float(params["final_torque_nm"])
+        return start + (
+            final - start
+        ) * share, "the thread's torque there, start_torque_nm rising to final_torque_nm"
     return None
 
 
-def _force_needed(kind: TemplateKind, params: dict, step: Step) -> tuple[float, str] | None:
-    if kind is TemplateKind.DRAWER and step.primitive in (PrimitiveKind.HOOK_PULL, PrimitiveKind.PUSH):
-        return float(params["pull_force_n"]), "the drawer's pull_force_n"
+def _force_needed(kind: TemplateKind, params: dict, step: Step) -> tuple[float, str, bool] | None:
+    """(the force a step must apply, why, whether the controller keeps to a share of the limit)."""
+    if kind is TemplateKind.DRAWER and step.primitive is PrimitiveKind.HOOK_PULL:
+        return float(params["pull_force_n"]), "the drawer's pull_force_n", False
+    if kind is TemplateKind.DRAWER and step.primitive is PrimitiveKind.PUSH:
+        return float(params["pull_force_n"]), "the drawer's pull_force_n", True
     if kind is TemplateKind.PORT_PLUG and step.primitive is PrimitiveKind.INSERT:
-        return float(params["insert_force_n"]), "the plug's insert_force_n"
+        return float(params["insert_force_n"]), "the plug's insert_force_n", True
     return None
 
 
@@ -176,7 +215,7 @@ def _ref_problems(
 
 def _step_problems(objects: Sequence[ObjectInstance], steps: Sequence[Step]) -> list[str]:
     out: list[str] = []
-    torque_limit = STUDIO_WRIST.roll_torque_nm
+    wrist = wrist_twist_limit()
     by_name = {o.name: o for o in objects}
     for i, s in enumerate(steps):
         where = _where_step(i, s)
@@ -184,9 +223,13 @@ def _step_problems(objects: Sequence[ObjectInstance], steps: Sequence[Step]) -> 
         if obj is None or obj.kind not in s.info.objects:
             continue  # the contract's parser reports it
         kind, params = obj.kind, dict(obj.params)
+        twist = s.primitive is PrimitiveKind.TWIST
         goals = goal_quantities(obj.template)
-        if not any(c.quantity in goals for c in s.success):
+        snug = twist and any(c.quantity == "torque_nm" and c.at_least is not None for c in s.success)
+        if not snug and not any(c.quantity in goals for c in s.success):
             usable = sorted(goals & (set(obj.template.quantities) | set(s.info.quantities)))
+            if twist:
+                usable.append("torque_nm at_least")
             out.append(
                 f"{where}: add a criterion on what the step achieves ({', '.join(usable)}); force, torque, "
                 "slip and penetration limits alone do not say when it succeeded"
@@ -195,12 +238,50 @@ def _step_problems(objects: Sequence[ObjectInstance], steps: Sequence[Step]) -> 
             out.append(f"{where}: in_target needs a target bin")
         if s.target is not None and s.hold_after:
             out.append(f"{where}: placing {s.object!r} in {s.target!r} releases it; set hold_after false")
-        if s.primitive is PrimitiveKind.INSERT:
-            prev = steps[i - 1] if i > 0 else None
-            if prev is None or prev.object != s.object or not prev.hold_after:
+        if s.primitive in PICKS and kind in NO_PICK:
+            out.append(
+                f"{where}: a threaded member lives on its stub and cannot be picked up or moved; leave the "
+                "pick out (insert and twist grip the member in place)"
+            )
+        if twist and kind in TWIST_SENSE:
+            sense = TWIST_SENSE[kind]
+            if s.params["direction"] != sense:
+                back = any(
+                    p.primitive is PrimitiveKind.TWIST
+                    and p.object == s.object
+                    and p.params["direction"] == sense
+                    for p in steps[:i]
+                )
+                if not back:
+                    name = _TWIST_NAMES[kind]
+                    if sense == "ccw":
+                        out.append(
+                            f"{where}: a {name} starts closed at its stop and opens counter-clockwise; twist "
+                            "it ccw (cw meets the stop)"
+                        )
+                    else:
+                        out.append(
+                            f"{where}: a {name} tightens clockwise from its start; twist it cw (ccw meets "
+                            "the thread start)"
+                        )
+        if s.primitive is PrimitiveKind.INSERT and kind is TemplateKind.THREADED_JOINT and s.hold_after:
+            out.append(
+                f"{where}: end the insert of a threaded member with hold_after false; the twist grips it "
+                "again in place"
+            )
+        stops_early = any(c.quantity == "torque_nm" and c.at_least is not None for c in s.success)
+        if twist and stops_early and kind in (TemplateKind.QUARTER_TURN_LATCH, TemplateKind.HANDWHEEL_VALVE):
+            out.append(
+                f"{where}: a twist stops as soon as the roll torque reaches a torque_nm at_least, and a "
+                f"{_TWIST_NAMES[kind]} resists most before it turns; drop torque_nm at_least here (it "
+                "tightens a thread until snug)"
+            )
+        if twist and kind is TemplateKind.THREADED_JOINT:
+            inserted = any(p.primitive is PrimitiveKind.INSERT and p.object == s.object for p in steps[:i])
+            if not inserted:
                 out.append(
-                    f"{where}: insert pushes a member the tool holds; put a grasp of {s.object!r} with "
-                    "hold_after true right before it"
+                    f"{where}: a threaded member starts on its lead-in, free of the thread; insert "
+                    f"{s.object!r} to the thread start before this twist"
                 )
         for c in s.success:
             d = _demand(c)
@@ -214,7 +295,7 @@ def _step_problems(objects: Sequence[ObjectInstance], steps: Sequence[Step]) -> 
                         f"param ({num(own)}); raise the param or lower the criterion"
                     )
                 continue
-            ceiling = _ceiling(kind, params, c.quantity)
+            ceiling = _ceiling(kind, params, c.quantity, s.primitive)
             if ceiling is not None and d > ceiling[0] + 1e-9:
                 out.append(
                     f"{where}: {c.quantity} {num(d)} cannot be reached; {s.object!r} stops at {num(ceiling[0])} "
@@ -223,28 +304,86 @@ def _step_problems(objects: Sequence[ObjectInstance], steps: Sequence[Step]) -> 
         need = _torque_needed(kind, params, s)
         if need is not None:
             torque, why = need
-            if torque > torque_limit:
-                out.append(
-                    f"{where}: it takes {num(torque)} N m ({why}) but the wrist roll gives at most "
-                    f"{num(torque_limit)} N m; lower the torque or refuse the step"
-                )
-            cap = s.constraints.max_torque_nm
-            if cap is not None and cap < torque:
-                out.append(
-                    f"{where}: max_torque_nm {num(cap)} is below the {num(torque)} N m it takes ({why})"
-                )
             for c in s.success:
-                if c.quantity == "torque_nm" and c.at_most is not None and c.at_most < torque:
+                if c.quantity == "torque_nm" and c.at_least is not None and c.at_least > torque:
+                    torque, why = c.at_least, "its torque_nm at_least criterion"
+            cap = s.constraints.max_torque_nm
+            allowed = min(wrist, TORQUE_SHARE * cap) if cap is not None else wrist
+            if torque > allowed + 1e-9:
+                if cap is not None and TORQUE_SHARE * cap < wrist:
                     out.append(
-                        f"{where}: torque_nm at_most {num(c.at_most)} is below the {num(torque)} N m it takes "
-                        f"({why})"
+                        f"{where}: max_torque_nm {num(cap)} lets the twist turn up to {num(TORQUE_SHARE * cap)} "
+                        f"N m ({num(100 * TORQUE_SHARE)} %), below the {num(torque)} N m it takes ({why})"
+                    )
+                else:
+                    out.append(
+                        f"{where}: it takes {num(torque)} N m ({why}) but a twist turns at most {num(wrist)} N m "
+                        "(95 % of the wrist roll's 15 N m); lower the torque or refuse the step"
+                    )
+            object_torque = need[0]
+            for c in s.success:
+                if c.quantity == "torque_nm" and c.at_most is not None and c.at_most < object_torque:
+                    out.append(
+                        f"{where}: torque_nm at_most {num(c.at_most)} is below the {num(object_torque)} N m it "
+                        f"takes ({need[1]})"
                     )
         need_f = _force_needed(kind, params, s)
         if need_f is not None:
-            force, why = need_f
+            force, why, shared = need_f
             cap_f = s.constraints.max_force_n
-            if cap_f is not None and cap_f < force:
-                out.append(f"{where}: max_force_n {num(cap_f)} is below the {num(force)} N it takes ({why})")
+            if not shared:
+                if cap_f is not None and cap_f < force:
+                    out.append(
+                        f"{where}: max_force_n {num(cap_f)} is below the {num(force)} N it takes ({why})"
+                    )
+            elif cap_f is not None and FORCE_SHARE * cap_f < force:
+                out.append(
+                    f"{where}: max_force_n {num(cap_f)} lets the push reach {num(FORCE_SHARE * cap_f)} N "
+                    f"({num(100 * FORCE_SHARE)} %), below the {num(force)} N it takes ({why})"
+                )
+            elif cap_f is None and DEFAULT_PUSH_N < force:
+                out.append(
+                    f"{where}: without a max_force_n the push stops at {num(DEFAULT_PUSH_N)} N, below the "
+                    f"{num(force)} N it takes ({why}); set max_force_n"
+                )
+    return out
+
+
+def _layout_warnings(objects: Sequence[ObjectInstance], steps: Sequence[Step]) -> list[str]:
+    """Lids the simulator cannot keep open (warnings)."""
+    out: list[str] = []
+    opened = {s.object for s in steps if s.primitive is PrimitiveKind.HOOK_PULL}
+    for i, o in enumerate(objects):
+        if o.kind is not TemplateKind.HINGED_LID or o.params["orientation"] != "lid":
+            continue
+        where = f"objects[{i}] ({o.name})"
+        stop = float(o.params["max_angle_deg"])
+        if o.name in opened and stop <= 90.0:
+            out.append(
+                f"{where}: a lid stays open only past vertical; with max_angle_deg {num(stop)} it falls shut "
+                "when the tool lets go"
+            )
+    return out
+
+
+def _lid_problems(objects: Sequence[ObjectInstance]) -> list[str]:
+    """A lid over a bin (same position) whose height is not the lid's fixed hinge height."""
+    out: list[str] = []
+    for i, o in enumerate(objects):
+        if o.kind is not TemplateKind.HINGED_LID or o.params["orientation"] != "lid":
+            continue
+        for b in objects:
+            if b.kind is not TemplateKind.BIN:
+                continue
+            same = abs(b.pose.x_mm - o.pose.x_mm) < 1.0 and abs(b.pose.y_mm - o.pose.y_mm) < 1.0
+            height = float(b.params["height_mm"])
+            if same and abs(height - LID_HINGE_MM) > 1.0:
+                out.append(
+                    f"objects[{i}] ({o.name}): the lid template's hinge height is fixed at {num(LID_HINGE_MM)} mm, "
+                    f"so the bin {b.name!r} it covers must be {num(LID_HINGE_MM)} mm tall (it is {num(height)} mm); "
+                    "if the use case states another height, put that lid on that bin in unsupported (not "
+                    "modelled) instead of changing it"
+                )
     return out
 
 
@@ -258,7 +397,11 @@ def check_parts(
 ) -> list[str]:
     """The plan checks on whatever objects and steps parsed (also when the task spec as a whole
     did not), so one repair prompt can list every problem at once."""
-    return _ref_problems(objects, uploads, required_uploads, check_library) + _step_problems(objects, steps)
+    return (
+        _ref_problems(objects, uploads, required_uploads, check_library)
+        + _lid_problems(objects)
+        + _step_problems(objects, steps)
+    )
 
 
 def check_plan(
@@ -297,6 +440,7 @@ def check_plan(
     for i, o in enumerate(spec.objects):
         if o.name not in touched:
             warnings.append(f"objects[{i}] ({o.name}): no step acts on it or places into it")
+    warnings += _layout_warnings(spec.objects, spec.steps)
     return problems, warnings
 
 

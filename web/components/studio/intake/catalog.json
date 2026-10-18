@@ -8,7 +8,7 @@
    "kind": "hinged_lid",
    "display_name": "Hinged lid or door",
    "description": "A panel on a revolute hinge: a lid opens upward about its back edge, a door swings about a side edge.",
-   "note": "A tote lid, a hatch or a cabinet door (orientation door).",
+   "note": "A tote lid, a hatch, a cover or a cabinet door. orientation lid: a horizontal panel hinged along its back edge, its closed underside 120 mm above the table (there is no hinge-height parameter; 120 mm is a default bin's height, so a lid at a bin's position covers a bin of that height); it stays open only past vertical. orientation door: a vertical panel depth_mm wide and width_mm tall, 10 mm above the table, hinged on its left edge, opening toward its front. It starts closed; angle_deg is 0 closed, positive open.",
    "model": "revolute joint with damping, a hinge stop and an optional opening torque (spring or detent)",
    "fidelity": "rigid",
    "caveat": "",
@@ -123,7 +123,7 @@
    "kind": "drawer",
    "display_name": "Drawer",
    "description": "A box on a prismatic slide with friction, opened by a bar, lip or knob handle.",
-   "note": "A drawer in a cabinet or shelf unit; it starts closed.",
+   "note": "A drawer in a cabinet or shelf unit. It starts closed; travel_mm is 0 closed, positive open.",
    "model": "prismatic joint with friction loss and end stops",
    "fidelity": "rigid",
    "caveat": "",
@@ -216,7 +216,7 @@
    "kind": "quarter_turn_latch",
    "display_name": "Quarter-turn latch",
    "description": "A slot or wing head on a revolute joint with a detent and a stop at the end of its turn.",
-   "note": "A panel fastener or cam lock; it starts locked.",
+   "note": "A panel fastener or cam lock on its own plate. It starts locked at its stop and opens counter-clockwise seen from above (twist ccw); angle_deg counts counter-clockwise from locked. Locking a latch that starts locked is not modelled.",
    "model": "revolute joint with a torque to open, a detent and a stop",
    "fidelity": "approximation",
    "caveat": "Latches are an approximation: a detent torque on a revolute joint; no cam or spring geometry.",
@@ -297,7 +297,7 @@
    "kind": "threaded_joint",
    "display_name": "Threaded joint",
    "description": "A cap, coupling or nut that starts on a fixed threaded seat and tightens to a final torque.",
-   "note": "A pipe coupling, cap or nut and the stub, rod or neck it threads onto (the seat).",
+   "note": "A pipe coupling, cap or nut (the member) and the fixed stub, rod or neck it threads onto (the seat), in one object. The member starts resting loose on top of the stub, captive on the stub's axis: it cannot be picked up, carried or placed, so no pick acts on it. insert grips it in place and pushes it down the lead-in to the thread start (chamfer_mm + 3 mm down); twist clockwise seen from above runs it down the thread, engage_turns turns to seated, while the resisting torque rises from start_torque_nm to final_torque_nm. depth_mm counts down from the stub top; turns and angle_deg count clockwise from the start. Picking a loose member and starting it on a stub is not modelled.",
    "model": "revolute joint coupled to a prismatic joint (helical equality) with a friction torque ramp",
    "fidelity": "approximation",
    "caveat": "Threads are an approximation: a helical joint with a torque ramp; no thread flanks, cross-threading or galling. A screen, not a promise.",
@@ -402,7 +402,7 @@
    "kind": "handwheel_valve",
    "display_name": "Handwheel valve",
    "description": "A handwheel on a vertical stem with a resistive torque over its travel.",
-   "note": "A valve or any round handwheel; angle_deg counts from where it starts.",
+   "note": "A valve or any round handwheel on a vertical stem, the wheel 110 mm above the table. It starts closed at its stop and opens counter-clockwise seen from above (twist ccw); angle_deg counts counter-clockwise from closed. Closing a valve that starts closed is not modelled.",
    "model": "revolute joint with a resistive torque curve and travel stops",
    "fidelity": "approximation",
    "caveat": "Valves are an approximation: a resistive torque curve on a revolute joint; no packing or seat dynamics.",
@@ -470,7 +470,7 @@
    "kind": "port_plug",
    "display_name": "Port and plug",
    "description": "A fixed socket with a chamfer and a clearance, and a plug that starts free on the table.",
-   "note": "A connector and its port, a peg and its hole, a vial and its holder.",
+   "note": "A connector and its port, a peg and its hole, a vial and its holder: one object holds both, the plug standing free on the table 40 mm beside its socket (do not add the plug as a separate part). depth_mm is the plug tip's depth below the socket mouth, seated at the socket's depth_mm.",
    "model": "rigid socket and plug with contact, an insertion friction and an optional latch click",
    "fidelity": "rigid",
    "caveat": "",
@@ -1132,7 +1132,7 @@
   "handle": "the lip or handle at the free edge or front (hook it to pull open)",
   "drawer": "the drawer front (push it shut)",
   "head": "the latch head, a slot or a wing (twist it)",
-  "member": "the cap, coupling or nut (grasp, insert or twist it)",
+  "member": "the cap, coupling or nut, captive on its stub (insert or twist it)",
   "seat": "the fixed threaded seat (no primitive acts on it)",
   "wheel": "the handwheel rim (twist it)",
   "plug": "the free plug or connector (grasp, insert or push it)",
@@ -1148,6 +1148,28 @@
   "l_bracket",
   "steel_slug"
  ],
+ "sim": {
+  "twist_sense": {
+   "quarter_turn_latch": "ccw",
+   "handwheel_valve": "ccw",
+   "threaded_joint": "cw"
+  },
+  "no_pick": [
+   "threaded_joint"
+  ],
+  "picks": [
+   "grasp",
+   "suction",
+   "wrap"
+  ],
+  "thread_lead_extra_mm": 3.0,
+  "force_share": 0.8,
+  "default_push_n": 30.0,
+  "torque_share": 0.9,
+  "wrist_torque_share": 0.95,
+  "lid_hinge_mm": 120.0,
+  "depth_tolerance_mm": 0.5
+ },
  "limit_quantities": [
   "force_n",
   "jam",

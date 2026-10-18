@@ -43,16 +43,16 @@ HERO_CASES: Final[tuple[UseCase, ...]] = (
         "h2_coupling",
         "construction",
         "Pipe coupling",
-        "Pipe prefabrication: pick a threaded steel coupling (1 inch pipe size, about 40 mm across "
-        "and 45 mm long) from the bench, start it on the threaded stub of a pipe spool that stands "
-        "upright, and turn it on by hand until it is snug, without going over 8 N m.",
+        "Pipe prefabrication: a threaded steel coupling (1 inch pipe size, about 40 mm across and 45 mm "
+        "long) sits loosely on the threaded stub of a pipe spool that stands upright. Push it onto the "
+        "thread start and turn it on until it is snug, without going over 8 N m.",
     ),
     UseCase(
         "h3_cabinet",
         "maintenance",
         "Equipment cabinet",
         "Field maintenance on an equipment cabinet: turn the quarter-turn latch to unlock the door, "
-        "swing the door open, turn the valve handwheel inside a quarter turn to open it, then plug "
+        "swing the door open, turn the valve handwheel inside a quarter turn (90 degrees) to open it, then plug "
         "the test connector into the service port.",
     ),
 )
@@ -71,15 +71,15 @@ GATE_CASES: Final[tuple[UseCase, ...]] = (
         "e2_rod_nut",
         "construction",
         "Nut on a threaded rod",
-        "On a framing jig, take an M10 hex nut from the tray and run it down an upright threaded rod "
-        "three full turns. Keep the torque under 3 N m so the thread is not damaged.",
+        "On a framing jig, an M10 hex nut sits loose on top of an upright threaded rod. Run it down the "
+        "rod three full turns, keeping the torque under 3 N m so the thread is not damaged.",
     ),
     UseCase(
         "e3_isolation_valve",
         "maintenance",
         "Isolation valve",
-        "Plant maintenance round: open the hatch of a valve box, close the isolation valve inside by "
-        "turning its handwheel one full turn clockwise against about 4 N m, then close the hatch.",
+        "Plant maintenance round: open the hatch of a valve box, open the isolation valve inside by "
+        "turning its handwheel one full turn counter-clockwise against about 4 N m, then close the hatch.",
     ),
     UseCase(
         "e4_vial_holder",

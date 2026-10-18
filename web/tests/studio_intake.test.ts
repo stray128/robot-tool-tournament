@@ -115,17 +115,19 @@ describe("recorded plans", () => {
 describe("edits", () => {
   const h3 = () => planArgsOf(examples.find((e) => e.case_id === "h3_cabinet")!.plan);
 
-  it("reorder and delete steps, and point problems at their entry", () => {
-    const moved = moveStep(h3(), 4, -1);
-    expect(moved.steps.map((s) => s.primitive)).toEqual(["twist", "hook_pull", "twist", "insert", "grasp"]);
-    const verdict = validatePlan(catalog, moved);
-    expect(verdict.status).toBe("invalid");
-    const targets = verdict.problems.map((p) => problemTarget(p, moved));
-    expect(targets.some((t) => t.kind === "step")).toBe(true);
+  it("reorder and delete steps, flip a direction, and point problems at their entry", () => {
+    const moved = moveStep(h3(), 2, 1);
+    expect(moved.steps.map((s) => s.primitive)).toEqual(["twist", "hook_pull", "insert", "twist"]);
     expect(moveStep(h3(), 0, -1)).toEqual(h3());
+    const flipped = h3();
+    flipped.steps[0]!.params.direction = "cw";
+    const verdict = validatePlan(catalog, flipped);
+    expect(verdict.status).toBe("invalid");
+    expect(verdict.problems[0]).toMatch(/opens counter-clockwise; twist it ccw/);
+    expect(problemTarget(verdict.problems[0]!, flipped)).toEqual({ kind: "step", index: 0 });
     const removed = deleteStep(h3(), 1);
-    expect(removed.steps).toHaveLength(4);
-    expect(removed.steps.every((s) => !s.after.includes("open_door"))).toBe(true);
+    expect(removed.steps).toHaveLength(3);
+    expect(removed.steps.every((s) => !s.after.includes(h3().steps[1]!.id))).toBe(true);
     expect(validatePlan(catalog, removed).status).toBe("valid");
   });
 
@@ -144,7 +146,14 @@ describe("edits", () => {
     expect(validatePlan(catalog, box).status).toBe("valid");
     let twist = addObject(catalog, emptyPlan(), "handwheel_valve");
     twist = addStep(catalog, twist, "twist");
+    expect(twist.steps[0]!.params.direction).toBe("ccw");
     expect(validatePlan(catalog, twist).status).toBe("valid");
+    let thread = addObject(catalog, emptyPlan(), "threaded_joint");
+    thread = addStep(catalog, thread, "insert");
+    thread = addStep(catalog, thread, "twist");
+    expect(thread.steps.map((s) => [s.primitive, s.params.direction ?? null])).toEqual([["insert", null], ["twist", "cw"]]);
+    expect(validatePlan(catalog, thread).problems).toEqual([]);
+    expect(addStep(catalog, thread, "grasp").steps[2]!.object).not.toBe(thread.objects[0]!.name); // no pick on a thread
   });
 
   it("exports TaskSpec.to_dict with the task id and fidelity", async () => {
