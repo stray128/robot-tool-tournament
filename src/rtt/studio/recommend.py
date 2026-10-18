@@ -136,7 +136,10 @@ def eligibility(sr: SetupResult) -> tuple[bool, str | None]:
             return False, "never completed the task"
         step, info = next(iter(st.items()))
         why = ", ".join(f"{m} {n}x" for m, n in info["failure_modes"].items())
-        return False, f"never completed the task (stops at {step} in {info['runs']}/{len(sr.runs)} runs: {why})"
+        return (
+            False,
+            f"never completed the task (stops at {step} in {info['runs']}/{len(sr.runs)} runs: {why})",
+        )
     if _modes(sr)["physics_invalid"]:
         return False, "a run reset the simulator (physics_invalid)"
     return True, None
@@ -152,6 +155,17 @@ def _close(top: SetupResult, other: SetupResult) -> bool:
 
 def _base_key(sr: SetupResult) -> tuple[Any, ...]:
     return (*sr.rank_key(), sr.setup.setup_id)
+
+
+def _progress(sr: SetupResult) -> float:
+    """Mean per-step success over the runs: how far the setup gets when it never completes."""
+    rates = list(sr.step_success.values())
+    return sum(rates) / len(rates) if rates else 0.0
+
+
+def _closest_key(sr: SetupResult) -> tuple[Any, ...]:
+    """Order of setups that did not qualify: further along the task first, then the rank key."""
+    return (-sr.completion_rate, -round(_progress(sr), 9), *_base_key(sr))
 
 
 def rank_setups(results: Sequence[SetupResult]) -> list[tuple[SetupResult, SetupResult | None]]:
@@ -242,6 +256,7 @@ def _row(
         "reason": reason,
         "completion_rate": round(sr.completion_rate, 4),
         "step_success": {k: round(v, 4) for k, v in sr.step_success.items()},
+        "step_progress": round(_progress(sr), 4),
         "weakest_step": {"step_id": weakest, "success_rate": round(rate, 4)},
         "cycle_time_s": round(sr.cycle_time_s, 3),
         "complexity": sr.complexity.to_dict(),
@@ -338,7 +353,7 @@ def recommend_setups(
     verdicts = {sr.setup.setup_id: eligibility(sr) for sr in results}
     ranked = rank_setups(results)
     out["ranking"] = [_row(sr, True, None, payload, best_single_id) for sr, _ in ranked]
-    rest = sorted((sr for sr in results if not verdicts[sr.setup.setup_id][0]), key=_base_key)
+    rest = sorted((sr for sr in results if not verdicts[sr.setup.setup_id][0]), key=_closest_key)
     out["ranking"] += [
         _row(sr, False, verdicts[sr.setup.setup_id][1], payload, best_single_id) for sr in rest
     ]
@@ -363,7 +378,7 @@ def recommend_setups(
                 "extra_tools": pick.complexity.n_tools - best_single.complexity.n_tools,
             }
     else:
-        closest = sorted(results, key=_base_key)[:3]
+        closest = sorted(results, key=_closest_key)[:3]
         out["no_winner"] = {
             "reason": "no setup completed the task on the condition grid (nothing is forced)",
             "closest": [

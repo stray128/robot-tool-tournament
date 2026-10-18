@@ -574,7 +574,7 @@ def fit_problem(cand: Candidate, info: ToolInfo, step: Step, task_spec: TaskSpec
         elif kind is TemplateKind.THREADED_JOINT:
             d, length = float(p["diameter_mm"]), float(p["length_mm"])
             if cup is not None and p["member"] != "cap":
-                return f"the {p['member']} {obj.name} has an open top; a cup cannot seal on it"
+                return f"{obj.name} (a {p['member']}) has an open top; a cup cannot seal on it"
             if cup is not None and cup > d:
                 return f"its {cup:g} mm cup is wider than the {d:g} mm cap {obj.name}"
         else:
@@ -587,7 +587,7 @@ def fit_problem(cand: Candidate, info: ToolInfo, step: Step, task_spec: TaskSpec
             if opening is not None and opening - OPENING_MARGIN_MM < d:
                 return f"it opens {opening:.0f} mm; the {p['member']} {obj.name} is {d:g} mm across"
             if cup is not None and p["member"] != "cap":
-                return f"the {p['member']} {obj.name} has an open top; a cup cannot seal on it"
+                return f"{obj.name} (a {p['member']}) has an open top; a cup cannot seal on it"
         if kind is TemplateKind.QUARTER_TURN_LATCH and cup is not None:
             if p["head"] == "slot":
                 return f"the slot across the head of {obj.name} breaks a cup's seal"
@@ -1255,11 +1255,13 @@ class SetupPlan:
     payload_kg: float
     chain_tools: tuple[str, ...]
     geometry: BracketGeometry | None = None
+    progress: float = 0.0  # mean screened success of the steps (orders setups that all fail)
 
     def key(self) -> tuple[float, ...]:
         return (
             -round(self.predicted, 9),
             -round(self.weakest, 9),
+            -round(self.progress, 9),
             round(self.cycle_s, 3),
             *self.complexity.key(),
         )
@@ -1275,6 +1277,7 @@ class SetupPlan:
             "predicted_completion": round(self.predicted, 4),
             "weakest_chain_rate": round(self.weakest, 4),
             "predicted_cycle_s": round(self.cycle_s, 3),
+            "predicted_step_progress": round(self.progress, 4),
             "complexity": self.complexity.to_dict(),
             "payload_kg": round(self.payload_kg, 4),
             "geometry": self.geometry.to_dict() if self.geometry else None,
@@ -1339,8 +1342,14 @@ def _predict(
     segs = setup.segments(sc.task_spec)
     cycle = sum(d for d in durations if math.isfinite(d)) + sum(s.change_s for s in segs)
     complexity, carried = _complexity(setup, sc.infos, geometry, sc.task_spec)
+    steps = [
+        sc.cells[(e, sid)].rate if (e, sid) in sc.cells else 0.0
+        for chain, e in zip(sc.chains, chain_tools, strict=True)
+        for sid in chain
+    ]
     return SetupPlan(
         setup=setup,
+        progress=sum(steps) / len(steps) if steps else 0.0,
         predicted=math.prod(rates) if rates else 0.0,
         weakest=min(rates) if rates else 0.0,
         cycle_s=cycle,
