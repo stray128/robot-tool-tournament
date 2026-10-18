@@ -32,7 +32,7 @@ page before anything runs.
    drawer and a small box, built from the contract, so it is always valid).
 3. **One forced call** of `submit_task_plan` on `nvidia/nemotron-3-super-120b-a12b` through
    `rtt.llm.LLMClient` (cache, ledger, spend cap, retries; temperature 0.6, top_p 0.95,
-   max_tokens 8,000, thinking on).
+   max_tokens 5,000, thinking on; section 6 has the token counts behind that number).
 4. **Judge.** `task_spec_from_tool_args` (structure, bounds, cross-references, every problem
    with its path), then `check_plan` (`checks.py`):
    * every step has a goal criterion (a state quantity of its object, `lift_mm`, `hold_s` or
@@ -65,6 +65,9 @@ page before anything runs.
      `feature_mm`, `depth_mm` at least its y extent + 2 x `feature_mm` (the extents of the bin as
      turned relative to the lid); a lid with feature `handle` may match its bin. The check and the
      prompt state the rule; neither picks the feature for the planner;
+   * a pick (grasp, suction or wrap) into a bin under a lid needs an earlier `hook_pull` of that
+     lid with `angle_deg` at_least 95 (past vertical: a lid opened less falls shut when the tool
+     lets go), and no `push` on that lid between that hook pull and the pick (S4e);
    * layout (`layout.py`, section 1b): plan-view footprints and swings at least 20 mm apart
      [assumed], except a lid at its bin's position and the plug of a port (one object); so a part
      picked into a bin starts outside it, and nothing stands in a lid's, door's or drawer's swing;
@@ -79,11 +82,27 @@ page before anything runs.
    construct, the checks still run on every object and step that does, so one repair prompt
    lists every problem.
 5. **One repair call** if anything is wrong: the same messages plus the previous call (scrubbed)
-   and every problem. Whatever is still wrong after it is reported (`status: invalid`), never
-   silently fixed. The one fallback: a refusal whose items still name no nearest primitive gets
-   one from a keyword table (`nearest_primitive`), and the plan says so.
-6. **Status**: `valid`, `refused` (a valid refusal), `invalid`, or `failed` (no usable call:
-   transport, unreadable answer, spend cap).
+   and every problem. Whatever is still wrong after it is reported (`status: invalid`), with two
+   stated exceptions: a refusal whose items still name no nearest primitive gets one from a
+   keyword table (`nearest_primitive`), and the layout fixer (step 6). Both are in the plan's
+   notes.
+6. **Layout fix** (S4e, `layout.fix_layout`, Python only). When the plan after the repair call
+   has layout problems (overlaps, swings, clearances) and nothing else, code moves the free
+   objects to the nearest spot that clears every other object within the pose limits (+-300 mm,
+   inside the wrist's reach). A lid on its bin moves only with its bin, and a port's plug is part
+   of the port. A bin a step places into keeps its place when moving the other object of the
+   conflict clears it. The search is a fixed order: offsets on a 10 mm grid, nearest first, ties
+   counter-clockwise from +x, out to 850 mm. It takes one conflict at a time (in the order the
+   check lists them) and moves the later object of the pair unless that one is such a bin. So the
+   same plan always gives the same moves. Each moved object adds one assumption to the plan, for
+   example "Moved test_port from (0, -150) to (0, -240) mm to clear the swing of cabinet_door".
+   The moved plan is checked again in full, and the result is `valid` with `layout_fixed` true
+   ("valid after layout fix"). If no spot clears a conflict, or the moves would need more than
+   the 10 assumption lines, the layout problems stand. The page shows the moved positions, the
+   moves and the assumptions. It has no "Fix layout" button; edited plans are only validated.
+7. **Status**: `valid`, `refused` (a valid refusal), `invalid`, or `failed` (no usable call:
+   transport, unreadable answer, spend cap). `result` says how a plan got there:
+   `valid_first_call`, `valid_after_repair`, `valid_after_layout_fix`, `refused` or `failed`.
 
 ### 1a. The simulator's conventions (track S2)
 
@@ -92,7 +111,7 @@ The prompt, the checks and the intake page follow S2's models ([STUDIO_PRIMITIVE
 
 | Template | How S2 models it | What a plan must do |
 |---|---|---|
-| `hinged_lid` | lid: closed underside 120 mm above the table (no hinge-height parameter), stays open only past vertical; door: vertical, hinged on its left edge; `angle_deg` 0 closed, positive open | open with `hook_pull`, close with `push` (`angle_deg` at_most); a bin under a lid is 120 mm tall; a `lip` lid overhangs its bin by `feature_mm` on every side, a `handle` lid need not |
+| `hinged_lid` | lid: closed underside 120 mm above the table (no hinge-height parameter), stays open only past vertical; door: vertical, hinged on its left edge; `angle_deg` 0 closed, positive open | open with `hook_pull`, close with `push` (`angle_deg` at_most); a bin under a lid is 120 mm tall; a `lip` lid overhangs its bin by `feature_mm` on every side, a `handle` lid need not; a pick into a bin under a lid comes after a `hook_pull` of the lid to `angle_deg` at_least 95 |
 | `drawer` | starts closed; `travel_mm` positive open | `hook_pull` out, `push` shut |
 | `quarter_turn_latch` | starts locked at its stop; opens counter-clockwise from above; `angle_deg` ccw from locked | twist `ccw`; no `torque_nm` at_least |
 | `handwheel_valve` | starts closed at its stop; opens counter-clockwise; `angle_deg` ccw from closed | twist `ccw`; closing a valve that starts closed is not modelled |
@@ -236,102 +255,127 @@ all three files and compares them with the committed copies.
 
 ## 6. Gate (design S4) and spend
 
-Recorded live on 2026-10-18 with S2's conventions, the layout, window, lid-on-bin and lip-overhang
-rules in the prompt (`recorded/gate-2026-10-18-s4d/`, 18 calls, $0.144):
+The gate is judged on **one** full live run (S4e). A case that fails stays recorded as failed and
+is not drawn again. The page's summary line and this table report that run's numbers exactly.
+
+Recorded live on 2026-10-18 with every rule above in the prompt (`recorded/gate-2026-10-18-s4e/`:
+one run, 17 calls, $0.133, the run's cap $0.24):
 
 | case | setting | result | calls | steps produced | $ |
 |---|---|---|---|---|---|
-| h1_tote | warehouse | valid after repair | 2 | hook_pull tote_lid, grasp carton -> tote, grasp pack -> tote, push tote_lid | 0.0161 |
-| h2_coupling | construction | valid after repair | 2 | insert pipe_coupling, twist pipe_coupling (cw) | 0.0144 |
-| h3_cabinet | maintenance | valid after repair | 2 | twist latch (ccw), hook_pull door, twist valve (ccw), insert port | 0.0167 |
-| e1_drawer_kitting | warehouse | valid after repair | 2 | hook_pull shelf_drawer, grasp cube_part -> kit_tray, grasp rod_part -> kit_tray, push shelf_drawer | 0.0161 |
-| e2_rod_nut | construction | valid first try | 1 | insert m10_nut_on_rod, twist m10_nut_on_rod (cw) | 0.0076 |
-| e3_isolation_valve | maintenance | valid after repair | 2 | hook_pull meter_hatch, twist iso_valve (ccw), push meter_hatch | 0.0153 |
-| e4_vial_holder | lab | valid after repair | 2 | hook_pull instrument_lid, insert vial_holder, push instrument_lid | 0.0226 |
-| e5_fridge_restock | retail | valid after repair | 2 | hook_pull fridge_door, grasp drink_can -> storage_basket, push fridge_door | 0.0154 |
-| u1_fold_shirt | unsupported | refused (nearest: grasp, wrap) | 1 | none | 0.0068 |
-| u2_pour | unsupported | refused (nearest: grasp) | 2 | none | 0.0130 |
+| h1_tote | warehouse | valid after repair | 2 | hook_pull tote_lid, grasp carton -> tote_bin, grasp pack -> tote_bin, push tote_lid | 0.0159 |
+| h2_coupling | construction | valid after repair | 2 | insert pipe_coupling, twist pipe_coupling (cw) | 0.0152 |
+| h3_cabinet | maintenance | valid after layout fix | 2 | twist qt_latch (ccw), hook_pull cabinet_door, twist service_valve (ccw), insert test_port | 0.0169 |
+| e1_drawer_kitting | warehouse | valid after repair | 2 | hook_pull shelf_drawer, grasp cube_part -> kit_tray, grasp rod_part -> kit_tray, push shelf_drawer | 0.0182 |
+| e2_rod_nut | construction | valid after repair | 2 | insert threaded_rod_nut, twist threaded_rod_nut (cw) | 0.0141 |
+| e3_isolation_valve | maintenance | valid after repair | 2 | hook_pull meter_hatch, twist iso_valve (ccw), push meter_hatch | 0.0155 |
+| e4_vial_holder | lab | valid first call | 1 | hook_pull instrument_lid, grasp sample_holder, insert sample_holder, push instrument_lid | 0.0088 |
+| e5_fridge_restock | retail | valid after layout fix | 2 | hook_pull fridge_door, grasp drink_can -> storage_basket, push fridge_door | 0.0152 |
+| u1_fold_shirt | unsupported | refused (nearest: grasp) | 1 | none | 0.0065 |
+| u2_pour | unsupported | refused (nearest: grasp) | 1 | none | 0.0065 |
 
-The recorded set has plans valid 8/8 (1 on the first call, 7 after the repair) and unsupported
-2/2 refused with a reason and a nearest primitive, **but it is assembled from three draws, and a
-single run did not pass the gate**: the first live run of all ten cases left 6 of 8 plans valid
-(75 %, under the 90 % gate). What the repairs fixed: the lip lid as large as its tote (h1, twice,
-and the upload plan), parts inside or within 20 mm of their tote, tray or drawer (h1, e1), the
-can and basket in the fridge door's swing (e5), zero-wide windows and a `torque_nm` at_least on
-the latch and the valve twists (h3, e3), steps left holding while the next acted on another
-object (e3, e4), an insert of a thread left holding (h2), a refusal with no nearest primitive (u2).
+Plans: 8 of 8 valid in that one run: 1 on the first call, 5 after the repair call, 2 after the
+layout fix, 0 failed. Unsupported: 2 of 2 refused with a reason and a nearest primitive. The gate
+(at least 90 % valid, every unsupported case refused) passed.
 
-How the run was assembled (`manifest.json` `runs`): `gate_d1`, all ten cases live ($0.155),
-left h1 and e3 invalid after the repair, both by layout alone (h1's carton and pack 10 mm into
-the tote; e3's valve at the meter box's corner); in both, and in every other plan, the lip lid had
-its overhang after the repair. `gate_d2` re-sampled h1 and e3 live with an empty cache (the same
-requests, a new draw, $0.032): e3 valid after the repair, h1 invalid again (the pack 5 mm from the
-grown lid's footprint), so that draw is not used. `gate_d3` re-sampled h1 once more ($0.016):
-valid after the repair. So h1 was valid on 1 of 3 draws; the larger lip lid (340 x 240 mm over a
-300 x 200 mm tote) leaves less room around the tote for the two parts, and the planner's first
-placements (+-200 or +-250 mm on x) keep landing within 20 mm of it. Nothing was tuned between
-draws: the prompt, the text and the sampling are the same.
+What the repair calls fixed: parts inside the tote, the tray or the drawer (h1, e1), the latch and
+the valve against the door (h3), the valve against the hatch (e3), steps left holding while the
+next acted on another object (h3, e3), an insert of a thread left holding (h2), a twist on a nut
+before its insert (e2). What the layout fixer moved after the repair: h3's test port, from (0, -150)
+to (0, -240), out of the door's swing; e5's fridge door, from (0, 0) to (60, -60), off the basket
+that the can goes into (the basket is a target, so it kept its place).
 
-The three hero plans, as recorded (positions in mm, plan-view extents x and y of each
-footprint and swing):
+### 6a. The hero plans, frozen for S7
 
-* **h1_tote**: tote 300 x 200 x 120 mm at (0, 0) [x -150..150, y -100..100]; lid 340 x 240 mm,
-  lip 15 mm (so 20 mm over the tote on every side, 5 mm more than the rule asks), stop 110 deg,
-  at (0, 0) [footprint x -170..170, y -120..134, swing y 120..208]; carton 120 x 80 x 60 mm,
-  300 g at (-250, -250) [x -310..-190, y -290..-210]; pack 150 x 100 x 20 mm, 150 g at
-  (250, -250) [x 175..325, y -300..-200]. Steps: hook_pull the lid (lip, top, `angle_deg`
-  at_least 30, 20 N); grasp the carton into the tote (lift 100 mm, hold 1 s, `in_target`
-  at_least 1, `tilt_deg` at_most 15); grasp the pack into the tote (the same); push the lid shut
-  (`angle_deg` at_most 5, 20 N). The planner kept the lip and grew the lid; it was not told which.
-* **h2_coupling**: coupling 40 mm across, 45 mm long, pitch 1.5 mm, 2 engaged turns, 0.2 to
-  8 N m, at (0, 0) [x and y -32..32]. Steps: insert to the thread start (`depth_mm` 4 to 6; the thread
-  starts at 4 mm, 50 N, releases); twist `cw` at 60 deg/s until snug (`torque_nm` 5 to 8,
-  `max_torque_nm` 10). As in S4c the planner sets the seated torque (`final_torque_nm`) to the
-  8 N m limit the description gives.
-* **h3_cabinet**: latch (wing, 20 mm head, 0.8 N m, 90 deg) at (-300, 0) [x -320..-280, y
-  -20..20]; door 300 mm wide, 400 mm tall, handle, stop 110 deg, at (0, 0) [footprint x
-  -165..150, y -32..24; swing x -311..152, y -301..0]; valve (3 spokes, 100 mm, 2 N m, 90 deg) at
-  (300, 0) [x 250..350]; port with a 5 mm plug in a 10 mm socket at (0, 200) [x -10..55, y
-  190..210], behind the door. Steps: twist the latch `ccw` (`angle_deg` 85 to 95, at most
-  2 N m); hook_pull the door (handle, front, `angle_deg` 60 to 110, 30 N); twist the valve `ccw`
-  (`angle_deg` 85 to 95, at most 3 N m); insert the plug (`depth_mm` 9 to 11, 20 N). The latch
-  keeps its 0.8 N m; the connector, 8 mm in the S4c draw, is 5 mm in this one (the description
-  gives no size, and nothing was tuned).
+The three hero plans below are frozen for the recorded Studio sessions (S7). A test pins their
+`task_id`s (`FROZEN_HERO_TASK_IDS` in `tests/test_studio_engineer.py`), so any later change to
+them is deliberate. Positions are in mm; the brackets give each footprint's and swing's plan-view
+extent in x and y.
 
-One more recorded plan (`recorded/upload-2026-10-18-s4d/`, $0.0214, valid after the repair) plans
-a use case with an uploaded STL (`assets/parts/rounded_tub.stl`) and uses it as
-`upload:stl-575c1d026461`. Its first call made the lip lid as large as its tote; the repair kept
-the lip and shrank the tote to 200 x 150 x 120 mm under a 250 x 200 mm lid (25 mm over on every
-side). The first run's $0.03 cap refused the repair call; a second run replayed the first call
-from its cache and made the repair live, so the plan's `cost_usd` is the sum of both live calls.
+* **h1_tote** (task `e4586f36...`):
+  * Objects:
+    * tote: 300 x 200 x 120 mm at (0, 0) [x -150..150, y -100..100];
+    * lid: 340 x 240 mm, lip 20 mm (20 mm over the tote on every side), stop 110 deg, at (0, 0)
+      [footprint x -170..170, y -120..134; swing y 120..208];
+    * carton: 120 x 80 x 60 mm, 300 g, on the bench at (-200, -200) [x -260..-140, y -240..-160];
+    * pack: 150 x 100 x 20 mm, 150 g, on the bench at (200, -200) [x 125..275, y -250..-150].
+  * Steps:
+    1. hook_pull the lid (lip, from the top, 80 mm/s, at most 20 N): `angle_deg` at_least 95,
+       past vertical;
+    2. grasp the carton into the tote (lift 150 mm, hold 1 s): `in_target` at_least 1,
+       `tilt_deg` at_most 30;
+    3. grasp the pack into the tote (the same);
+    4. push the lid shut (60 mm/s, at most 20 N): `angle_deg` at_most 5.
+* **h2_coupling** (task `33599e99...`):
+  * Object: the coupling, 40 mm across, 45 mm long, pitch 1.5 mm, 2 engaged turns, 1 mm chamfer,
+    torque 0.2 rising to 8 N m when seated, at (0, 0) [x and y -32..32].
+  * Steps:
+    1. insert it to the thread start (10 mm/s, 5 mm standoff, at most 30 N): `depth_mm` at_most 4
+       (the thread starts at 4 mm), `jam` at_most 0; releases;
+    2. twist it `cw` (60 deg/s, `max_torque_nm` 10): `torque_nm` 3 to 8 (hand-tight, never
+       over 8), `turns` at_least 0.25.
+* **h3_cabinet** (task `3297a111...`):
+  * Objects:
+    * latch: wing head 20 mm, 0.5 N m, 90 deg, at (-100, 0) [x -120..-80, y -20..20];
+    * door: 200 mm wide, 400 mm tall, handle, stop 120 deg, at (100, 0) [footprint x -15..200,
+      y -32..24; swing x -151..203, y -201..0];
+    * valve: 3 spokes, 100 mm wheel, 2 N m, 90 deg travel, at (0, 150) [x -50..50, y 100..200];
+    * port: the 8 mm round connector (30 mm long) in a 15 mm socket, 0.2 mm clearance, at
+      (0, -240) after the layout fix [x -11..59, y -251..-229].
+  * Steps:
+    1. twist the latch `ccw` (60 deg/s, at most 5 N m): `angle_deg` 80 to 100;
+    2. hook_pull the door (handle, from the front, 100 mm/s, at most 20 N): `angle_deg` 100 to
+       130;
+    3. twist the valve `ccw` (60 deg/s, at most 5 N m): `angle_deg` 80 to 100;
+    4. insert the connector (10 mm/s, 5 mm standoff, at most 30 N): `depth_mm` 12 to 18.
+
+The hero descriptions were made specific in S4e where a user would know the detail: h2 says
+"hand-tight (about 3 N m), never over 8 N m", and h3 says "the 8 mm round test connector". The h1
+parts stay on the bench.
+
+One more recorded plan (`recorded/upload-2026-10-18-s4e/`, one run, $0.0157, valid after the
+repair) plans a use case with an uploaded STL (`assets/parts/rounded_tub.stl`) and uses it as
+`upload:stl-575c1d026461`.
+
+**max_tokens.** Through S4d, 83 complete calls had at most 3,150 completion tokens (reasoning,
+at most 1,791, included). 7 calls kept generating after a complete tool call and ran to the cap
+(8,000 or 12,000), which was billed. S4e lowered the cap to 5,000. In the S4e run no call ran to
+the cap, but one complete call (e1's repair) used 4,403 tokens. So the margin is thinner than the
+earlier counts suggested; section 7 has more.
 
 Token Factory spend: S4 $0.149 (cap $0.50); S4b $0.175 (cap $0.20); S4c $0.196 (cap $0.25);
-S4d $0.224 (cap $0.25): $0.144 of recorded gate calls, $0.059 of the h1 and e3 draws not used,
-and $0.021 for the upload plan. 4 of the 26 S4d calls ran to `max_tokens` (8000) after a complete
-tool call (the provider drops the extra output, which is billed), about $0.006 each over a normal
-call; none of the S4c calls did.
+S4d $0.224 (cap $0.25); S4e $0.148 (cap $0.30): $0.133 for the one gate run and $0.016 for the
+upload plan.
 
 ## 7. Open issues
 
-* **First calls rarely lay a scene out right, and one repair is not always enough.** With the
-  footprints and the rule in the prompt, 1 of 8 plans passed on the first call (S4c and S4d
-  alike). In S4c the repair fixed every layout; in S4d's first run two plans kept an overlap
-  after it, and h1 needed three draws (section 6). A worked example with a lid on a bin and a
-  door, or a layout helper the planner calls, could raise both rates.
-* **The lip rule grows h1's lid.** The planner meets the overhang by enlarging the lid (h1) or
-  shrinking the tote (upload); a larger lid crowds the bench around the tote, which is where h1's
-  remaining layout misses are.
+* **First calls rarely lay a scene out right.** 1 of 8 plans passed on the first call in S4c,
+  S4d and S4e alike. The repair call does not always clear the layout: S4d's run had two plans
+  still overlapping after it, and in S4e the layout fixer cleared two (h3, e5). The fixer moves
+  objects in code and states each move, but it does not know which placement makes physical sense:
+  h3's test port now stands in front of the door's swing, not behind the door. A worked example
+  with a lid on a bin and a door, or a layout helper the planner calls, could raise the
+  first-call rate.
+* **The lip rule grows h1's lid.** The planner meets the overhang by enlarging the lid. h1's lid is
+  340 x 240 mm over a 300 x 200 mm tote, so the parts need more bench room around the tote.
+* **max_tokens 5,000 has a thin margin.** One complete S4e call used 4,403 tokens, against 3,150 at
+  most before. A longer call than that would be cut off and need the repair call. The next
+  re-record should raise the cap to about 6,000. Changing it changes every request, so the frozen
+  recording keeps 5,000.
 * **Nested scenes are not modelled.** The templates stand side by side on one table: a valve in
   a box under a hatch, cans in a crate, a latch on a door are separate objects that must stand
   20 mm apart. The h3 latch now stands beside the door's hinge side, where a real latch would sit
   at the free edge; nothing checks which side.
 * **Semantics beyond the rules are not checked**: the model may still misread a quantity or a
-  limit (h2 takes "snug, without going over 8 N m" as a seated torque of 8 N m and a stop at
-  2 N m). The user edits these on the page.
+  limit, or fill in one the use case does not give. With "hand-tight (about 3 N m)" h2 now stops
+  at 3 N m; h3's latch torque (0.5 N m) is the planner's own guess. The user edits these on the
+  page.
 * **Recorded replays are tied to the prompt.** Any change to the prompt templates, the catalog
   rendering (including `layout.py`'s numbers and the S2 conventions), the worked example, the
   tool schema or the sampling is a different request: the replay tests then fail with a cache
   miss, and the gate must be re-recorded (`gate --out ... --live`, about $0.15), then `export-web`.
+  The re-record is one run, judged as it comes; the hero plans' pinned `task_id`s then need a
+  deliberate update.
 * The upload path inherits the part intake's gripper-sized limits (79 mm, 2 kg); larger parts in
   a Studio use case need a Studio intake.
 * S2's limits stay limits of the plans: a loose member cannot be started on a stub, a valve or

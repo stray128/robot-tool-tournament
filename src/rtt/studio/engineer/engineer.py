@@ -11,9 +11,13 @@ table limits and one worked example of a different use case.
 (structure, bounds, cross-references; every problem with its path) and then checked by
 :func:`~rtt.studio.engineer.checks.check_plan` (goals, holding, reachability, torque and force,
 refs, refusals). A plan with problems gets **one repair call** that quotes the previous call
-and lists every problem; whatever is still wrong after it is reported, never silently fixed.
-The one exception: a refusal whose items name no nearest primitive after the repair gets one
-from :func:`~rtt.studio.engineer.checks.nearest_primitive`, and the result says so.
+and lists every problem; whatever is still wrong after it is reported, never silently fixed,
+with two stated exceptions. A refusal whose items name no nearest primitive after the repair
+gets one from :func:`~rtt.studio.engineer.checks.nearest_primitive`. And when layout problems
+(overlaps, swings, clearances) are all that is left after the repair, the deterministic
+**layout fixer** (:func:`~rtt.studio.engineer.layout.fix_layout`) moves the free objects to the
+nearest spot that clears them; each move becomes an assumption of the plan and the result is
+``layout_fixed`` ("valid after layout fix"). Both say so in the result's notes.
 
 **Tool.** :func:`engineer_tool` is :func:`~rtt.studio.types.submit_task_plan_tool`, the
 contract's strict, bounded schema (closed objects, every property required, ``anyOf`` per kind
@@ -71,6 +75,7 @@ from rtt.studio.engineer.catalog import (
 )
 from rtt.studio.engineer.checks import check_parts, check_plan, nearest_primitive
 from rtt.studio.engineer.examples import worked_example
+from rtt.studio.engineer.layout import fix_layout, layout_problems
 from rtt.studio.engineer.uploads import UploadInfo
 from rtt.studio.types import (
     CONTRACT_VERSION,
@@ -112,10 +117,11 @@ __all__ = [
 ]
 
 ENGINEER_MODEL: Final = NEMOTRON_SUPER
-#: Thinking on (the model's default). The largest useful completion recorded was 2,700 tokens
-#: (reasoning included); 8,000 leaves room for 8 objects and 12 steps and bounds a call that keeps
-#: generating after a complete tool call. With a ~19k-token prompt the worst case is about $0.013.
-ENGINEER_SAMPLING: Final[dict[str, float | int]] = {"temperature": 0.6, "top_p": 0.95, "max_tokens": 8000}
+#: Thinking on (the model's default). The largest complete call recorded (83 of them, S4 to S4d) was
+#: 3,150 completion tokens, reasoning (at most 1,791) included; 5,000 leaves 1.6 x that and bounds a
+#: call that keeps generating after a complete tool call (7 recorded calls ran on to the cap). With
+#: a ~20k-token prompt the worst case is about $0.011.
+ENGINEER_SAMPLING: Final[dict[str, float | int]] = {"temperature": 0.6, "top_p": 0.95, "max_tokens": 5000}
 #: The default tool is the contract's own schema, descriptions included (module docstring).
 COMPACT_TOOL: Final = False
 MAX_USE_CASE_CHARS: Final = 2000
@@ -407,7 +413,8 @@ class PlanResult:
 
     ``status``: ``valid`` (a runnable plan), ``refused`` (a valid refusal), ``invalid`` (still
     has problems after the repair; ``problems`` lists them and ``spec`` is the parsed plan when
-    it parsed), ``failed`` (no usable call: transport, parse or spend cap).
+    it parsed), ``failed`` (no usable call: transport, parse or spend cap). ``layout_moves``:
+    the layout fixer's moves (the assumption lines it added) when it made the plan valid.
     """
 
     use_case: str
@@ -421,6 +428,7 @@ class PlanResult:
     template_hashes: Mapping[str, str] = field(default_factory=dict)
     tool_sha256: str = ""
     ledger: tuple[LedgerEntry, ...] = ()
+    layout_moves: tuple[str, ...] = ()
 
     @property
     def ok(self) -> bool:
@@ -432,8 +440,24 @@ class PlanResult:
         return bool(self.attempts) and self.attempts[0].outcome in ("valid", "refused")
 
     @property
+    def layout_fixed(self) -> bool:
+        """Valid only after the layout fixer moved objects (after the repair call)."""
+        return self.status == "valid" and bool(self.layout_moves)
+
+    @property
     def repaired(self) -> bool:
-        return self.ok and not self.first_try
+        """Valid (or refused) after the repair call, without the layout fixer."""
+        return self.ok and not self.first_try and not self.layout_fixed
+
+    @property
+    def result(self) -> str:
+        """``valid_first_call``, ``valid_after_repair``, ``valid_after_layout_fix``, ``refused`` or
+        ``failed`` (the gate table's column)."""
+        if self.status == "valid":
+            if self.first_try:
+                return "valid_first_call"
+            return "valid_after_layout_fix" if self.layout_fixed else "valid_after_repair"
+        return "refused" if self.status == "refused" else "failed"
 
     @property
     def cost_usd(self) -> float:
@@ -451,6 +475,9 @@ class PlanResult:
             "status": self.status,
             "first_try": self.first_try,
             "repaired": self.repaired,
+            "layout_fixed": self.layout_fixed,
+            "result": self.result,
+            "layout_moves": list(self.layout_moves),
             "problems": list(self.problems),
             "warnings": list(self.warnings),
             "notes": list(self.notes),
@@ -691,6 +718,41 @@ def _fill_nearest(spec: TaskSpec, use_case: str) -> TaskSpec:
     return replace(spec, unsupported=items)
 
 
+#: The contract's cap on a plan's assumptions (the layout fixer's moves are added to them).
+_MAX_ASSUMPTIONS: Final = 10
+
+
+def _fix_layout(
+    spec: TaskSpec, problems: Sequence[str], uploads: Sequence[UploadInfo]
+) -> tuple[TaskSpec, tuple[str, ...], tuple[str, ...]] | str:
+    """The layout fixer on a plan whose only problems are layout problems: ``(spec, warnings,
+    moves)`` when the moved plan passes every check, else a note (empty when it did not apply)."""
+    layout = layout_problems(spec.objects, spec.steps)
+    if not problems or not layout or not set(problems) <= set(layout):
+        return ""
+    fixed = fix_layout(spec.objects, spec.steps)
+    if fixed is None:
+        return (
+            "The layout fixer found no spot within reach that clears every object; the layout problems stand."
+        )
+    objects, moves = fixed
+    lines = tuple(m.text() for m in moves)
+    if len(spec.assumptions) + len(lines) > _MAX_ASSUMPTIONS:
+        return (
+            f"The layout fixer would move {len(lines)} objects, more than the plan's assumptions can list; "
+            "the layout problems stand."
+        )
+    try:
+        moved = replace(spec, objects=tuple(objects), assumptions=(*spec.assumptions, *lines))
+    except TaskSpecError as exc:
+        return f"The layout fixer's moves do not construct ({'; '.join(exc.problems)[:200]}); the layout problems stand."
+    ids = [u.upload_id for u in uploads]
+    left, warnings = check_plan(moved, uploads=ids, required_uploads=ids)
+    if left:
+        return "The layout fixer's moves left other problems; the layout problems stand."
+    return moved, tuple(warnings), lines
+
+
 @dataclass(frozen=True)
 class _Verdict:
     spec: TaskSpec | None
@@ -753,12 +815,27 @@ def plan_task(
         else:
             notes.append(f"The repair call failed ({repair.failure}); the first plan's problems stand.")
 
-    spec, problems = final.spec, list(final.problems)
+    spec, problems, warnings = final.spec, list(final.problems), final.warnings
+    layout_moves: tuple[str, ...] = ()
+    if final.failure is None and final.outcome == "invalid" and spec is not None and spec.refusal is None:
+        fixed = _fix_layout(spec, problems, uploads)
+        if isinstance(fixed, str):
+            if fixed:
+                notes.append(fixed)
+        else:
+            spec, warnings, layout_moves = fixed
+            problems = []
+            notes.append(
+                f"The layout fixer moved {len(layout_moves)} object{'s' if len(layout_moves) != 1 else ''} in code "
+                "after the repair call; each move is an assumption of the plan."
+            )
     status: Status
     if final.failure is not None:
         status = "failed"
     elif final.outcome in ("valid", "refused"):
         status = final.outcome  # type: ignore[assignment]
+    elif layout_moves:
+        status = "valid"
     elif (
         spec is not None and spec.refusal is not None and all(p.startswith("unsupported:") for p in problems)
     ):
@@ -777,10 +854,11 @@ def plan_task(
         spec=spec,
         attempts=tuple(attempts),
         problems=tuple(problems),
-        warnings=final.warnings,
+        warnings=tuple(warnings),
         notes=tuple(notes),
         uploads=tuple(uploads),
         template_hashes=prompts.template_hashes(),
         tool_sha256=tool_sha256(compact=compact),
         ledger=ledger,
+        layout_moves=layout_moves,
     )

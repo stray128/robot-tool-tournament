@@ -24,17 +24,27 @@ the table, from the same params and the same constants as the builders:
 :data:`CLEARANCE_MM` of each other [assumed], with two exceptions: a lid at its bin's position
 (the lid covers the bin), and the plug and socket of one port (one object). A part a step picks
 into a bin therefore starts outside that bin and outside every lid and door.
+
+:func:`fix_layout` is the deterministic layout fixer (track S4e) the Task Engineer runs after its
+repair call when layout problems are all that is left: it moves the free objects (every object
+but a lid on its bin, which moves with its bin; a port's plug is part of its port) to the nearest
+spot that clears every other object, searching a fixed order of offsets (rings of a 10 mm grid
+around the object's position, nearest first, then counter-clockwise from +x) inside the pose
+limits (the wrist's reach). Bins a step places into keep their place when moving something else
+clears the conflict. Each move is reported, so the plan states it as an assumption.
 """
 
 from __future__ import annotations
 
 import math
 from collections.abc import Sequence
+from dataclasses import dataclass, replace
+from functools import cache
 from typing import Final
 
-from rtt.studio.types import ObjectInstance, Step, TemplateKind
+from rtt.studio.types import ObjectInstance, ObjectPose, Step, TemplateKind
 
-__all__ = ["CLEARANCE_MM", "Polygon", "Region", "layout_problems", "regions"]
+__all__ = ["CLEARANCE_MM", "LayoutMove", "Polygon", "Region", "fix_layout", "layout_problems", "regions"]
 
 #: Plan-view gap kept between the footprints and swings of separate objects (mm) [assumed].
 CLEARANCE_MM: Final = 20.0
@@ -54,6 +64,9 @@ PORT_SIDES: Final = 16
 PLUG_GAP_MM: Final = 40.0
 LID_BACK_WALL_MM: Final = 8.0
 ARC_STEP_DEG: Final = 15.0
+#: The layout fixer's search grid and the farthest it moves an object.
+FIX_STEP_MM: Final = 10.0
+FIX_MAX_MM: Final = 850.0
 
 
 def _rect(x0: float, y0: float, x1: float, y1: float) -> Polygon:
@@ -196,35 +209,185 @@ def _lid_on_bin(a: ObjectInstance, b: ObjectInstance) -> bool:
     )
 
 
+Conflict = tuple[int, int, str, str, float]  # (i, j, region of i, region of j, distance), i < j
+
+
+def _bbox(poly: Polygon) -> tuple[float, float, float, float]:
+    xs, ys = [x for x, _ in poly], [y for _, y in poly]
+    return min(xs), min(ys), max(xs), max(ys)
+
+
+def _hit(ra: list[Region], rb: list[Region]) -> tuple[str, str, float] | None:
+    """The first pair of regions (in order) that comes within :data:`CLEARANCE_MM`."""
+    for na, pa in ra:
+        ax0, ay0, ax1, ay1 = _bbox(pa)
+        for nb, pb in rb:
+            bx0, by0, bx1, by1 = _bbox(pb)
+            gap = max(bx0 - ax1, ax0 - bx1, by0 - ay1, ay0 - by1)
+            if gap >= CLEARANCE_MM:
+                continue  # the boxes are already clear, so the polygons are
+            dist = _distance(pa, pb)
+            if dist < CLEARANCE_MM:
+                return na, nb, dist
+    return None
+
+
+def _conflicts(
+    objects: Sequence[ObjectInstance],
+    placed: Sequence[list[Region]],
+    covered: set[tuple[int, int]] | None = None,
+) -> list[Conflict]:
+    """Every pair (later object ``j``, earlier ``i``) that comes within the clearance; ``covered``
+    lists the lid-on-bin pairs to skip (by default the pairs that are a lid on its bin now)."""
+    out: list[Conflict] = []
+    for j, b in enumerate(objects):
+        for i in range(j):
+            a = objects[i]
+            skip = (i, j) in covered if covered is not None else _lid_on_bin(a, b)
+            if a.name == b.name or skip:
+                continue
+            hit = _hit(placed[i], placed[j])
+            if hit is not None:
+                out.append((i, j, hit[0], hit[1], hit[2]))
+    return out
+
+
 def layout_problems(objects: Sequence[ObjectInstance], steps: Sequence[Step]) -> list[str]:
     """Pairs of objects whose footprints or swings come within :data:`CLEARANCE_MM` (one problem
     per pair, on the later object's path)."""
     out: list[str] = []
     placed = [regions(o) for o in objects]
     targets = {(s.object, s.target) for s in steps if s.target is not None}
-    for j, b in enumerate(objects):
-        for i in range(j):
-            a = objects[i]
-            if a.name == b.name or _lid_on_bin(a, b):
-                continue
-            hit = None
-            for ra, pa in placed[i]:
-                for rb, pb in placed[j]:
-                    dist = _distance(pa, pb)
-                    if dist < CLEARANCE_MM:
-                        hit = (ra, rb, dist)
-                        break
-                if hit:
-                    break
-            if hit is None:
-                continue
-            ra, rb, dist = hit
-            verb = "overlaps" if dist == 0.0 else f"comes within {CLEARANCE_MM:g} mm of"
-            note = ""
-            if (b.name, a.name) in targets or (a.name, b.name) in targets:
-                note = "; a part picked into a bin starts outside it"
-            out.append(
-                f"objects[{j}] ({b.name}): its {rb} {verb} the {ra} of objects[{i}] ({a.name}); keep them at "
-                f"least {CLEARANCE_MM:g} mm apart{note}"
-            )
+    for i, j, ra, rb, dist in _conflicts(objects, placed):
+        a, b = objects[i], objects[j]
+        verb = "overlaps" if dist == 0.0 else f"comes within {CLEARANCE_MM:g} mm of"
+        note = ""
+        if (b.name, a.name) in targets or (a.name, b.name) in targets:
+            note = "; a part picked into a bin starts outside it"
+        out.append(
+            f"objects[{j}] ({b.name}): its {rb} {verb} the {ra} of objects[{i}] ({a.name}); keep them at "
+            f"least {CLEARANCE_MM:g} mm apart{note}"
+        )
     return out
+
+
+# --------------------------------------------------------------------------- the fixer
+
+
+def _mm(v: float) -> str:
+    return f"{round(v, 1) + 0.0:g}"
+
+
+@dataclass(frozen=True)
+class LayoutMove:
+    """One object (with any lid on it) the fixer moved, and what that cleared."""
+
+    names: tuple[str, ...]
+    before: tuple[float, float]
+    after: tuple[float, float]
+    clears: str  # "the swing of tote_lid"
+
+    def text(self) -> str:
+        """The plan's assumption line for this move."""
+        what = self.names[0] + (f" (with {', '.join(self.names[1:])})" if len(self.names) > 1 else "")
+        return (
+            f"Moved {what} from ({_mm(self.before[0])}, {_mm(self.before[1])}) to ({_mm(self.after[0])}, "
+            f"{_mm(self.after[1])}) mm to clear the {self.clears}"
+        )
+
+
+@cache
+def _offsets() -> tuple[tuple[float, float], ...]:
+    """The search order: grid offsets nearest first, then counter-clockwise from +x."""
+    n = int(FIX_MAX_MM // FIX_STEP_MM)
+    out = []
+    for ix in range(-n, n + 1):
+        for iy in range(-n, n + 1):
+            r = math.hypot(ix, iy)
+            if 0 < r * FIX_STEP_MM <= FIX_MAX_MM:
+                angle = math.atan2(iy, ix) % (2.0 * math.pi)
+                out.append((r, angle, ix * FIX_STEP_MM, iy * FIX_STEP_MM))
+    out.sort()
+    return tuple((dx, dy) for _, _, dx, dy in out)
+
+
+def _shift(regs: list[Region], dx: float, dy: float) -> list[Region]:
+    return [(n, [(x + dx, y + dy) for x, y in poly]) for n, poly in regs]
+
+
+def _clear(moving: list[list[Region]], fixed: list[list[Region]]) -> bool:
+    return all(_hit(a, b) is None for a in moving for b in fixed)
+
+
+def fix_layout(
+    objects: Sequence[ObjectInstance], steps: Sequence[Step]
+) -> tuple[list[ObjectInstance], list[LayoutMove]] | None:
+    """Objects moved so that no footprint or swing comes within the clearance of another's, and the
+    moves (one per object or bin-with-lid, from its first position to its last), or ``None`` when no
+    spot inside the pose limits clears a conflict. Deterministic: the same plan gives the same moves."""
+    objs = list(objects)
+    n = len(objs)
+    group = list(range(n))
+    for j, o in enumerate(objs):
+        for i, b in enumerate(objs):
+            if i != j and _lid_on_bin(o, b) and o.kind is TemplateKind.HINGED_LID:
+                group[j] = i  # a lid on its bin moves with the bin
+                break
+    covered = {(min(i, j), max(i, j)) for j in range(n) for i in range(n) if i != j and group[j] == i}
+    members = {g: [k for k in range(n) if group[k] == g] for g in set(group)}
+    targets = {s.target for s in steps if s.target is not None}
+    anchored = {
+        g: any(objs[k].kind is TemplateKind.BIN and objs[k].name in targets for k in ks)
+        for g, ks in members.items()
+    }
+    placed = [regions(o) for o in objs]
+    first: dict[int, tuple[tuple[float, float], str]] = {}
+    limit = ObjectPose.LIMIT_MM
+    for _ in range(4 * n + 4):
+        conflicts = _conflicts(objs, placed, covered)
+        if not conflicts:
+            break
+        i, j, ri, rj, _ = conflicts[0]
+        options = sorted({group[i], group[j]}, key=lambda g: (anchored[g], 0 if g == group[j] else 1))
+        for g in options:
+            ks = members[g]
+            others = [k for k in range(n) if group[k] != g]
+            spot = None
+            for dx, dy in _offsets():
+                if any(
+                    abs(objs[k].pose.x_mm + dx) > limit or abs(objs[k].pose.y_mm + dy) > limit for k in ks
+                ):
+                    continue
+                if _clear([_shift(placed[k], dx, dy) for k in ks], [placed[m] for m in others]):
+                    spot = (dx, dy)
+                    break
+            if spot is None:
+                continue
+            dx, dy = spot
+            if g not in first:
+                other = i if g == group[j] else j
+                region = ri if g == group[j] else rj
+                lead = objs[g]
+                first[g] = ((lead.pose.x_mm, lead.pose.y_mm), f"{region} of {objs[other].name}")
+            for k in ks:
+                o = objs[k]
+                objs[k] = replace(o, pose=ObjectPose(o.pose.x_mm + dx, o.pose.y_mm + dy, o.pose.yaw_deg))
+                placed[k] = _shift(placed[k], dx, dy)
+            break
+        else:
+            return None
+    else:
+        return None
+    if _conflicts(objs, placed, covered):
+        return None
+    moves = [
+        LayoutMove(
+            names=tuple(objs[k].name for k in members[g]),
+            before=before,
+            after=(objs[g].pose.x_mm, objs[g].pose.y_mm),
+            clears=clears,
+        )
+        for g, (before, clears) in sorted(first.items())
+        if (objs[g].pose.x_mm, objs[g].pose.y_mm) != before
+    ]
+    return objs, moves

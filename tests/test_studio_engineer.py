@@ -977,6 +977,163 @@ def test_the_recorded_upload_plan_replays_and_builds_a_studio_scene(tub: Any) ->
     assert scene.model.nbody > 0
 
 
+# --------------------------------------------------------------------------- lid-open rule and layout fixer (S4e)
+
+
+def _tote_scene(open_deg: float | None = 100.0) -> tuple[list[ObjectInstance], list[Step]]:
+    tote = ObjectInstance.of("tote", "bin", "Tote", ObjectPose(0, 0, 0), height_mm=120)  # 300 x 200 mm
+    lid = ObjectInstance.of("lid", "hinged_lid", "Lid", ObjectPose(0, 0, 0), width_mm=330, depth_mm=230)
+    box = ObjectInstance.of("box", "part", "Box", ObjectPose(-250, -250, 0), size_x_mm=60, size_y_mm=40)
+    crit = [_crit("angle_deg", open_deg)] if open_deg is not None else [_crit("angle_deg", None, 120)]
+    steps = [
+        Step.of("open", "hook_pull", "lid", "handle", "Open it.", crit),
+        Step.of("pick", "grasp", "box", "part", "Pick it.", [_crit("in_target", 1)], target="tote"),
+        Step.of("shut", "push", "lid", "lid", "Shut it.", [_crit("angle_deg", None, 5)]),
+    ]
+    return [tote, lid, box], steps
+
+
+def test_a_pick_into_a_lidded_bin_needs_the_lid_opened_past_vertical_first() -> None:
+    from rtt.studio.engineer.catalog import LID_OPEN_DEG
+
+    assert LID_OPEN_DEG == 95.0
+    objects, steps = _tote_scene(100)
+    assert check_plan(_spec(objects, steps))[0] == []
+    low = check_plan(_spec(*_tote_scene(30)))[0]
+    assert low == [
+        (
+            "steps[0] (open): 'pick' picks into 'tote' under this lid later, so open it past vertical: angle_deg "
+            "at_least 95 (it asks for 30); a lid opened less falls shut when the tool lets go"
+        )
+    ]
+    assert "(it asks for no angle_deg at_least)" in check_plan(_spec(*_tote_scene(None)))[0][0]
+    objects, steps = _tote_scene(100)
+    never = check_plan(_spec(objects, [steps[1]]))[0]
+    assert never == [
+        (
+            "steps[0] (pick): it picks into 'tote', which the lid 'lid' covers, and no earlier step opens that lid; "
+            "hook_pull 'lid' first with angle_deg at_least 95 (past vertical: a lid opened less falls shut)"
+        )
+    ]
+    shut_first = check_plan(_spec(objects, [steps[0], steps[2], steps[1]]))[0]
+    assert shut_first == [
+        (
+            "steps[2] (pick): 'shut' pushes the lid 'lid' shut after 'open' opened it, so this pick into 'tote' "
+            "meets a closed lid; hook_pull it open again (angle_deg at_least 95) after that push"
+        )
+    ]
+    # one problem per hook pull, at its first pick
+    other = ObjectInstance.of("tin", "part", "Tin", ObjectPose(250, -250, 0), size_x_mm=60, size_y_mm=40)
+    two = [
+        *_tote_scene(30)[1][:2],
+        Step.of("pick2", "grasp", "tin", "part", "Pick.", [_crit("in_target", 1)], target="tote"),
+    ]
+    assert len(check_plan(_spec([*_tote_scene(30)[0], other], two))[0]) == 1
+    # a bin without a lid, and a lid not over the bin, need nothing
+    tote, _, box = objects
+    plain = check_plan(_spec([tote, box], [steps[1]]))[0]
+    assert plain == []
+    away = ObjectInstance.of("lid", "hinged_lid", "Lid", ObjectPose(0, 250, 0), width_mm=200, depth_mm=40)
+    assert not any("past vertical" in p for p in check_plan(_spec([tote, away, box], steps))[0])
+
+
+def test_the_layout_fixer_moves_free_objects_to_the_nearest_clear_spot_deterministically() -> None:
+    from rtt.studio.engineer.layout import fix_layout, layout_problems
+
+    objects, steps = _tote_scene(100)
+    tote, lid, _ = objects
+    box = ObjectInstance.of("box", "part", "Box", ObjectPose(-150, 0, 0), size_x_mm=60, size_y_mm=40)
+    scene = [tote, lid, box]
+    assert layout_problems(scene, steps)
+    fixed = fix_layout(scene, steps)
+    again = fix_layout(scene, steps)
+    assert fixed is not None and again is not None
+    moved, moves = fixed
+    assert moves == again[1] and [o.pose for o in moved] == [o.pose for o in again[0]]  # deterministic
+    assert [m.text() for m in moves] == [
+        "Moved box from (-150, 0) to (-220, 0) mm to clear the footprint of tote"
+    ]
+    assert moved[0].pose == tote.pose and moved[1].pose == lid.pose  # the target bin and its lid stay
+    assert layout_problems(moved, steps) == []
+    # a bin and its lid move together, when nothing a step places into has to stay
+    door = ObjectInstance.of(
+        "door", "hinged_lid", "Door", ObjectPose(0, 0, 0), orientation="door", depth_mm=200
+    )
+    crate = ObjectInstance.of(
+        "crate", "bin", "Crate", ObjectPose(0, -150, 0), height_mm=120, length_mm=200, width_mm=150
+    )
+    cover = ObjectInstance.of(
+        "cover", "hinged_lid", "Cover", ObjectPose(0, -150, 0), width_mm=200, depth_mm=150, feature="handle"
+    )
+    swing = [Step.of("open", "hook_pull", "door", "handle", "Open it.", [_crit("angle_deg", 80)])]
+    group = fix_layout([door, crate, cover], swing)
+    assert group is not None
+    (d2, c2, v2), (move,) = group
+    assert d2.pose == door.pose and (c2.pose.x_mm, c2.pose.y_mm) == (v2.pose.x_mm, v2.pose.y_mm)
+    assert move.text().startswith("Moved crate (with cover) from (0, -150) to (")
+    # no spot within reach: two bins too big to stand 20 mm apart
+    big = [
+        ObjectInstance.of(f"bin{i}", "bin", "Bin", ObjectPose(0, 0, 0), length_mm=800, width_mm=600)
+        for i in (1, 2)
+    ]
+    assert fix_layout(big, []) is None
+
+
+def test_layout_problems_alone_after_the_repair_are_fixed_in_code_and_stated() -> None:
+    args = good_args()
+    box = next(o for o in args["objects"] if o["name"] == "small_box")
+    box["pose"] = {"x_mm": 200.0, "y_mm": 60.0, "yaw_deg": 0.0}  # inside the tote
+    planner = ScriptedPlanner([args, args])
+    result = plan_task("Drawer, box, tote.", client=client_for(planner))
+    assert len(planner.payloads) == 2  # the model gets its repair call first
+    assert result.status == "valid" and result.layout_fixed and not result.repaired and not result.first_try
+    assert result.result == "valid_after_layout_fix"
+    move = "Moved small_box from (200, 60) to (200, 200) mm to clear the footprint of tote"
+    assert result.layout_moves == (move,)
+    assert result.spec is not None and result.spec.assumptions[-1] == move
+    moved = next(o for o in result.spec.objects if o.name == "small_box")
+    assert (moved.pose.x_mm, moved.pose.y_mm) == (200.0, 200.0)
+    assert any("layout fixer moved 1 object" in n for n in result.notes)
+    record = result.to_dict()
+    assert record["result"] == "valid_after_layout_fix" and record["layout_moves"] == [move]
+    assert judge_args(result.spec.to_tool_args())[1] == []
+    # anything besides layout problems: no fix
+    args["steps"][2]["hold_after"] = True
+    mixed = plan_task("Drawer, box, tote.", client=client_for(ScriptedPlanner([args, args])))
+    assert mixed.status == "invalid" and not mixed.layout_moves
+
+
+def test_the_gate_summary_counts_each_result_once() -> None:
+    from rtt.studio.engineer.examples import GATE_CASES as cases
+
+    args = good_args()
+    inside = copy.deepcopy(args)
+    next(o for o in inside["objects"] if o["name"] == "small_box")["pose"] = {
+        "x_mm": 200.0,
+        "y_mm": 60.0,
+        "yaw_deg": 0.0,
+    }
+    broken = copy.deepcopy(args)
+    broken["steps"][2]["hold_after"] = True
+    planner = ScriptedPlanner([args, broken, args, inside, inside, broken, broken])
+    picked = [c for c in cases if c.expect == "plan"][:4]
+    results = run_gate(client_for(planner), picked)
+    m = gate_manifest(results, mode="replay")
+    assert [r["result"] for r in m["cases"]] == [
+        "valid_first_call",
+        "valid_after_repair",
+        "valid_after_layout_fix",
+        "failed",
+    ]
+    plans = m["summary"]["plans"]
+    assert (plans["valid_first_call"], plans["valid_after_repair"], plans["valid_after_layout_fix"]) == (
+        1,
+        1,
+        1,
+    )
+    assert plans["failed"] == 1 and plans["valid"] == 3 and plans["valid_rate"] == 0.75
+
+
 # --------------------------------------------------------------------------- the recorded gate run
 
 
@@ -996,12 +1153,68 @@ def test_the_recorded_gate_passed_under_its_cap_with_the_label() -> None:
     assert abs(sum(e.cost_usd for e in ledger) - m["llm"]["cost_usd"]) < 1e-6
     assert {c["case_id"] for c in m["cases"]} == {c.case_id for c in GATE_CASES}
     for row in m["cases"]:
-        assert row["calls"] <= 2 and row["passed"], row["case_id"]
-        if row["expect"] == "refusal":
-            assert row["refusal"] and row["nearest_primitives"] and not row["steps"]
+        assert row["calls"] <= 2, row["case_id"]
+        if not row["passed"]:
+            assert row["result"] == "failed", row["case_id"]  # a failed case stays recorded as failed
+        elif row["expect"] == "refusal":
+            assert (
+                row["result"] == "refused"
+                and row["refusal"]
+                and row["nearest_primitives"]
+                and not row["steps"]
+            )
         else:
-            assert row["steps"] and row["task_id"]
+            assert row["result"].startswith("valid_") and row["steps"] and row["task_id"]
+            assert bool(row["layout_moves"]) == (row["result"] == "valid_after_layout_fix")
     assert m["tool"]["sha256"] == tool_sha256() and m["template_hashes"] == eprompts.template_hashes()
+
+
+def test_the_recorded_gate_is_one_live_run_counted_honestly() -> None:
+    m = _manifest()
+    assert "runs" not in m  # one run, not assembled from draws
+    assert all(not a["cached"] for r in m["cases"] for a in r["attempts"])
+    ledger = read_ledger(RECORDED_GATE / "ledger.jsonl")
+    hashes = [a["request_hash"] for r in m["cases"] for a in r["attempts"]]
+    assert [e.request_hash for e in ledger] == hashes and len(set(hashes)) == len(hashes)
+    plans = m["summary"]["plans"]
+    rows = [r for r in m["cases"] if r["expect"] == "plan"]
+    for key in ("valid_first_call", "valid_after_repair", "valid_after_layout_fix"):
+        assert plans[key] == sum(1 for r in rows if r["result"] == key), key
+    assert plans["failed"] == sum(1 for r in rows if r["result"] == "failed")
+    assert plans["valid"] + plans["failed"] == plans["n"] == len(rows)
+    assert plans["valid_rate"] == round(plans["valid"] / plans["n"], 4)
+    assert m["gate"]["passed"] == (
+        plans["valid_rate"] >= GATE_VALID_RATE and m["summary"]["refusals"]["failed"] == 0
+    )
+
+
+#: The hero plans frozen for the recorded Studio sessions (S7): a change to any of them is deliberate.
+FROZEN_HERO_TASK_IDS = {
+    "h1_tote": "e4586f3612e11b0eb490349c52a109bec75f43fdb0bcf9f1d91127f9e01a4ad5",
+    "h2_coupling": "33599e99ac277cf20e73d6acd349b9422330a255b3fe5ea48c6442a26c3decd6",
+    "h3_cabinet": "3297a111d7c61392e9a99a08d3a80a8e14c7046b80d277925ed3a78788ff651d",
+}
+
+
+def test_the_hero_plans_are_frozen_valid_and_open_the_lid_past_vertical() -> None:
+    from rtt.studio.engineer.catalog import LID_OPEN_DEG
+
+    rows = {r["case_id"]: r for r in _manifest()["cases"]}
+    assert {k: rows[k]["task_id"] for k in FROZEN_HERO_TASK_IDS} == FROZEN_HERO_TASK_IDS
+    for case_id, task_id in FROZEN_HERO_TASK_IDS.items():
+        assert rows[case_id]["passed"] and rows[case_id]["plan"]["status"] == "valid", case_id
+        spec, problems, _ = judge_args(hero_args(case_id))
+        assert spec is not None and problems == [] and spec.task_id == task_id
+    h1 = hero_args("h1_tote")
+    opens = [s for s in h1["steps"] if s["primitive"] == "hook_pull"]
+    assert opens and all(
+        any(c["quantity"] == "angle_deg" and (c["at_least"] or 0) >= LID_OPEN_DEG for c in s["success"])
+        for s in opens
+    )
+    assert all(
+        o["kind"] != "part" or abs(o["pose"]["x_mm"]) > 150 or abs(o["pose"]["y_mm"]) > 100
+        for o in h1["objects"]
+    )
 
 
 def test_the_recorded_gate_replays_exactly_with_zero_calls() -> None:
@@ -1014,6 +1227,8 @@ def test_the_recorded_gate_replays_exactly_with_zero_calls() -> None:
     for a, b in zip(m["cases"], replay["cases"], strict=True):
         for key in (
             "status",
+            "result",
+            "layout_moves",
             "steps",
             "task_id",
             "problems",
@@ -1084,6 +1299,9 @@ def test_parity_cases_cover_valid_refused_and_every_kind_of_problem() -> None:
         "before this twist",
         "label is longer",
         "a lip lid is opened by a hook",
+        "under this lid later, so open it past vertical",
+        "no earlier step opens that lid",
+        "meets a closed lid",
     ):
         assert fragment in joined, fragment
     recorded = recorded_plans()

@@ -4,9 +4,13 @@
 subset) with one client, in order, and :func:`gate_manifest` summarises the results:
 
 * **plans**: the three hero use cases and the five other realistic ones must give a valid
-  ``TaskSpec`` after at most one repair, in at least 90 % of the cases;
+  ``TaskSpec`` (on the first call, after the one repair call, or after the deterministic layout
+  fix that follows it), in at least 90 % of the cases;
 * **refusals**: the deliberately unsupported ones must be refused, with a reason and at least
   one nearest primitive.
+
+The gate is judged on **one** full live run: a case that fails stays recorded as failed (track
+S4e); the manifest's summary counts each case once, under its ``result``.
 
 Live (``--live``) the run calls Token Factory under a hard cap on everything recorded in its
 ledger; without it the run replays the recorded cache with zero API calls, and the test suite
@@ -42,7 +46,7 @@ __all__ = ["GATE_VALID_RATE", "RECORDED_GATE", "case_row", "gate_manifest", "run
 #: Share of the plan cases that must give a valid TaskSpec after at most one repair.
 GATE_VALID_RATE: Final = 0.9
 #: The recorded live gate run (scrubbed cache, ledger, manifest).
-RECORDED_GATE: Final = Path(__file__).with_name("recorded") / "gate-2026-10-18-s4d"
+RECORDED_GATE: Final = Path(__file__).with_name("recorded") / "gate-2026-10-18-s4e"
 
 
 def run_gate(
@@ -77,6 +81,9 @@ def case_row(case: UseCase, result: PlanResult) -> dict[str, Any]:
         "passed": passed,
         "first_try": result.first_try,
         "repaired": result.repaired,
+        "layout_fixed": result.layout_fixed,
+        "result": result.result,
+        "layout_moves": list(result.layout_moves),
         "calls": len(result.attempts),
         "steps": steps,
         "n_objects": len(spec.objects) if spec is not None else 0,
@@ -109,17 +116,24 @@ def gate_manifest(
     attempts = [a for r in rows for a in r["attempts"]]
     live = [a for a in attempts if not a["cached"]]
     tool = engineer_tool(compact=compact)
+
+    def count(rs: Sequence[dict[str, Any]], result: str) -> int:
+        return sum(1 for r in rs if r["result"] == result)
+
     summary = {
         "plans": {
             "n": len(plans),
             "valid": len(valid),
-            "valid_first_try": sum(1 for r in valid if r["first_try"]),
-            "valid_after_repair": sum(1 for r in valid if r["repaired"]),
+            "valid_first_call": count(valid, "valid_first_call"),
+            "valid_after_repair": count(valid, "valid_after_repair"),
+            "valid_after_layout_fix": count(valid, "valid_after_layout_fix"),
+            "failed": len(plans) - len(valid),
             "valid_rate": round(rate, 4) if plans else None,
         },
         "refusals": {
             "n": len(refusals),
             "refused_with_nearest": sum(1 for r in refusals if r["passed"]),
+            "failed": sum(1 for r in refusals if not r["passed"]),
         },
         "all_ok": sum(1 for r in rows if r["passed"]),
         "n": len(rows),

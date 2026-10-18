@@ -53,7 +53,7 @@ def _client(args: argparse.Namespace, cache_dir: Path, ledger_path: Path | None)
 
 def _print_plan(result: Any) -> None:
     spec = result.spec
-    print(f"status: {result.status} ({'first try' if result.first_try else f'{len(result.attempts)} calls'})")
+    print(f"status: {result.status} ({result.result.replace('_', ' ')}, {len(result.attempts)} calls)")
     if spec is not None:
         print(f"title: {spec.title}")
         if spec.refusal:
@@ -66,6 +66,8 @@ def _print_plan(result: Any) -> None:
         for u in spec.unsupported:
             near = u.nearest_primitive.value if u.nearest_primitive else "none"
             print(f"  not simulated: {u.what} ({u.reason}); nearest primitive: {near}")
+    for m in result.layout_moves:
+        print(f"  layout fix: {m}")
     for p in result.problems:
         print(f"  problem: {p}")
     for w in result.warnings:
@@ -148,17 +150,19 @@ def cmd_gate(args: argparse.Namespace) -> int:
         compact=args.compact_tool,
     )
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-    print("| case | expect | status | calls | steps |")
+    print("| case | expect | result | calls | steps |")
     print("|---|---|---|---|---|")
     for row in manifest["cases"]:
         steps = (
             ", ".join(f"{s['primitive']}:{s['object']}" for s in row["steps"]) or (row["refusal"] or "")[:60]
         )
-        verdict = row["status"] + (" (repaired)" if row["repaired"] else "")
+        verdict = row["result"].replace("_", " ")
         print(f"| {row['case_id']} | {row['expect']} | {verdict} | {row['calls']} | {steps} |")
     s = manifest["summary"]
     print(
-        f"plans valid {s['plans']['valid']}/{s['plans']['n']} (first try {s['plans']['valid_first_try']}), "
+        f"plans valid {s['plans']['valid']}/{s['plans']['n']} (first call {s['plans']['valid_first_call']}, "
+        f"after repair {s['plans']['valid_after_repair']}, after layout fix {s['plans']['valid_after_layout_fix']}, "
+        f"failed {s['plans']['failed']}), "
         f"refusals {s['refusals']['refused_with_nearest']}/{s['refusals']['n']}; "
         f"gate {'PASSED' if manifest['gate']['passed'] else 'FAILED'}; "
         f"recorded cost ${manifest['llm']['cost_usd']:.4f}"

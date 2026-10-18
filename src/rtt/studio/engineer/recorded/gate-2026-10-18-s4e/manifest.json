@@ -1,0 +1,2842 @@
+{
+  "format": "rtt-studio-engineer-gate",
+  "version": 1,
+  "label": "Product mode: not part of the pre-registered experiment",
+  "contract": "rtt-effectors/2",
+  "model": "nvidia/nemotron-3-super-120b-a12b",
+  "sampling": {
+    "temperature": 0.6,
+    "top_p": 0.95,
+    "max_tokens": 5000
+  },
+  "mode": "live",
+  "budget_usd": 0.24,
+  "written_at": "2026-10-18T16:56:15Z",
+  "tool": {
+    "compact": false,
+    "sha256": "d5ac5d4361ab8f61ccff4a3c3919298be5d00a84134fe85e5bd2fe2ec35cd702",
+    "bytes": 33196
+  },
+  "template_hashes": {
+    "system.md": "69589cf14a708eb214576522923c7193695f0e3189fffae1195c9ecadb386edb",
+    "user.md": "9eeadc86596227a22bcbe63a4be3f061cffc0de96d0f9d1b0c89801e40214cd1",
+    "repair.md": "215ddfaa29d5893f95760f4f36e56798831e846290069d3e3699b0ea411cf454"
+  },
+  "gate": {
+    "valid_rate_needed": 0.9,
+    "passed": true
+  },
+  "summary": {
+    "plans": {
+      "n": 8,
+      "valid": 8,
+      "valid_first_call": 1,
+      "valid_after_repair": 5,
+      "valid_after_layout_fix": 2,
+      "failed": 0,
+      "valid_rate": 1.0
+    },
+    "refusals": {
+      "n": 2,
+      "refused_with_nearest": 2,
+      "failed": 0
+    },
+    "all_ok": 10,
+    "n": 10
+  },
+  "llm": {
+    "calls": 17,
+    "live_calls": 17,
+    "cost_usd": 0.132807,
+    "prompt_tokens": 352696,
+    "completion_tokens": 29998
+  },
+  "cases": [
+    {
+      "case_id": "h1_tote",
+      "setting": "warehouse",
+      "title": "Returns tote",
+      "expect": "plan",
+      "text": "Warehouse returns: a plastic tote on the packing bench has a hinged lid. Open the lid, put a small rigid carton (about 120 x 80 x 60 mm, 300 g) and a flat shrink-wrapped pack (about 150 x 100 x 20 mm, 150 g) from the bench into the tote, then close the lid.",
+      "status": "valid",
+      "passed": true,
+      "first_try": false,
+      "repaired": true,
+      "layout_fixed": false,
+      "result": "valid_after_repair",
+      "layout_moves": [],
+      "calls": 2,
+      "steps": [
+        {
+          "id": "open_lid",
+          "primitive": "hook_pull",
+          "object": "tote_lid",
+          "target": null
+        },
+        {
+          "id": "pick_carton",
+          "primitive": "grasp",
+          "object": "carton",
+          "target": "tote_bin"
+        },
+        {
+          "id": "pick_pack",
+          "primitive": "grasp",
+          "object": "pack",
+          "target": "tote_bin"
+        },
+        {
+          "id": "close_lid",
+          "primitive": "push",
+          "object": "tote_lid",
+          "target": null
+        }
+      ],
+      "n_objects": 4,
+      "refusal": null,
+      "nearest_primitives": [],
+      "task_id": "e4586f3612e11b0eb490349c52a109bec75f43fdb0bcf9f1d91127f9e01a4ad5",
+      "problems": [],
+      "first_problems": [
+        "objects[2] (carton): its footprint overlaps the footprint of objects[0] (tote_bin); keep them at least 20 mm apart; a part picked into a bin starts outside it",
+        "objects[2] (carton): its footprint overlaps the footprint of objects[1] (tote_lid); keep them at least 20 mm apart",
+        "objects[3] (pack): its footprint overlaps the footprint of objects[0] (tote_bin); keep them at least 20 mm apart; a part picked into a bin starts outside it",
+        "objects[3] (pack): its footprint overlaps the footprint of objects[1] (tote_lid); keep them at least 20 mm apart"
+      ],
+      "warnings": [],
+      "notes": [
+        "Null written as text was read as null (refusal)."
+      ],
+      "cost_usd": 0.015858,
+      "attempts": [
+        {
+          "stage": "main",
+          "outcome": "invalid",
+          "problems": [
+            "objects[2] (carton): its footprint overlaps the footprint of objects[0] (tote_bin); keep them at least 20 mm apart; a part picked into a bin starts outside it",
+            "objects[2] (carton): its footprint overlaps the footprint of objects[1] (tote_lid); keep them at least 20 mm apart",
+            "objects[3] (pack): its footprint overlaps the footprint of objects[0] (tote_bin); keep them at least 20 mm apart; a part picked into a bin starts outside it",
+            "objects[3] (pack): its footprint overlaps the footprint of objects[1] (tote_lid); keep them at least 20 mm apart"
+          ],
+          "request_hash": "510672f1c19397136c58f3ce105997c98bc03d4412738fc7b464b8ea24f618fd",
+          "cached": false,
+          "prompt_tokens": 20378,
+          "completion_tokens": 1892,
+          "reasoning_tokens": 562,
+          "cost_usd": 0.0078162,
+          "latency_s": 26.492,
+          "finish_reason": "tool_calls",
+          "notes": [],
+          "error": null
+        },
+        {
+          "stage": "repair",
+          "outcome": "valid",
+          "problems": [],
+          "request_hash": "87452f1c22257a6aa6f2a582c18f49175b7c52160d6e5281a3978ce77b449d31",
+          "cached": false,
+          "prompt_tokens": 21606,
+          "completion_tokens": 1733,
+          "reasoning_tokens": 385,
+          "cost_usd": 0.0080415,
+          "latency_s": 26.3531,
+          "finish_reason": "tool_calls",
+          "notes": [],
+          "error": null
+        }
+      ],
+      "plan": {
+        "format": "rtt-studio-plan",
+        "version": 1,
+        "contract": "rtt-effectors/2",
+        "label": "Product mode: not part of the pre-registered experiment",
+        "model": "nvidia/nemotron-3-super-120b-a12b",
+        "use_case": "Warehouse returns: a plastic tote on the packing bench has a hinged lid. Open the lid, put a small rigid carton (about 120 x 80 x 60 mm, 300 g) and a flat shrink-wrapped pack (about 150 x 100 x 20 mm, 150 g) from the bench into the tote, then close the lid.",
+        "status": "valid",
+        "first_try": false,
+        "repaired": true,
+        "layout_fixed": false,
+        "result": "valid_after_repair",
+        "layout_moves": [],
+        "problems": [],
+        "warnings": [],
+        "notes": [
+          "Null written as text was read as null (refusal)."
+        ],
+        "uploads": [],
+        "plan": {
+          "contract": "rtt-effectors/2",
+          "label": "Product mode: not part of the pre-registered experiment",
+          "task_id": "e4586f3612e11b0eb490349c52a109bec75f43fdb0bcf9f1d91127f9e01a4ad5",
+          "source": "nemotron",
+          "title": "Warehouse returns tote lid open/close",
+          "description": "Open the hinged lid of a tote, place a small carton and a flat pack inside, then close the lid.",
+          "objects": [
+            {
+              "name": "tote_bin",
+              "kind": "bin",
+              "params": {
+                "fixed": true,
+                "height_mm": 120,
+                "length_mm": 300,
+                "wall_mm": 4,
+                "width_mm": 200
+              },
+              "pose": {
+                "x_mm": 0.0,
+                "y_mm": 0.0,
+                "yaw_deg": 0.0
+              },
+              "ref": null,
+              "label": "Tote"
+            },
+            {
+              "name": "tote_lid",
+              "kind": "hinged_lid",
+              "params": {
+                "damping_nms": 0.05,
+                "depth_mm": 240,
+                "feature": "lip",
+                "feature_mm": 20,
+                "max_angle_deg": 110,
+                "open_torque_nm": 0.3,
+                "orientation": "lid",
+                "thickness_mm": 6,
+                "width_mm": 340
+              },
+              "pose": {
+                "x_mm": 0.0,
+                "y_mm": 0.0,
+                "yaw_deg": 0.0
+              },
+              "ref": null,
+              "label": "Tote lid"
+            },
+            {
+              "name": "carton",
+              "kind": "part",
+              "params": {
+                "mass_g": 300,
+                "shape": "box",
+                "size_x_mm": 120,
+                "size_y_mm": 80,
+                "size_z_mm": 60
+              },
+              "pose": {
+                "x_mm": -200.0,
+                "y_mm": -200.0,
+                "yaw_deg": 0.0
+              },
+              "ref": null,
+              "label": "Small carton"
+            },
+            {
+              "name": "pack",
+              "kind": "part",
+              "params": {
+                "mass_g": 150,
+                "shape": "box",
+                "size_x_mm": 150,
+                "size_y_mm": 100,
+                "size_z_mm": 20
+              },
+              "pose": {
+                "x_mm": 200.0,
+                "y_mm": -200.0,
+                "yaw_deg": 0.0
+              },
+              "ref": null,
+              "label": "Flat pack"
+            }
+          ],
+          "steps": [
+            {
+              "id": "open_lid",
+              "primitive": "hook_pull",
+              "object": "tote_lid",
+              "handle": "handle",
+              "target": null,
+              "params": {
+                "approach": "top",
+                "speed_mm_s": 80
+              },
+              "constraints": {
+                "max_force_n": 20.0,
+                "max_torque_nm": null,
+                "precision_mm": null,
+                "precision_deg": null
+              },
+              "success": [
+                {
+                  "quantity": "angle_deg",
+                  "at_least": 95.0,
+                  "at_most": null
+                }
+              ],
+              "after": [],
+              "hold_after": false,
+              "description": "Hook the lid's lip and pull it open past vertical."
+            },
+            {
+              "id": "pick_carton",
+              "primitive": "grasp",
+              "object": "carton",
+              "handle": "part",
+              "target": "tote_bin",
+              "params": {
+                "hold_s": 1,
+                "lift_mm": 150
+              },
+              "constraints": {
+                "max_force_n": null,
+                "max_torque_nm": null,
+                "precision_mm": null,
+                "precision_deg": null
+              },
+              "success": [
+                {
+                  "quantity": "in_target",
+                  "at_least": 1.0,
+                  "at_most": null
+                },
+                {
+                  "quantity": "tilt_deg",
+                  "at_least": null,
+                  "at_most": 30.0
+                }
+              ],
+              "after": [
+                "open_lid"
+              ],
+              "hold_after": false,
+              "description": "Pick the small carton and place it inside the tote."
+            },
+            {
+              "id": "pick_pack",
+              "primitive": "grasp",
+              "object": "pack",
+              "handle": "part",
+              "target": "tote_bin",
+              "params": {
+                "hold_s": 1,
+                "lift_mm": 150
+              },
+              "constraints": {
+                "max_force_n": null,
+                "max_torque_nm": null,
+                "precision_mm": null,
+                "precision_deg": null
+              },
+              "success": [
+                {
+                  "quantity": "in_target",
+                  "at_least": 1.0,
+                  "at_most": null
+                },
+                {
+                  "quantity": "tilt_deg",
+                  "at_least": null,
+                  "at_most": 30.0
+                }
+              ],
+              "after": [
+                "open_lid"
+              ],
+              "hold_after": false,
+              "description": "Pick the flat pack and place it inside the tote."
+            },
+            {
+              "id": "close_lid",
+              "primitive": "push",
+              "object": "tote_lid",
+              "handle": "lid",
+              "target": null,
+              "params": {
+                "speed_mm_s": 60
+              },
+              "constraints": {
+                "max_force_n": 20.0,
+                "max_torque_nm": null,
+                "precision_mm": null,
+                "precision_deg": null
+              },
+              "success": [
+                {
+                  "quantity": "angle_deg",
+                  "at_least": null,
+                  "at_most": 5.0
+                }
+              ],
+              "after": [
+                "pick_carton",
+                "pick_pack"
+              ],
+              "hold_after": false,
+              "description": "Push the lid shut until it latched."
+            }
+          ],
+          "assumptions": [
+            "Tote interior approx 300x200x120 mm, lid overhang 20 mm each side.",
+            "Lid lip feature 20 mm enables hook pull.",
+            "Carton and pack are rigid boxes as described."
+          ],
+          "clarifications": [],
+          "unsupported": [],
+          "refusal": null,
+          "fidelity": {
+            "open_lid": "rigid",
+            "pick_carton": "rigid",
+            "pick_pack": "rigid",
+            "close_lid": "rigid"
+          }
+        },
+        "attempts": [
+          {
+            "stage": "main",
+            "outcome": "invalid",
+            "problems": [
+              "objects[2] (carton): its footprint overlaps the footprint of objects[0] (tote_bin); keep them at least 20 mm apart; a part picked into a bin starts outside it",
+              "objects[2] (carton): its footprint overlaps the footprint of objects[1] (tote_lid); keep them at least 20 mm apart",
+              "objects[3] (pack): its footprint overlaps the footprint of objects[0] (tote_bin); keep them at least 20 mm apart; a part picked into a bin starts outside it",
+              "objects[3] (pack): its footprint overlaps the footprint of objects[1] (tote_lid); keep them at least 20 mm apart"
+            ],
+            "request_hash": "510672f1c19397136c58f3ce105997c98bc03d4412738fc7b464b8ea24f618fd",
+            "cached": false,
+            "prompt_tokens": 20378,
+            "completion_tokens": 1892,
+            "reasoning_tokens": 562,
+            "cost_usd": 0.0078162,
+            "latency_s": 26.492,
+            "finish_reason": "tool_calls",
+            "notes": [],
+            "error": null
+          },
+          {
+            "stage": "repair",
+            "outcome": "valid",
+            "problems": [],
+            "request_hash": "87452f1c22257a6aa6f2a582c18f49175b7c52160d6e5281a3978ce77b449d31",
+            "cached": false,
+            "prompt_tokens": 21606,
+            "completion_tokens": 1733,
+            "reasoning_tokens": 385,
+            "cost_usd": 0.0080415,
+            "latency_s": 26.3531,
+            "finish_reason": "tool_calls",
+            "notes": [],
+            "error": null
+          }
+        ],
+        "cost_usd": 0.015858,
+        "template_hashes": {
+          "system.md": "69589cf14a708eb214576522923c7193695f0e3189fffae1195c9ecadb386edb",
+          "user.md": "9eeadc86596227a22bcbe63a4be3f061cffc0de96d0f9d1b0c89801e40214cd1",
+          "repair.md": "215ddfaa29d5893f95760f4f36e56798831e846290069d3e3699b0ea411cf454"
+        },
+        "tool_sha256": "d5ac5d4361ab8f61ccff4a3c3919298be5d00a84134fe85e5bd2fe2ec35cd702"
+      }
+    },
+    {
+      "case_id": "h2_coupling",
+      "setting": "construction",
+      "title": "Pipe coupling",
+      "expect": "plan",
+      "text": "Pipe prefabrication: a threaded steel coupling (1 inch pipe size, about 40 mm across and 45 mm long) sits loosely on the threaded stub of a pipe spool that stands upright. Push it onto the thread start and turn it on until it is hand-tight (about 3 N m), never over 8 N m.",
+      "status": "valid",
+      "passed": true,
+      "first_try": false,
+      "repaired": true,
+      "layout_fixed": false,
+      "result": "valid_after_repair",
+      "layout_moves": [],
+      "calls": 2,
+      "steps": [
+        {
+          "id": "insert_coupling",
+          "primitive": "insert",
+          "object": "pipe_coupling",
+          "target": null
+        },
+        {
+          "id": "tighten_coupling",
+          "primitive": "twist",
+          "object": "pipe_coupling",
+          "target": null
+        }
+      ],
+      "n_objects": 1,
+      "refusal": null,
+      "nearest_primitives": [],
+      "task_id": "33599e99ac277cf20e73d6acd349b9422330a255b3fe5ea48c6442a26c3decd6",
+      "problems": [],
+      "first_problems": [
+        "steps[0] (insert_coupling): end the insert of a threaded member with hold_after false; the twist grips it again in place"
+      ],
+      "warnings": [],
+      "notes": [
+        "Null written as text was read as null (refusal)."
+      ],
+      "cost_usd": 0.015215,
+      "attempts": [
+        {
+          "stage": "main",
+          "outcome": "invalid",
+          "problems": [
+            "steps[0] (insert_coupling): end the insert of a threaded member with hold_after false; the twist grips it again in place"
+          ],
+          "request_hash": "dacb955faab1629ee407de704fae5e25dac87f240e45dd6137487914553e2688",
+          "cached": false,
+          "prompt_tokens": 20361,
+          "completion_tokens": 2069,
+          "reasoning_tokens": 1296,
+          "cost_usd": 0.0079704,
+          "latency_s": 27.0721,
+          "finish_reason": "tool_calls",
+          "notes": [],
+          "error": null
+        },
+        {
+          "stage": "repair",
+          "outcome": "valid",
+          "problems": [],
+          "request_hash": "89e5e081793b3418c6ad7a3519b6b823a48f9bfc42b06f480110e591c4752a9a",
+          "cached": false,
+          "prompt_tokens": 21005,
+          "completion_tokens": 1048,
+          "reasoning_tokens": 285,
+          "cost_usd": 0.0072447,
+          "latency_s": 21.0731,
+          "finish_reason": "tool_calls",
+          "notes": [],
+          "error": null
+        }
+      ],
+      "plan": {
+        "format": "rtt-studio-plan",
+        "version": 1,
+        "contract": "rtt-effectors/2",
+        "label": "Product mode: not part of the pre-registered experiment",
+        "model": "nvidia/nemotron-3-super-120b-a12b",
+        "use_case": "Pipe prefabrication: a threaded steel coupling (1 inch pipe size, about 40 mm across and 45 mm long) sits loosely on the threaded stub of a pipe spool that stands upright. Push it onto the thread start and turn it on until it is hand-tight (about 3 N m), never over 8 N m.",
+        "status": "valid",
+        "first_try": false,
+        "repaired": true,
+        "layout_fixed": false,
+        "result": "valid_after_repair",
+        "layout_moves": [],
+        "problems": [],
+        "warnings": [],
+        "notes": [
+          "Null written as text was read as null (refusal)."
+        ],
+        "uploads": [],
+        "plan": {
+          "contract": "rtt-effectors/2",
+          "label": "Product mode: not part of the pre-registered experiment",
+          "task_id": "33599e99ac277cf20e73d6acd349b9422330a255b3fe5ea48c6442a26c3decd6",
+          "source": "nemotron",
+          "title": "Pipe coupling tightening",
+          "description": "A threaded coupling sits on a pipe stub; insert it to the thread start then tighten clockwise to hand\u2011tight torque.",
+          "objects": [
+            {
+              "name": "pipe_coupling",
+              "kind": "threaded_joint",
+              "params": {
+                "chamfer_mm": 1,
+                "diameter_mm": 40,
+                "engage_turns": 2,
+                "final_torque_nm": 8,
+                "length_mm": 45,
+                "member": "coupling",
+                "pitch_mm": 1.5,
+                "start_torque_nm": 0.2
+              },
+              "pose": {
+                "x_mm": 0.0,
+                "y_mm": 0.0,
+                "yaw_deg": 0.0
+              },
+              "ref": null,
+              "label": "Pipe coupling"
+            }
+          ],
+          "steps": [
+            {
+              "id": "insert_coupling",
+              "primitive": "insert",
+              "object": "pipe_coupling",
+              "handle": "member",
+              "target": null,
+              "params": {
+                "speed_mm_s": 10,
+                "standoff_mm": 5
+              },
+              "constraints": {
+                "max_force_n": 30.0,
+                "max_torque_nm": null,
+                "precision_mm": 1.0,
+                "precision_deg": null
+              },
+              "success": [
+                {
+                  "quantity": "depth_mm",
+                  "at_least": null,
+                  "at_most": 4.0
+                },
+                {
+                  "quantity": "jam",
+                  "at_least": null,
+                  "at_most": 0.0
+                }
+              ],
+              "after": [],
+              "hold_after": false,
+              "description": "Push the coupling onto the thread start until it seats on the chamfer."
+            },
+            {
+              "id": "tighten_coupling",
+              "primitive": "twist",
+              "object": "pipe_coupling",
+              "handle": "member",
+              "target": null,
+              "params": {
+                "direction": "cw",
+                "speed_deg_s": 60
+              },
+              "constraints": {
+                "max_force_n": null,
+                "max_torque_nm": 10.0,
+                "precision_mm": null,
+                "precision_deg": null
+              },
+              "success": [
+                {
+                  "quantity": "torque_nm",
+                  "at_least": 3.0,
+                  "at_most": 8.0
+                },
+                {
+                  "quantity": "turns",
+                  "at_least": 0.25,
+                  "at_most": null
+                }
+              ],
+              "after": [
+                "insert_coupling"
+              ],
+              "hold_after": false,
+              "description": "Turn the coupling clockwise to hand\u2011tight torque."
+            }
+          ],
+          "assumptions": [
+            "The coupling outer diameter is about 40 mm and length 45 mm.",
+            "Thread pitch is 1.5 mm, typical for 1\u2011inch pipe threads.",
+            "Seating depth is chamfer plus 3\u202fmm."
+          ],
+          "clarifications": [],
+          "unsupported": [],
+          "refusal": null,
+          "fidelity": {
+            "insert_coupling": "approximation",
+            "tighten_coupling": "approximation"
+          }
+        },
+        "attempts": [
+          {
+            "stage": "main",
+            "outcome": "invalid",
+            "problems": [
+              "steps[0] (insert_coupling): end the insert of a threaded member with hold_after false; the twist grips it again in place"
+            ],
+            "request_hash": "dacb955faab1629ee407de704fae5e25dac87f240e45dd6137487914553e2688",
+            "cached": false,
+            "prompt_tokens": 20361,
+            "completion_tokens": 2069,
+            "reasoning_tokens": 1296,
+            "cost_usd": 0.0079704,
+            "latency_s": 27.0721,
+            "finish_reason": "tool_calls",
+            "notes": [],
+            "error": null
+          },
+          {
+            "stage": "repair",
+            "outcome": "valid",
+            "problems": [],
+            "request_hash": "89e5e081793b3418c6ad7a3519b6b823a48f9bfc42b06f480110e591c4752a9a",
+            "cached": false,
+            "prompt_tokens": 21005,
+            "completion_tokens": 1048,
+            "reasoning_tokens": 285,
+            "cost_usd": 0.0072447,
+            "latency_s": 21.0731,
+            "finish_reason": "tool_calls",
+            "notes": [],
+            "error": null
+          }
+        ],
+        "cost_usd": 0.015215,
+        "template_hashes": {
+          "system.md": "69589cf14a708eb214576522923c7193695f0e3189fffae1195c9ecadb386edb",
+          "user.md": "9eeadc86596227a22bcbe63a4be3f061cffc0de96d0f9d1b0c89801e40214cd1",
+          "repair.md": "215ddfaa29d5893f95760f4f36e56798831e846290069d3e3699b0ea411cf454"
+        },
+        "tool_sha256": "d5ac5d4361ab8f61ccff4a3c3919298be5d00a84134fe85e5bd2fe2ec35cd702"
+      }
+    },
+    {
+      "case_id": "h3_cabinet",
+      "setting": "maintenance",
+      "title": "Equipment cabinet",
+      "expect": "plan",
+      "text": "Field maintenance on an equipment cabinet: turn the quarter-turn latch to unlock the door, swing the door open, turn the valve handwheel inside a quarter turn (90 degrees) to open it, then plug the 8 mm round test connector into the service port.",
+      "status": "valid",
+      "passed": true,
+      "first_try": false,
+      "repaired": false,
+      "layout_fixed": true,
+      "result": "valid_after_layout_fix",
+      "layout_moves": [
+        "Moved test_port from (0, -150) to (0, -240) mm to clear the swing of cabinet_door"
+      ],
+      "calls": 2,
+      "steps": [
+        {
+          "id": "unlock_latch",
+          "primitive": "twist",
+          "object": "qt_latch",
+          "target": null
+        },
+        {
+          "id": "open_door",
+          "primitive": "hook_pull",
+          "object": "cabinet_door",
+          "target": null
+        },
+        {
+          "id": "open_valve",
+          "primitive": "twist",
+          "object": "service_valve",
+          "target": null
+        },
+        {
+          "id": "plug_connector",
+          "primitive": "insert",
+          "object": "test_port",
+          "target": null
+        }
+      ],
+      "n_objects": 4,
+      "refusal": null,
+      "nearest_primitives": [],
+      "task_id": "3297a111d7c61392e9a99a08d3a80a8e14c7046b80d277925ed3a78788ff651d",
+      "problems": [],
+      "first_problems": [
+        "step open_door: acts on 'cabinet_door' while 'qt_latch' is still held by the previous step",
+        "step plug_connector: acts on 'test_port' while 'service_valve' is still held by the previous step",
+        "objects[1] (cabinet_door): its footprint overlaps the footprint of objects[0] (qt_latch); keep them at least 20 mm apart",
+        "objects[2] (service_valve): its footprint overlaps the footprint of objects[1] (cabinet_door); keep them at least 20 mm apart"
+      ],
+      "warnings": [],
+      "notes": [
+        "Null written as text was read as null (refusal).",
+        "The layout fixer moved 1 object in code after the repair call; each move is an assumption of the plan."
+      ],
+      "cost_usd": 0.016949,
+      "attempts": [
+        {
+          "stage": "main",
+          "outcome": "invalid",
+          "problems": [
+            "step open_door: acts on 'cabinet_door' while 'qt_latch' is still held by the previous step",
+            "step plug_connector: acts on 'test_port' while 'service_valve' is still held by the previous step",
+            "objects[1] (cabinet_door): its footprint overlaps the footprint of objects[0] (qt_latch); keep them at least 20 mm apart",
+            "objects[2] (service_valve): its footprint overlaps the footprint of objects[1] (cabinet_door); keep them at least 20 mm apart"
+          ],
+          "request_hash": "84d8500e9acc44c8a8f3d0c85fe29401c3f682b11ed23c4149695529ece7094e",
+          "cached": false,
+          "prompt_tokens": 20342,
+          "completion_tokens": 2720,
+          "reasoning_tokens": 1194,
+          "cost_usd": 0.008550599999999998,
+          "latency_s": 27.0102,
+          "finish_reason": "tool_calls",
+          "notes": [],
+          "error": null
+        },
+        {
+          "stage": "repair",
+          "outcome": "invalid",
+          "problems": [
+            "objects[3] (test_port): its footprint overlaps the swing of objects[1] (cabinet_door); keep them at least 20 mm apart"
+          ],
+          "request_hash": "2ff96bcc3bdd42218de36607ae9a9b795c9d110f48e4e6835eac1f66f2c80e66",
+          "cached": false,
+          "prompt_tokens": 21731,
+          "completion_tokens": 2088,
+          "reasoning_tokens": 539,
+          "cost_usd": 0.0083985,
+          "latency_s": 27.4598,
+          "finish_reason": "tool_calls",
+          "notes": [],
+          "error": null
+        }
+      ],
+      "plan": {
+        "format": "rtt-studio-plan",
+        "version": 1,
+        "contract": "rtt-effectors/2",
+        "label": "Product mode: not part of the pre-registered experiment",
+        "model": "nvidia/nemotron-3-super-120b-a12b",
+        "use_case": "Field maintenance on an equipment cabinet: turn the quarter-turn latch to unlock the door, swing the door open, turn the valve handwheel inside a quarter turn (90 degrees) to open it, then plug the 8 mm round test connector into the service port.",
+        "status": "valid",
+        "first_try": false,
+        "repaired": false,
+        "layout_fixed": true,
+        "result": "valid_after_layout_fix",
+        "layout_moves": [
+          "Moved test_port from (0, -150) to (0, -240) mm to clear the swing of cabinet_door"
+        ],
+        "problems": [],
+        "warnings": [],
+        "notes": [
+          "Null written as text was read as null (refusal).",
+          "The layout fixer moved 1 object in code after the repair call; each move is an assumption of the plan."
+        ],
+        "uploads": [],
+        "plan": {
+          "contract": "rtt-effectors/2",
+          "label": "Product mode: not part of the pre-registered experiment",
+          "task_id": "3297a111d7c61392e9a99a08d3a80a8e14c7046b80d277925ed3a78788ff651d",
+          "source": "nemotron",
+          "title": "Cabinet maintenance",
+          "description": "Unlock a quarter-turn latch, swing open a cabinet door, open a handwheel valve by a quarter turn, and insert an 8\u202fmm test connector into a service port.",
+          "objects": [
+            {
+              "name": "qt_latch",
+              "kind": "quarter_turn_latch",
+              "params": {
+                "detent": true,
+                "head": "wing",
+                "head_diameter_mm": 20,
+                "head_height_mm": 10,
+                "torque_nm": 0.5,
+                "turn_deg": 90
+              },
+              "pose": {
+                "x_mm": -100.0,
+                "y_mm": 0.0,
+                "yaw_deg": 0.0
+              },
+              "ref": null,
+              "label": "Quarter-turn latch"
+            },
+            {
+              "name": "cabinet_door",
+              "kind": "hinged_lid",
+              "params": {
+                "damping_nms": 0.05,
+                "depth_mm": 200,
+                "feature": "handle",
+                "feature_mm": 20,
+                "max_angle_deg": 120,
+                "open_torque_nm": 0.2,
+                "orientation": "door",
+                "thickness_mm": 5,
+                "width_mm": 400
+              },
+              "pose": {
+                "x_mm": 100.0,
+                "y_mm": 0.0,
+                "yaw_deg": 0.0
+              },
+              "ref": null,
+              "label": "Cabinet door"
+            },
+            {
+              "name": "service_valve",
+              "kind": "handwheel_valve",
+              "params": {
+                "rim_diameter_mm": 100,
+                "rim_section_mm": 10,
+                "spokes": 3,
+                "torque_nm": 2,
+                "travel_deg": 90
+              },
+              "pose": {
+                "x_mm": 0.0,
+                "y_mm": 150.0,
+                "yaw_deg": 0.0
+              },
+              "ref": null,
+              "label": "Service valve"
+            },
+            {
+              "name": "test_port",
+              "kind": "port_plug",
+              "params": {
+                "chamfer_mm": 1,
+                "clearance_mm": 0.2,
+                "depth_mm": 15,
+                "insert_force_n": 5,
+                "latch": false,
+                "plug_diameter_mm": 8,
+                "plug_length_mm": 30
+              },
+              "pose": {
+                "x_mm": 0.0,
+                "y_mm": -240.0,
+                "yaw_deg": 0.0
+              },
+              "ref": null,
+              "label": "Test port"
+            }
+          ],
+          "steps": [
+            {
+              "id": "unlock_latch",
+              "primitive": "twist",
+              "object": "qt_latch",
+              "handle": "head",
+              "target": null,
+              "params": {
+                "direction": "ccw",
+                "speed_deg_s": 60
+              },
+              "constraints": {
+                "max_force_n": null,
+                "max_torque_nm": 5.0,
+                "precision_mm": null,
+                "precision_deg": null
+              },
+              "success": [
+                {
+                  "quantity": "angle_deg",
+                  "at_least": 80.0,
+                  "at_most": 100.0
+                }
+              ],
+              "after": [],
+              "hold_after": false,
+              "description": "Turn the quarter-turn latch counter\u2011clockwise to unlock the door."
+            },
+            {
+              "id": "open_door",
+              "primitive": "hook_pull",
+              "object": "cabinet_door",
+              "handle": "handle",
+              "target": null,
+              "params": {
+                "approach": "front",
+                "speed_mm_s": 100
+              },
+              "constraints": {
+                "max_force_n": 20.0,
+                "max_torque_nm": null,
+                "precision_mm": null,
+                "precision_deg": null
+              },
+              "success": [
+                {
+                  "quantity": "angle_deg",
+                  "at_least": 100.0,
+                  "at_most": 130.0
+                }
+              ],
+              "after": [
+                "unlock_latch"
+              ],
+              "hold_after": false,
+              "description": "Hook the door handle and pull the door open."
+            },
+            {
+              "id": "open_valve",
+              "primitive": "twist",
+              "object": "service_valve",
+              "handle": "wheel",
+              "target": null,
+              "params": {
+                "direction": "ccw",
+                "speed_deg_s": 60
+              },
+              "constraints": {
+                "max_force_n": null,
+                "max_torque_nm": 5.0,
+                "precision_mm": null,
+                "precision_deg": null
+              },
+              "success": [
+                {
+                  "quantity": "angle_deg",
+                  "at_least": 80.0,
+                  "at_most": 100.0
+                }
+              ],
+              "after": [
+                "open_door"
+              ],
+              "hold_after": false,
+              "description": "Turn the handwheel valve counter\u2011clockwise a quarter turn to open it."
+            },
+            {
+              "id": "plug_connector",
+              "primitive": "insert",
+              "object": "test_port",
+              "handle": "plug",
+              "target": null,
+              "params": {
+                "speed_mm_s": 10,
+                "standoff_mm": 5
+              },
+              "constraints": {
+                "max_force_n": 30.0,
+                "max_torque_nm": null,
+                "precision_mm": null,
+                "precision_deg": null
+              },
+              "success": [
+                {
+                  "quantity": "depth_mm",
+                  "at_least": 12.0,
+                  "at_most": 18.0
+                }
+              ],
+              "after": [
+                "open_valve"
+              ],
+              "hold_after": false,
+              "description": "Insert the 8\u202fmm test connector into the service port."
+            }
+          ],
+          "assumptions": [
+            "The latch requires about 0.5\u202fN\u00b7m to turn and has a wing head 20\u202fmm diameter.",
+            "The cabinet door is 400\u202fmm tall, 200\u202fmm deep, hinged on the left edge with a handle 20\u202fmm from the front.",
+            "The service valve needs roughly 2\u202fN\u00b7m to turn and has a 100\u202fmm rim handwheel.",
+            "The test port socket accepts an 8\u202fmm plug with 0.2\u202fmm clearance and 1\u202fmm chamfer.",
+            "Moved test_port from (0, -150) to (0, -240) mm to clear the swing of cabinet_door"
+          ],
+          "clarifications": [],
+          "unsupported": [],
+          "refusal": null,
+          "fidelity": {
+            "unlock_latch": "approximation",
+            "open_door": "rigid",
+            "open_valve": "approximation",
+            "plug_connector": "rigid"
+          }
+        },
+        "attempts": [
+          {
+            "stage": "main",
+            "outcome": "invalid",
+            "problems": [
+              "step open_door: acts on 'cabinet_door' while 'qt_latch' is still held by the previous step",
+              "step plug_connector: acts on 'test_port' while 'service_valve' is still held by the previous step",
+              "objects[1] (cabinet_door): its footprint overlaps the footprint of objects[0] (qt_latch); keep them at least 20 mm apart",
+              "objects[2] (service_valve): its footprint overlaps the footprint of objects[1] (cabinet_door); keep them at least 20 mm apart"
+            ],
+            "request_hash": "84d8500e9acc44c8a8f3d0c85fe29401c3f682b11ed23c4149695529ece7094e",
+            "cached": false,
+            "prompt_tokens": 20342,
+            "completion_tokens": 2720,
+            "reasoning_tokens": 1194,
+            "cost_usd": 0.008550599999999998,
+            "latency_s": 27.0102,
+            "finish_reason": "tool_calls",
+            "notes": [],
+            "error": null
+          },
+          {
+            "stage": "repair",
+            "outcome": "invalid",
+            "problems": [
+              "objects[3] (test_port): its footprint overlaps the swing of objects[1] (cabinet_door); keep them at least 20 mm apart"
+            ],
+            "request_hash": "2ff96bcc3bdd42218de36607ae9a9b795c9d110f48e4e6835eac1f66f2c80e66",
+            "cached": false,
+            "prompt_tokens": 21731,
+            "completion_tokens": 2088,
+            "reasoning_tokens": 539,
+            "cost_usd": 0.0083985,
+            "latency_s": 27.4598,
+            "finish_reason": "tool_calls",
+            "notes": [],
+            "error": null
+          }
+        ],
+        "cost_usd": 0.016949,
+        "template_hashes": {
+          "system.md": "69589cf14a708eb214576522923c7193695f0e3189fffae1195c9ecadb386edb",
+          "user.md": "9eeadc86596227a22bcbe63a4be3f061cffc0de96d0f9d1b0c89801e40214cd1",
+          "repair.md": "215ddfaa29d5893f95760f4f36e56798831e846290069d3e3699b0ea411cf454"
+        },
+        "tool_sha256": "d5ac5d4361ab8f61ccff4a3c3919298be5d00a84134fe85e5bd2fe2ec35cd702"
+      }
+    },
+    {
+      "case_id": "e1_drawer_kitting",
+      "setting": "warehouse",
+      "title": "Drawer kitting",
+      "expect": "plan",
+      "text": "Kitting at a parts shelf: pull open the drawer of the shelf unit, take a 50 mm cube part off the bench and a short steel rod (20 mm across, 60 mm long) next to it, drop both into the kit tray, then push the drawer closed again.",
+      "status": "valid",
+      "passed": true,
+      "first_try": false,
+      "repaired": true,
+      "layout_fixed": false,
+      "result": "valid_after_repair",
+      "layout_moves": [],
+      "calls": 2,
+      "steps": [
+        {
+          "id": "open_drawer",
+          "primitive": "hook_pull",
+          "object": "shelf_drawer",
+          "target": null
+        },
+        {
+          "id": "pick_cube",
+          "primitive": "grasp",
+          "object": "cube_part",
+          "target": "kit_tray"
+        },
+        {
+          "id": "pick_rod",
+          "primitive": "grasp",
+          "object": "rod_part",
+          "target": "kit_tray"
+        },
+        {
+          "id": "close_drawer",
+          "primitive": "push",
+          "object": "shelf_drawer",
+          "target": null
+        }
+      ],
+      "n_objects": 4,
+      "refusal": null,
+      "nearest_primitives": [],
+      "task_id": "9631f73b0824931098cc32792fab25e8bab0bb6c4829562b68b94475fc36522a",
+      "problems": [],
+      "first_problems": [
+        "objects[1] (cube_part): its footprint overlaps the footprint of objects[0] (shelf_drawer); keep them at least 20 mm apart",
+        "objects[2] (rod_part): its footprint overlaps the footprint of objects[0] (shelf_drawer); keep them at least 20 mm apart",
+        "objects[2] (rod_part): its footprint comes within 20 mm of the footprint of objects[1] (cube_part); keep them at least 20 mm apart",
+        "objects[3] (kit_tray): its footprint overlaps the footprint of objects[0] (shelf_drawer); keep them at least 20 mm apart"
+      ],
+      "warnings": [],
+      "notes": [
+        "Null written as text was read as null (refusal)."
+      ],
+      "cost_usd": 0.018196,
+      "attempts": [
+        {
+          "stage": "main",
+          "outcome": "invalid",
+          "problems": [
+            "objects[1] (cube_part): its footprint overlaps the footprint of objects[0] (shelf_drawer); keep them at least 20 mm apart",
+            "objects[2] (rod_part): its footprint overlaps the footprint of objects[0] (shelf_drawer); keep them at least 20 mm apart",
+            "objects[2] (rod_part): its footprint comes within 20 mm of the footprint of objects[1] (cube_part); keep them at least 20 mm apart",
+            "objects[3] (kit_tray): its footprint overlaps the footprint of objects[0] (shelf_drawer); keep them at least 20 mm apart"
+          ],
+          "request_hash": "a813284cf95e613aec6c2f3e257a2b61b9b6e89abbc44ad853331763269a1ad1",
+          "cached": false,
+          "prompt_tokens": 20350,
+          "completion_tokens": 1820,
+          "reasoning_tokens": 424,
+          "cost_usd": 0.007743,
+          "latency_s": 23.0557,
+          "finish_reason": "tool_calls",
+          "notes": [],
+          "error": null
+        },
+        {
+          "stage": "repair",
+          "outcome": "valid",
+          "problems": [],
+          "request_hash": "bee0579a88c4a27cb9db048fc171f0555178b8ad25039f14aa89a474ba0b2995",
+          "cached": false,
+          "prompt_tokens": 21633,
+          "completion_tokens": 4403,
+          "reasoning_tokens": 2956,
+          "cost_usd": 0.010452600000000001,
+          "latency_s": 40.0529,
+          "finish_reason": "tool_calls",
+          "notes": [],
+          "error": null
+        }
+      ],
+      "plan": {
+        "format": "rtt-studio-plan",
+        "version": 1,
+        "contract": "rtt-effectors/2",
+        "label": "Product mode: not part of the pre-registered experiment",
+        "model": "nvidia/nemotron-3-super-120b-a12b",
+        "use_case": "Kitting at a parts shelf: pull open the drawer of the shelf unit, take a 50 mm cube part off the bench and a short steel rod (20 mm across, 60 mm long) next to it, drop both into the kit tray, then push the drawer closed again.",
+        "status": "valid",
+        "first_try": false,
+        "repaired": true,
+        "layout_fixed": false,
+        "result": "valid_after_repair",
+        "layout_moves": [],
+        "problems": [],
+        "warnings": [],
+        "notes": [
+          "Null written as text was read as null (refusal)."
+        ],
+        "uploads": [],
+        "plan": {
+          "contract": "rtt-effectors/2",
+          "label": "Product mode: not part of the pre-registered experiment",
+          "task_id": "9631f73b0824931098cc32792fab25e8bab0bb6c4829562b68b94475fc36522a",
+          "source": "nemotron",
+          "title": "Parts shelf kitting",
+          "description": "Open the drawer, pick a 50 mm cube and a 20 mm diameter 60 mm long rod from the bench, place both into the kit tray, then close the drawer.",
+          "objects": [
+            {
+              "name": "shelf_drawer",
+              "kind": "drawer",
+              "params": {
+                "depth_mm": 350,
+                "handle": "bar",
+                "handle_mm": 25,
+                "height_mm": 100,
+                "pull_force_n": 5,
+                "travel_mm": 250,
+                "width_mm": 400
+              },
+              "pose": {
+                "x_mm": 0.0,
+                "y_mm": 0.0,
+                "yaw_deg": 0.0
+              },
+              "ref": null,
+              "label": "Shelf drawer"
+            },
+            {
+              "name": "kit_tray",
+              "kind": "bin",
+              "params": {
+                "fixed": true,
+                "height_mm": 50,
+                "length_mm": 100,
+                "wall_mm": 5,
+                "width_mm": 100
+              },
+              "pose": {
+                "x_mm": -300.0,
+                "y_mm": 0.0,
+                "yaw_deg": 0.0
+              },
+              "ref": null,
+              "label": "Kit tray"
+            },
+            {
+              "name": "cube_part",
+              "kind": "part",
+              "params": {
+                "mass_g": 200,
+                "shape": "box",
+                "size_x_mm": 50,
+                "size_y_mm": 50,
+                "size_z_mm": 50
+              },
+              "pose": {
+                "x_mm": 260.0,
+                "y_mm": 150.0,
+                "yaw_deg": 0.0
+              },
+              "ref": null,
+              "label": "Cube part"
+            },
+            {
+              "name": "rod_part",
+              "kind": "part",
+              "params": {
+                "mass_g": 150,
+                "shape": "cylinder",
+                "size_x_mm": 20,
+                "size_y_mm": 20,
+                "size_z_mm": 60
+              },
+              "pose": {
+                "x_mm": 260.0,
+                "y_mm": -150.0,
+                "yaw_deg": 0.0
+              },
+              "ref": null,
+              "label": "Rod part"
+            }
+          ],
+          "steps": [
+            {
+              "id": "open_drawer",
+              "primitive": "hook_pull",
+              "object": "shelf_drawer",
+              "handle": "handle",
+              "target": null,
+              "params": {
+                "approach": "front",
+                "speed_mm_s": 60
+              },
+              "constraints": {
+                "max_force_n": 20.0,
+                "max_torque_nm": null,
+                "precision_mm": null,
+                "precision_deg": null
+              },
+              "success": [
+                {
+                  "quantity": "travel_mm",
+                  "at_least": 200.0,
+                  "at_most": null
+                }
+              ],
+              "after": [],
+              "hold_after": false,
+              "description": "Hook the drawer's bar handle and pull the drawer open."
+            },
+            {
+              "id": "pick_cube",
+              "primitive": "grasp",
+              "object": "cube_part",
+              "handle": "part",
+              "target": "kit_tray",
+              "params": {
+                "hold_s": 1,
+                "lift_mm": 100
+              },
+              "constraints": {
+                "max_force_n": null,
+                "max_torque_nm": null,
+                "precision_mm": null,
+                "precision_deg": null
+              },
+              "success": [
+                {
+                  "quantity": "in_target",
+                  "at_least": 1.0,
+                  "at_most": null
+                },
+                {
+                  "quantity": "lift_mm",
+                  "at_least": 80.0,
+                  "at_most": null
+                }
+              ],
+              "after": [
+                "open_drawer"
+              ],
+              "hold_after": false,
+              "description": "Pick the 50 mm cube off the bench and drop it into the kit tray."
+            },
+            {
+              "id": "pick_rod",
+              "primitive": "grasp",
+              "object": "rod_part",
+              "handle": "part",
+              "target": "kit_tray",
+              "params": {
+                "hold_s": 1,
+                "lift_mm": 100
+              },
+              "constraints": {
+                "max_force_n": null,
+                "max_torque_nm": null,
+                "precision_mm": null,
+                "precision_deg": null
+              },
+              "success": [
+                {
+                  "quantity": "in_target",
+                  "at_least": 1.0,
+                  "at_most": null
+                },
+                {
+                  "quantity": "lift_mm",
+                  "at_least": 80.0,
+                  "at_most": null
+                }
+              ],
+              "after": [
+                "pick_cube"
+              ],
+              "hold_after": false,
+              "description": "Pick the steel rod from the bench and drop it into the kit tray."
+            },
+            {
+              "id": "close_drawer",
+              "primitive": "push",
+              "object": "shelf_drawer",
+              "handle": "drawer",
+              "target": null,
+              "params": {
+                "speed_mm_s": 60
+              },
+              "constraints": {
+                "max_force_n": 20.0,
+                "max_torque_nm": null,
+                "precision_mm": null,
+                "precision_deg": null
+              },
+              "success": [
+                {
+                  "quantity": "travel_mm",
+                  "at_least": null,
+                  "at_most": 10.0
+                }
+              ],
+              "after": [
+                "pick_rod"
+              ],
+              "hold_after": false,
+              "description": "Push the drawer front until the drawer is shut."
+            }
+          ],
+          "assumptions": [
+            "Drawer friction force is about 5 N.",
+            "Cube part mass is 200 g, rod mass is 150 g.",
+            "Kit tray is fixed to the table."
+          ],
+          "clarifications": [],
+          "unsupported": [],
+          "refusal": null,
+          "fidelity": {
+            "open_drawer": "rigid",
+            "pick_cube": "rigid",
+            "pick_rod": "rigid",
+            "close_drawer": "rigid"
+          }
+        },
+        "attempts": [
+          {
+            "stage": "main",
+            "outcome": "invalid",
+            "problems": [
+              "objects[1] (cube_part): its footprint overlaps the footprint of objects[0] (shelf_drawer); keep them at least 20 mm apart",
+              "objects[2] (rod_part): its footprint overlaps the footprint of objects[0] (shelf_drawer); keep them at least 20 mm apart",
+              "objects[2] (rod_part): its footprint comes within 20 mm of the footprint of objects[1] (cube_part); keep them at least 20 mm apart",
+              "objects[3] (kit_tray): its footprint overlaps the footprint of objects[0] (shelf_drawer); keep them at least 20 mm apart"
+            ],
+            "request_hash": "a813284cf95e613aec6c2f3e257a2b61b9b6e89abbc44ad853331763269a1ad1",
+            "cached": false,
+            "prompt_tokens": 20350,
+            "completion_tokens": 1820,
+            "reasoning_tokens": 424,
+            "cost_usd": 0.007743,
+            "latency_s": 23.0557,
+            "finish_reason": "tool_calls",
+            "notes": [],
+            "error": null
+          },
+          {
+            "stage": "repair",
+            "outcome": "valid",
+            "problems": [],
+            "request_hash": "bee0579a88c4a27cb9db048fc171f0555178b8ad25039f14aa89a474ba0b2995",
+            "cached": false,
+            "prompt_tokens": 21633,
+            "completion_tokens": 4403,
+            "reasoning_tokens": 2956,
+            "cost_usd": 0.010452600000000001,
+            "latency_s": 40.0529,
+            "finish_reason": "tool_calls",
+            "notes": [],
+            "error": null
+          }
+        ],
+        "cost_usd": 0.018196,
+        "template_hashes": {
+          "system.md": "69589cf14a708eb214576522923c7193695f0e3189fffae1195c9ecadb386edb",
+          "user.md": "9eeadc86596227a22bcbe63a4be3f061cffc0de96d0f9d1b0c89801e40214cd1",
+          "repair.md": "215ddfaa29d5893f95760f4f36e56798831e846290069d3e3699b0ea411cf454"
+        },
+        "tool_sha256": "d5ac5d4361ab8f61ccff4a3c3919298be5d00a84134fe85e5bd2fe2ec35cd702"
+      }
+    },
+    {
+      "case_id": "e2_rod_nut",
+      "setting": "construction",
+      "title": "Nut on a threaded rod",
+      "expect": "plan",
+      "text": "On a framing jig, an M10 hex nut sits loose on top of an upright threaded rod. Run it down the rod three full turns, keeping the torque under 3 N m so the thread is not damaged.",
+      "status": "valid",
+      "passed": true,
+      "first_try": false,
+      "repaired": true,
+      "layout_fixed": false,
+      "result": "valid_after_repair",
+      "layout_moves": [],
+      "calls": 2,
+      "steps": [
+        {
+          "id": "insert_nut",
+          "primitive": "insert",
+          "object": "threaded_rod_nut",
+          "target": null
+        },
+        {
+          "id": "run_nut_down",
+          "primitive": "twist",
+          "object": "threaded_rod_nut",
+          "target": null
+        }
+      ],
+      "n_objects": 1,
+      "refusal": null,
+      "nearest_primitives": [],
+      "task_id": "99bdb11a2af7a4038a0f5a33e3164bb2ea55db9112b62ac8a15fcc5fac515ff1",
+      "problems": [],
+      "first_problems": [
+        "steps[0] (run_nut_down): a threaded member starts on its lead-in, free of the thread; insert 'threaded_rod_nut' to the thread start before this twist"
+      ],
+      "warnings": [],
+      "notes": [
+        "Null written as text was read as null (refusal)."
+      ],
+      "cost_usd": 0.014069,
+      "attempts": [
+        {
+          "stage": "main",
+          "outcome": "invalid",
+          "problems": [
+            "steps[0] (run_nut_down): a threaded member starts on its lead-in, free of the thread; insert 'threaded_rod_nut' to the thread start before this twist"
+          ],
+          "request_hash": "873c2be6580f3d11455c30a2c4740177d0d1d9690c0c278ba57cf7b24788244d",
+          "cached": false,
+          "prompt_tokens": 20334,
+          "completion_tokens": 1080,
+          "reasoning_tokens": 501,
+          "cost_usd": 0.0070722,
+          "latency_s": 21.2971,
+          "finish_reason": "tool_calls",
+          "notes": [],
+          "error": null
+        },
+        {
+          "stage": "repair",
+          "outcome": "valid",
+          "problems": [],
+          "request_hash": "b1c2072a0a5d3d028e91abac5254f0ed6c67aa239367f686f20510e1df644c8e",
+          "cached": false,
+          "prompt_tokens": 20819,
+          "completion_tokens": 834,
+          "reasoning_tokens": 88,
+          "cost_usd": 0.0069963000000000004,
+          "latency_s": 18.4898,
+          "finish_reason": "tool_calls",
+          "notes": [],
+          "error": null
+        }
+      ],
+      "plan": {
+        "format": "rtt-studio-plan",
+        "version": 1,
+        "contract": "rtt-effectors/2",
+        "label": "Product mode: not part of the pre-registered experiment",
+        "model": "nvidia/nemotron-3-super-120b-a12b",
+        "use_case": "On a framing jig, an M10 hex nut sits loose on top of an upright threaded rod. Run it down the rod three full turns, keeping the torque under 3 N m so the thread is not damaged.",
+        "status": "valid",
+        "first_try": false,
+        "repaired": true,
+        "layout_fixed": false,
+        "result": "valid_after_repair",
+        "layout_moves": [],
+        "problems": [],
+        "warnings": [],
+        "notes": [
+          "Null written as text was read as null (refusal)."
+        ],
+        "uploads": [],
+        "plan": {
+          "contract": "rtt-effectors/2",
+          "label": "Product mode: not part of the pre-registered experiment",
+          "task_id": "99bdb11a2af7a4038a0f5a33e3164bb2ea55db9112b62ac8a15fcc5fac515ff1",
+          "source": "nemotron",
+          "title": "Run nut down threaded rod",
+          "description": "Insert an M10 hex nut onto the threaded rod to the thread start, then twist it clockwise three full turns while keeping torque under 3 N m.",
+          "objects": [
+            {
+              "name": "threaded_rod_nut",
+              "kind": "threaded_joint",
+              "params": {
+                "chamfer_mm": 1,
+                "diameter_mm": 15,
+                "engage_turns": 3,
+                "final_torque_nm": 2.5,
+                "length_mm": 10,
+                "member": "nut",
+                "pitch_mm": 1.5,
+                "start_torque_nm": 0.1
+              },
+              "pose": {
+                "x_mm": 0.0,
+                "y_mm": 0.0,
+                "yaw_deg": 0.0
+              },
+              "ref": null,
+              "label": "M10 nut on rod"
+            }
+          ],
+          "steps": [
+            {
+              "id": "insert_nut",
+              "primitive": "insert",
+              "object": "threaded_rod_nut",
+              "handle": "member",
+              "target": null,
+              "params": {
+                "speed_mm_s": 10,
+                "standoff_mm": 5
+              },
+              "constraints": {
+                "max_force_n": 30.0,
+                "max_torque_nm": null,
+                "precision_mm": null,
+                "precision_deg": null
+              },
+              "success": [
+                {
+                  "quantity": "depth_mm",
+                  "at_least": 0.0,
+                  "at_most": 4.0
+                }
+              ],
+              "after": [],
+              "hold_after": false,
+              "description": "Align the nut over the rod and push it to the thread start."
+            },
+            {
+              "id": "run_nut_down",
+              "primitive": "twist",
+              "object": "threaded_rod_nut",
+              "handle": "member",
+              "target": null,
+              "params": {
+                "direction": "cw",
+                "speed_deg_s": 60
+              },
+              "constraints": {
+                "max_force_n": null,
+                "max_torque_nm": 5.0,
+                "precision_mm": null,
+                "precision_deg": null
+              },
+              "success": [
+                {
+                  "quantity": "turns",
+                  "at_least": 3.0,
+                  "at_most": 3.5
+                },
+                {
+                  "quantity": "torque_nm",
+                  "at_least": null,
+                  "at_most": 3.0
+                }
+              ],
+              "after": [
+                "insert_nut"
+              ],
+              "hold_after": false,
+              "description": "Twist the nut clockwise three turns on the threaded rod."
+            }
+          ],
+          "assumptions": [
+            "M10 standard pitch is 1.5 mm.",
+            "Nut outer diameter approx 15 mm, length 10 mm.",
+            "Chamfer plus 3 mm gives ~4 mm insertion depth."
+          ],
+          "clarifications": [],
+          "unsupported": [],
+          "refusal": null,
+          "fidelity": {
+            "insert_nut": "approximation",
+            "run_nut_down": "approximation"
+          }
+        },
+        "attempts": [
+          {
+            "stage": "main",
+            "outcome": "invalid",
+            "problems": [
+              "steps[0] (run_nut_down): a threaded member starts on its lead-in, free of the thread; insert 'threaded_rod_nut' to the thread start before this twist"
+            ],
+            "request_hash": "873c2be6580f3d11455c30a2c4740177d0d1d9690c0c278ba57cf7b24788244d",
+            "cached": false,
+            "prompt_tokens": 20334,
+            "completion_tokens": 1080,
+            "reasoning_tokens": 501,
+            "cost_usd": 0.0070722,
+            "latency_s": 21.2971,
+            "finish_reason": "tool_calls",
+            "notes": [],
+            "error": null
+          },
+          {
+            "stage": "repair",
+            "outcome": "valid",
+            "problems": [],
+            "request_hash": "b1c2072a0a5d3d028e91abac5254f0ed6c67aa239367f686f20510e1df644c8e",
+            "cached": false,
+            "prompt_tokens": 20819,
+            "completion_tokens": 834,
+            "reasoning_tokens": 88,
+            "cost_usd": 0.0069963000000000004,
+            "latency_s": 18.4898,
+            "finish_reason": "tool_calls",
+            "notes": [],
+            "error": null
+          }
+        ],
+        "cost_usd": 0.014069,
+        "template_hashes": {
+          "system.md": "69589cf14a708eb214576522923c7193695f0e3189fffae1195c9ecadb386edb",
+          "user.md": "9eeadc86596227a22bcbe63a4be3f061cffc0de96d0f9d1b0c89801e40214cd1",
+          "repair.md": "215ddfaa29d5893f95760f4f36e56798831e846290069d3e3699b0ea411cf454"
+        },
+        "tool_sha256": "d5ac5d4361ab8f61ccff4a3c3919298be5d00a84134fe85e5bd2fe2ec35cd702"
+      }
+    },
+    {
+      "case_id": "e3_isolation_valve",
+      "setting": "maintenance",
+      "title": "Isolation valve",
+      "expect": "plan",
+      "text": "Plant maintenance round: open the hatch of the meter box, open the isolation valve that stands beside the box by turning its handwheel one full turn counter-clockwise against about 4 N m, then close the hatch.",
+      "status": "valid",
+      "passed": true,
+      "first_try": false,
+      "repaired": true,
+      "layout_fixed": false,
+      "result": "valid_after_repair",
+      "layout_moves": [],
+      "calls": 2,
+      "steps": [
+        {
+          "id": "open_hatch",
+          "primitive": "hook_pull",
+          "object": "meter_hatch",
+          "target": null
+        },
+        {
+          "id": "turn_valve",
+          "primitive": "twist",
+          "object": "iso_valve",
+          "target": null
+        },
+        {
+          "id": "close_hatch",
+          "primitive": "push",
+          "object": "meter_hatch",
+          "target": null
+        }
+      ],
+      "n_objects": 2,
+      "refusal": null,
+      "nearest_primitives": [],
+      "task_id": "905bf58594db95c8cc975b5379267a19bb7b4b8f0abc5308f0038bafd4115ab7",
+      "problems": [],
+      "first_problems": [
+        "step close_hatch: acts on 'meter_hatch' while 'iso_valve' is still held by the previous step",
+        "objects[1] (iso_valve): its footprint overlaps the footprint of objects[0] (meter_hatch); keep them at least 20 mm apart"
+      ],
+      "warnings": [],
+      "notes": [
+        "Null written as text was read as null (refusal)."
+      ],
+      "cost_usd": 0.015508,
+      "attempts": [
+        {
+          "stage": "main",
+          "outcome": "invalid",
+          "problems": [
+            "step close_hatch: acts on 'meter_hatch' while 'iso_valve' is still held by the previous step",
+            "objects[1] (iso_valve): its footprint overlaps the footprint of objects[0] (meter_hatch); keep them at least 20 mm apart"
+          ],
+          "request_hash": "e1669dfb700bd3faa0fb4d68bda01b22bb5ec55cec6e8e42b94e18933396f4fc",
+          "cached": false,
+          "prompt_tokens": 20333,
+          "completion_tokens": 1880,
+          "reasoning_tokens": 914,
+          "cost_usd": 0.0077919,
+          "latency_s": 23.5268,
+          "finish_reason": "tool_calls",
+          "notes": [],
+          "error": null
+        },
+        {
+          "stage": "repair",
+          "outcome": "valid",
+          "problems": [],
+          "request_hash": "73be4046be6c8eb8db36475f368aa501cb60a2332fa11fdd2a1d8373f573a4a0",
+          "cached": false,
+          "prompt_tokens": 21175,
+          "completion_tokens": 1515,
+          "reasoning_tokens": 568,
+          "cost_usd": 0.007716,
+          "latency_s": 21.7191,
+          "finish_reason": "tool_calls",
+          "notes": [],
+          "error": null
+        }
+      ],
+      "plan": {
+        "format": "rtt-studio-plan",
+        "version": 1,
+        "contract": "rtt-effectors/2",
+        "label": "Product mode: not part of the pre-registered experiment",
+        "model": "nvidia/nemotron-3-super-120b-a12b",
+        "use_case": "Plant maintenance round: open the hatch of the meter box, open the isolation valve that stands beside the box by turning its handwheel one full turn counter-clockwise against about 4 N m, then close the hatch.",
+        "status": "valid",
+        "first_try": false,
+        "repaired": true,
+        "layout_fixed": false,
+        "result": "valid_after_repair",
+        "layout_moves": [],
+        "problems": [],
+        "warnings": [],
+        "notes": [
+          "Null written as text was read as null (refusal)."
+        ],
+        "uploads": [],
+        "plan": {
+          "contract": "rtt-effectors/2",
+          "label": "Product mode: not part of the pre-registered experiment",
+          "task_id": "905bf58594db95c8cc975b5379267a19bb7b4b8f0abc5308f0038bafd4115ab7",
+          "source": "nemotron",
+          "title": "Plant maintenance round",
+          "description": "Open the meter box hatch, turn the isolation valve handwheel one full turn counter\u2011clockwise against about 4 N\u00b7m, then close the hatch.",
+          "objects": [
+            {
+              "name": "meter_hatch",
+              "kind": "hinged_lid",
+              "params": {
+                "damping_nms": 0.05,
+                "depth_mm": 250,
+                "feature": "handle",
+                "feature_mm": 20,
+                "max_angle_deg": 110,
+                "open_torque_nm": 0.2,
+                "orientation": "lid",
+                "thickness_mm": 5,
+                "width_mm": 300
+              },
+              "pose": {
+                "x_mm": -200.0,
+                "y_mm": 0.0,
+                "yaw_deg": 0.0
+              },
+              "ref": null,
+              "label": "Meter hatch"
+            },
+            {
+              "name": "iso_valve",
+              "kind": "handwheel_valve",
+              "params": {
+                "rim_diameter_mm": 100,
+                "rim_section_mm": 10,
+                "spokes": 3,
+                "torque_nm": 4,
+                "travel_deg": 360
+              },
+              "pose": {
+                "x_mm": 200.0,
+                "y_mm": 0.0,
+                "yaw_deg": 0.0
+              },
+              "ref": null,
+              "label": "Isolation valve"
+            }
+          ],
+          "steps": [
+            {
+              "id": "open_hatch",
+              "primitive": "hook_pull",
+              "object": "meter_hatch",
+              "handle": "handle",
+              "target": null,
+              "params": {
+                "approach": "top",
+                "speed_mm_s": 80
+              },
+              "constraints": {
+                "max_force_n": 30.0,
+                "max_torque_nm": null,
+                "precision_mm": null,
+                "precision_deg": null
+              },
+              "success": [
+                {
+                  "quantity": "angle_deg",
+                  "at_least": 90.0,
+                  "at_most": 110.0
+                }
+              ],
+              "after": [],
+              "hold_after": false,
+              "description": "Hook the hatch handle and pull it open."
+            },
+            {
+              "id": "turn_valve",
+              "primitive": "twist",
+              "object": "iso_valve",
+              "handle": "wheel",
+              "target": null,
+              "params": {
+                "direction": "ccw",
+                "speed_deg_s": 60
+              },
+              "constraints": {
+                "max_force_n": null,
+                "max_torque_nm": 10.0,
+                "precision_mm": null,
+                "precision_deg": null
+              },
+              "success": [
+                {
+                  "quantity": "angle_deg",
+                  "at_least": 350.0,
+                  "at_most": 360.0
+                }
+              ],
+              "after": [
+                "open_hatch"
+              ],
+              "hold_after": false,
+              "description": "Turn the valve handwheel one full turn counter\u2011clockwise."
+            },
+            {
+              "id": "close_hatch",
+              "primitive": "push",
+              "object": "meter_hatch",
+              "handle": "lid",
+              "target": null,
+              "params": {
+                "speed_mm_s": 50
+              },
+              "constraints": {
+                "max_force_n": 30.0,
+                "max_torque_nm": null,
+                "precision_mm": null,
+                "precision_deg": null
+              },
+              "success": [
+                {
+                  "quantity": "angle_deg",
+                  "at_least": 0.0,
+                  "at_most": 10.0
+                }
+              ],
+              "after": [
+                "turn_valve"
+              ],
+              "hold_after": false,
+              "description": "Push the hatch lid shut."
+            }
+          ],
+          "assumptions": [
+            "The hatch behaves like a light lid with a handle, the valve requires about 4 N\u00b7m to turn, and both objects are rigid."
+          ],
+          "clarifications": [],
+          "unsupported": [],
+          "refusal": null,
+          "fidelity": {
+            "open_hatch": "rigid",
+            "turn_valve": "approximation",
+            "close_hatch": "rigid"
+          }
+        },
+        "attempts": [
+          {
+            "stage": "main",
+            "outcome": "invalid",
+            "problems": [
+              "step close_hatch: acts on 'meter_hatch' while 'iso_valve' is still held by the previous step",
+              "objects[1] (iso_valve): its footprint overlaps the footprint of objects[0] (meter_hatch); keep them at least 20 mm apart"
+            ],
+            "request_hash": "e1669dfb700bd3faa0fb4d68bda01b22bb5ec55cec6e8e42b94e18933396f4fc",
+            "cached": false,
+            "prompt_tokens": 20333,
+            "completion_tokens": 1880,
+            "reasoning_tokens": 914,
+            "cost_usd": 0.0077919,
+            "latency_s": 23.5268,
+            "finish_reason": "tool_calls",
+            "notes": [],
+            "error": null
+          },
+          {
+            "stage": "repair",
+            "outcome": "valid",
+            "problems": [],
+            "request_hash": "73be4046be6c8eb8db36475f368aa501cb60a2332fa11fdd2a1d8373f573a4a0",
+            "cached": false,
+            "prompt_tokens": 21175,
+            "completion_tokens": 1515,
+            "reasoning_tokens": 568,
+            "cost_usd": 0.007716,
+            "latency_s": 21.7191,
+            "finish_reason": "tool_calls",
+            "notes": [],
+            "error": null
+          }
+        ],
+        "cost_usd": 0.015508,
+        "template_hashes": {
+          "system.md": "69589cf14a708eb214576522923c7193695f0e3189fffae1195c9ecadb386edb",
+          "user.md": "9eeadc86596227a22bcbe63a4be3f061cffc0de96d0f9d1b0c89801e40214cd1",
+          "repair.md": "215ddfaa29d5893f95760f4f36e56798831e846290069d3e3699b0ea411cf454"
+        },
+        "tool_sha256": "d5ac5d4361ab8f61ccff4a3c3919298be5d00a84134fe85e5bd2fe2ec35cd702"
+      }
+    },
+    {
+      "case_id": "e4_vial_holder",
+      "setting": "lab",
+      "title": "Vial into a holder",
+      "expect": "plan",
+      "text": "Lab automation: lift the hinged cover of a benchtop instrument, pick a sample vial (12 mm across, 60 mm tall) from the bench and press it into the 12.4 mm holder of the instrument, then close the cover.",
+      "status": "valid",
+      "passed": true,
+      "first_try": true,
+      "repaired": false,
+      "layout_fixed": false,
+      "result": "valid_first_call",
+      "layout_moves": [],
+      "calls": 1,
+      "steps": [
+        {
+          "id": "open_lid",
+          "primitive": "hook_pull",
+          "object": "instrument_lid",
+          "target": null
+        },
+        {
+          "id": "grasp_vial",
+          "primitive": "grasp",
+          "object": "sample_holder",
+          "target": null
+        },
+        {
+          "id": "insert_vial",
+          "primitive": "insert",
+          "object": "sample_holder",
+          "target": null
+        },
+        {
+          "id": "close_lid",
+          "primitive": "push",
+          "object": "instrument_lid",
+          "target": null
+        }
+      ],
+      "n_objects": 2,
+      "refusal": null,
+      "nearest_primitives": [],
+      "task_id": "e27def6ba4a7c4972c4a595293fd29cdcd9f610b2aeb2bef38272aec3aa37938",
+      "problems": [],
+      "first_problems": [],
+      "warnings": [],
+      "notes": [
+        "Null written as text was read as null (refusal)."
+      ],
+      "cost_usd": 0.008827,
+      "attempts": [
+        {
+          "stage": "main",
+          "outcome": "valid",
+          "problems": [],
+          "request_hash": "cb081f738a63d5682402ab5b2833a67605fed3043be26c5a3a8003ae734e1c4b",
+          "cached": false,
+          "prompt_tokens": 20343,
+          "completion_tokens": 3027,
+          "reasoning_tokens": 1798,
+          "cost_usd": 0.0088272,
+          "latency_s": 31.2917,
+          "finish_reason": "tool_calls",
+          "notes": [],
+          "error": null
+        }
+      ],
+      "plan": {
+        "format": "rtt-studio-plan",
+        "version": 1,
+        "contract": "rtt-effectors/2",
+        "label": "Product mode: not part of the pre-registered experiment",
+        "model": "nvidia/nemotron-3-super-120b-a12b",
+        "use_case": "Lab automation: lift the hinged cover of a benchtop instrument, pick a sample vial (12 mm across, 60 mm tall) from the bench and press it into the 12.4 mm holder of the instrument, then close the cover.",
+        "status": "valid",
+        "first_try": true,
+        "repaired": false,
+        "layout_fixed": false,
+        "result": "valid_first_call",
+        "layout_moves": [],
+        "problems": [],
+        "warnings": [],
+        "notes": [
+          "Null written as text was read as null (refusal)."
+        ],
+        "uploads": [],
+        "plan": {
+          "contract": "rtt-effectors/2",
+          "label": "Product mode: not part of the pre-registered experiment",
+          "task_id": "e27def6ba4a7c4972c4a595293fd29cdcd9f610b2aeb2bef38272aec3aa37938",
+          "source": "nemotron",
+          "title": "Lab automation vial loading",
+          "description": "Open the instrument lid, pick up a 12 mm diameter 60 mm tall vial from the bench, insert it into the 12.4 mm holder, then close the lid.",
+          "objects": [
+            {
+              "name": "instrument_lid",
+              "kind": "hinged_lid",
+              "params": {
+                "damping_nms": 0.05,
+                "depth_mm": 150,
+                "feature": "lip",
+                "feature_mm": 10,
+                "max_angle_deg": 110,
+                "open_torque_nm": 0.2,
+                "orientation": "lid",
+                "thickness_mm": 5,
+                "width_mm": 200
+              },
+              "pose": {
+                "x_mm": 0.0,
+                "y_mm": 100.0,
+                "yaw_deg": 0.0
+              },
+              "ref": null,
+              "label": "Instrument lid"
+            },
+            {
+              "name": "sample_holder",
+              "kind": "port_plug",
+              "params": {
+                "chamfer_mm": 0.5,
+                "clearance_mm": 0.2,
+                "depth_mm": 15,
+                "insert_force_n": 2,
+                "latch": false,
+                "plug_diameter_mm": 12,
+                "plug_length_mm": 60
+              },
+              "pose": {
+                "x_mm": 0.0,
+                "y_mm": -100.0,
+                "yaw_deg": 0.0
+              },
+              "ref": null,
+              "label": "Sample holder"
+            }
+          ],
+          "steps": [
+            {
+              "id": "open_lid",
+              "primitive": "hook_pull",
+              "object": "instrument_lid",
+              "handle": "handle",
+              "target": null,
+              "params": {
+                "approach": "top",
+                "speed_mm_s": 50
+              },
+              "constraints": {
+                "max_force_n": 20.0,
+                "max_torque_nm": null,
+                "precision_mm": null,
+                "precision_deg": null
+              },
+              "success": [
+                {
+                  "quantity": "angle_deg",
+                  "at_least": 95.0,
+                  "at_most": null
+                },
+                {
+                  "quantity": "force_n",
+                  "at_least": null,
+                  "at_most": 20.0
+                }
+              ],
+              "after": [],
+              "hold_after": false,
+              "description": "Hook the lid's lip and pull the cover open."
+            },
+            {
+              "id": "grasp_vial",
+              "primitive": "grasp",
+              "object": "sample_holder",
+              "handle": "plug",
+              "target": null,
+              "params": {
+                "hold_s": 1,
+                "lift_mm": 80
+              },
+              "constraints": {
+                "max_force_n": null,
+                "max_torque_nm": null,
+                "precision_mm": null,
+                "precision_deg": null
+              },
+              "success": [
+                {
+                  "quantity": "lift_mm",
+                  "at_least": 70.0,
+                  "at_most": 90.0
+                },
+                {
+                  "quantity": "hold_s",
+                  "at_least": 0.5,
+                  "at_most": 2.0
+                }
+              ],
+              "after": [
+                "open_lid"
+              ],
+              "hold_after": true,
+              "description": "Pick the sample vial from the bench."
+            },
+            {
+              "id": "insert_vial",
+              "primitive": "insert",
+              "object": "sample_holder",
+              "handle": "plug",
+              "target": null,
+              "params": {
+                "speed_mm_s": 10,
+                "standoff_mm": 5
+              },
+              "constraints": {
+                "max_force_n": 15.0,
+                "max_torque_nm": null,
+                "precision_mm": null,
+                "precision_deg": null
+              },
+              "success": [
+                {
+                  "quantity": "depth_mm",
+                  "at_least": 12.0,
+                  "at_most": 16.0
+                },
+                {
+                  "quantity": "force_n",
+                  "at_least": null,
+                  "at_most": 15.0
+                }
+              ],
+              "after": [
+                "grasp_vial"
+              ],
+              "hold_after": false,
+              "description": "Press the vial into the holder."
+            },
+            {
+              "id": "close_lid",
+              "primitive": "push",
+              "object": "instrument_lid",
+              "handle": "lid",
+              "target": null,
+              "params": {
+                "speed_mm_s": 30
+              },
+              "constraints": {
+                "max_force_n": 20.0,
+                "max_torque_nm": null,
+                "precision_mm": null,
+                "precision_deg": null
+              },
+              "success": [
+                {
+                  "quantity": "angle_deg",
+                  "at_least": null,
+                  "at_most": 10.0
+                }
+              ],
+              "after": [
+                "insert_vial"
+              ],
+              "hold_after": false,
+              "description": "Push the lid closed until it latches."
+            }
+          ],
+          "assumptions": [
+            "The lid opens upward with low hinge torque (~0.2 N m).",
+            "The vial holder provides ~2 N insertion friction."
+          ],
+          "clarifications": [],
+          "unsupported": [],
+          "refusal": null,
+          "fidelity": {
+            "open_lid": "rigid",
+            "grasp_vial": "rigid",
+            "insert_vial": "rigid",
+            "close_lid": "rigid"
+          }
+        },
+        "attempts": [
+          {
+            "stage": "main",
+            "outcome": "valid",
+            "problems": [],
+            "request_hash": "cb081f738a63d5682402ab5b2833a67605fed3043be26c5a3a8003ae734e1c4b",
+            "cached": false,
+            "prompt_tokens": 20343,
+            "completion_tokens": 3027,
+            "reasoning_tokens": 1798,
+            "cost_usd": 0.0088272,
+            "latency_s": 31.2917,
+            "finish_reason": "tool_calls",
+            "notes": [],
+            "error": null
+          }
+        ],
+        "cost_usd": 0.008827,
+        "template_hashes": {
+          "system.md": "69589cf14a708eb214576522923c7193695f0e3189fffae1195c9ecadb386edb",
+          "user.md": "9eeadc86596227a22bcbe63a4be3f061cffc0de96d0f9d1b0c89801e40214cd1",
+          "repair.md": "215ddfaa29d5893f95760f4f36e56798831e846290069d3e3699b0ea411cf454"
+        },
+        "tool_sha256": "d5ac5d4361ab8f61ccff4a3c3919298be5d00a84134fe85e5bd2fe2ec35cd702"
+      }
+    },
+    {
+      "case_id": "e5_fridge_restock",
+      "setting": "retail",
+      "title": "Fridge restock",
+      "expect": "plan",
+      "text": "Store back room: open the glass door of a drinks fridge, take a can (66 mm across, 115 mm tall, 380 g) from the bench beside the fridge and put it in the basket that stands behind the door, then close the door.",
+      "status": "valid",
+      "passed": true,
+      "first_try": false,
+      "repaired": false,
+      "layout_fixed": true,
+      "result": "valid_after_layout_fix",
+      "layout_moves": [
+        "Moved fridge_door from (0, 0) to (60, -60) mm to clear the footprint of storage_basket"
+      ],
+      "calls": 2,
+      "steps": [
+        {
+          "id": "open_door",
+          "primitive": "hook_pull",
+          "object": "fridge_door",
+          "target": null
+        },
+        {
+          "id": "pick_can",
+          "primitive": "grasp",
+          "object": "drink_can",
+          "target": "storage_basket"
+        },
+        {
+          "id": "close_door",
+          "primitive": "push",
+          "object": "fridge_door",
+          "target": null
+        }
+      ],
+      "n_objects": 3,
+      "refusal": null,
+      "nearest_primitives": [],
+      "task_id": "6170fcb024e8e813e13891b0930e43544a74093d0129cf5cfc11cd731ba0b7c2",
+      "problems": [],
+      "first_problems": [
+        "objects[2] (storage_basket): its footprint overlaps the footprint of objects[0] (fridge_door); keep them at least 20 mm apart"
+      ],
+      "warnings": [],
+      "notes": [
+        "Null written as text was read as null (refusal).",
+        "The layout fixer moved 1 object in code after the repair call; each move is an assumption of the plan."
+      ],
+      "cost_usd": 0.015232,
+      "attempts": [
+        {
+          "stage": "main",
+          "outcome": "invalid",
+          "problems": [
+            "objects[2] (storage_basket): its footprint overlaps the footprint of objects[0] (fridge_door); keep them at least 20 mm apart"
+          ],
+          "request_hash": "16ca35a1a11ac516775f779dc301bd5ff4e009e7d0a6b739939578d3f33c313a",
+          "cached": false,
+          "prompt_tokens": 20346,
+          "completion_tokens": 1496,
+          "reasoning_tokens": 188,
+          "cost_usd": 0.007450200000000001,
+          "latency_s": 30.7273,
+          "finish_reason": "tool_calls",
+          "notes": [],
+          "error": null
+        },
+        {
+          "stage": "repair",
+          "outcome": "invalid",
+          "problems": [
+            "objects[2] (storage_basket): its footprint overlaps the footprint of objects[0] (fridge_door); keep them at least 20 mm apart"
+          ],
+          "request_hash": "7d6394b55b77d4d43664132921e88013af0b20b78faf00657b48fe15bf3a99ff",
+          "cached": false,
+          "prompt_tokens": 21318,
+          "completion_tokens": 1540,
+          "reasoning_tokens": 401,
+          "cost_usd": 0.0077814,
+          "latency_s": 23.722,
+          "finish_reason": "tool_calls",
+          "notes": [],
+          "error": null
+        }
+      ],
+      "plan": {
+        "format": "rtt-studio-plan",
+        "version": 1,
+        "contract": "rtt-effectors/2",
+        "label": "Product mode: not part of the pre-registered experiment",
+        "model": "nvidia/nemotron-3-super-120b-a12b",
+        "use_case": "Store back room: open the glass door of a drinks fridge, take a can (66 mm across, 115 mm tall, 380 g) from the bench beside the fridge and put it in the basket that stands behind the door, then close the door.",
+        "status": "valid",
+        "first_try": false,
+        "repaired": false,
+        "layout_fixed": true,
+        "result": "valid_after_layout_fix",
+        "layout_moves": [
+          "Moved fridge_door from (0, 0) to (60, -60) mm to clear the footprint of storage_basket"
+        ],
+        "problems": [],
+        "warnings": [],
+        "notes": [
+          "Null written as text was read as null (refusal).",
+          "The layout fixer moved 1 object in code after the repair call; each move is an assumption of the plan."
+        ],
+        "uploads": [],
+        "plan": {
+          "contract": "rtt-effectors/2",
+          "label": "Product mode: not part of the pre-registered experiment",
+          "task_id": "6170fcb024e8e813e13891b0930e43544a74093d0129cf5cfc11cd731ba0b7c2",
+          "source": "nemotron",
+          "title": "Fridge door and can storage",
+          "description": "Open the glass door of a drinks fridge, take a can from the bench beside the fridge and put it in the basket behind the door, then close the door.",
+          "objects": [
+            {
+              "name": "fridge_door",
+              "kind": "hinged_lid",
+              "params": {
+                "damping_nms": 0.05,
+                "depth_mm": 200,
+                "feature": "handle",
+                "feature_mm": 20,
+                "max_angle_deg": 110,
+                "open_torque_nm": 0.3,
+                "orientation": "door",
+                "thickness_mm": 6,
+                "width_mm": 600
+              },
+              "pose": {
+                "x_mm": 60.0,
+                "y_mm": -60.0,
+                "yaw_deg": 0.0
+              },
+              "ref": null,
+              "label": "Fridge glass door"
+            },
+            {
+              "name": "drink_can",
+              "kind": "part",
+              "params": {
+                "mass_g": 380,
+                "shape": "cylinder",
+                "size_x_mm": 66,
+                "size_y_mm": 40,
+                "size_z_mm": 115
+              },
+              "pose": {
+                "x_mm": 250.0,
+                "y_mm": -50.0,
+                "yaw_deg": 0.0
+              },
+              "ref": null,
+              "label": "Drink can"
+            },
+            {
+              "name": "storage_basket",
+              "kind": "bin",
+              "params": {
+                "fixed": true,
+                "height_mm": 120,
+                "length_mm": 300,
+                "wall_mm": 4,
+                "width_mm": 200
+              },
+              "pose": {
+                "x_mm": -250.0,
+                "y_mm": 0.0,
+                "yaw_deg": 0.0
+              },
+              "ref": null,
+              "label": "Storage basket"
+            }
+          ],
+          "steps": [
+            {
+              "id": "open_door",
+              "primitive": "hook_pull",
+              "object": "fridge_door",
+              "handle": "handle",
+              "target": null,
+              "params": {
+                "approach": "front",
+                "speed_mm_s": 80
+              },
+              "constraints": {
+                "max_force_n": 30.0,
+                "max_torque_nm": null,
+                "precision_mm": null,
+                "precision_deg": null
+              },
+              "success": [
+                {
+                  "quantity": "angle_deg",
+                  "at_least": 95.0,
+                  "at_most": null
+                }
+              ],
+              "after": [],
+              "hold_after": false,
+              "description": "Hook the door handle and pull the door open."
+            },
+            {
+              "id": "pick_can",
+              "primitive": "grasp",
+              "object": "drink_can",
+              "handle": "part",
+              "target": "storage_basket",
+              "params": {
+                "hold_s": 1,
+                "lift_mm": 150
+              },
+              "constraints": {
+                "max_force_n": null,
+                "max_torque_nm": null,
+                "precision_mm": null,
+                "precision_deg": null
+              },
+              "success": [
+                {
+                  "quantity": "in_target",
+                  "at_least": 1.0,
+                  "at_most": null
+                },
+                {
+                  "quantity": "tilt_deg",
+                  "at_least": null,
+                  "at_most": 15.0
+                }
+              ],
+              "after": [
+                "open_door"
+              ],
+              "hold_after": false,
+              "description": "Pick the can from the bench and place it in the basket."
+            },
+            {
+              "id": "close_door",
+              "primitive": "push",
+              "object": "fridge_door",
+              "handle": "lid",
+              "target": null,
+              "params": {
+                "speed_mm_s": 60
+              },
+              "constraints": {
+                "max_force_n": 30.0,
+                "max_torque_nm": null,
+                "precision_mm": null,
+                "precision_deg": null
+              },
+              "success": [
+                {
+                  "quantity": "angle_deg",
+                  "at_least": null,
+                  "at_most": 10.0
+                }
+              ],
+              "after": [
+                "pick_can"
+              ],
+              "hold_after": false,
+              "description": "Push the door panel until the door is shut."
+            }
+          ],
+          "assumptions": [
+            "The fridge door is a vertical door hinged on its left edge, opening toward the front.",
+            "The can is a standard aluminium cylinder 66 mm diameter, 115 mm tall, 380 g.",
+            "The basket is a fixed bin sized 300x200x120 mm placed behind the door when closed with at least 20 mm clearance.",
+            "Moved fridge_door from (0, 0) to (60, -60) mm to clear the footprint of storage_basket"
+          ],
+          "clarifications": [],
+          "unsupported": [],
+          "refusal": null,
+          "fidelity": {
+            "open_door": "rigid",
+            "pick_can": "rigid",
+            "close_door": "rigid"
+          }
+        },
+        "attempts": [
+          {
+            "stage": "main",
+            "outcome": "invalid",
+            "problems": [
+              "objects[2] (storage_basket): its footprint overlaps the footprint of objects[0] (fridge_door); keep them at least 20 mm apart"
+            ],
+            "request_hash": "16ca35a1a11ac516775f779dc301bd5ff4e009e7d0a6b739939578d3f33c313a",
+            "cached": false,
+            "prompt_tokens": 20346,
+            "completion_tokens": 1496,
+            "reasoning_tokens": 188,
+            "cost_usd": 0.007450200000000001,
+            "latency_s": 30.7273,
+            "finish_reason": "tool_calls",
+            "notes": [],
+            "error": null
+          },
+          {
+            "stage": "repair",
+            "outcome": "invalid",
+            "problems": [
+              "objects[2] (storage_basket): its footprint overlaps the footprint of objects[0] (fridge_door); keep them at least 20 mm apart"
+            ],
+            "request_hash": "7d6394b55b77d4d43664132921e88013af0b20b78faf00657b48fe15bf3a99ff",
+            "cached": false,
+            "prompt_tokens": 21318,
+            "completion_tokens": 1540,
+            "reasoning_tokens": 401,
+            "cost_usd": 0.0077814,
+            "latency_s": 23.722,
+            "finish_reason": "tool_calls",
+            "notes": [],
+            "error": null
+          }
+        ],
+        "cost_usd": 0.015232,
+        "template_hashes": {
+          "system.md": "69589cf14a708eb214576522923c7193695f0e3189fffae1195c9ecadb386edb",
+          "user.md": "9eeadc86596227a22bcbe63a4be3f061cffc0de96d0f9d1b0c89801e40214cd1",
+          "repair.md": "215ddfaa29d5893f95760f4f36e56798831e846290069d3e3699b0ea411cf454"
+        },
+        "tool_sha256": "d5ac5d4361ab8f61ccff4a3c3919298be5d00a84134fe85e5bd2fe2ec35cd702"
+      }
+    },
+    {
+      "case_id": "u1_fold_shirt",
+      "setting": "unsupported",
+      "title": "Fold a shirt",
+      "expect": "refusal",
+      "text": "Take a T-shirt from the laundry pile, fold it in thirds on the table and put it in the box.",
+      "status": "refused",
+      "passed": true,
+      "first_try": true,
+      "repaired": false,
+      "layout_fixed": false,
+      "result": "refused",
+      "layout_moves": [],
+      "calls": 1,
+      "steps": [],
+      "n_objects": 0,
+      "refusal": "The use case involves folding a T-shirt, which is a cloth/flexible object; the simulator only handles rigid parts and cannot simulate fabric folding.",
+      "nearest_primitives": [
+        "grasp"
+      ],
+      "task_id": null,
+      "problems": [],
+      "first_problems": [],
+      "warnings": [],
+      "notes": [],
+      "cost_usd": 0.00647,
+      "attempts": [
+        {
+          "stage": "main",
+          "outcome": "refused",
+          "problems": [],
+          "request_hash": "458fed1a46f351fea421ec26dc6233ff147dac4fe70fe4c3f56a800e8154023c",
+          "cached": false,
+          "prompt_tokens": 20312,
+          "completion_tokens": 418,
+          "reasoning_tokens": 189,
+          "cost_usd": 0.0064697999999999995,
+          "latency_s": 17.4268,
+          "finish_reason": "tool_calls",
+          "notes": [],
+          "error": null
+        }
+      ],
+      "plan": {
+        "format": "rtt-studio-plan",
+        "version": 1,
+        "contract": "rtt-effectors/2",
+        "label": "Product mode: not part of the pre-registered experiment",
+        "model": "nvidia/nemotron-3-super-120b-a12b",
+        "use_case": "Take a T-shirt from the laundry pile, fold it in thirds on the table and put it in the box.",
+        "status": "refused",
+        "first_try": true,
+        "repaired": false,
+        "layout_fixed": false,
+        "result": "refused",
+        "layout_moves": [],
+        "problems": [],
+        "warnings": [],
+        "notes": [],
+        "uploads": [],
+        "plan": {
+          "contract": "rtt-effectors/2",
+          "label": "Product mode: not part of the pre-registered experiment",
+          "task_id": "d10c68fcd0666273b03a29750003822b34365e2300469d68b9351aa53043b44f",
+          "source": "nemotron",
+          "title": "T-shirt folding",
+          "description": "Take a T-shirt from the laundry pile, fold it in thirds on the table and put it in the box.",
+          "objects": [],
+          "steps": [],
+          "assumptions": [],
+          "clarifications": [],
+          "unsupported": [
+            {
+              "what": "folding a T-shirt (cloth)",
+              "reason": "Cloth simulation not supported",
+              "nearest_primitive": "grasp"
+            }
+          ],
+          "refusal": "The use case involves folding a T-shirt, which is a cloth/flexible object; the simulator only handles rigid parts and cannot simulate fabric folding.",
+          "fidelity": {}
+        },
+        "attempts": [
+          {
+            "stage": "main",
+            "outcome": "refused",
+            "problems": [],
+            "request_hash": "458fed1a46f351fea421ec26dc6233ff147dac4fe70fe4c3f56a800e8154023c",
+            "cached": false,
+            "prompt_tokens": 20312,
+            "completion_tokens": 418,
+            "reasoning_tokens": 189,
+            "cost_usd": 0.0064697999999999995,
+            "latency_s": 17.4268,
+            "finish_reason": "tool_calls",
+            "notes": [],
+            "error": null
+          }
+        ],
+        "cost_usd": 0.00647,
+        "template_hashes": {
+          "system.md": "69589cf14a708eb214576522923c7193695f0e3189fffae1195c9ecadb386edb",
+          "user.md": "9eeadc86596227a22bcbe63a4be3f061cffc0de96d0f9d1b0c89801e40214cd1",
+          "repair.md": "215ddfaa29d5893f95760f4f36e56798831e846290069d3e3699b0ea411cf454"
+        },
+        "tool_sha256": "d5ac5d4361ab8f61ccff4a3c3919298be5d00a84134fe85e5bd2fe2ec35cd702"
+      }
+    },
+    {
+      "case_id": "u2_pour",
+      "setting": "unsupported",
+      "title": "Pour coffee",
+      "expect": "refusal",
+      "text": "Pour hot coffee from the jug into three cups without spilling, filling each about 200 ml.",
+      "status": "refused",
+      "passed": true,
+      "first_try": true,
+      "repaired": false,
+      "layout_fixed": false,
+      "result": "refused",
+      "layout_moves": [],
+      "calls": 1,
+      "steps": [],
+      "n_objects": 0,
+      "refusal": "The core action of pouring liquid cannot be simulated; the use case involves fluids which are outside the supported primitives.",
+      "nearest_primitives": [
+        "grasp"
+      ],
+      "task_id": null,
+      "problems": [],
+      "first_problems": [],
+      "warnings": [],
+      "notes": [],
+      "cost_usd": 0.006484,
+      "attempts": [
+        {
+          "stage": "main",
+          "outcome": "refused",
+          "problems": [],
+          "request_hash": "d0357c7da0142ef7925cf8ef46c4cc9568af5820a9312b8f60729b6d31a44134",
+          "cached": false,
+          "prompt_tokens": 20310,
+          "completion_tokens": 435,
+          "reasoning_tokens": 213,
+          "cost_usd": 0.0064845,
+          "latency_s": 17.2314,
+          "finish_reason": "tool_calls",
+          "notes": [],
+          "error": null
+        }
+      ],
+      "plan": {
+        "format": "rtt-studio-plan",
+        "version": 1,
+        "contract": "rtt-effectors/2",
+        "label": "Product mode: not part of the pre-registered experiment",
+        "model": "nvidia/nemotron-3-super-120b-a12b",
+        "use_case": "Pour hot coffee from the jug into three cups without spilling, filling each about 200 ml.",
+        "status": "refused",
+        "first_try": true,
+        "repaired": false,
+        "layout_fixed": false,
+        "result": "refused",
+        "layout_moves": [],
+        "problems": [],
+        "warnings": [],
+        "notes": [],
+        "uploads": [],
+        "plan": {
+          "contract": "rtt-effectors/2",
+          "label": "Product mode: not part of the pre-registered experiment",
+          "task_id": "d10c68fcd0666273b03a29750003822b34365e2300469d68b9351aa53043b44f",
+          "source": "nemotron",
+          "title": "Pour coffee into cups",
+          "description": "Pour hot coffee from a jug into three cups, filling each about 200 ml without spilling.",
+          "objects": [],
+          "steps": [],
+          "assumptions": [],
+          "clarifications": [],
+          "unsupported": [
+            {
+              "what": "Pouring liquid",
+              "reason": "Liquid handling (fluids) is not simulated in the physics engine.",
+              "nearest_primitive": "grasp"
+            }
+          ],
+          "refusal": "The core action of pouring liquid cannot be simulated; the use case involves fluids which are outside the supported primitives.",
+          "fidelity": {}
+        },
+        "attempts": [
+          {
+            "stage": "main",
+            "outcome": "refused",
+            "problems": [],
+            "request_hash": "d0357c7da0142ef7925cf8ef46c4cc9568af5820a9312b8f60729b6d31a44134",
+            "cached": false,
+            "prompt_tokens": 20310,
+            "completion_tokens": 435,
+            "reasoning_tokens": 213,
+            "cost_usd": 0.0064845,
+            "latency_s": 17.2314,
+            "finish_reason": "tool_calls",
+            "notes": [],
+            "error": null
+          }
+        ],
+        "cost_usd": 0.006484,
+        "template_hashes": {
+          "system.md": "69589cf14a708eb214576522923c7193695f0e3189fffae1195c9ecadb386edb",
+          "user.md": "9eeadc86596227a22bcbe63a4be3f061cffc0de96d0f9d1b0c89801e40214cd1",
+          "repair.md": "215ddfaa29d5893f95760f4f36e56798831e846290069d3e3699b0ea411cf454"
+        },
+        "tool_sha256": "d5ac5d4361ab8f61ccff4a3c3919298be5d00a84134fe85e5bd2fe2ec35cd702"
+      }
+    }
+  ]
+}

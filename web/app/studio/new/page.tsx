@@ -33,8 +33,10 @@ export default function StudioNewPage() {
           <span className="stamp text-pending">PRODUCT MODE</span>
           <span>{plans.label}.</span>
           <span>
-            Recorded test set: {summary.plans.valid} of {summary.plans.n} use cases planned validly ({summary.plans.valid_first_try} on the first
-            call), {summary.refusals.refused_with_nearest} of {summary.refusals.n} unsupported ones refused with the nearest primitive.
+            Recorded test set, one live run: {summary.plans.valid} of {summary.plans.n} use cases planned validly ({summary.plans.valid_first_call} on
+            the first call, {summary.plans.valid_after_repair} after one repair call, {summary.plans.valid_after_layout_fix} after the layout fix),{" "}
+            {summary.plans.failed} failed; {summary.refusals.refused_with_nearest} of {summary.refusals.n} unsupported ones refused with the nearest
+            primitive.
           </span>
           <Link className="link" href="/about/">
             Method and limitations

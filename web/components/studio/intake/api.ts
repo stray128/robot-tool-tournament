@@ -35,6 +35,10 @@ export interface PlanResultView {
   status: "valid" | "refused" | "invalid" | "failed";
   first_try: boolean;
   repaired: boolean;
+  /** Valid only after the layout fixer moved objects in code (after the repair call). */
+  layout_fixed?: boolean;
+  /** The fixer's moves, also the plan's last assumptions. */
+  layout_moves?: string[];
   problems: string[];
   warnings: string[];
   notes: string[];

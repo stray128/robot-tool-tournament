@@ -30,7 +30,7 @@ from rtt.studio.types import CONTRACT_VERSION
 
 __all__ = ["RECORDED_UPLOAD", "parity_cases", "recorded_plans", "write_web_data"]
 
-RECORDED_UPLOAD: Final = Path(__file__).with_name("recorded") / "upload-2026-10-18-s4d"
+RECORDED_UPLOAD: Final = Path(__file__).with_name("recorded") / "upload-2026-10-18-s4e"
 FILES: Final = ("catalog.json", "recorded.json", "parity.json")
 
 
@@ -52,6 +52,9 @@ def _example(row: dict[str, Any], *, hero: bool) -> dict[str, Any]:
         "status": plan["status"],
         "first_try": plan["first_try"],
         "repaired": plan["repaired"],
+        "layout_fixed": plan["layout_fixed"],
+        "result": plan["result"],
+        "layout_moves": plan["layout_moves"],
         "attempts": [
             {
                 k: a[k]
@@ -194,6 +197,14 @@ def _edits() -> list[tuple[str, str, Callable[[dict[str, Any]], None]]]:
     def add_step(index: int, step: dict[str, Any]) -> Callable[[dict[str, Any]], None]:
         return lambda a: a["steps"].insert(index if index >= 0 else len(a["steps"]), copy.deepcopy(step))
 
+    def add_step_on(index: int, step: dict[str, Any], kind: str) -> Callable[[dict[str, Any]], None]:
+        """``step`` on the plan's object of ``kind`` (whatever the planner named it)."""
+
+        def f(a: dict[str, Any]) -> None:
+            a["steps"].insert(index, {**copy.deepcopy(step), "object": _object(a, kind)["name"]})
+
+        return f
+
     def no_cons(primitive: str) -> Callable[[dict[str, Any]], None]:
         return lambda a: _step(a, primitive).__setitem__(
             "constraints",
@@ -277,6 +288,28 @@ def _edits() -> list[tuple[str, str, Callable[[dict[str, Any]], None]]]:
             )
 
         return f
+
+    def shut_before_picks(a: dict[str, Any]) -> None:
+        lid = _object(a, "hinged_lid")["name"]
+        first_pick = next(
+            i for i, x in enumerate(a["steps"]) if x["primitive"] in ("grasp", "suction", "wrap")
+        )
+        a["steps"].insert(
+            first_pick,
+            {
+                "id": "shut_early",
+                "primitive": "push",
+                "object": lid,
+                "handle": "lid",
+                "target": None,
+                "description": "Push the lid shut too early.",
+                "params": {"speed_mm_s": 40},
+                "constraints": dict(none_cons),
+                "success": [{"quantity": "angle_deg", "at_least": None, "at_most": 5}],
+                "after": [],
+                "hold_after": False,
+            },
+        )
 
     return [
         ("valid_h1", "h1_tote", lambda a: None),
@@ -378,9 +411,9 @@ def _edits() -> list[tuple[str, str, Callable[[dict[str, Any]], None]]]:
         # the simulator's conventions (S2)
         ("twist_cw_latch", "h3_cabinet", nth_param("twist", 0, "direction", "cw")),
         ("twist_cw_valve", "h3_cabinet", nth_param("twist", 1, "direction", "cw")),
-        ("twist_back_after_open", "h3_cabinet", add_step(3, close_valve)),
+        ("twist_back_after_open", "h3_cabinet", add_step_on(3, close_valve, "handwheel_valve")),
         ("twist_ccw_thread", "h2_coupling", sparam("twist", "direction", "ccw")),
-        ("grasp_on_thread", "h2_coupling", add_step(0, grasp_coupling)),
+        ("grasp_on_thread", "h2_coupling", add_step_on(0, grasp_coupling, "threaded_joint")),
         ("twist_without_insert", "h2_coupling", drop_step("insert")),
         (
             "insert_too_deep",
@@ -392,6 +425,7 @@ def _edits() -> list[tuple[str, str, Callable[[dict[str, Any]], None]]]:
             "thread_torque_capped",
             "h2_coupling",
             chain(
+                setp("threaded_joint", "engage_turns", 3),
                 crit(
                     "twist",
                     [
@@ -406,6 +440,7 @@ def _edits() -> list[tuple[str, str, Callable[[dict[str, Any]], None]]]:
             "thread_torque_wrist",
             "h2_coupling",
             chain(
+                setp("threaded_joint", "engage_turns", 3),
                 setp("threaded_joint", "final_torque_nm", 18),
                 no_cons("twist"),
                 crit("twist", [{"quantity": "turns", "at_least": 3, "at_most": None}]),
@@ -431,7 +466,7 @@ def _edits() -> list[tuple[str, str, Callable[[dict[str, Any]], None]]]:
             "e1_drawer_kitting",
             chain(setp("drawer", "pull_force_n", 20), cons("push", "max_force_n", 20)),
         ),
-        ("plug_grasped_first", "h3_cabinet", add_step(3, grasp_plug)),
+        ("plug_grasped_first", "h3_cabinet", add_step_on(3, grasp_plug, "port_plug")),
         (
             "lid_low_stop",
             "h1_tote",
@@ -449,6 +484,24 @@ def _edits() -> list[tuple[str, str, Callable[[dict[str, Any]], None]]]:
         ("lid_lip_overhangs_its_bin", "h1_tote", lid_over_bin("lip", 30, 30)),
         ("lid_lip_short_in_depth", "h1_tote", lid_over_bin("lip", 30, 29)),
         ("lid_lip_on_a_turned_bin", "h1_tote", lid_over_bin("lip", 30, 30, 90)),
+        # a pick into a lidded bin needs the lid opened past vertical first (S4e)
+        (
+            "lid_opened_to_30",
+            "h1_tote",
+            crit("hook_pull", [{"quantity": "angle_deg", "at_least": 30, "at_most": None}]),
+        ),
+        (
+            "lid_opened_without_at_least",
+            "h1_tote",
+            crit("hook_pull", [{"quantity": "angle_deg", "at_least": None, "at_most": 110}]),
+        ),
+        (
+            "lid_opened_to_95",
+            "h1_tote",
+            crit("hook_pull", [{"quantity": "angle_deg", "at_least": 95, "at_most": None}]),
+        ),
+        ("lid_never_opened", "h1_tote", drop_step("hook_pull")),
+        ("lid_shut_before_the_picks", "h1_tote", shut_before_picks),
         # layout and windows (S4c)
         (
             "layout_part_in_its_bin",
@@ -471,7 +524,10 @@ def _edits() -> list[tuple[str, str, Callable[[dict[str, Any]], None]]]:
         (
             "window_narrow_turns",
             "h2_coupling",
-            crit("twist", [{"quantity": "turns", "at_least": 2.9, "at_most": 3}]),
+            chain(
+                setp("threaded_joint", "engage_turns", 3),
+                crit("twist", [{"quantity": "turns", "at_least": 2.9, "at_most": 3}]),
+            ),
         ),
         (
             "window_narrow_angle",

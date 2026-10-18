@@ -47,6 +47,7 @@ __all__ = [
     "GOAL_EXTRA",
     "HANDLE_TEXT",
     "LID_HINGE_MM",
+    "LID_OPEN_DEG",
     "LIMIT_QUANTITIES",
     "MAPPING_ROWS",
     "NO_PICK",
@@ -123,6 +124,9 @@ TORQUE_SHARE: Final = 0.9
 WRIST_TORQUE_SHARE: Final = 0.95
 #: A lid's closed underside above the table (the simulator has no hinge-height parameter).
 LID_HINGE_MM: Final = 120.0
+#: A pick into a bin under a lid needs that lid opened at least this far first (past vertical: a lid
+#: below it falls shut when the tool lets go).
+LID_OPEN_DEG: Final = 95.0
 #: A handwheel's mid-plane above the table.
 WHEEL_HEIGHT_MM: Final = 110.0
 
@@ -364,7 +368,9 @@ def render_rules() -> str:
                 "changing the height. A lid with feature lip is opened by a hook slid under its free edge, so it "
                 "overhangs its bin by feature_mm on every side (width_mm at least the bin's length_mm + 2 x "
                 "feature_mm, depth_mm at least the bin's width_mm + 2 x feature_mm); a lid with feature handle "
-                "may match its bin."
+                "may match its bin. A pick (grasp, suction, wrap) into a bin under a lid comes after a hook_pull "
+                f"of that lid with angle_deg at_least {num(LID_OPEN_DEG)} (past vertical: a lid opened less falls "
+                "shut when the tool lets go), and no push closes the lid between that hook_pull and the pick."
             ),
             (
                 "- Reachable criteria: a lid's or door's angle within its max_angle_deg; a drawer's travel "
@@ -604,6 +610,7 @@ def web_catalog() -> dict[str, Any]:
             "torque_share": TORQUE_SHARE,
             "wrist_torque_share": WRIST_TORQUE_SHARE,
             "lid_hinge_mm": LID_HINGE_MM,
+            "lid_open_deg": LID_OPEN_DEG,
             "depth_tolerance_mm": 0.5,
             "window_min": dict(_window_min()),
             "layout": _layout_constants(),

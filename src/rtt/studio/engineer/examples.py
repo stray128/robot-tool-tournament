@@ -45,7 +45,7 @@ HERO_CASES: Final[tuple[UseCase, ...]] = (
         "Pipe coupling",
         "Pipe prefabrication: a threaded steel coupling (1 inch pipe size, about 40 mm across and 45 mm "
         "long) sits loosely on the threaded stub of a pipe spool that stands upright. Push it onto the "
-        "thread start and turn it on until it is snug, without going over 8 N m.",
+        "thread start and turn it on until it is hand-tight (about 3 N m), never over 8 N m.",
     ),
     UseCase(
         "h3_cabinet",
@@ -53,7 +53,7 @@ HERO_CASES: Final[tuple[UseCase, ...]] = (
         "Equipment cabinet",
         "Field maintenance on an equipment cabinet: turn the quarter-turn latch to unlock the door, "
         "swing the door open, turn the valve handwheel inside a quarter turn (90 degrees) to open it, then plug "
-        "the test connector into the service port.",
+        "the 8 mm round test connector into the service port.",
     ),
 )
 
