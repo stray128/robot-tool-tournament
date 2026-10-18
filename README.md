@@ -219,6 +219,7 @@ The analysis refuses anything but the registered design: 32 runs per arm, the se
 | `rtt job {smoke,m1,search,gv4}`, `python -m rtt.cloud run ...` | The same work as a Nebius Serverless AI Job: capacity check, submit by digest, wait, record the spend, fetch and verify |
 | `rtt cloud {capacity,status,logs,list,fetch,spend}` | The rest of the job tooling |
 | `python -m rtt.effectors {tournament,export-web,families}` | The effector tournament (product mode) |
+| `python -m rtt.library {check,gate,export-web}`, `scripts/vendor_library.py [--check\|--drift]` | The open effector library: verify, gate the entrants, export the catalog page; vendor at pinned commits (product mode, `docs/LIBRARY.md`) |
 | `python -m rtt.analysis.tau {derive,analyze,rule}`, `rtt analyze-secondary` | The pre-registered analysis |
 | `rtt certify`, `rtt heldout`, `rtt heldout-real` | Certificates and the held-out suites |
 | `rtt probe-llm` | The Token Factory output-mode probe report |
@@ -237,6 +238,7 @@ The analysis refuses anything but the registered design: 32 runs per arm, the se
 - `src/rtt/analysis/`, `src/rtt/heldout_v2/`: the pre-registered analysis and the held-out runners.
 - `src/rtt/part/`, `src/rtt/agent/`, `src/rtt/api/`: Bring Your Part, the Grasp Engineer and its API.
 - `src/rtt/effectors/`: the effector layer (catalog, soft arm, suction, designed morphologies, tournament).
+- `src/rtt/library/`, `assets/effectors/library/`: the open effector library (licence gate, pinned ingest, rigid proxies, ISO 9409-1 adapter generator, catalog page data).
 - `configs/`, `assets/`: tasks, suites, seeds, example parts (CC0), vendored effector models.
 - `docker/`, `jobs/nebius/`: the job image and its build and push scripts.
 - `web/`: the static Next.js site ([`web/README.md`](web/README.md)), deployed to GitHub Pages by `.github/workflows/pages.yml`.
@@ -270,6 +272,24 @@ credits page. On screen, every third-party robot model carries a generic name.
   Robotics (Apache-2.0), the UMI Gripper by the Columbia Artificial Intelligence and
   Robotics Lab (MIT), the YAM arm's linear gripper by I2RT Robotics (MIT) and the PiPER
   arm's gripper by AgileX Robotics (MIT).
+- **Open effector library** (product mode), 26 third-party items pinned by commit in
+  `assets/effectors/library/`, each with its licence texts and a `SOURCE.json` of hashes
+  (`lock.json` pins the whole library); full credit lines are in `NOTICE` and
+  `docs/ATTRIBUTION.md`. Simulation models from MuJoCo Menagerie (Google DeepMind, commit
+  62ab00f2): the Robotiq 2F-85 (v4) gripper by ROS-Industrial (BSD-2-Clause), the Franka
+  Emika Panda hand (Apache-2.0), the Shadow DEX-EE hand by The Shadow Robot Company
+  (Apache-2.0), the ALOHA gripper by Trossen Robotics (BSD-3-Clause), the SO-ARM100 gripper
+  by The Robot Studio (Apache-2.0), and the UFACTORY xArm and Lite 6 grippers (BSD-3-Clause).
+  Open hardware: the SSG-48 gripper by Source Robotics (Apache-2.0), the ORCA hand by ORCA
+  (MIT description, CC-BY-4.0 hardware), the MIDAS hand by its contributors (MIT), the
+  SO-ARM100/101 parallel gripper by Robonine (CERN-OHL-P-2.0, Apache-2.0), the Schunk WSG 50
+  model by Toyota Research Institute (BSD-3-Clause), the xArm vacuum gripper description by
+  UFACTORY (BSD-3-Clause), the robosuite suction gripper (MIT), Stretch Tool Share tools by
+  Hello Robot (Apache-2.0), assembler0 parts by Jack Vial (MIT), ALOHA 2 fingers by Tony Z.
+  Zhao (MIT), Grip4SO101 by Xiujin Liu (MIT), the norma-core pgripper (Apache-2.0), the
+  XLeRobot soft fin (Apache-2.0), the co-designed soft gripper (MIT), the BCN3D Moveo gripper
+  (MIT) and the AmazingHand by Pollen Robotics (CC-BY-4.0, Apache-2.0). Copyright licences
+  cover the files, not the makers' patents or trademarks.
 - **Real-object held-out set.** Google Scanned Objects (Google Research; Downs et al.,
   ICRA 2022, arXiv:2204.11918), CC BY 4.0, via Kevin Zakka's `mujoco_scanned_objects`
   (MIT, commit 6ff8d275). Scans are fetched at run time, and each selection writes

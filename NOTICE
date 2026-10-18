@@ -144,3 +144,236 @@ upstream wrist and positioning joints (the shared 4-DoF wrist replaces them) and
 geometry that carries no mass, and pins the fin-ray gripper base's mass properties at the
 upstream values; actuator gains and force ranges are unmodified. The procedural two- and
 three-finger adaptive grippers are this project's own geometry (Apache-2.0).
+
+7. Open effector library (vendored; product mode, not part of the pre-registered experiment)
+
+The open effector library (docs/LIBRARY.md) ships open-source end-effectors and simulation
+models whose licences allow redistribution, each under a generic key in
+assets/effectors/library/<key>/ with its upstream licence and notice texts byte for byte in
+LICENSES/, and a SOURCE.json that pins every file (upstream repository, commit, path and
+sha256; sha256 as shipped; SPDX licence; copyright; changes). assets/effectors/library/lock.json
+pins the whole library. On screen each item has a generic name; makers are credited only
+here, in the README, in docs/ATTRIBUTION.md and on the site's credits page. Copyright licences
+cover the files, not the makers' patents or trademarks.
+
+  finger-fin-tpu ......... "XLeRobot soft fin" by the XLeRobot contributors,
+                           https://github.com/Vector-Wangel/XLeRobot (commit b017b5e),
+                           licensed Apache-2.0
+                           (https://www.apache.org/licenses/LICENSE-2.0). Copyright the
+                           XLeRobot contributors. Files: Apache-2.0.
+  finger-soft-codesign ... "Co-design soft gripper (CoRL 2025)" by Yisha and co-authors,
+                           https://github.com/yswhynot/codesign-soft-gripper (commit
+                           64c886d), licensed MIT (https://spdx.org/licenses/MIT.html).
+                           Copyright (c) 2025 Yisha. Files: MIT.
+  gripper-2f-adaptive-85 .. "Robotiq 2F-85 (v4) MJCF model" by ROS-Industrial and MuJoCo
+                           Menagerie contributors,
+                           https://github.com/google-deepmind/mujoco_menagerie (commit
+                           62ab00f), licensed BSD-2-Clause
+                           (https://spdx.org/licenses/BSD-2-Clause.html); MJCF from MuJoCo
+                           Menagerie (Google DeepMind,
+                           https://github.com/google-deepmind/mujoco_menagerie). Copyright
+                           (c) 2013, ROS-Industrial. Files: BSD-2-Clause. Modified: the
+                           effector subtree written as one MJCF; mass properties pinned at
+                           the upstream values; visual-only geometry removed; contact
+                           priorities set to 0; element names carrying a maker's or
+                           product's name renamed; collision meshes shipped as their convex
+                           hulls.
+  gripper-2f-air-mini .... "UFACTORY Lite 6 gripper MJCF model" by UFACTORY Inc. and MuJoCo
+                           Menagerie contributors,
+                           https://github.com/google-deepmind/mujoco_menagerie (commit
+                           62ab00f), licensed BSD-3-Clause
+                           (https://spdx.org/licenses/BSD-3-Clause.html); MJCF from MuJoCo
+                           Menagerie (Google DeepMind,
+                           https://github.com/google-deepmind/mujoco_menagerie). Copyright
+                           (c) 2018, UFACTORY Inc. Files: BSD-3-Clause. Modified: the
+                           effector subtree written as one MJCF; mass properties pinned at
+                           the upstream values; visual-only geometry removed; element names
+                           carrying a maker's or product's name renamed; collision meshes
+                           shipped as their convex hulls.
+  gripper-2f-camera-holder .. "norma-core pgripper" by the norma-core contributors,
+                           https://github.com/norma-core/norma-core (commit 0d17bb3),
+                           licensed Apache-2.0
+                           (https://www.apache.org/licenses/LICENSE-2.0). Copyright the
+                           norma-core contributors. Files: Apache-2.0.
+  gripper-2f-cobot-hand-80 .. "Franka Emika Panda hand MJCF model" by Franka Robotics GmbH and
+                           MuJoCo Menagerie contributors,
+                           https://github.com/google-deepmind/mujoco_menagerie (commit
+                           62ab00f), licensed Apache-2.0
+                           (https://www.apache.org/licenses/LICENSE-2.0); MJCF from MuJoCo
+                           Menagerie (Google DeepMind,
+                           https://github.com/google-deepmind/mujoco_menagerie). Copyright
+                           Franka Robotics GmbH (formerly Franka Emika GmbH); MJCF by the
+                           MuJoCo Menagerie contributors. Files: Apache-2.0. Modified: the
+                           effector subtree written as one MJCF; mass properties pinned at
+                           the upstream values; visual-only geometry removed; collision
+                           meshes shipped as their convex hulls.
+  gripper-2f-force-48 .... "SSG-48 adaptive electric gripper" by Source Robotics,
+                           https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper
+                           (commit cb99f63), licensed Apache-2.0
+                           (https://www.apache.org/licenses/LICENSE-2.0). Copyright Source
+                           Robotics and the SSG-48 contributors. Files: Apache-2.0.
+                           Modified: the effector subtree written as one MJCF; mass
+                           properties pinned at the upstream values; element names carrying
+                           a maker's or product's name renamed; collision meshes shipped as
+                           their convex hulls.
+  gripper-2f-hobby-parallel-84 .. "SO-ARM100/101 Parallel Gripper" by Robonine,
+                           https://github.com/roboninecom/SO-ARM100-101-Parallel-Gripper
+                           (commit 305ad0f), licensed CERN-OHL-P-2.0
+                           (https://ohwr.org/cern_ohl_p_v2.txt); description Apache-2.0;
+                           documentation CC-BY-4.0. Copyright (c) 2025 Robonine. Files:
+                           Apache-2.0, CC-BY-4.0, CERN-OHL-P-2.0. Modified: converted from
+                           the upstream URDF (so_101.urdf.xacro) to MJCF; the clamp
+                           position servo (kp 3000 N/m, force limit 120 N, the published
+                           grip) is ours: the description declares no actuator; the
+                           mirrored clamp follows through a joint equality; collision
+                           meshes shipped as their convex hulls.
+  gripper-2f-linkage-cobot .. "UFACTORY xArm gripper MJCF model" by UFACTORY Inc. and MuJoCo
+                           Menagerie contributors,
+                           https://github.com/google-deepmind/mujoco_menagerie (commit
+                           62ab00f), licensed BSD-3-Clause
+                           (https://spdx.org/licenses/BSD-3-Clause.html); MJCF from MuJoCo
+                           Menagerie (Google DeepMind,
+                           https://github.com/google-deepmind/mujoco_menagerie). Copyright
+                           (c) 2018, UFACTORY Inc. Files: BSD-3-Clause. Modified: the
+                           effector subtree written as one MJCF; mass properties pinned at
+                           the upstream values; visual-only geometry removed; contact
+                           priorities set to 0; element names carrying a maker's or
+                           product's name renamed; collision meshes shipped as their convex
+                           hulls.
+  gripper-2f-rail-jaws ... "Grip4SO101" by Xiujin Liu,
+                           https://github.com/XiujinLiu/Grip4SO101 (commit 8dd3a23),
+                           licensed MIT (https://spdx.org/licenses/MIT.html). Copyright (c)
+                           2025 Xiujin Liu. Files: MIT.
+  gripper-2f-servo-110 ... "Schunk WSG 50 model (Drake models repository)" by Toyota
+                           Research Institute, https://github.com/RobotLocomotion/models
+                           (commit f85076b), licensed BSD-3-Clause
+                           (https://spdx.org/licenses/BSD-3-Clause.html). Copyright 2020
+                           Toyota Research Institute. Files: BSD-3-Clause. Modified:
+                           converted from the upstream SDF (schunk_wsg_50.sdf) to MJCF;
+                           rotational inertia computed from each collision box at the
+                           declared mass; one position servo (kp 2000 N/m) at the model's
+                           80 N effort limit drives the left finger; the right finger
+                           mirrors it (Drake actuates both).
+  gripper-2f-teleop ...... "ALOHA gripper MJCF model" by Trossen Robotics and MuJoCo
+                           Menagerie contributors,
+                           https://github.com/google-deepmind/mujoco_menagerie (commit
+                           62ab00f), licensed BSD-3-Clause
+                           (https://spdx.org/licenses/BSD-3-Clause.html); MJCF from MuJoCo
+                           Menagerie (Google DeepMind,
+                           https://github.com/google-deepmind/mujoco_menagerie); "ALOHA 2
+                           gripper finger STLs" by Tony Z. Zhao,
+                           https://github.com/tonyzhaozh/aloha (commit 06369f0), licensed
+                           MIT (https://spdx.org/licenses/MIT.html). Copyright (c) 2023,
+                           Trossen Robotics (model); Copyright (c) 2023 Tony Z. Zhao
+                           (finger sets). Files: BSD-3-Clause, MIT. Modified: the effector
+                           subtree written as one MJCF; mass properties pinned at the
+                           upstream values; visual-only geometry removed; collision meshes
+                           shipped as their convex hulls.
+  gripper-angular-jaw-hobby .. "SO-ARM100 MJCF model" by The Robot Studio and MuJoCo Menagerie
+                           contributors,
+                           https://github.com/google-deepmind/mujoco_menagerie (commit
+                           62ab00f), licensed Apache-2.0
+                           (https://www.apache.org/licenses/LICENSE-2.0); MJCF from MuJoCo
+                           Menagerie (Google DeepMind,
+                           https://github.com/google-deepmind/mujoco_menagerie); "SO-ARM100
+                           / SO-101 moving jaw" by The Robot Studio,
+                           https://github.com/TheRobotStudio/SO-ARM100 (commit a758567),
+                           licensed Apache-2.0
+                           (https://www.apache.org/licenses/LICENSE-2.0). Copyright The
+                           Robot Studio and the SO-ARM100 contributors. Files: Apache-2.0.
+                           Modified: the effector subtree written as one MJCF; mass
+                           properties pinned at the upstream values; visual-only geometry
+                           removed; collision meshes shipped as their convex hulls.
+  gripper-hobby-arm-twin-jaw .. "BCN3D Moveo gripper" by BCN3D Technologies,
+                           https://github.com/BCN3D/BCN3D-Moveo (commit 0866a92), licensed
+                           MIT (https://spdx.org/licenses/MIT.html). Copyright (c) 2016
+                           BCN3D Technologies. Files: MIT.
+  hand-3f-12dof-industrial .. "Shadow DEX-EE MJCF model" by The Shadow Robot Company and
+                           MuJoCo Menagerie contributors,
+                           https://github.com/google-deepmind/mujoco_menagerie (commit
+                           62ab00f), licensed Apache-2.0
+                           (https://www.apache.org/licenses/LICENSE-2.0); MJCF from MuJoCo
+                           Menagerie (Google DeepMind,
+                           https://github.com/google-deepmind/mujoco_menagerie). Copyright
+                           The Shadow Robot Company. Files: Apache-2.0. Modified: the
+                           effector subtree written as one MJCF; mass properties pinned at
+                           the upstream values; visual-only geometry removed; collision
+                           meshes shipped as their convex hulls.
+  hand-4f-8dof-printed ... "AmazingHand" by Pollen Robotics,
+                           https://github.com/pollen-robotics/AmazingHand (commit 3e82410),
+                           licensed CC-BY-4.0
+                           (https://creativecommons.org/licenses/by/4.0/); code Apache-2.0.
+                           Copyright Pollen Robotics. Files: Apache-2.0, CC-BY-4.0.
+  hand-4f-servo-13act .... "MIDAS hand MuJoCo model" by MIDAS Hand Contributors (UCLA
+                           RoMeLa), https://github.com/midas-hand-org/midas_hand_mujoco
+                           (commit 6c7d17f), licensed MIT
+                           (https://spdx.org/licenses/MIT.html). Copyright (c) 2026 MIDAS
+                           Hand Contributors. Files: MIT. Modified: the effector subtree
+                           written as one MJCF; mass properties pinned at the upstream
+                           values; visual-only geometry removed.
+  hand-5f-tendon-16dof ... "ORCA hand description (v2)" by ORCA,
+                           https://github.com/orcahand/orcahand_description (commit
+                           b9b349a), licensed MIT (https://spdx.org/licenses/MIT.html);
+                           "ORCA Hand v2 hardware" by ORCA Dexterity, Inc.,
+                           https://github.com/orcahand/orcahand_hardware (commit 37b71dc),
+                           licensed CC-BY-4.0
+                           (https://creativecommons.org/licenses/by/4.0/). Copyright (c)
+                           2025 ORCA (description); Copyright (c) 2026 ORCA Dexterity, Inc.
+                           (hardware). Files: CC-BY-4.0, MIT. Modified: the effector
+                           subtree written as one MJCF; mass properties pinned at the
+                           upstream values; visual-only geometry removed; contact margins
+                           set to 0; collision meshes shipped as their convex hulls.
+  jaw-compliant-tpu ...... "SO-101 compliant gripper" by The Robot Studio,
+                           https://github.com/TheRobotStudio/SO-ARM100 (commit a758567),
+                           licensed Apache-2.0
+                           (https://www.apache.org/licenses/LICENSE-2.0). Copyright The
+                           Robot Studio and the SO-ARM100 contributors. Files: Apache-2.0.
+  jaw-magnetic-static .... "assembler0 magnetic follower gripper static part" by Jack Vial,
+                           https://github.com/jackvial/assembler0 (commit 841a758),
+                           licensed MIT (https://spdx.org/licenses/MIT.html). Copyright (c)
+                           2025 Jack Vial. Files: MIT.
+  suction-cup-cobot ...... "UFACTORY xArm vacuum gripper description" by UFACTORY Inc.,
+                           https://github.com/xArm-Developer/xarm_ros2 (commit 62936f7),
+                           licensed BSD-3-Clause
+                           (https://spdx.org/licenses/BSD-3-Clause.html). Copyright (c)
+                           2018, UFACTORY Inc. Files: BSD-3-Clause.
+  suction-primitive ...... "robosuite suction gripper MJCF" by the robosuite authors
+                           (Stanford SVL and UT RPL),
+                           https://github.com/ARISE-Initiative/robosuite (commit 5ce6643),
+                           licensed MIT (https://spdx.org/licenses/MIT.html). Copyright (c)
+                           2022 Stanford Vision and Learning Lab and UT Robot Perception
+                           and Learning Lab. Files: MIT.
+  tool-button-pusher ..... "Stretch Tool Share button pusher (v2)" by Hello Robot Inc. and
+                           Henry Evans, https://github.com/hello-robot/stretch_tool_share
+                           (commit 802e128), licensed Apache-2.0
+                           (https://www.apache.org/licenses/LICENSE-2.0). Copyright
+                           2020-2024 Hello Robot Inc. Files: Apache-2.0. Modified: a rigid
+                           simulation proxy (CoACD convex pieces) generated from the part's
+                           mesh.
+  tool-hook-drawer ....... "Stretch Tool Share puller (v1)" by Hello Robot Inc.,
+                           https://github.com/hello-robot/stretch_tool_share (commit
+                           802e128), licensed Apache-2.0
+                           (https://www.apache.org/licenses/LICENSE-2.0). Copyright
+                           2020-2024 Hello Robot Inc. Files: Apache-2.0. Modified: a rigid
+                           simulation proxy (CoACD convex pieces) generated from the part's
+                           mesh.
+  tool-marker-holder ..... "Stretch Tool Share dry-erase marker holder (v1)" by Hello Robot
+                           Inc., https://github.com/hello-robot/stretch_tool_share (commit
+                           802e128), licensed Apache-2.0
+                           (https://www.apache.org/licenses/LICENSE-2.0). Copyright
+                           2020-2024 Hello Robot Inc. Files: Apache-2.0. Modified: a rigid
+                           simulation proxy (CoACD convex pieces) generated from the part's
+                           mesh.
+  tool-screwdriver-servo .. "assembler0 SO-101 screwdriver" by Jack Vial,
+                           https://github.com/jackvial/assembler0 (commit 841a758),
+                           licensed MIT (https://spdx.org/licenses/MIT.html). Copyright (c)
+                           2025 Jack Vial. Files: MIT. Modified: a rigid simulation proxy
+                           (CoACD convex pieces) generated from the part's mesh.
+
+  plate-iso50-4-m6, plate-iso31p5-4-m5, adapter-iso50-4-m6-to-iso31p5-4-m5: ISO 9409-1
+                           flange plates generated by this project (rtt.library.adapters),
+                           Apache-2.0.
+
+Print, CAD and documentation files and licence texts are shipped byte for byte. Simulation
+models are written by scripts/vendor_library.py as listed above; the 3D previews under
+web/public/data/library/glb/ are derived from each item's own geometry and carry its licence.
