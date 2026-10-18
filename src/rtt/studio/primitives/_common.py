@@ -260,6 +260,17 @@ class Tool:
     def footprint(self, closure: float) -> Footprint:
         return footprint(self.scene, closure)
 
+    def closing_tip(self, pre: float) -> np.ndarray:
+        """The tool's tip as it closes from the pre-shape ``pre`` (wrist frame, roll 0): on the
+        axis, at the lowest point its geoms reach over the calibrated closures from ``pre`` to 1
+        (a linkage finger's tip swings down as it closes), so a tip height planned for it holds
+        through the whole close. Fingers only (else :attr:`tip`)."""
+        if self.mechanism != "fingers":
+            return self.tip
+        closures = [c for c in (*PRESHAPE_CLOSURES, 0.8, 1.0) if c >= pre - 1e-9]
+        low = min(self.footprint(c).tip_z for c in closures)
+        return np.array([self.tip[0], self.tip[1], min(float(self.tip[2]), low)])
+
     def preshape(self, width: float, clearance: float = PRESHAPE_CLEARANCE) -> float:
         """The largest calibrated closure whose aperture along the closing axis still clears a
         feature ``width`` m across by ``clearance`` m on each side (0: fully open). Fingers only."""

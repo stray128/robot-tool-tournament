@@ -106,6 +106,7 @@ START_DEPTH = 0.001  # m past the chamfer: how far the grip starts a plug it can
 RELEASE_S = 0.4
 RETRACT = 0.050
 FORCE_HOLD = 0.9  # of a step's max_force_n: the measured push the z servo backs off above
+PULL_TOL = 0.0003  # m: a pressed plug that comes up this far with the rising fist is being held
 RESEAT_MIN = 0.001  # m: a plug at least this deep in the bore stands upright for a press home
 RESEAT_CLEAR = 0.015  # m over the plug's top while the fingers close into a fist
 
@@ -214,6 +215,7 @@ class InsertController:
             grip = tool.tip
             if tool.mechanism == "fingers":
                 tip = grip_tip(info, h, float(task.physics.friction), c.min_tip_clearance)
+                grip = tool.closing_tip(0.0)  # the tips' lowest point while they close
                 # the plug goes between the pads, wherever they are mounted
                 grip = grip + np.array([tool.footprint(0.0).grip_centre(0.5 * info["plug_d_m"]), 0.0, 0.0])
             approach = wrist_target(
@@ -340,12 +342,38 @@ class InsertController:
             closure = run["closure_override"]
         release = run.get("release_at")
         if release is not None and not run["hold"] and t >= release:
-            if "reseat_at" not in run:  # a fist that pressed the plug home just rises
+            if "reseat_at" not in run:
                 closure *= max(0.0, 1.0 - (t - release) / RELEASE_S)
-            up = min_jerk(min(1.0, max(0.0, (t - release - RELEASE_S) / 0.6)))
-            wrist = wrist + np.array([0.0, 0.0, RETRACT * up, 0.0, 0.0])
+                rise = RETRACT * min_jerk(min(1.0, max(0.0, (t - release - RELEASE_S) / 0.6)))
+            else:
+                rise = self._fist_rise(t, ctx, run, data, release)
+                if run.get("let_go_at") is not None:
+                    closure *= max(0.0, 1.0 - (t - run["let_go_at"]) / RELEASE_S)
+            wrist = wrist + np.array([0.0, 0.0, rise, 0.0, 0.0])
         phase = Phase.HOLD if held or t >= t_close else Phase.DESCEND
         return PrimitiveCommand(wrist, tool.controls(t, closure, model, data, phase))
+
+    @staticmethod
+    def _fist_rise(
+        t: float, ctx: StepContext, run: dict[str, Any], data: mujoco.MjData, release: float
+    ) -> float:
+        """How far a fist that pressed the plug home has risen: it rises closed; if the plug comes
+        up with it (fingers that closed around the plug's top), it holds and lets go first."""
+        depth = _depth_observed(ctx, data, run)
+        if run.get("seated") is None:
+            run["seated"] = depth
+        if run.get("let_go_at") is None and depth < run["seated"] - PULL_TOL:
+            run["let_go_at"] = t
+            run["rise_held"] = run.get("rise", 0.0)
+        if run.get("let_go_at") is None:
+            rise = RETRACT * min_jerk(min(1.0, max(0.0, (t - release - RELEASE_S) / 0.6)))
+        else:
+            held = run["rise_held"]
+            rise = held + (RETRACT - held) * min_jerk(
+                min(1.0, max(0.0, (t - run["let_go_at"] - RELEASE_S) / 0.6))
+            )
+        run["rise"] = rise
+        return rise
 
     def _align(self, t: float, ctx: StepContext, run: dict[str, Any], data: mujoco.MjData) -> np.ndarray:
         sch = schedule(ctx)
@@ -430,6 +458,9 @@ class InsertController:
                             base[4],
                         ]
                     )
+                    # under a step force limit the push eases off while the fingers let go (an
+                    # opening finger on a pushed plug presses it down past the limit)
+                    run["reseat_palm"] = palm_z if math.isfinite(run["force_cap"]) else run["z_cmd"]
                     tip_z = float(tool_point_world(ctx.scene, data, tool.tip)[2])
                     run["reseat_rise"] = float(ctx.observe_site(data, "plug")[2]) + RESEAT_CLEAR - tip_z
                 else:
@@ -462,8 +493,10 @@ class InsertController:
         wrist = start.copy()
         if u < 0.3:
             run["closure_override"] = max(0.0, 1.0 - u / 0.3)
+            wrist[2] = start[2] + (run["reseat_palm"] - start[2]) * min(1.0, u / 0.1)
             return wrist
-        wrist[2] = start[2] + run["reseat_rise"] * min_jerk(min(1.0, (u - 0.3) / 0.5))
+        top = start[2] + run["reseat_rise"]  # where the fist closes, over the plug's top
+        wrist[2] = run["reseat_palm"] + (top - run["reseat_palm"]) * min_jerk(min(1.0, (u - 0.3) / 0.5))
         if u < 1.1:
             run["closure_override"] = 0.0 if u < 0.8 else min(1.0, (u - 0.8) / 0.3)
             run["press_z"] = float(wrist[2])
