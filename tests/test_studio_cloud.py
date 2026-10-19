@@ -445,14 +445,14 @@ def test_studio_job_spec_is_a_cpu_job_with_no_secret(tmp_path: Path) -> None:
 # --------------------------------------------------------------------------- the benchmark
 
 
-def test_the_draft_config_pins_the_heroes_and_holds_a_regenerable_unsecreted_frozen_block() -> None:
-    """The draft's frozen block is the script's output (complete and self-consistent: every setup
-    hashes to its id, the primary rule follows from the arms, the arms were verified on the code),
-    with no secret yet, so ``freeze-arms --refreeze`` can still regenerate it."""
+def test_the_frozen_config_pins_the_heroes_arms_and_held_out_commitment() -> None:
+    """The committed config is frozen: its frozen block is the script's output (complete and
+    self-consistent: every setup hashes to its id, the primary rule follows from the arms, the arms
+    were verified on the code), and the held-out secret appears only as its SHA-256 commitment."""
     from test_studio_engineer import FROZEN_HERO_TASK_IDS
 
     cfg = uc.load_config(CONFIG)
-    assert cfg["label"] == PRODUCT_MODE_LABEL and cfg["status"] == "draft"
+    assert cfg["label"] == PRODUCT_MODE_LABEL and cfg["status"] == "frozen"
     assert cfg["heroes"]["cases"] == FROZEN_HERO_TASK_IDS
     assert cfg["heldout"]["conditions"] == 32 and cfg["heldout"]["placement_mm"] == 2.0
     assert cfg["development"]["conditions"] == 8 and cfg["development"]["screen"] == 3
@@ -460,7 +460,9 @@ def test_the_draft_config_pins_the_heroes_and_holds_a_regenerable_unsecreted_fro
     assert cfg["executor"]["cap_usd"] == 10.0 and cfg["executor"]["token_factory_usd"] == 0.0
     assert cfg["heldout"]["secret_file"].startswith("secrets/")
     frozen = cfg["frozen"]
-    assert frozen is not None and frozen["commitment"] is None and frozen["label"] == PRODUCT_MODE_LABEL
+    assert frozen is not None and frozen["label"] == PRODUCT_MODE_LABEL
+    assert isinstance(frozen["commitment"], str) and len(frozen["commitment"]) == 64
+    int(frozen["commitment"], 16)  # hex: only the SHA-256 of the secret is committed
     assert uc.frozen_problems(cfg) == []
     verified = frozen["code"]["verified"]
     assert verified["runs"] > 0 and verified["equal"] == verified["runs"] and not verified["unequal"]
@@ -652,6 +654,7 @@ def test_arm_rules_follow_the_declared_exclusions() -> None:
 def test_commit_reveal_order_and_refusals(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     cfg_path = tmp_path / "config.yaml"
     shutil.copyfile(CONFIG, cfg_path)
+    uc.set_status(cfg_path, "draft")  # the repository's copy is frozen once the protocol is tagged
     uc.write_frozen(cfg_path, None)
     with pytest.raises(ValueError, match="freeze the arms first"):
         uc.commit_secret(cfg_path, secret_file=tmp_path / "secrets" / "seed.txt")

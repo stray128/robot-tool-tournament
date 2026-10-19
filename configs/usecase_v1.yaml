@@ -10,7 +10,7 @@
 
 format: rtt-usecase-benchmark/1
 label: "Product mode: not part of the pre-registered experiment"
-status: draft # draft until `finalize`; evaluate refuses anything but frozen
+status: frozen
 tag: usecase-v1
 contract: rtt-effectors/2
 
@@ -89,11 +89,11 @@ executor:
 # ---- frozen block: written by scripts/studio_usecase_v1.py, never edited by hand ----
 frozen:
   label: 'Product mode: not part of the pre-registered experiment'
-  frozen_at: '2026-10-18T21:46:53Z'
+  frozen_at: '2026-10-19T05:04:53Z'
   code:
-    git_sha: aa8ac03f7cf0ac4bc28adc5f8284f7e4445f1f03
+    git_sha: 67c08249edc810b6b5bcf4a1905872b0ebe6fd8c
     git_dirty: false
-    executor: fake
+    executor: local
     image: null
     verified:
       conditions: 2
@@ -105,13 +105,13 @@ frozen:
       task_id: e4586f3612e11b0eb490349c52a109bec75f43fdb0bcf9f1d91127f9e01a4ad5
       dev_reports:
         b:
-          sha256: eee2800a8bfda94752122945ce5e6d2a428ead97b439e2056aef85295b681237
+          sha256: e9bccde001afe8b1d1cdecef8fc6edbe6113184c5a2d40a8f07feb1569b91829
           path: h1_tote/b/report.json
           source: reused
         c:
-          sha256: de356b47d1683b97e41e5eda433b51beeb081ca92dbebfea3198866838df9601
+          sha256: 7ecb199ebec785f26459b37e17cd14421b236882d37fac7d96d42f284264faa9
           path: h1_tote/c/report.json
-          source: run here (fake)
+          source: run here (local)
       arms:
         a:
           setup_id: d136ab4824c1bad26b5ac84b7a481c14bedee5790c495f0eb8c1c9369bb11a57
@@ -202,19 +202,19 @@ frozen:
             label: Industrial servo parallel gripper, 110 mm stroke
             product_label: 'Product mode: not part of the pre-registered experiment'
         b:
-          setup_id: 9d7829e0d8861c572779cefc3cfce3110b92c0150e87f45e6fa82785e7f26f3f
+          setup_id: 72c634ec4fa356473388d98dc594a1287959d4df49c9961941abf9e50964ab56
           status: tested
           basis: S5's recommendation
           kind: multi_head
           label: 'Two-tool head: Soft arm + Suction cup'
           tools:
           - Soft arm, 12 segments, 140 mm
-          - Suction cup, 16 mm bellows
+          - Suction cup, 40 mm bellows
           complexity:
             n_tools: 2
             n_actuators: 2
-            tool_mass_kg: 0.32007
-            total_mass_kg: 0.32007
+            tool_mass_kg: 0.37267
+            total_mass_kg: 0.37267
             n_changes: 1
             bracket: true
           fidelity: approximation
@@ -224,35 +224,35 @@ frozen:
             - condition_id: nominal
               seed: 0
               completed: true
-              traj_sha: d635201dfc052d0a6f194bcc1fd1b93c1a95efc299630d2f63a7f4a1ec1a2c96
+              traj_sha: b08d3a137b124890243053bcd2c1c1651074c4e33337f2c2bded0e69b3c5af4b
             - condition_id: place01
               seed: 1
               completed: true
-              traj_sha: d12d7ea50622dc20f6210118176631a46942e28b5b7127ceb5ef330632d8d25e
+              traj_sha: 1d2be85333933564d1964d5636a120d8a2a1166fff2e2c55b5d4dc45a7dcaaaf
             - condition_id: place02
               seed: 2
               completed: true
-              traj_sha: bb604d3c7d0400da2487b0efaa3e604e9422a8d5b748b86228134aae29f86df4
+              traj_sha: 92de316119c5ec985ac6919cfa81bd339fdddb9974ff1b0a5897c505e64ab5ee
             - condition_id: place03
               seed: 3
               completed: true
-              traj_sha: 1b38c7b4a64edf17f59754613618d3874a962a4bc6fd8aff728ffccf2c4e82dd
+              traj_sha: 61b9c17d5ec0da221b239f7a183fc8f84b83023108c32f05501eb7ebd06aff6a
             - condition_id: place04
               seed: 4
               completed: true
-              traj_sha: 51049c629979da261993671ca7fe26994439e4b883839cb3a392f2da2b0c83be
+              traj_sha: c5d6e69406fb2a8f53540a10e0efd7950564bcfeb51d8d9ef7f80abe067a9402
             - condition_id: place05
               seed: 5
               completed: true
-              traj_sha: 1a2ae93c97297dfc87137342013892e384f671ef952b8f6ef0a215195a3e119b
+              traj_sha: 2896f99776898b5a398b1ce51a6bba64869261d2ac966c7cbd6202d44074632e
             - condition_id: place06
               seed: 6
               completed: true
-              traj_sha: a6e2323abe00a72d725576201211565f704f62a0d0a9bab3e5ec29f7fa0b8b92
+              traj_sha: ea6a96d226ab5d0fe56f172c04b6da4719b95a8810d5517795e7ae11488e97f7
             - condition_id: place07
               seed: 7
               completed: true
-              traj_sha: 18906f5ac403240819f099daff8cec0be8eddeb9a38a185d7dc0907957d6f8b0
+              traj_sha: 01a944fee29d47b9aca368a1b1644091db3c826210d10facccd4f6f90490d17e
           setup:
             contract: rtt-effectors/2
             kind: multi_head
@@ -280,18 +280,18 @@ frozen:
               label: 'Product mode: not part of the pre-registered experiment'
             - contract: rtt-effectors/1
               family: suction
-              model: cup-16mm
+              model: cup-40mm
               primitive: seal
               params:
                 bellows_stiffness_n_per_mm: 1
-                diameter_mm: 16
+                diameter_mm: 40
                 lip_segments: 12
                 max_tilt_deg: 10
                 vacuum_kpa: 60
               recipe: null
               origin: preset
-              effector_id: 3907bc284d9e2c3399ddb8b45b1bf94dbb3b0ef0672705c6d90724839ecf7186
-              display_name: Suction cup, 16 mm bellows
+              effector_id: a5d7b1667b4f0d6582a36df49b9e600eeedc31f54dc883ddf7803fe113091f1d
+              display_name: Suction cup, 40 mm bellows
               fidelity: approximation
               group: suction
               label: 'Product mode: not part of the pre-registered experiment'
@@ -317,7 +317,7 @@ frozen:
               density_kg_m3: 1300.0
             changer: null
             present_s: 1.5
-            setup_id: 9d7829e0d8861c572779cefc3cfce3110b92c0150e87f45e6fa82785e7f26f3f
+            setup_id: 72c634ec4fa356473388d98dc594a1287959d4df49c9961941abf9e50964ab56
             label: 'Two-tool head: Soft arm + Suction cup'
             product_label: 'Product mode: not part of the pre-registered experiment'
         c:
@@ -415,13 +415,13 @@ frozen:
       task_id: 33599e99ac277cf20e73d6acd349b9422330a255b3fe5ea48c6442a26c3decd6
       dev_reports:
         b:
-          sha256: e4a8e1f01859b6ddef640664c95d308dbc72d7141036ef74544bf188c85e5a57
+          sha256: e64b609d5ad8af2152c249f179fd20c5ce8cad925977c985f9cf5442979c415b
           path: h2_coupling/b/report.json
           source: reused
         c:
-          sha256: c0eabc71614c3fff50fad769810e872956fb8ea07a7dcb11a5131a64a393b780
+          sha256: 4f8b00a2952d4adfd3817455bc2b2469a4f5bb49e30e51560d00b9e814b58cfa
           path: h2_coupling/c/report.json
-          source: run here (fake)
+          source: run here (local)
       arms:
         a:
           setup_id: 5367b08cfd9757334f9c396a60276bfa411aa86283cd970d44f8c87fcd63ba09
@@ -755,13 +755,13 @@ frozen:
       task_id: 3297a111d7c61392e9a99a08d3a80a8e14c7046b80d277925ed3a78788ff651d
       dev_reports:
         b:
-          sha256: 2a096bb15c219ad9f2751502928d1dbe37c7f1c49f6538a9c163f738428212fe
+          sha256: 2736dbcab0bd7ced5546f9f875466651177c217d893c780e311fc03d0fadbed1
           path: h3_cabinet/b/report.json
           source: reused
         c:
-          sha256: e8b4f309972acb76b88eba4647c81c1f4b13a98a01482522c7b60aa26c2cb6e1
+          sha256: 38d2755d007bd33b0c77e08a3e20c6129d60025e2f775fa0ac56aebfb79f4a69
           path: h3_cabinet/c/report.json
-          source: run here (fake)
+          source: run here (local)
       arms:
         a:
           setup_id: 69a55b715795559ec0d142e71384940c96f8d9b9cf2d33bd199a4f8a5c2257ba
@@ -1126,9 +1126,10 @@ frozen:
       primary:
         tested: true
         reason: null
-  commitment: null
+  commitment: 8011661730eb0c5805065ca6ef5b9b4948dbe58db86e26c8333bd30f4e31196a
   timings_s:
-    h1_tote/c: 151.5
-    h2_coupling/c: 135.2
-    h3_cabinet/c: 351.4
-    verify: 60.2
+    h1_tote/c: 126.8
+    h2_coupling/c: 99.1
+    h3_cabinet/c: 261.5
+    verify: 41.9
+  secret_drawn_at: '2026-10-19T05:14:02Z'

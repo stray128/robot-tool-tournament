@@ -1,12 +1,15 @@
-# Use-case benchmark v1 (pre-registration draft) and the Nebius fan-out (track S6)
+# Use-case benchmark v1 (pre-registration) and the Nebius fan-out (track S6)
 
 **Product mode: not part of the pre-registered experiment.** The pre-registered finger experiment
 (`prereg-v1`, [PREREG.md](PREREG.md)) is unchanged. This benchmark asks a product question of the
 Effector Lab Studio ([STUDIO.md](STUDIO.md), [STUDIO_SEARCH.md](STUDIO_SEARCH.md)) and borrows the
 experiment's commit-reveal pattern in a lighter form.
 
-**Status: DRAFT.** Nothing here has run on Nebius. The founder rules on this draft (section 1)
-before the tag `usecase-v1`. From the tag on, every change goes in section 12.
+**Status: FROZEN.** The founder approved section 1 as drafted on 2026-10-19, with the arms frozen
+on the laptop and the held-out evaluation on Nebius. The arms were frozen on `main` `67c0824`, the
+held-out secret's SHA-256 commitment is `8011661730eb0c5805065ca6ef5b9b4948dbe58db86e26c8333bd30f4e31196a`,
+and the protocol is tagged `usecase-v1` before any held-out run. Nothing ran on Nebius before the
+tag. From the tag on, every change goes in section 12.
 
 | What | Where |
 |---|---|
@@ -35,7 +38,7 @@ before the tag `usecase-v1`. From the tag on, every change goes in section 12.
 Each line is a default set by the orchestrator. The founder accepts or changes each one before the
 freeze; none may change after the tag.
 
-| # | Item | Draft value |
+| # | Item | Value |
 |---|---|---|
 | 1 | Heroes | the three frozen plans of `src/rtt/studio/engineer/recorded/gate-2026-10-18-s4e/` (H1 `e4586f3612e1`, H2 `33599e99ac27`, H3 `3297a111d7c6`) |
 | 2 | Development conditions | S5's grid: 8 full-run conditions (`nominal` and `place01` to `place07`, seeds 0 to 7, aim offsets uniform in +-2 mm), the first 3 screen the steps; search and selection use only these |
@@ -111,18 +114,17 @@ has run. `tests/test_studio_cloud.py` checks that the committed block is complet
 (`frozen_problems`): every setup hashes to its id, the primary rule follows from the arms, each arm
 has its 8 development runs, the arms were verified.
 
-**The draft's frozen block (provisional, to be regenerated on the final code).** Generated on
-`aa8ac03` (`main` `bcfe4bb`, S2d, plus this track) with
-`freeze-arms --executor fake --reuse-b <S5 hero gate 5>`: tournament b reused from S5's gate 5
-(each report checked as above), tournament c run here on the fake cloud, the 8 distinct arm setups
-re-run on 2 development conditions (16 runs), every `traj_sha` equal. A further primitive fix (S2e, lid
-closing) may change H1: the block is then regenerated with `--refreeze`.
+**The frozen block (final).** Generated on `main` `67c0824` (S2e, the last primitive fix) with
+`freeze-arms --refreeze --executor local --reuse-b <S5 hero gate 6>`: tournament b reused from S5's
+gate 6 on the same commit (each report checked as above), tournament c run here on the laptop, the
+distinct arm setups re-run on 2 development conditions (16 runs), every `traj_sha` equal. The
+development numbers below are the 8 development runs, not results.
 
 | Hero | Arm a (dev) | Arm b (dev) | Arm c (dev) | In the family? |
 |---|---|---|---|---|
-| H1 | `d136ab4824c1` 110 mm servo parallel gripper, 0/8, rigid | `9d7829e0d886` two-tool head: 12-segment soft arm and 16 mm suction cup, 8/8, approximation | no recommendation; closest: arm a's gripper (descriptive) | yes |
+| H1 | `d136ab4824c1` 110 mm servo parallel gripper, 0/8, rigid | `72c634ec4fa3` two-tool head: 12-segment soft arm and 40 mm suction cup, 8/8, approximation | no recommendation; closest: arm a's gripper (descriptive) | yes |
 | H2 | `5367b08cfd97` stock-blade part-shaped jaw, 0/8 | `48274cb2290c` two-tool head: fin-ray parallel gripper and cobot linkage gripper, 8/8 | `5a4079666692` tool change: 48 mm force-controlled gripper, then the cobot linkage gripper, 3/8 | yes |
-| H3 | `69a55b715795` cobot linkage gripper, 0/8 | `4a5ca67a8577` tool change of three grippers (85 mm adaptive, 48 mm force-controlled, 80 mm cobot hand), 4/8 | `04b397942e5e` tool change of the same three in another order, 3/8 | yes |
+| H3 | `69a55b715795` cobot linkage gripper, 0/8 | `4a5ca67a8577` tool change of three grippers (85 mm adaptive, 48 mm force-controlled, 80 mm cobot hand), 4/8 | `04b397942e5e` tool change of three library grippers in another order, 3/8 | yes |
 
 Every H2 and H3 arm is approximation tier (the threaded joint, the latch and the valve are
 approximation templates).
