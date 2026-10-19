@@ -1,0 +1,1739 @@
+{
+ "label": "Product mode: not part of the pre-registered experiment",
+ "conditions": {
+  "h1_tote": [
+   {
+    "condition_id": "heldout00",
+    "seed": 1833922578,
+    "aim_offsets_mm": {
+     "carton": [
+      0.283,
+      0.932
+     ],
+     "pack": [
+      -0.253,
+      -0.95
+     ],
+     "tote_bin": [
+      -0.419,
+      -0.07
+     ],
+     "tote_lid": [
+      0.841,
+      1.348
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout01",
+    "seed": 468924866,
+    "aim_offsets_mm": {
+     "carton": [
+      0.029,
+      -0.502
+     ],
+     "pack": [
+      0.697,
+      0.191
+     ],
+     "tote_bin": [
+      0.922,
+      -0.221
+     ],
+     "tote_lid": [
+      0.171,
+      -0.013
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout02",
+    "seed": 684838184,
+    "aim_offsets_mm": {
+     "carton": [
+      0.767,
+      -1.941
+     ],
+     "pack": [
+      -1.312,
+      0.853
+     ],
+     "tote_bin": [
+      -1.711,
+      -0.976
+     ],
+     "tote_lid": [
+      1.977,
+      1.275
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout03",
+    "seed": 194489096,
+    "aim_offsets_mm": {
+     "carton": [
+      -1.924,
+      0.663
+     ],
+     "pack": [
+      -0.229,
+      -1.083
+     ],
+     "tote_bin": [
+      0.514,
+      1.015
+     ],
+     "tote_lid": [
+      0.48,
+      -0.217
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout04",
+    "seed": 1873985128,
+    "aim_offsets_mm": {
+     "carton": [
+      1.179,
+      -1.981
+     ],
+     "pack": [
+      0.573,
+      -0.428
+     ],
+     "tote_bin": [
+      0.523,
+      -1.84
+     ],
+     "tote_lid": [
+      1.302,
+      -1.373
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout05",
+    "seed": 1968346832,
+    "aim_offsets_mm": {
+     "carton": [
+      -1.208,
+      0.924
+     ],
+     "pack": [
+      -1.904,
+      -0.876
+     ],
+     "tote_bin": [
+      -0.137,
+      0.826
+     ],
+     "tote_lid": [
+      1.355,
+      0.655
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout06",
+    "seed": 1800232483,
+    "aim_offsets_mm": {
+     "carton": [
+      -1.796,
+      0.988
+     ],
+     "pack": [
+      -0.685,
+      -0.214
+     ],
+     "tote_bin": [
+      -0.731,
+      0.828
+     ],
+     "tote_lid": [
+      1.879,
+      0.363
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout07",
+    "seed": 2021427556,
+    "aim_offsets_mm": {
+     "carton": [
+      0.239,
+      0.428
+     ],
+     "pack": [
+      1.628,
+      -1.573
+     ],
+     "tote_bin": [
+      0.367,
+      -1.359
+     ],
+     "tote_lid": [
+      0.96,
+      1.183
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout08",
+    "seed": 378696480,
+    "aim_offsets_mm": {
+     "carton": [
+      -0.474,
+      0.618
+     ],
+     "pack": [
+      1.721,
+      0.993
+     ],
+     "tote_bin": [
+      0.17,
+      0.785
+     ],
+     "tote_lid": [
+      -1.708,
+      -0.376
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout09",
+    "seed": 1260825438,
+    "aim_offsets_mm": {
+     "carton": [
+      0.353,
+      -1.272
+     ],
+     "pack": [
+      0.731,
+      -1.627
+     ],
+     "tote_bin": [
+      -0.927,
+      0.268
+     ],
+     "tote_lid": [
+      -0.548,
+      1.136
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout10",
+    "seed": 344867905,
+    "aim_offsets_mm": {
+     "carton": [
+      0.347,
+      0.411
+     ],
+     "pack": [
+      1.577,
+      0.202
+     ],
+     "tote_bin": [
+      -0.049,
+      -0.582
+     ],
+     "tote_lid": [
+      1.58,
+      1.664
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout11",
+    "seed": 1004013927,
+    "aim_offsets_mm": {
+     "carton": [
+      1.954,
+      -0.567
+     ],
+     "pack": [
+      -1.66,
+      -0.966
+     ],
+     "tote_bin": [
+      -1.625,
+      -1.108
+     ],
+     "tote_lid": [
+      -1.511,
+      1.563
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout12",
+    "seed": 1075873204,
+    "aim_offsets_mm": {
+     "carton": [
+      1.144,
+      -1.127
+     ],
+     "pack": [
+      -1.62,
+      1.723
+     ],
+     "tote_bin": [
+      -1.326,
+      -1.762
+     ],
+     "tote_lid": [
+      1.535,
+      0.333
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout13",
+    "seed": 1674777223,
+    "aim_offsets_mm": {
+     "carton": [
+      -0.597,
+      -0.127
+     ],
+     "pack": [
+      1.676,
+      0.379
+     ],
+     "tote_bin": [
+      -1.652,
+      -1.761
+     ],
+     "tote_lid": [
+      1.223,
+      1.014
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout14",
+    "seed": 691642489,
+    "aim_offsets_mm": {
+     "carton": [
+      -0.524,
+      1.977
+     ],
+     "pack": [
+      0.879,
+      0.682
+     ],
+     "tote_bin": [
+      -0.731,
+      -0.593
+     ],
+     "tote_lid": [
+      -1.031,
+      -0.002
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout15",
+    "seed": 306904653,
+    "aim_offsets_mm": {
+     "carton": [
+      -0.653,
+      -1.433
+     ],
+     "pack": [
+      1.926,
+      0.259
+     ],
+     "tote_bin": [
+      -0.437,
+      1.469
+     ],
+     "tote_lid": [
+      -1.606,
+      1.473
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout16",
+    "seed": 1349474496,
+    "aim_offsets_mm": {
+     "carton": [
+      -0.77,
+      -0.232
+     ],
+     "pack": [
+      -0.685,
+      -0.098
+     ],
+     "tote_bin": [
+      1.973,
+      -0.82
+     ],
+     "tote_lid": [
+      -0.173,
+      1.511
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout17",
+    "seed": 1715142266,
+    "aim_offsets_mm": {
+     "carton": [
+      -0.402,
+      0.052
+     ],
+     "pack": [
+      1.891,
+      1.496
+     ],
+     "tote_bin": [
+      0.362,
+      0.618
+     ],
+     "tote_lid": [
+      -1.384,
+      0.201
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout18",
+    "seed": 203728456,
+    "aim_offsets_mm": {
+     "carton": [
+      1.739,
+      0.274
+     ],
+     "pack": [
+      0.358,
+      0.783
+     ],
+     "tote_bin": [
+      0.855,
+      -0.725
+     ],
+     "tote_lid": [
+      -0.95,
+      1.255
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout19",
+    "seed": 299033343,
+    "aim_offsets_mm": {
+     "carton": [
+      -0.052,
+      0.192
+     ],
+     "pack": [
+      0.797,
+      1.279
+     ],
+     "tote_bin": [
+      -1.162,
+      -1.727
+     ],
+     "tote_lid": [
+      1.436,
+      0.873
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout20",
+    "seed": 1336905619,
+    "aim_offsets_mm": {
+     "carton": [
+      -1.924,
+      -0.918
+     ],
+     "pack": [
+      -1.697,
+      -1.704
+     ],
+     "tote_bin": [
+      1.08,
+      1.276
+     ],
+     "tote_lid": [
+      1.941,
+      0.874
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout21",
+    "seed": 577085498,
+    "aim_offsets_mm": {
+     "carton": [
+      0.084,
+      -0.037
+     ],
+     "pack": [
+      -1.835,
+      -1.093
+     ],
+     "tote_bin": [
+      -0.7,
+      -1.583
+     ],
+     "tote_lid": [
+      0.38,
+      -0.462
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout22",
+    "seed": 1414342987,
+    "aim_offsets_mm": {
+     "carton": [
+      1.601,
+      -0.941
+     ],
+     "pack": [
+      -1.846,
+      -0.975
+     ],
+     "tote_bin": [
+      -1.538,
+      -0.153
+     ],
+     "tote_lid": [
+      0.127,
+      -1.464
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout23",
+    "seed": 1372032424,
+    "aim_offsets_mm": {
+     "carton": [
+      0.516,
+      -1.996
+     ],
+     "pack": [
+      1.762,
+      -1.753
+     ],
+     "tote_bin": [
+      -1.416,
+      0.281
+     ],
+     "tote_lid": [
+      -1.582,
+      -1.393
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout24",
+    "seed": 392105065,
+    "aim_offsets_mm": {
+     "carton": [
+      -0.05,
+      0.296
+     ],
+     "pack": [
+      0.305,
+      0.343
+     ],
+     "tote_bin": [
+      -0.255,
+      -0.201
+     ],
+     "tote_lid": [
+      -0.07,
+      -0.643
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout25",
+    "seed": 1783391675,
+    "aim_offsets_mm": {
+     "carton": [
+      1.523,
+      1.946
+     ],
+     "pack": [
+      1.799,
+      1.639
+     ],
+     "tote_bin": [
+      1.623,
+      -1.789
+     ],
+     "tote_lid": [
+      -1.511,
+      -1.13
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout26",
+    "seed": 1964385542,
+    "aim_offsets_mm": {
+     "carton": [
+      1.897,
+      -1.13
+     ],
+     "pack": [
+      0.639,
+      0.684
+     ],
+     "tote_bin": [
+      1.108,
+      0.146
+     ],
+     "tote_lid": [
+      -0.259,
+      0.225
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout27",
+    "seed": 412080049,
+    "aim_offsets_mm": {
+     "carton": [
+      -1.707,
+      -0.338
+     ],
+     "pack": [
+      -0.727,
+      -0.366
+     ],
+     "tote_bin": [
+      -0.507,
+      -0.931
+     ],
+     "tote_lid": [
+      -0.194,
+      -0.977
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout28",
+    "seed": 582082363,
+    "aim_offsets_mm": {
+     "carton": [
+      0.941,
+      -1.448
+     ],
+     "pack": [
+      0.17,
+      -1.592
+     ],
+     "tote_bin": [
+      1.068,
+      -1.556
+     ],
+     "tote_lid": [
+      0.624,
+      -1.874
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout29",
+    "seed": 1766314908,
+    "aim_offsets_mm": {
+     "carton": [
+      1.457,
+      1.029
+     ],
+     "pack": [
+      0.428,
+      -0.583
+     ],
+     "tote_bin": [
+      0.906,
+      0.544
+     ],
+     "tote_lid": [
+      -1.287,
+      0.612
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout30",
+    "seed": 1645973333,
+    "aim_offsets_mm": {
+     "carton": [
+      0.656,
+      -0.324
+     ],
+     "pack": [
+      1.896,
+      -1.445
+     ],
+     "tote_bin": [
+      -1.52,
+      -1.356
+     ],
+     "tote_lid": [
+      0.956,
+      0.31
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout31",
+    "seed": 336904704,
+    "aim_offsets_mm": {
+     "carton": [
+      1.151,
+      -0.318
+     ],
+     "pack": [
+      -0.633,
+      -1.399
+     ],
+     "tote_bin": [
+      1.257,
+      1.948
+     ],
+     "tote_lid": [
+      0.892,
+      1.608
+     ]
+    }
+   }
+  ],
+  "h2_coupling": [
+   {
+    "condition_id": "heldout00",
+    "seed": 843318494,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      -1.134,
+      -0.206
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout01",
+    "seed": 1404967879,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      -1.054,
+      -1.033
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout02",
+    "seed": 935167643,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      1.945,
+      -1.236
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout03",
+    "seed": 507672218,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      1.252,
+      0.705
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout04",
+    "seed": 1631747655,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      0.542,
+      1.798
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout05",
+    "seed": 375394949,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      -0.805,
+      0.831
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout06",
+    "seed": 1000355518,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      0.727,
+      -0.826
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout07",
+    "seed": 854507169,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      -1.239,
+      1.025
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout08",
+    "seed": 170914419,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      0.721,
+      1.343
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout09",
+    "seed": 305131288,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      1.409,
+      1.589
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout10",
+    "seed": 84358603,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      -1.853,
+      -0.182
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout11",
+    "seed": 64560040,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      -1.358,
+      1.052
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout12",
+    "seed": 462090519,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      -1.179,
+      0.416
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout13",
+    "seed": 838979561,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      0.753,
+      -0.556
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout14",
+    "seed": 803572182,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      0.767,
+      1.107
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout15",
+    "seed": 1591903592,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      -0.148,
+      1.986
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout16",
+    "seed": 1894067643,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      -1.432,
+      -0.33
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout17",
+    "seed": 1754569375,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      1.408,
+      0.467
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout18",
+    "seed": 1968439486,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      -1.453,
+      -0.88
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout19",
+    "seed": 1700521638,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      1.024,
+      -0.173
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout20",
+    "seed": 927040930,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      0.67,
+      -1.347
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout21",
+    "seed": 985987258,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      1.204,
+      -0.734
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout22",
+    "seed": 77405887,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      1.474,
+      0.587
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout23",
+    "seed": 821234807,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      1.698,
+      -1.593
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout24",
+    "seed": 176964575,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      -0.245,
+      1.879
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout25",
+    "seed": 964906742,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      -0.41,
+      -1.079
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout26",
+    "seed": 583620786,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      1.491,
+      0.86
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout27",
+    "seed": 1033525013,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      1.281,
+      -1.866
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout28",
+    "seed": 1584627555,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      -0.403,
+      0.483
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout29",
+    "seed": 754679436,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      0.803,
+      0.78
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout30",
+    "seed": 1423007737,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      -1.355,
+      -0.843
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout31",
+    "seed": 984099651,
+    "aim_offsets_mm": {
+     "pipe_coupling": [
+      0.25,
+      0.159
+     ]
+    }
+   }
+  ],
+  "h3_cabinet": [
+   {
+    "condition_id": "heldout00",
+    "seed": 567373591,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      -0.302,
+      0.161
+     ],
+     "qt_latch": [
+      -0.922,
+      1.512
+     ],
+     "service_valve": [
+      -0.827,
+      -1.725
+     ],
+     "test_port": [
+      -1.502,
+      -0.607
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout01",
+    "seed": 69812686,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      0.632,
+      -1.457
+     ],
+     "qt_latch": [
+      -0.839,
+      0.642
+     ],
+     "service_valve": [
+      -0.1,
+      -1.234
+     ],
+     "test_port": [
+      1.809,
+      1.887
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout02",
+    "seed": 691705227,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      -0.813,
+      0.019
+     ],
+     "qt_latch": [
+      -1.837,
+      1.67
+     ],
+     "service_valve": [
+      -1.469,
+      -1.871
+     ],
+     "test_port": [
+      1.746,
+      -1.48
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout03",
+    "seed": 1209631629,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      0.29,
+      -0.06
+     ],
+     "qt_latch": [
+      -1.165,
+      1.311
+     ],
+     "service_valve": [
+      -1.336,
+      0.174
+     ],
+     "test_port": [
+      1.189,
+      0.858
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout04",
+    "seed": 1388849317,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      -1.581,
+      -0.055
+     ],
+     "qt_latch": [
+      1.118,
+      -1.16
+     ],
+     "service_valve": [
+      -1.719,
+      0.968
+     ],
+     "test_port": [
+      -0.895,
+      0.554
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout05",
+    "seed": 1175608150,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      1.253,
+      -1.341
+     ],
+     "qt_latch": [
+      -1.121,
+      0.509
+     ],
+     "service_valve": [
+      -1.943,
+      -1.653
+     ],
+     "test_port": [
+      -1.614,
+      1.076
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout06",
+    "seed": 969177581,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      -0.32,
+      0.316
+     ],
+     "qt_latch": [
+      0.31,
+      1.404
+     ],
+     "service_valve": [
+      0.818,
+      -0.762
+     ],
+     "test_port": [
+      -1.838,
+      -0.141
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout07",
+    "seed": 1247159329,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      1.835,
+      -1.316
+     ],
+     "qt_latch": [
+      0.649,
+      -1.61
+     ],
+     "service_valve": [
+      -0.668,
+      0.801
+     ],
+     "test_port": [
+      -0.618,
+      -1.691
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout08",
+    "seed": 242510333,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      0.004,
+      -1.45
+     ],
+     "qt_latch": [
+      -0.941,
+      1.541
+     ],
+     "service_valve": [
+      -0.133,
+      -1.407
+     ],
+     "test_port": [
+      -1.918,
+      1.035
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout09",
+    "seed": 2024420279,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      1.177,
+      -1.091
+     ],
+     "qt_latch": [
+      1.644,
+      -1.666
+     ],
+     "service_valve": [
+      0.048,
+      1.934
+     ],
+     "test_port": [
+      -0.467,
+      -1.025
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout10",
+    "seed": 1131829612,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      0.462,
+      -0.912
+     ],
+     "qt_latch": [
+      0.246,
+      0.254
+     ],
+     "service_valve": [
+      -1.781,
+      1.225
+     ],
+     "test_port": [
+      1.175,
+      -0.266
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout11",
+    "seed": 1688717928,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      1.532,
+      -1.078
+     ],
+     "qt_latch": [
+      -0.475,
+      0.458
+     ],
+     "service_valve": [
+      -0.515,
+      1.305
+     ],
+     "test_port": [
+      0.064,
+      -0.464
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout12",
+    "seed": 1024846171,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      0.556,
+      0.532
+     ],
+     "qt_latch": [
+      -0.097,
+      0.404
+     ],
+     "service_valve": [
+      1.401,
+      1.025
+     ],
+     "test_port": [
+      0.997,
+      1.638
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout13",
+    "seed": 1289732717,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      1.421,
+      1.303
+     ],
+     "qt_latch": [
+      -0.124,
+      -0.32
+     ],
+     "service_valve": [
+      -1.169,
+      -1.563
+     ],
+     "test_port": [
+      -0.123,
+      -0.339
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout14",
+    "seed": 2091037606,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      -1.36,
+      -0.042
+     ],
+     "qt_latch": [
+      -1.485,
+      -1.812
+     ],
+     "service_valve": [
+      1.971,
+      -1.31
+     ],
+     "test_port": [
+      -0.58,
+      0.56
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout15",
+    "seed": 1326996618,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      -1.047,
+      -0.53
+     ],
+     "qt_latch": [
+      -0.536,
+      -1.463
+     ],
+     "service_valve": [
+      -1.026,
+      0.526
+     ],
+     "test_port": [
+      0.185,
+      0.665
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout16",
+    "seed": 1594385103,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      -1.288,
+      -1.114
+     ],
+     "qt_latch": [
+      0.398,
+      1.181
+     ],
+     "service_valve": [
+      -1.674,
+      -1.322
+     ],
+     "test_port": [
+      0.689,
+      0.873
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout17",
+    "seed": 833712960,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      -0.472,
+      0.485
+     ],
+     "qt_latch": [
+      -0.363,
+      1.025
+     ],
+     "service_valve": [
+      1.996,
+      -0.286
+     ],
+     "test_port": [
+      -0.992,
+      1.158
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout18",
+    "seed": 325332661,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      -1.872,
+      1.257
+     ],
+     "qt_latch": [
+      -1.183,
+      -1.385
+     ],
+     "service_valve": [
+      1.054,
+      1.805
+     ],
+     "test_port": [
+      -0.944,
+      -0.907
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout19",
+    "seed": 785718265,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      1.521,
+      -0.546
+     ],
+     "qt_latch": [
+      -0.425,
+      0.93
+     ],
+     "service_valve": [
+      0.34,
+      0.609
+     ],
+     "test_port": [
+      0.071,
+      -0.627
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout20",
+    "seed": 1211059503,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      -1.762,
+      -1.077
+     ],
+     "qt_latch": [
+      -0.309,
+      0.193
+     ],
+     "service_valve": [
+      1.336,
+      1.255
+     ],
+     "test_port": [
+      1.375,
+      -0.682
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout21",
+    "seed": 1648400688,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      0.964,
+      -1.67
+     ],
+     "qt_latch": [
+      -0.606,
+      -1.302
+     ],
+     "service_valve": [
+      1.754,
+      -0.76
+     ],
+     "test_port": [
+      -1.587,
+      -0.918
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout22",
+    "seed": 1672626729,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      -0.421,
+      -1.751
+     ],
+     "qt_latch": [
+      0.177,
+      -0.75
+     ],
+     "service_valve": [
+      0.847,
+      0.25
+     ],
+     "test_port": [
+      1.772,
+      0.746
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout23",
+    "seed": 369874546,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      0.808,
+      0.511
+     ],
+     "qt_latch": [
+      0.229,
+      -1.204
+     ],
+     "service_valve": [
+      1.103,
+      -0.422
+     ],
+     "test_port": [
+      -1.568,
+      1.664
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout24",
+    "seed": 731620771,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      -0.945,
+      1.524
+     ],
+     "qt_latch": [
+      1.72,
+      -1.892
+     ],
+     "service_valve": [
+      1.755,
+      -1.692
+     ],
+     "test_port": [
+      1.086,
+      0.794
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout25",
+    "seed": 1415568096,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      -1.469,
+      1.074
+     ],
+     "qt_latch": [
+      -1.772,
+      -1.942
+     ],
+     "service_valve": [
+      1.12,
+      -0.057
+     ],
+     "test_port": [
+      -0.488,
+      -1.206
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout26",
+    "seed": 59771860,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      -1.136,
+      -0.782
+     ],
+     "qt_latch": [
+      1.955,
+      1.723
+     ],
+     "service_valve": [
+      1.381,
+      -0.215
+     ],
+     "test_port": [
+      0.1,
+      -1.731
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout27",
+    "seed": 182999826,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      -0.579,
+      -1.951
+     ],
+     "qt_latch": [
+      0.708,
+      -1.002
+     ],
+     "service_valve": [
+      -1.679,
+      -0.199
+     ],
+     "test_port": [
+      -1.777,
+      0.846
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout28",
+    "seed": 370546852,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      1.367,
+      0.761
+     ],
+     "qt_latch": [
+      -1.061,
+      0.282
+     ],
+     "service_valve": [
+      -1.69,
+      1.631
+     ],
+     "test_port": [
+      0.846,
+      -0.861
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout29",
+    "seed": 1219189917,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      0.154,
+      1.315
+     ],
+     "qt_latch": [
+      1.605,
+      -0.156
+     ],
+     "service_valve": [
+      1.975,
+      -0.905
+     ],
+     "test_port": [
+      -0.249,
+      -0.233
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout30",
+    "seed": 1802650123,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      -1.226,
+      -1.591
+     ],
+     "qt_latch": [
+      1.021,
+      0.785
+     ],
+     "service_valve": [
+      -1.011,
+      -1.703
+     ],
+     "test_port": [
+      0.925,
+      0.405
+     ]
+    }
+   },
+   {
+    "condition_id": "heldout31",
+    "seed": 1280995041,
+    "aim_offsets_mm": {
+     "cabinet_door": [
+      1.023,
+      -0.373
+     ],
+     "qt_latch": [
+      -1.403,
+      1.044
+     ],
+     "service_valve": [
+      -1.68,
+      -1.145
+     ],
+     "test_port": [
+      0.701,
+      1.188
+     ]
+    }
+   }
+  ]
+ }
+}

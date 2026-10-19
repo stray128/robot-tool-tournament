@@ -1,0 +1,851 @@
+{
+ "format": "rtt-usecase-v1-analysis/1",
+ "label": "Product mode: not part of the pre-registered experiment",
+ "mode": "confirmatory",
+ "note": null,
+ "commitment": "8011661730eb0c5805065ca6ef5b9b4948dbe58db86e26c8333bd30f4e31196a",
+ "secret_revealed": "a418e29f0a0cb819298bc0f3e7de328d3f743b7e8f470f415f5e7322933a33a7",
+ "alpha": 0.05,
+ "test": "exact one-sided paired sign-flip permutation test (exact McNemar), b > a",
+ "multiplicity": "holm",
+ "family": [
+  "h1_tote",
+  "h2_coupling",
+  "h3_cabinet"
+ ],
+ "excluded": {},
+ "holm": {
+  "h1_tote": {
+   "p": 2.3283064365386963e-10,
+   "p_holm": 6.984919309616089e-10,
+   "reject": true,
+   "rank": 1,
+   "m": 3
+  },
+  "h2_coupling": {
+   "p": 2.3283064365386963e-10,
+   "p_holm": 6.984919309616089e-10,
+   "reject": true,
+   "rank": 2,
+   "m": 3
+  },
+  "h3_cabinet": {
+   "p": 0.0009765625,
+   "p_holm": 0.0009765625,
+   "reject": true,
+   "rank": 3,
+   "m": 3
+  }
+ },
+ "heroes": {
+  "h1_tote": {
+   "task_id": "e4586f3612e11b0eb490349c52a109bec75f43fdb0bcf9f1d91127f9e01a4ad5",
+   "n_conditions": 32,
+   "arms": {
+    "a": {
+     "setup_id": "d136ab4824c1bad26b5ac84b7a481c14bedee5790c495f0eb8c1c9369bb11a57",
+     "status": "tested",
+     "kind": "single",
+     "label": "Industrial servo parallel gripper, 110 mm stroke",
+     "tools": [
+      "Industrial servo parallel gripper, 110 mm stroke"
+     ],
+     "n": 32,
+     "completed": 0,
+     "rate": 0.0,
+     "ci95": [
+      0.0,
+      0.1089
+     ],
+     "steps": {
+      "open_lid": {
+       "primitive": "hook_pull",
+       "n": 32,
+       "successes": 0,
+       "rate": 0.0,
+       "fidelity": {
+        "rigid": 32
+       },
+       "failure_modes": {
+        "slip": 25,
+        "constraint_exceeded": 7
+       }
+      },
+      "pick_carton": {
+       "primitive": "grasp",
+       "n": 32,
+       "successes": 0,
+       "rate": 0.0,
+       "fidelity": {
+        "rigid": 32
+       },
+       "failure_modes": {
+        "not_reached": 32
+       }
+      },
+      "pick_pack": {
+       "primitive": "grasp",
+       "n": 32,
+       "successes": 0,
+       "rate": 0.0,
+       "fidelity": {
+        "rigid": 32
+       },
+       "failure_modes": {
+        "not_reached": 32
+       }
+      },
+      "close_lid": {
+       "primitive": "push",
+       "n": 32,
+       "successes": 0,
+       "rate": 0.0,
+       "fidelity": {
+        "rigid": 32
+       },
+       "failure_modes": {
+        "not_reached": 32
+       }
+      }
+     },
+     "cycle_time_s": {
+      "median_completed": null,
+      "median_all": 16.284
+     },
+     "tools_and_mass": {
+      "n_tools": 1,
+      "n_actuators": 1,
+      "carried_kg": 1.08888,
+      "total_kg": 1.08888,
+      "changes_per_run": 0
+     },
+     "physics": {
+      "physics_invalid": 0,
+      "physics_unreliable": 0
+     },
+     "fidelity_worst": "rigid",
+     "dev_completion_rate": 0.0
+    },
+    "b": {
+     "setup_id": "72c634ec4fa356473388d98dc594a1287959d4df49c9961941abf9e50964ab56",
+     "status": "tested",
+     "kind": "multi_head",
+     "label": "Two-tool head: Soft arm + Suction cup",
+     "tools": [
+      "Soft arm, 12 segments, 140 mm",
+      "Suction cup, 40 mm bellows"
+     ],
+     "n": 32,
+     "completed": 32,
+     "rate": 1.0,
+     "ci95": [
+      0.8911,
+      1.0
+     ],
+     "steps": {
+      "open_lid": {
+       "primitive": "hook_pull",
+       "n": 32,
+       "successes": 32,
+       "rate": 1.0,
+       "fidelity": {
+        "approximation": 32
+       },
+       "failure_modes": {}
+      },
+      "pick_carton": {
+       "primitive": "grasp",
+       "n": 32,
+       "successes": 32,
+       "rate": 1.0,
+       "fidelity": {
+        "approximation": 32
+       },
+       "failure_modes": {}
+      },
+      "pick_pack": {
+       "primitive": "grasp",
+       "n": 32,
+       "successes": 32,
+       "rate": 1.0,
+       "fidelity": {
+        "approximation": 32
+       },
+       "failure_modes": {}
+      },
+      "close_lid": {
+       "primitive": "push",
+       "n": 32,
+       "successes": 32,
+       "rate": 1.0,
+       "fidelity": {
+        "approximation": 32
+       },
+       "failure_modes": {}
+      }
+     },
+     "cycle_time_s": {
+      "median_completed": 62.574,
+      "median_all": 62.574
+     },
+     "tools_and_mass": {
+      "n_tools": 2,
+      "n_actuators": 2,
+      "carried_kg": 0.37267,
+      "total_kg": 0.37267,
+      "changes_per_run": 1
+     },
+     "physics": {
+      "physics_invalid": 0,
+      "physics_unreliable": 0
+     },
+     "fidelity_worst": "approximation",
+     "dev_completion_rate": 1.0
+    },
+    "c": {
+     "setup_id": "d136ab4824c1bad26b5ac84b7a481c14bedee5790c495f0eb8c1c9369bb11a57",
+     "status": "descriptive",
+     "kind": "single",
+     "label": "Industrial servo parallel gripper, 110 mm stroke",
+     "tools": [
+      "Industrial servo parallel gripper, 110 mm stroke"
+     ],
+     "n": 32,
+     "completed": 0,
+     "rate": 0.0,
+     "ci95": [
+      0.0,
+      0.1089
+     ],
+     "steps": {
+      "open_lid": {
+       "primitive": "hook_pull",
+       "n": 32,
+       "successes": 0,
+       "rate": 0.0,
+       "fidelity": {
+        "rigid": 32
+       },
+       "failure_modes": {
+        "slip": 25,
+        "constraint_exceeded": 7
+       }
+      },
+      "pick_carton": {
+       "primitive": "grasp",
+       "n": 32,
+       "successes": 0,
+       "rate": 0.0,
+       "fidelity": {
+        "rigid": 32
+       },
+       "failure_modes": {
+        "not_reached": 32
+       }
+      },
+      "pick_pack": {
+       "primitive": "grasp",
+       "n": 32,
+       "successes": 0,
+       "rate": 0.0,
+       "fidelity": {
+        "rigid": 32
+       },
+       "failure_modes": {
+        "not_reached": 32
+       }
+      },
+      "close_lid": {
+       "primitive": "push",
+       "n": 32,
+       "successes": 0,
+       "rate": 0.0,
+       "fidelity": {
+        "rigid": 32
+       },
+       "failure_modes": {
+        "not_reached": 32
+       }
+      }
+     },
+     "cycle_time_s": {
+      "median_completed": null,
+      "median_all": 16.284
+     },
+     "tools_and_mass": {
+      "n_tools": 1,
+      "n_actuators": 1,
+      "carried_kg": 1.08888,
+      "total_kg": 1.08888,
+      "changes_per_run": 0
+     },
+     "physics": {
+      "physics_invalid": 0,
+      "physics_unreliable": 0
+     },
+     "fidelity_worst": "rigid",
+     "dev_completion_rate": 0.0
+    }
+   },
+   "primary": {
+    "tested": true,
+    "reason": null,
+    "n": 32,
+    "n10": 32,
+    "n01": 0,
+    "ties": 0,
+    "p": 2.3283064365386963e-10,
+    "p_holm": 6.984919309616089e-10,
+    "reject": true
+   },
+   "secondary_b_vs_c": {
+    "descriptive": true,
+    "rate_b": 1.0,
+    "rate_c": 0.0,
+    "difference": 1.0,
+    "b_only": 32,
+    "c_only": 0,
+    "same_setup": false
+   },
+   "parity": [
+    {
+     "arm": "a",
+     "runs": 8,
+     "equal": 8,
+     "expected": 8
+    },
+    {
+     "arm": "b",
+     "runs": 8,
+     "equal": 5,
+     "expected": 8
+    },
+    {
+     "arm": "c",
+     "runs": 8,
+     "equal": 8,
+     "expected": 8
+    }
+   ]
+  },
+  "h2_coupling": {
+   "task_id": "33599e99ac277cf20e73d6acd349b9422330a255b3fe5ea48c6442a26c3decd6",
+   "n_conditions": 32,
+   "arms": {
+    "a": {
+     "setup_id": "5367b08cfd9757334f9c396a60276bfa411aa86283cd970d44f8c87fcd63ba09",
+     "status": "tested",
+     "kind": "single",
+     "label": "Parallel jaw, stock blade: Pipe coupling",
+     "tools": [
+      "Parallel jaw, stock blade: Pipe coupling"
+     ],
+     "n": 32,
+     "completed": 0,
+     "rate": 0.0,
+     "ci95": [
+      0.0,
+      0.1089
+     ],
+     "steps": {
+      "insert_coupling": {
+       "primitive": "insert",
+       "n": 32,
+       "successes": 26,
+       "rate": 0.8125,
+       "fidelity": {
+        "approximation": 32
+       },
+       "failure_modes": {
+        "criterion_not_met": 6
+       }
+      },
+      "tighten_coupling": {
+       "primitive": "twist",
+       "n": 32,
+       "successes": 0,
+       "rate": 0.0,
+       "fidelity": {
+        "approximation": 32
+       },
+       "failure_modes": {
+        "slip": 26,
+        "not_reached": 6
+       }
+      }
+     },
+     "cycle_time_s": {
+      "median_completed": null,
+      "median_all": 31.894
+     },
+     "tools_and_mass": {
+      "n_tools": 1,
+      "n_actuators": 1,
+      "carried_kg": 0.41398,
+      "total_kg": 0.41398,
+      "changes_per_run": 0
+     },
+     "physics": {
+      "physics_invalid": 0,
+      "physics_unreliable": 0
+     },
+     "fidelity_worst": "approximation",
+     "dev_completion_rate": 0.0
+    },
+    "b": {
+     "setup_id": "48274cb2290cdf2e9ec0ba57d02a4a3d10e580eecbd471cfa4a455f4a327b7a0",
+     "status": "tested",
+     "kind": "multi_head",
+     "label": "Two-tool head: Two-finger parallel + Two-finger linkage",
+     "tools": [
+      "Two-finger parallel gripper, fin-ray pads",
+      "Two-finger linkage gripper of a cobot arm"
+     ],
+     "n": 32,
+     "completed": 32,
+     "rate": 1.0,
+     "ci95": [
+      0.8911,
+      1.0
+     ],
+     "steps": {
+      "insert_coupling": {
+       "primitive": "insert",
+       "n": 32,
+       "successes": 32,
+       "rate": 1.0,
+       "fidelity": {
+        "approximation": 32
+       },
+       "failure_modes": {}
+      },
+      "tighten_coupling": {
+       "primitive": "twist",
+       "n": 32,
+       "successes": 32,
+       "rate": 1.0,
+       "fidelity": {
+        "approximation": 32
+       },
+       "failure_modes": {}
+      }
+     },
+     "cycle_time_s": {
+      "median_completed": 33.864,
+      "median_all": 33.864
+     },
+     "tools_and_mass": {
+      "n_tools": 2,
+      "n_actuators": 2,
+      "carried_kg": 2.66883,
+      "total_kg": 2.66883,
+      "changes_per_run": 1
+     },
+     "physics": {
+      "physics_invalid": 0,
+      "physics_unreliable": 0
+     },
+     "fidelity_worst": "approximation",
+     "dev_completion_rate": 1.0
+    },
+    "c": {
+     "setup_id": "5a40796666921e7c3b3a958662cac93f0c03f7bafd661cfaca9a30f8153eb0d2",
+     "status": "tested",
+     "kind": "tool_change",
+     "label": "Tool change: Force-controlled parallel > Two-finger linkage",
+     "tools": [
+      "Force-controlled parallel gripper, 48 mm stroke",
+      "Two-finger linkage gripper of a cobot arm"
+     ],
+     "n": 32,
+     "completed": 16,
+     "rate": 0.5,
+     "ci95": [
+      0.3189,
+      0.6811
+     ],
+     "steps": {
+      "insert_coupling": {
+       "primitive": "insert",
+       "n": 32,
+       "successes": 16,
+       "rate": 0.5,
+       "fidelity": {
+        "approximation": 32
+       },
+       "failure_modes": {
+        "criterion_not_met": 16
+       }
+      },
+      "tighten_coupling": {
+       "primitive": "twist",
+       "n": 32,
+       "successes": 16,
+       "rate": 0.5,
+       "fidelity": {
+        "approximation": 32
+       },
+       "failure_modes": {
+        "not_reached": 16
+       }
+      }
+     },
+     "cycle_time_s": {
+      "median_completed": 38.364,
+      "median_all": 22.628
+     },
+     "tools_and_mass": {
+      "n_tools": 2,
+      "n_actuators": 2,
+      "carried_kg": 1.10143,
+      "total_kg": 1.61543,
+      "changes_per_run": 1
+     },
+     "physics": {
+      "physics_invalid": 0,
+      "physics_unreliable": 0
+     },
+     "fidelity_worst": "approximation",
+     "dev_completion_rate": 0.375
+    }
+   },
+   "primary": {
+    "tested": true,
+    "reason": null,
+    "n": 32,
+    "n10": 32,
+    "n01": 0,
+    "ties": 0,
+    "p": 2.3283064365386963e-10,
+    "p_holm": 6.984919309616089e-10,
+    "reject": true
+   },
+   "secondary_b_vs_c": {
+    "descriptive": true,
+    "rate_b": 1.0,
+    "rate_c": 0.5,
+    "difference": 0.5,
+    "b_only": 16,
+    "c_only": 0,
+    "same_setup": false
+   },
+   "parity": [
+    {
+     "arm": "a",
+     "runs": 8,
+     "equal": 2,
+     "expected": 8
+    },
+    {
+     "arm": "b",
+     "runs": 8,
+     "equal": 2,
+     "expected": 8
+    },
+    {
+     "arm": "c",
+     "runs": 8,
+     "equal": 0,
+     "expected": 8
+    }
+   ]
+  },
+  "h3_cabinet": {
+   "task_id": "3297a111d7c61392e9a99a08d3a80a8e14c7046b80d277925ed3a78788ff651d",
+   "n_conditions": 32,
+   "arms": {
+    "a": {
+     "setup_id": "69a55b715795559ec0d142e71384940c96f8d9b9cf2d33bd199a4f8a5c2257ba",
+     "status": "tested",
+     "kind": "single",
+     "label": "Two-finger linkage gripper of a cobot arm",
+     "tools": [
+      "Two-finger linkage gripper of a cobot arm"
+     ],
+     "n": 32,
+     "completed": 0,
+     "rate": 0.0,
+     "ci95": [
+      0.0,
+      0.1089
+     ],
+     "steps": {
+      "unlock_latch": {
+       "primitive": "twist",
+       "n": 32,
+       "successes": 32,
+       "rate": 1.0,
+       "fidelity": {
+        "approximation": 32
+       },
+       "failure_modes": {}
+      },
+      "open_door": {
+       "primitive": "hook_pull",
+       "n": 32,
+       "successes": 32,
+       "rate": 1.0,
+       "fidelity": {
+        "rigid": 32
+       },
+       "failure_modes": {}
+      },
+      "open_valve": {
+       "primitive": "twist",
+       "n": 32,
+       "successes": 0,
+       "rate": 0.0,
+       "fidelity": {
+        "approximation": 32
+       },
+       "failure_modes": {
+        "slip": 32
+       }
+      },
+      "plug_connector": {
+       "primitive": "insert",
+       "n": 32,
+       "successes": 0,
+       "rate": 0.0,
+       "fidelity": {
+        "rigid": 32
+       },
+       "failure_modes": {
+        "not_reached": 32
+       }
+      }
+     },
+     "cycle_time_s": {
+      "median_completed": null,
+      "median_all": 36.76
+     },
+     "tools_and_mass": {
+      "n_tools": 1,
+      "n_actuators": 1,
+      "carried_kg": 0.75143,
+      "total_kg": 0.75143,
+      "changes_per_run": 0
+     },
+     "physics": {
+      "physics_invalid": 0,
+      "physics_unreliable": 0
+     },
+     "fidelity_worst": "approximation",
+     "dev_completion_rate": 0.0
+    },
+    "b": {
+     "setup_id": "4a5ca67a8577219bf4f87501e90e8e532276f839b488a9b86dfc6a86a472700c",
+     "status": "tested",
+     "kind": "tool_change",
+     "label": "Tool change: Two-finger > Force-controlled > Two-finger",
+     "tools": [
+      "Two-finger adaptive linkage gripper, 85 mm",
+      "Force-controlled parallel gripper, 48 mm stroke",
+      "Two-finger parallel cobot hand, 80 mm"
+     ],
+     "n": 32,
+     "completed": 10,
+     "rate": 0.3125,
+     "ci95": [
+      0.1612,
+      0.5001
+     ],
+     "steps": {
+      "unlock_latch": {
+       "primitive": "twist",
+       "n": 32,
+       "successes": 32,
+       "rate": 1.0,
+       "fidelity": {
+        "approximation": 32
+       },
+       "failure_modes": {}
+      },
+      "open_door": {
+       "primitive": "hook_pull",
+       "n": 32,
+       "successes": 22,
+       "rate": 0.6875,
+       "fidelity": {
+        "rigid": 32
+       },
+       "failure_modes": {
+        "slip": 10
+       }
+      },
+      "open_valve": {
+       "primitive": "twist",
+       "n": 32,
+       "successes": 11,
+       "rate": 0.3438,
+       "fidelity": {
+        "approximation": 32
+       },
+       "failure_modes": {
+        "physics_unreliable": 11,
+        "not_reached": 10
+       }
+      },
+      "plug_connector": {
+       "primitive": "insert",
+       "n": 32,
+       "successes": 10,
+       "rate": 0.3125,
+       "fidelity": {
+        "rigid": 32
+       },
+       "failure_modes": {
+        "not_reached": 21,
+        "jam": 1
+       }
+      }
+     },
+     "cycle_time_s": {
+      "median_completed": 71.714,
+      "median_all": 45.386
+     },
+     "tools_and_mass": {
+      "n_tools": 3,
+      "n_actuators": 3,
+      "carried_kg": 1.25,
+      "total_kg": 2.624,
+      "changes_per_run": 3
+     },
+     "physics": {
+      "physics_invalid": 0,
+      "physics_unreliable": 11
+     },
+     "fidelity_worst": "approximation",
+     "dev_completion_rate": 0.5
+    },
+    "c": {
+     "setup_id": "04b397942e5efe7074495a7d3ab2fc82c6d8f932747fefd3bbef07f4ec61584d",
+     "status": "tested",
+     "kind": "tool_change",
+     "label": "Tool change: Two-finger > Two-finger > Force-controlled",
+     "tools": [
+      "Two-finger adaptive linkage gripper, 85 mm",
+      "Two-finger parallel cobot hand, 80 mm",
+      "Force-controlled parallel gripper, 48 mm stroke"
+     ],
+     "n": 32,
+     "completed": 12,
+     "rate": 0.375,
+     "ci95": [
+      0.211,
+      0.5631
+     ],
+     "steps": {
+      "unlock_latch": {
+       "primitive": "twist",
+       "n": 32,
+       "successes": 32,
+       "rate": 1.0,
+       "fidelity": {
+        "approximation": 32
+       },
+       "failure_modes": {}
+      },
+      "open_door": {
+       "primitive": "hook_pull",
+       "n": 32,
+       "successes": 32,
+       "rate": 1.0,
+       "fidelity": {
+        "rigid": 32
+       },
+       "failure_modes": {}
+      },
+      "open_valve": {
+       "primitive": "twist",
+       "n": 32,
+       "successes": 16,
+       "rate": 0.5,
+       "fidelity": {
+        "approximation": 32
+       },
+       "failure_modes": {
+        "physics_unreliable": 16
+       }
+      },
+      "plug_connector": {
+       "primitive": "insert",
+       "n": 32,
+       "successes": 12,
+       "rate": 0.375,
+       "fidelity": {
+        "rigid": 32
+       },
+       "failure_modes": {
+        "not_reached": 16,
+        "jam": 4
+       }
+      }
+     },
+     "cycle_time_s": {
+      "median_completed": 67.863,
+      "median_all": 54.69
+     },
+     "tools_and_mass": {
+      "n_tools": 3,
+      "n_actuators": 3,
+      "carried_kg": 1.25,
+      "total_kg": 2.624,
+      "changes_per_run": 2
+     },
+     "physics": {
+      "physics_invalid": 0,
+      "physics_unreliable": 16
+     },
+     "fidelity_worst": "approximation",
+     "dev_completion_rate": 0.375
+    }
+   },
+   "primary": {
+    "tested": true,
+    "reason": null,
+    "n": 32,
+    "n10": 10,
+    "n01": 0,
+    "ties": 22,
+    "p": 0.0009765625,
+    "p_holm": 0.0009765625,
+    "reject": true
+   },
+   "secondary_b_vs_c": {
+    "descriptive": true,
+    "rate_b": 0.3125,
+    "rate_c": 0.375,
+    "difference": -0.0625,
+    "b_only": 1,
+    "c_only": 3,
+    "same_setup": false
+   },
+   "parity": [
+    {
+     "arm": "a",
+     "runs": 8,
+     "equal": 5,
+     "expected": 8
+    },
+    {
+     "arm": "b",
+     "runs": 8,
+     "equal": 5,
+     "expected": 8
+    },
+    {
+     "arm": "c",
+     "runs": 8,
+     "equal": 6,
+     "expected": 8
+    }
+   ]
+  }
+ },
+ "problems": [],
+ "spend": {
+  "jobs": 1,
+  "est_usd": 0.0606
+ }
+}

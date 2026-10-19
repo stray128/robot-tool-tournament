@@ -1,0 +1,58 @@
+Product mode: not part of the pre-registered experiment
+test: exact one-sided paired sign-flip permutation test (exact McNemar), b > a; holm at alpha 0.05; family: h1_tote, h2_coupling, h3_cabinet
+
+h1_tote (e4586f3612e1), 32 held-out conditions
+  a [tested] Industrial servo parallel gripper, 110 mm stroke: 0/32 complete (95 % CI 0.0-0.1089), dev 0.0, tools 1, carried 1.08888 kg, fidelity rigid
+      open_lid (hook_pull): 0/32  tiers {'rigid': 32}  modes {'slip': 25, 'constraint_exceeded': 7}
+      pick_carton (grasp): 0/32  tiers {'rigid': 32}  modes {'not_reached': 32}
+      pick_pack (grasp): 0/32  tiers {'rigid': 32}  modes {'not_reached': 32}
+      close_lid (push): 0/32  tiers {'rigid': 32}  modes {'not_reached': 32}
+  b [tested] Two-tool head: Soft arm + Suction cup: 32/32 complete (95 % CI 0.8911-1.0), dev 1.0, tools 2, carried 0.37267 kg, fidelity approximation
+      open_lid (hook_pull): 32/32  tiers {'approximation': 32}  modes {}
+      pick_carton (grasp): 32/32  tiers {'approximation': 32}  modes {}
+      pick_pack (grasp): 32/32  tiers {'approximation': 32}  modes {}
+      close_lid (push): 32/32  tiers {'approximation': 32}  modes {}
+  c [descriptive] Industrial servo parallel gripper, 110 mm stroke: 0/32 complete (95 % CI 0.0-0.1089), dev 0.0, tools 1, carried 1.08888 kg, fidelity rigid
+      open_lid (hook_pull): 0/32  tiers {'rigid': 32}  modes {'slip': 25, 'constraint_exceeded': 7}
+      pick_carton (grasp): 0/32  tiers {'rigid': 32}  modes {'not_reached': 32}
+      pick_pack (grasp): 0/32  tiers {'rigid': 32}  modes {'not_reached': 32}
+      close_lid (push): 0/32  tiers {'rigid': 32}  modes {'not_reached': 32}
+  primary b > a: b only 32, a only 0, ties 0; p 2.33e-10, Holm 6.98e-10, reject True
+  b vs c (descriptive): 1.0 vs 0.0, b only 32, c only 0
+  parity on development conditions: a 8/8, b 5/8, c 8/8
+
+h2_coupling (33599e99ac27), 32 held-out conditions
+  a [tested] Parallel jaw, stock blade: Pipe coupling: 0/32 complete (95 % CI 0.0-0.1089), dev 0.0, tools 1, carried 0.41398 kg, fidelity approximation
+      insert_coupling (insert): 26/32  tiers {'approximation': 32}  modes {'criterion_not_met': 6}
+      tighten_coupling (twist): 0/32  tiers {'approximation': 32}  modes {'slip': 26, 'not_reached': 6}
+  b [tested] Two-tool head: Two-finger parallel + Two-finger linkage: 32/32 complete (95 % CI 0.8911-1.0), dev 1.0, tools 2, carried 2.66883 kg, fidelity approximation
+      insert_coupling (insert): 32/32  tiers {'approximation': 32}  modes {}
+      tighten_coupling (twist): 32/32  tiers {'approximation': 32}  modes {}
+  c [tested] Tool change: Force-controlled parallel > Two-finger linkage: 16/32 complete (95 % CI 0.3189-0.6811), dev 0.375, tools 2, carried 1.10143 kg, fidelity approximation
+      insert_coupling (insert): 16/32  tiers {'approximation': 32}  modes {'criterion_not_met': 16}
+      tighten_coupling (twist): 16/32  tiers {'approximation': 32}  modes {'not_reached': 16}
+  primary b > a: b only 32, a only 0, ties 0; p 2.33e-10, Holm 6.98e-10, reject True
+  b vs c (descriptive): 1.0 vs 0.5, b only 16, c only 0
+  parity on development conditions: a 2/8, b 2/8, c 0/8
+
+h3_cabinet (3297a111d7c6), 32 held-out conditions
+  a [tested] Two-finger linkage gripper of a cobot arm: 0/32 complete (95 % CI 0.0-0.1089), dev 0.0, tools 1, carried 0.75143 kg, fidelity approximation
+      unlock_latch (twist): 32/32  tiers {'approximation': 32}  modes {}
+      open_door (hook_pull): 32/32  tiers {'rigid': 32}  modes {}
+      open_valve (twist): 0/32  tiers {'approximation': 32}  modes {'slip': 32}
+      plug_connector (insert): 0/32  tiers {'rigid': 32}  modes {'not_reached': 32}
+  b [tested] Tool change: Two-finger > Force-controlled > Two-finger: 10/32 complete (95 % CI 0.1612-0.5001), dev 0.5, tools 3, carried 1.25 kg, fidelity approximation
+      unlock_latch (twist): 32/32  tiers {'approximation': 32}  modes {}
+      open_door (hook_pull): 22/32  tiers {'rigid': 32}  modes {'slip': 10}
+      open_valve (twist): 11/32  tiers {'approximation': 32}  modes {'physics_unreliable': 11, 'not_reached': 10}
+      plug_connector (insert): 10/32  tiers {'rigid': 32}  modes {'not_reached': 21, 'jam': 1}
+  c [tested] Tool change: Two-finger > Two-finger > Force-controlled: 12/32 complete (95 % CI 0.211-0.5631), dev 0.375, tools 3, carried 1.25 kg, fidelity approximation
+      unlock_latch (twist): 32/32  tiers {'approximation': 32}  modes {}
+      open_door (hook_pull): 32/32  tiers {'rigid': 32}  modes {}
+      open_valve (twist): 16/32  tiers {'approximation': 32}  modes {'physics_unreliable': 16}
+      plug_connector (insert): 12/32  tiers {'rigid': 32}  modes {'not_reached': 16, 'jam': 4}
+  primary b > a: b only 10, a only 0, ties 22; p 0.000977, Holm 0.000977, reject True
+  b vs c (descriptive): 0.3125 vs 0.375, b only 1, c only 3
+  parity on development conditions: a 5/8, b 5/8, c 6/8
+
+spend: 1 jobs, $0.0606 (wall-based estimate)

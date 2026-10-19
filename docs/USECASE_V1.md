@@ -9,7 +9,7 @@ experiment's commit-reveal pattern in a lighter form.
 on the laptop and the held-out evaluation on Nebius. The arms were frozen on `main` `67c0824`, the
 held-out secret's SHA-256 commitment is `8011661730eb0c5805065ca6ef5b9b4948dbe58db86e26c8333bd30f4e31196a`,
 and the protocol is tagged `usecase-v1` before any held-out run. Nothing ran on Nebius before the
-tag. From the tag on, every change goes in section 12.
+tag. From the tag on, every change goes in section 12. **Results:** [USECASE_V1_RESULTS.md](USECASE_V1_RESULTS.md).
 
 | What | Where |
 |---|---|
@@ -420,4 +420,5 @@ reason, before the affected result is looked at where possible.
 
 | Date | Change | Reason |
 |---|---|---|
+| 2026-10-19 | None to the protocol. The evaluation ran once (job `aijob-e05e55n905qj9va2fh`, no reruns); results in [USECASE_V1_RESULTS.md](USECASE_V1_RESULTS.md), secret revealed there. | Record of the run |
 | | none yet | |
