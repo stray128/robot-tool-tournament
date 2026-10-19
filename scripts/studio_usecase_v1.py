@@ -643,6 +643,8 @@ def check_tagged(config: Path, tag: str) -> str:
     sha = _git("rev-parse", "-q", "--verify", f"refs/tags/{tag}^{{commit}}").stdout.strip()
     if not sha:
         raise ValueError(f"no tag {tag}: the protocol is tagged before any held-out run")
+    if not config.resolve().is_relative_to(REPO):
+        raise ValueError(f"{config} differs from the copy at {tag}: it is outside the repository")
     rel = config.resolve().relative_to(REPO).as_posix()
     tagged = _git("show", f"{tag}:{rel}")
     if tagged.returncode != 0 or tagged.stdout != config.read_text(encoding="utf-8"):

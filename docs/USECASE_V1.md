@@ -421,4 +421,5 @@ reason, before the affected result is looked at where possible.
 | Date | Change | Reason |
 |---|---|---|
 | 2026-10-19 | None to the protocol. The evaluation ran once (job `aijob-e05e55n905qj9va2fh`, no reruns); results in [USECASE_V1_RESULTS.md](USECASE_V1_RESULTS.md), secret revealed there. | Record of the run |
+| 2026-10-19 | `check_tagged` in scripts/studio_usecase_v1.py refuses a config outside the repository with a message instead of a path error (found by the test suite once the tag existed). | No effect on the evaluation, which read the repository's own config |
 | | none yet | |
