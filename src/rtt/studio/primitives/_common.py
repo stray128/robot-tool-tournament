@@ -439,8 +439,9 @@ class Path:
 @dataclass
 class Guarded:
     """A straight move from ``a`` to ``b`` over ``duration`` s that stops advancing while the
-    tool presses on an object (any object in the scene) harder than :data:`GUARD_FORCE_N` (force
-    feedback); it keeps its progress, so a blocked move ends where it was stopped."""
+    tool presses on an object (any object in the scene) harder than ``force`` (default
+    :data:`GUARD_FORCE_N`; force feedback); it keeps its progress, so a blocked move ends where it
+    was stopped (:attr:`blocked`)."""
 
     a: np.ndarray
     b: np.ndarray
@@ -448,9 +449,15 @@ class Guarded:
     duration: float
     u: float = 0.0
     last_t: float = math.nan
+    force: float = GUARD_FORCE_N
+
+    @property
+    def blocked(self) -> bool:
+        """Stopped short of ``b``."""
+        return self.u < 1.0
 
     def at(self, t: float, pressing: float) -> np.ndarray:
-        if not math.isnan(self.last_t) and pressing <= GUARD_FORCE_N:
+        if not math.isnan(self.last_t) and pressing <= self.force:
             self.u = min(1.0, self.u + max(0.0, t - self.last_t) / self.duration)
         self.last_t = t
         s = min_jerk(self.u)

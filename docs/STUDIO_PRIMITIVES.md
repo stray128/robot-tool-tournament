@@ -24,6 +24,7 @@ candidate effector, and each one is a named constant in its module.
 8. [S2b: the hero-task limits](#8-s2b-the-hero-task-limits)
 9. [S2c: tool stacks and the friction torques](#9-s2c-tool-stacks-and-the-friction-torques)
 10. [S2d: every goal of a step](#10-s2d-every-goal-of-a-step)
+11. [S2e: a push's approach](#11-s2e-a-pushs-approach)
 
 ## 1. Rules every controller follows
 
@@ -269,9 +270,18 @@ depth), `penetration_mm`. Failing with `jam = 1` is `jam`.
 
 Fingers in a fist (closure 1), a cup's vacuum off, a soft arm slack; the contact point is the
 tool's tip moved to the side of its footprint that faces the push. A panel is pushed on its
-outer face 15 mm in from the free edge along the arc to the goal (3 deg past it); a lid open past
-vertical that must close is pushed only to 80 deg, its weight closes it, and the tool then
-presses the closed lid home from above. A drawer is pushed on the front of its handle along the
+outer face 15 mm in from the free edge along the arc to the goal (3 deg past it); where a bar
+handle stands off the face (S2e), a lid is pushed on the bar's outer side, 5 mm on the hinge side
+of it (the tool reaches from its tip toward the free edge, so it meets the whole bar), and a door
+at the middle of its outer face, clear of the bar that runs up it. A lid open past vertical that
+must close is pushed only to 80 deg, its weight closes it, and the tool then presses the closed
+lid home from above, at the middle of its outer face. **Approach** (S2e): a transit to 30 mm
+above the standoff point, then a guarded move in over 0.8 s (it stops on contact with any object
+over 5 N or the push limit, and the push then starts where it stopped); the standoff, 10 mm, is
+the whole tool's (whatever reaches further toward the face than the contact point, a wrist flange
+or a long finger, stands off it too), and the push meets the face, and its object its stop (the
+last 20 mm of the travel), at 15 mm/s at most [assumed], so an impact stays under the limit. A
+drawer is pushed on the front of its handle along the
 slide (3 mm past the goal); a part is pressed down on its top until the press force (10 N, or 60 %
 of the limit; a `force_n` at_least above that, S2d) for 0.5 s; a plug in its socket pressed down
 to the goal depth. The push advances at `speed_mm_s` while the tool's net force is under the limit
@@ -282,8 +292,9 @@ the object's resistance (a drawer pushed shut stopped 7.7 mm open against a 5 mm
 the push goes on, up to the limit over the servo's stiffness plus 2 mm past its path. A
 `force_n` at_least is a goal of the last push on top of its travel: it presses on, within that
 reach and while the observed state still meets its criteria, until the force is reached and held
-0.5 s, within the equal budget `force_press` plus that travel. Then hold 0.3 s, back off 30 mm,
-rise 60 mm.
+0.5 s, within the equal budget `force_press` plus that travel. A push whose observed state meets
+its criteria while it is held at its limit (shut against its stop) is done. Then the wrist target
+comes back to where the wrist is (the push stops), hold 0.3 s, back off 30 mm, rise 60 mm.
 
 Observed: the template state at the end, `force_n` (peak net force), `penetration_mm`.
 
@@ -302,6 +313,7 @@ cycle times stay comparable.
 | `insert_search` | 2.0 | spiral search at a socket mouth |
 | `insert_reseat` | 2.6 | jam recovery (let go, press home), plus the press itself: 1.3 x the full depth less 1 mm at `speed_mm_s` (S2b; the same for every tool on the port, since a slipping grip can stall anywhere) |
 | `push_slack` | 1.5 | force-limited pushing may pause |
+| push approach (S2e) | 0.8 + touch | the guarded move into a push's standoff (0.8 s), plus 1.3 x the 35 mm a push covers at the touch speed (the standoff, 5 mm into the face, the last 20 mm) at 15 mm/s instead of `speed_mm_s`; a tool whose flange or body overhangs its contact point adds 1.3 x that overhang at `speed_mm_s` (it starts further out) |
 | `force_press` | 1.0 | a push, an insert or a pull pressing on to a `force_n` at_least (S2d; only in a step with one, and for a part press only when it asks for more than the press force), plus 1.3 x the extra travel at the step's speed |
 
 Every step is capped at 30 s (`MAX_STEP_S`).
@@ -598,8 +610,64 @@ exactly as before.
 
 **Left open.** Pushing a lid shut from past vertical (opened to 110 deg, then `angle_deg` <= 3)
 exceeds a 40 N limit, 43.9 N, before and after S2d: the tool already presses 43.7 N on the lid
-when its press from above starts, so the load comes from the move down to the press's standoff
-over the lid that gravity closed, which is position-controlled. The engineer's
+when its press from above starts (fixed in S2e, section 11). The engineer's
 check that a `torque_nm` at_least stops a twist on a latch or valve before it turns
 (`rtt.studio.engineer.checks`, not an S2 file) still holds for a twist with only a torque goal; a
 twist with a rotation goal as well now turns to it.
+
+## 11. S2e: a push's approach
+
+**The bug.** Closing a lid with a bar handle from past vertical (opened to 110 deg, then
+`angle_deg` <= 3 under a 40 N limit) ended `constraint_exceeded` for most grippers, and the
+tool was already pressing 43.7 N on the lid before its press started. The push planned every
+standoff off the panel's **face**, at 15 mm in from the free edge, which is where the bar handle
+stands (centred 20 mm in, 20 mm of clearance under it plus its diameter off the face); and the
+moves into the standoff were position-controlled. The press from above landed on the bar and the
+z servo drove 11 mm into it (44 N); the arc push's move in ran into the bar at transit speed
+(57 N, 58 N, 104 N for the servo, rigid-pad and linkage grippers). Three more causes of the same
+kind came up on the way: on a door the move down beside the face landed on the bar's top end
+(150 N, the z servo's limit); a long finger or the wrist flange reached the face before the
+contact point, which the standoff did not count; and a push met the face at `speed_mm_s` (60 mm/s
+in H1, 24.8 N of impact against a 20 N limit), then held its command past the stop through the
+hold and the retract (36 N).
+
+**The fix** (`primitives/push.py`, section 3.5): where a bar stands off the face, a lid is pushed
+on the bar's outer side, on its hinge side, and a door at the middle of its face; the press from
+above is at the middle of the closed lid; the standoff is the whole tool's, flange included; the
+move in is a guarded move (`Guarded` gained a per-move force, the push uses the guard force or the
+push limit, whichever is lower), and a push stopped short starts from where it stopped; the push
+meets the face and its stop at 15 mm/s; a push whose criteria are met while it is held at its
+limit is done; and the push stops (the target comes back to the wrist) before the hold and retract.
+
+Pushed shut from 110 deg (`angle_deg` <= 3, 40 N), opened by the adaptive gripper, three seeds
+per tool (`test_a_lid_opened_past_vertical_is_pushed_shut_within_the_step_force_limit` runs the
+rigid-pad, servo and linkage grippers):
+
+| Tool | Lid with a bar, before | After | Door (400 x 300 mm, bar) from 88 deg, before | After |
+|---|---|---|---|---|
+| two-finger adaptive | 3/3, 10 N | 3/3, 10 N | 0/3, 150 N | 3/3, 32 N |
+| three-finger adaptive | 3/3, 10 N | 3/3, 10 N | 2/3, 75 N | 3/3, 32 N |
+| fin-ray gripper | 0/3, criterion not met | 0/3, criterion not met (its fingers bend; 27 N peak) | 0/3, 336 N | 3/3, 32 N |
+| rigid-pad gripper A | 0/3, 58 N | 3/3, 10 N | 0/3, 167 N | 3/3, 32 N |
+| 25 mm cup | 3/3, 29 N | 3/3, 10 N | 0/3, 150 N | 3/3, 33 N |
+| 16 mm cup | 3/3, 28 N | 3/3, 10 N | 0/3, 150 N | 3/3, 32 N |
+| 12-segment soft arm | 3/3, 10 N | 3/3, 10 N | 3/3, 8 N | 3/3, 1 N |
+| library servo gripper, 110 mm | 0/3, 57 N | 3/3, 10 N | 0/3, 351 N | 3/3, 32 N |
+| library linkage gripper | 0/3, 104 N | 3/3, 13 N | 0/3, physics unreliable | 3/3, 32 N |
+
+Peaks are the predicate's `force_n`. A lid with a lip (no bar) ends as before: 24/27, the fin-ray
+gripper 0/3 both times, every peak at most 13 N. A door is pushed 3 deg past closed, so a push
+ends held at its 32 N limit against the frame; a press (10 N) ends a lid's close.
+
+**H1's `close_lid`** (frozen plan: push, `angle_deg` <= 5, 20 N limit, after the lid is opened
+to 110 deg by its lip), three conditions: the recommended head's 16 mm cup closes it 3/3 before
+and after, its peak 14.8 to 15.0 N before and 10.3 N after (the press force; before, the impact
+at 60 mm/s). The best single (the library servo gripper) never reaches `close_lid`: it fails
+`open_lid` (slip, or 21.3 N against the 20 N limit), the same before and after. From the
+recommended head's state before `close_lid` (lid open, parts placed), the servo gripper closes
+the lid 1/3 before (2 x `constraint_exceeded`, 24.8 N: its impact at 60 mm/s) and 3/3 after
+(10.1 N).
+
+**Gate.** The S2 gate's push and hook_pull rows end as before (14/14 with their references,
+0/14 with the wrong effectors, the same failure modes and penetrations); the push step's median
+time grows from 5.3 to 6.0 s (the touch speed). The S2d probes end as in section 10.
