@@ -261,7 +261,7 @@
   "n_screened": 46,
   "n_conditions": 3,
   "runs": 438,
-  "wall_s": 333.6,
+  "wall_s": 259.8,
   "candidates": [
    {
     "effector_id": "50ce8d036dc831932b04f19f353a71d3a4b02a45794bbcb1b7437c9747bb128a",
@@ -4523,10 +4523,19 @@
   ]
  },
  "build_pack_note": null,
- "session": null,
+ "session": {
+  "file": "studio/sessions/h3.json",
+  "session_id": "sess-3961dea78cf3",
+  "status": "completed",
+  "model": "nvidia/nemotron-3-super-120b-a12b",
+  "turns": 4,
+  "tool_calls": 3,
+  "spend_usd": 0.004091,
+  "answer": "Recommended setup: Tool change: Two‑finger > Force‑controlled > Two‑finger (setup 4a5ca67a8577) – 4/8 runs completed (50 %), fidelity approximation (verify on hardware).  \nBest single off‑the‑shelf: Two‑finger linkage gripper of a cobot arm (setup 69a55b715795) – 0/8 runs completed (0 %).  \nBuild pack ID: spack-9b4a87816ac2."
+ },
  "provenance": {
-  "code_version": "591648aa39d3",
-  "report_sha256": "2a096bb15c219ad9f2751502928d1dbe37c7f1c49f6538a9c163f738428212fe",
+  "code_version": "67c08249edc8",
+  "report_sha256": "2736dbcab0bd7ced5546f9f875466651177c217d893c780e311fc03d0fadbed1",
   "task_id": "3297a111d7c61392e9a99a08d3a80a8e14c7046b80d277925ed3a78788ff651d",
   "controllers": "default",
   "evidence": "accepted",
@@ -4692,12 +4701,12 @@
    }
   ],
   "fairness_sha": "50b63720fa729dd50092c1e915aa839aada2f0d1013083e93d57c6b8a91480b6",
-  "workers": 4,
+  "workers": 6,
   "timings": {
-   "screen_s": 333.6,
-   "combine_s": 7.7,
-   "finalists_s": 74.9,
-   "total_s": 416.7
+   "screen_s": 259.8,
+   "combine_s": 8.3,
+   "finalists_s": 69.3,
+   "total_s": 337.9
   },
   "determinism": [
    {

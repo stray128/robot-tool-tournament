@@ -164,21 +164,6 @@
    },
    "uri": "assets/30e503738711cdc2.glb"
   },
-  "33dec22f02f9e8cf": {
-   "attribution": "Robot Tool Tournament (Apache-2.0)",
-   "bytes": 2672,
-   "changes": [],
-   "label": "Studio tool body: eff_cup_base",
-   "license": "Apache-2.0",
-   "media_type": "model/gltf-binary",
-   "role": "gripper_frame",
-   "sha256": "33dec22f02f9e8cfdc9d105ba9c3b9db5f1140ae768d10c9f42a28ccb271f1d4",
-   "source": {
-    "generator": "rtt.render.glb",
-    "kind": "generated"
-   },
-   "uri": "assets/33dec22f02f9e8cf.glb"
-  },
   "349d0809e2104964": {
    "attribution": "Simulation model of an open-source industrial gripper, MIT, modified (full credit: /credits#effectors)",
    "bytes": 3512,
@@ -397,6 +382,21 @@
    },
    "uri": "assets/432b06e9f7deaf88.glb"
   },
+  "435cbd1e5a2c189b": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 33996,
+   "changes": [],
+   "label": "Studio tool body: eff_cup",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "435cbd1e5a2c189b8c6e5f7008a3fa6c9ffe2b8137df7df84811d5a6ab8977f0",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/435cbd1e5a2c189b.glb"
+  },
   "448271b973a7bfa2": {
    "attribution": "Robot Tool Tournament (Apache-2.0)",
    "bytes": 2056,
@@ -533,6 +533,21 @@
    },
    "uri": "assets/58c3d59126c06393.glb"
   },
+  "5989c6d7aff06eee": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 2672,
+   "changes": [],
+   "label": "Studio tool body: eff_cup_base",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "5989c6d7aff06eee363cdf0522c9bf2f08eee137c0ea6e8c2db0a1660cfdeb33",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/5989c6d7aff06eee.glb"
+  },
   "5bee4c32f50bac92": {
    "attribution": "Simulation model of an open-source industrial gripper, Apache-2.0, modified (full credit: /credits#library)",
    "bytes": 3760,
@@ -652,6 +667,21 @@
     "kind": "generated"
    },
    "uri": "assets/6e524adaad17f15a.glb"
+  },
+  "6f328bea8487b346": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 2648,
+   "changes": [],
+   "label": "Studio tool body: eff_cup_bellows",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "6f328bea8487b346e382f2dbced6fbd61552d304d291cd5aaec7cd6ed945f81f",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/6f328bea8487b346.glb"
   },
   "6f7528ef2f895f67": {
    "attribution": "Robot Tool Tournament (Apache-2.0)",
@@ -881,36 +911,6 @@
     "kind": "generated"
    },
    "uri": "assets/93e877310dfbe849.glb"
-  },
-  "96e3813a86768051": {
-   "attribution": "Robot Tool Tournament (Apache-2.0)",
-   "bytes": 31964,
-   "changes": [],
-   "label": "Studio tool body: eff_cup",
-   "license": "Apache-2.0",
-   "media_type": "model/gltf-binary",
-   "role": "gripper_frame",
-   "sha256": "96e3813a86768051b58b679a60ed746766d0bd70b545bc8c7cdbc321240733ac",
-   "source": {
-    "generator": "rtt.render.glb",
-    "kind": "generated"
-   },
-   "uri": "assets/96e3813a86768051.glb"
-  },
-  "9a3b94e79e84eb45": {
-   "attribution": "Robot Tool Tournament (Apache-2.0)",
-   "bytes": 2612,
-   "changes": [],
-   "label": "Studio tool body: eff_cup_bellows",
-   "license": "Apache-2.0",
-   "media_type": "model/gltf-binary",
-   "role": "gripper_frame",
-   "sha256": "9a3b94e79e84eb4520d011746b7a159b8dde25ca98412ad598173b6993a7cabc",
-   "source": {
-    "generator": "rtt.render.glb",
-    "kind": "generated"
-   },
-   "uri": "assets/9a3b94e79e84eb45.glb"
   },
   "9bd8e3fed9f3ef2d": {
    "attribution": "Robot Tool Tournament (Apache-2.0)",

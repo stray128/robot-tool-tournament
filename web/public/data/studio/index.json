@@ -3,7 +3,7 @@
  "version": 1,
  "label": "Product mode: not part of the pre-registered experiment",
  "contract": "rtt-effectors/2",
- "code_version": "591648aa39d3",
+ "code_version": "67c08249edc8",
  "heroes": [
   {
    "hero": "h1",
@@ -18,7 +18,7 @@
    "outcome": "recommended",
    "headline": "A two-tool head completes the task in 8 of 8 runs; the best single off-the-shelf tool in 0 of 8 runs.",
    "recommended": {
-    "setup_id": "9d7829e0d8861c572779cefc3cfce3110b92c0150e87f45e6fa82785e7f26f3f",
+    "setup_id": "72c634ec4fa356473388d98dc594a1287959d4df49c9961941abf9e50964ab56",
     "kind": "multi_head",
     "kind_title": "Two-tool head",
     "label": "Two-tool head: Soft arm + Suction cup",
@@ -35,8 +35,8 @@
      },
      {
       "index": 1,
-      "effector_id": "3907bc284d9e2c3399ddb8b45b1bf94dbb3b0ef0672705c6d90724839ecf7186",
-      "display_name": "Suction cup, 16 mm bellows",
+      "effector_id": "a5d7b1667b4f0d6582a36df49b9e600eeedc31f54dc883ddf7803fe113091f1d",
+      "display_name": "Suction cup, 40 mm bellows",
       "family": "suction",
       "family_title": "Suction cup",
       "fidelity": "approximation",
@@ -49,7 +49,7 @@
     "n_runs": 8,
     "fidelity": "approximation",
     "stops_at": null,
-    "cycle_time_s": 58.1
+    "cycle_time_s": 62.57
    },
    "best_single": {
     "setup_id": "d136ab4824c1bad26b5ac84b7a481c14bedee5790c495f0eb8c1c9369bb11a57",

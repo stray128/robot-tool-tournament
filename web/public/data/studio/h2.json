@@ -142,7 +142,7 @@
   "n_screened": 44,
   "n_conditions": 3,
   "runs": 240,
-  "wall_s": 260.8,
+  "wall_s": 127.0,
   "candidates": [
    {
     "effector_id": "4a4d47cd94ec8da2baa50caf43de98b4bf19a2f33b5ee5032c093fd8fadcbe41",
@@ -3148,10 +3148,19 @@
   ]
  },
  "build_pack_note": null,
- "session": null,
+ "session": {
+  "file": "studio/sessions/h2.json",
+  "session_id": "sess-e563bd27e189",
+  "status": "completed",
+  "model": "nvidia/nemotron-3-super-120b-a12b",
+  "turns": 4,
+  "tool_calls": 3,
+  "spend_usd": 0.00378,
+  "answer": "Recommendation: Two-tool head – Two-finger parallel + Two-finger linkage (setup 48274cb2290c) completes the task in all runs (8/8, 100%), fidelity approximation – verify on hardware. Best single off‑the‑shelf baseline: Parallel jaw, stock blade – Pipe coupling (setup 5367b08cfd97) completes 0/8 runs (0%). Build pack ID: spack-4c9115b94a60."
+ },
  "provenance": {
-  "code_version": "591648aa39d3",
-  "report_sha256": "e4a8e1f01859b6ddef640664c95d308dbc72d7141036ef74544bf188c85e5a57",
+  "code_version": "67c08249edc8",
+  "report_sha256": "e64b609d5ad8af2152c249f179fd20c5ce8cad925977c985f9cf5442979c415b",
   "task_id": "33599e99ac277cf20e73d6acd349b9422330a255b3fe5ea48c6442a26c3decd6",
   "controllers": "default",
   "evidence": "accepted",
@@ -3233,12 +3242,12 @@
    }
   ],
   "fairness_sha": "50b63720fa729dd50092c1e915aa839aada2f0d1013083e93d57c6b8a91480b6",
-  "workers": 4,
+  "workers": 6,
   "timings": {
-   "screen_s": 260.8,
-   "combine_s": 12.9,
-   "finalists_s": 50.9,
-   "total_s": 325.3
+   "screen_s": 127.0,
+   "combine_s": 9.0,
+   "finalists_s": 31.5,
+   "total_s": 168.2
   },
   "determinism": [
    {

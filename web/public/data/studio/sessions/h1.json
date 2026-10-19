@@ -1,0 +1,692 @@
+{
+ "format": "rtt-agent-session",
+ "version": 1,
+ "session_id": "sess-ea83d7a1de12",
+ "mode": "product",
+ "label": "Product mode: not part of the pre-registered experiment",
+ "status": "completed",
+ "created_at": "2026-10-19T05:06:35.399Z",
+ "kind": "recorded",
+ "case_id": "h1_tote",
+ "use_case": "Warehouse returns: a plastic tote on the packing bench has a hinged lid. Open the lid, put a small rigid carton (about 120 x 80 x 60 mm, 300 g) and a flat shrink-wrapped pack (about 150 x 100 x 20 mm, 150 g) from the bench into the tote, then close the lid.",
+ "offline": false,
+ "spend": {
+  "session_cap_usd": 0.1,
+  "spent_usd": 0.003709,
+  "by_kind_usd": {
+   "llm": 0.003709
+  },
+  "reserved_usd": 0.0,
+  "session_remaining_usd": 0.096291,
+  "day_cap_usd": 0.1,
+  "day_spent_usd": 0.003709
+ },
+ "verdicts": [
+  {
+   "kind": "studio_recommendation",
+   "tournament_id": "tour-b5c0cda36fea",
+   "plan_id": "plan-1d5070f90f9b",
+   "task_id": "e4586f3612e11b0eb490349c52a109bec75f43fdb0bcf9f1d91127f9e01a4ad5",
+   "recommendation": "recommended",
+   "setup_id": "72c634ec4fa3",
+   "setup_label": "Two-tool head: Soft arm + Suction cup",
+   "completion_pct": 100.0,
+   "completed_runs": 8,
+   "total_runs": 8,
+   "fidelity": "approximation",
+   "verify_on_hardware": true,
+   "best_single_label": "Industrial servo parallel gripper, 110 mm stroke",
+   "best_single_completion_pct": 0.0,
+   "label": "Product mode: not part of the pre-registered experiment"
+  }
+ ],
+ "answer": "Recommendation: Two‑tool head – Soft arm + Suction cup (setup 72c634ec4fa3). Completed 8/8 runs (100%), fidelity ≈ approximation (verify on hardware). Best single off‑the‑shelf baseline: Industrial servo parallel gripper, 110 mm stroke (setup d136ab4824c1) – 0/8 runs completed. Build pack ID: spack-2bd1c297dda8.",
+ "summary": "Recommendation: Two‑tool head – Soft arm + Suction cup (setup 72c634ec4fa3). Completed 8/8 runs (100%), fidelity ≈ approximation (verify on hardware).",
+ "finished_at": "2026-10-19T05:15:29.455Z",
+ "events": [
+  {
+   "seq": 1,
+   "ts": "2026-10-19T05:06:35.401Z",
+   "t_s": 0.002,
+   "type": "session.started",
+   "kind": "studio",
+   "case_id": "h1_tote",
+   "use_case": "Warehouse returns: a plastic tote on the packing bench has a hinged lid. Open the lid, put a small rigid carton (about 120 x 80 x 60 mm, 300 g) and a flat shrink-wrapped pack (about 150 x 100 x 20 mm, 150 g) from the bench into the tote, then close the lid.",
+   "goal": "Plan this use case, find the tool setup that does the whole task in simulation, and give me its build pack.",
+   "label": "Product mode: not part of the pre-registered experiment",
+   "models": {
+    "agent": "nvidia/nemotron-3-super-120b-a12b",
+    "task_engineer": "nvidia/nemotron-3-super-120b-a12b",
+    "summarizer": "nvidia/Nemotron-3_5-Lightning"
+   },
+   "offline": false,
+   "caps": {
+    "max_tool_calls": 6,
+    "max_concurrent_jobs": 2,
+    "session_usd": 0.1,
+    "day_usd": 0.1,
+    "max_llm_turns": 16,
+    "max_designs_per_job": 8,
+    "max_designs_per_proposal": 4,
+    "poll_wait_s": 120.0
+   },
+   "studio_caps": {
+    "plan_usd": 0.05,
+    "wall_s": 1800.0,
+    "workers": 4,
+    "n_conditions": 8,
+    "max_zip_bytes": 20971520
+   },
+   "unlocked": false,
+   "tools": [
+    "plan_task",
+    "run_task_tournament",
+    "export_build_pack",
+    "cost_ledger"
+   ]
+  },
+  {
+   "seq": 2,
+   "ts": "2026-10-19T05:06:37.753Z",
+   "t_s": 2.354,
+   "type": "llm.call",
+   "role": "agent",
+   "model": "nvidia/nemotron-3-super-120b-a12b",
+   "prompt_tokens": 1636,
+   "completion_tokens": 122,
+   "reasoning_tokens": 8,
+   "cost_usd": 0.000601,
+   "latency_s": 2.3432,
+   "cached": false,
+   "finish_reason": "tool_calls"
+  },
+  {
+   "seq": 3,
+   "ts": "2026-10-19T05:06:37.754Z",
+   "t_s": 2.355,
+   "type": "agent.message",
+   "turn": 1,
+   "content": "",
+   "tool_calls": [
+    {
+     "name": "plan_task",
+     "call_id": "chatcmpl-tool-a3758476bc5cabb0"
+    }
+   ],
+   "reasoning": "We need to call plan_task first."
+  },
+  {
+   "seq": 4,
+   "ts": "2026-10-19T05:06:37.762Z",
+   "t_s": 2.363,
+   "type": "tool.call",
+   "call_id": "chatcmpl-tool-a3758476bc5cabb0",
+   "name": "plan_task",
+   "args": {
+    "text": "Warehouse returns: a plastic tote on the packing bench has a hinged lid. Open the lid, put a small rigid carton (about 120 x 80 x 60 mm, 300 g) and a flat shrink-wrapped pack (about 150 x 100 x 20 mm, 150 g) from the bench into the tote, then close the lid."
+   },
+   "n": 1
+  },
+  {
+   "seq": 5,
+   "ts": "2026-10-19T05:06:37.794Z",
+   "t_s": 2.396,
+   "type": "llm.call",
+   "role": "task_engineer",
+   "model": "nvidia/nemotron-3-super-120b-a12b",
+   "prompt_tokens": 20378,
+   "completion_tokens": 1892,
+   "reasoning_tokens": 562,
+   "cost_usd": 0.0,
+   "latency_s": 26.492,
+   "cached": true,
+   "finish_reason": "tool_calls",
+   "stage": "main",
+   "replay": true
+  },
+  {
+   "seq": 6,
+   "ts": "2026-10-19T05:06:37.795Z",
+   "t_s": 2.397,
+   "type": "llm.call",
+   "role": "task_engineer",
+   "model": "nvidia/nemotron-3-super-120b-a12b",
+   "prompt_tokens": 21606,
+   "completion_tokens": 1733,
+   "reasoning_tokens": 385,
+   "cost_usd": 0.0,
+   "latency_s": 26.3531,
+   "cached": true,
+   "finish_reason": "tool_calls",
+   "stage": "repair",
+   "replay": true
+  },
+  {
+   "seq": 7,
+   "ts": "2026-10-19T05:06:37.798Z",
+   "t_s": 2.399,
+   "type": "tool.result",
+   "call_id": "chatcmpl-tool-a3758476bc5cabb0",
+   "name": "plan_task",
+   "ok": true,
+   "duration_s": 0.036,
+   "result": {
+    "kind": "studio_plan",
+    "label": "Product mode: not part of the pre-registered experiment",
+    "plan_id": "plan-1d5070f90f9b",
+    "source": "recorded",
+    "status": "valid",
+    "result": "valid_after_repair",
+    "task_id": "e4586f3612e11b0eb490349c52a109bec75f43fdb0bcf9f1d91127f9e01a4ad5",
+    "title": "Warehouse returns tote lid open/close",
+    "objects": [
+     {
+      "name": "tote_bin",
+      "kind": "bin"
+     },
+     {
+      "name": "tote_lid",
+      "kind": "hinged_lid"
+     },
+     {
+      "name": "carton",
+      "kind": "part"
+     },
+     {
+      "name": "pack",
+      "kind": "part"
+     }
+    ],
+    "steps": [
+     {
+      "id": "open_lid",
+      "primitive": "hook_pull",
+      "object": "tote_lid",
+      "target": null,
+      "fidelity": "rigid"
+     },
+     {
+      "id": "pick_carton",
+      "primitive": "grasp",
+      "object": "carton",
+      "target": "tote_bin",
+      "fidelity": "rigid"
+     },
+     {
+      "id": "pick_pack",
+      "primitive": "grasp",
+      "object": "pack",
+      "target": "tote_bin",
+      "fidelity": "rigid"
+     },
+     {
+      "id": "close_lid",
+      "primitive": "push",
+      "object": "tote_lid",
+      "target": null,
+      "fidelity": "rigid"
+     }
+    ],
+    "problems": [],
+    "warnings": [],
+    "cost_usd": 0,
+    "next": "run_task_tournament with this plan_id"
+   },
+   "tool_calls_left": 5
+  },
+  {
+   "seq": 8,
+   "ts": "2026-10-19T05:06:38.178Z",
+   "t_s": 2.78,
+   "type": "llm.call",
+   "role": "summarizer",
+   "model": "nvidia/Nemotron-3_5-Lightning",
+   "prompt_tokens": 513,
+   "completion_tokens": 29,
+   "reasoning_tokens": 0,
+   "cost_usd": 3.8e-05,
+   "latency_s": 0.3781,
+   "cached": false,
+   "finish_reason": "stop"
+  },
+  {
+   "seq": 9,
+   "ts": "2026-10-19T05:06:38.179Z",
+   "t_s": 2.78,
+   "type": "summary",
+   "step": "plan_task",
+   "text": "Plan plan-1d5070f90f9b is valid after repair. Run task tournament with this plan_id.",
+   "model": "nvidia/Nemotron-3_5-Lightning"
+  },
+  {
+   "seq": 10,
+   "ts": "2026-10-19T05:06:38.855Z",
+   "t_s": 3.456,
+   "type": "llm.call",
+   "role": "agent",
+   "model": "nvidia/nemotron-3-super-120b-a12b",
+   "prompt_tokens": 2104,
+   "completion_tokens": 48,
+   "reasoning_tokens": 6,
+   "cost_usd": 0.000674,
+   "latency_s": 0.6602,
+   "cached": false,
+   "finish_reason": "tool_calls"
+  },
+  {
+   "seq": 11,
+   "ts": "2026-10-19T05:06:38.856Z",
+   "t_s": 3.457,
+   "type": "agent.message",
+   "turn": 2,
+   "content": "",
+   "tool_calls": [
+    {
+     "name": "run_task_tournament",
+     "call_id": "chatcmpl-tool-a3206303c3e717bf"
+    }
+   ],
+   "reasoning": "We need to run tournament."
+  },
+  {
+   "seq": 12,
+   "ts": "2026-10-19T05:06:38.857Z",
+   "t_s": 3.458,
+   "type": "tool.call",
+   "call_id": "chatcmpl-tool-a3206303c3e717bf",
+   "name": "run_task_tournament",
+   "args": {
+    "plan_id": "plan-1d5070f90f9b"
+   },
+   "n": 2
+  },
+  {
+   "seq": 13,
+   "ts": "2026-10-19T05:15:25.145Z",
+   "t_s": 529.746,
+   "type": "tool.result",
+   "call_id": "chatcmpl-tool-a3206303c3e717bf",
+   "name": "run_task_tournament",
+   "ok": true,
+   "duration_s": 526.287,
+   "result": {
+    "kind": "studio_tournament",
+    "label": "Product mode: not part of the pre-registered experiment",
+    "tournament_id": "tour-b5c0cda36fea",
+    "plan_id": "plan-1d5070f90f9b",
+    "task_id": "e4586f3612e11b0eb490349c52a109bec75f43fdb0bcf9f1d91127f9e01a4ad5",
+    "verdict": "recommended",
+    "evidence": "accepted",
+    "recommendation": {
+     "setup_id": "72c634ec4fa3",
+     "label": "Two-tool head: Soft arm + Suction cup",
+     "kind": "multi_head",
+     "completion_pct": 100.0,
+     "completed_runs": 8,
+     "total_runs": 8,
+     "stops_at": null,
+     "tools": [
+      "Soft arm, 12 segments, 140 mm",
+      "Suction cup, 40 mm bellows"
+     ],
+     "cycle_time_s": 62.573,
+     "fidelity": "approximation",
+     "step_fidelity": {
+      "open_lid": "approximation",
+      "pick_carton": "approximation",
+      "pick_pack": "approximation",
+      "close_lid": "approximation"
+     },
+     "caveat": "approximation: verify on hardware",
+     "verify_on_hardware": true,
+     "why": "Ties on completion (100%) and the weakest step, with the shorter cycle (62.57 s against 62.67 s), and is simpler: 373 g against 376 g."
+    },
+    "runner_up_rigid": {
+     "note": "no rigid-tier setup is eligible"
+    },
+    "best_single": {
+     "setup_id": "d136ab4824c1",
+     "label": "Industrial servo parallel gripper, 110 mm stroke",
+     "kind": "single",
+     "completion_pct": 0.0,
+     "completed_runs": 0,
+     "total_runs": 8,
+     "stops_at": {
+      "step_id": "open_lid",
+      "runs": 8,
+      "failure_modes": {
+       "slip": 5,
+       "constraint_exceeded": 3
+      }
+     },
+     "cycle_time_s": 16.284,
+     "fidelity": "rigid"
+    },
+    "versus_best_single": {
+     "same_setup": false,
+     "completion_delta_pct": 100.0,
+     "cycle_delta_s": 46.289,
+     "extra_tools": 1
+    },
+    "finalists": [
+     {
+      "setup_id": "72c634ec4fa3",
+      "label": "Two-tool head: Soft arm + Suction cup",
+      "kind": "multi_head",
+      "completion_pct": 100.0,
+      "completed_runs": 8,
+      "total_runs": 8,
+      "stops_at": null
+     },
+     {
+      "setup_id": "b22987c4aedb",
+      "label": "Two-tool head: Soft arm + Suction cup",
+      "kind": "multi_head",
+      "completion_pct": 100.0,
+      "completed_runs": 8,
+      "total_runs": 8,
+      "stops_at": null
+     },
+     {
+      "setup_id": "69ba5d6b8d25",
+      "label": "Tool change: Soft arm > Suction cup > Button-pusher tool",
+      "kind": "tool_change",
+      "completion_pct": 100.0,
+      "completed_runs": 8,
+      "total_runs": 8,
+      "stops_at": null
+     },
+     {
+      "setup_id": "d136ab4824c1",
+      "label": "Industrial servo parallel gripper, 110 mm stroke",
+      "kind": "single",
+      "completion_pct": 0.0,
+      "completed_runs": 0,
+      "total_runs": 8,
+      "stops_at": {
+       "step_id": "open_lid",
+       "runs": 8,
+       "failure_modes": {
+        "slip": 5,
+        "constraint_exceeded": 3
+       }
+      }
+     }
+    ],
+    "runs": 32,
+    "conditions": 8,
+    "wall_time_s": 526.3,
+    "workers": 4,
+    "next": "export_build_pack with this tournament_id"
+   },
+   "tool_calls_left": 4
+  },
+  {
+   "seq": 14,
+   "ts": "2026-10-19T05:15:26.146Z",
+   "t_s": 530.747,
+   "type": "llm.call",
+   "role": "summarizer",
+   "model": "nvidia/Nemotron-3_5-Lightning",
+   "prompt_tokens": 1104,
+   "completion_tokens": 87,
+   "reasoning_tokens": 0,
+   "cost_usd": 8.7e-05,
+   "latency_s": 0.9985,
+   "cached": false,
+   "finish_reason": "stop"
+  },
+  {
+   "seq": 15,
+   "ts": "2026-10-19T05:15:26.147Z",
+   "t_s": 530.749,
+   "type": "summary",
+   "step": "run_task_tournament",
+   "text": "The simulator recommends the multi-head setup \"Two-tool head: Soft arm + Suction cup\" (setup_id 72c634ec4fa3) with 100% completion and a cycle time of 62.573 s, which is slightly faster than the best single gripper (62.67 s). This recommendation carries the caveat: approximation: verify on hardware.",
+   "model": "nvidia/Nemotron-3_5-Lightning"
+  },
+  {
+   "seq": 16,
+   "ts": "2026-10-19T05:15:26.912Z",
+   "t_s": 531.514,
+   "type": "llm.call",
+   "role": "agent",
+   "model": "nvidia/nemotron-3-super-120b-a12b",
+   "prompt_tokens": 3011,
+   "completion_tokens": 66,
+   "reasoning_tokens": 28,
+   "cost_usd": 0.000963,
+   "latency_s": 0.7571,
+   "cached": false,
+   "finish_reason": "tool_calls"
+  },
+  {
+   "seq": 17,
+   "ts": "2026-10-19T05:15:26.913Z",
+   "t_s": 531.514,
+   "type": "agent.message",
+   "turn": 3,
+   "content": "",
+   "tool_calls": [
+    {
+     "name": "export_build_pack",
+     "call_id": "chatcmpl-tool-a4300d626b44dc51"
+    }
+   ],
+   "reasoning": "We need to output final answer with recommendation details and build pack ID via export_build_pack. Let's call export_build_pack with tournament_id."
+  },
+  {
+   "seq": 18,
+   "ts": "2026-10-19T05:15:26.920Z",
+   "t_s": 531.522,
+   "type": "tool.call",
+   "call_id": "chatcmpl-tool-a4300d626b44dc51",
+   "name": "export_build_pack",
+   "args": {
+    "tournament_id": "tour-b5c0cda36fea"
+   },
+   "n": 3
+  },
+  {
+   "seq": 19,
+   "ts": "2026-10-19T05:15:27.133Z",
+   "t_s": 531.735,
+   "type": "tool.result",
+   "call_id": "chatcmpl-tool-a4300d626b44dc51",
+   "name": "export_build_pack",
+   "ok": true,
+   "duration_s": 0.212,
+   "result": {
+    "kind": "studio_build_pack",
+    "label": "Product mode: not part of the pre-registered experiment",
+    "pack_id": "spack-2bd1c297dda8",
+    "tournament_id": "tour-b5c0cda36fea",
+    "setup_id": "72c634ec4fa3",
+    "setup_label": "Two-tool head: Soft arm + Suction cup",
+    "for": "recommended",
+    "files": [
+     {
+      "path": "ASSEMBLY.md",
+      "kind": "notes",
+      "license": "CC0-1.0",
+      "bytes": 2198
+     },
+     {
+      "path": "CREDITS.txt",
+      "kind": "licence",
+      "license": "CC0-1.0",
+      "bytes": 223
+     },
+     {
+      "path": "README.txt",
+      "kind": "notes",
+      "license": "CC0-1.0",
+      "bytes": 1106
+     },
+     {
+      "path": "bom.csv",
+      "kind": "bom",
+      "license": "CC0-1.0",
+      "bytes": 641
+     },
+     {
+      "path": "bracket.stl",
+      "kind": "bracket",
+      "license": "CC0-1.0",
+      "bytes": 144984
+     },
+     {
+      "path": "cad/tool0_reference.stl",
+      "kind": "effector_cad",
+      "license": "CC0-1.0",
+      "bytes": 333484
+     },
+     {
+      "path": "cad/tool1_reference.stl",
+      "kind": "effector_cad",
+      "license": "CC0-1.0",
+      "bytes": 326484
+     },
+     {
+      "path": "certificate.html",
+      "kind": "certificate",
+      "license": "CC0-1.0",
+      "bytes": 13921
+     },
+     {
+      "path": "mjcf/setup_tool0.xml",
+      "kind": "mjcf",
+      "license": "CC0-1.0",
+      "bytes": 21035
+     },
+     {
+      "path": "mjcf/setup_tool1.xml",
+      "kind": "mjcf",
+      "license": "CC0-1.0",
+      "bytes": 21555
+     }
+    ],
+    "n_files": 10,
+    "zip_bytes": 166871,
+    "links": 0,
+    "caveats": 7
+   },
+   "tool_calls_left": 3
+  },
+  {
+   "seq": 20,
+   "ts": "2026-10-19T05:15:27.561Z",
+   "t_s": 532.162,
+   "type": "llm.call",
+   "role": "summarizer",
+   "model": "nvidia/Nemotron-3_5-Lightning",
+   "prompt_tokens": 641,
+   "completion_tokens": 31,
+   "reasoning_tokens": 0,
+   "cost_usd": 4.6e-05,
+   "latency_s": 0.4254,
+   "cached": false,
+   "finish_reason": "stop"
+  },
+  {
+   "seq": 21,
+   "ts": "2026-10-19T05:15:27.562Z",
+   "t_s": 532.163,
+   "type": "summary",
+   "step": "export_build_pack",
+   "text": "Exporting build pack for two-tool head: Soft arm plus suction cup. Total 10 files, 166.9 KB zip.",
+   "model": "nvidia/Nemotron-3_5-Lightning"
+  },
+  {
+   "seq": 22,
+   "ts": "2026-10-19T05:15:28.901Z",
+   "t_s": 533.503,
+   "type": "llm.call",
+   "role": "agent",
+   "model": "nvidia/nemotron-3-super-120b-a12b",
+   "prompt_tokens": 3506,
+   "completion_tokens": 227,
+   "reasoning_tokens": 107,
+   "cost_usd": 0.001256,
+   "latency_s": 1.3306,
+   "cached": false,
+   "finish_reason": "stop"
+  },
+  {
+   "seq": 23,
+   "ts": "2026-10-19T05:15:28.902Z",
+   "t_s": 533.504,
+   "type": "agent.message",
+   "turn": 4,
+   "content": "Recommendation: Two‑tool head – Soft arm + Suction cup (setup 72c634ec4fa3). Completed 8/8 runs (100%), fidelity ≈ approximation (verify on hardware). Best single off‑the‑shelf baseline: Industrial servo parallel gripper, 110 mm stroke (setup d136ab4824c1) – 0/8 runs completed. Build pack ID: spack-2bd1c297dda8.",
+   "tool_calls": [],
+   "reasoning": "We need to produce final answer <=120 words, plain text, with recommendation details. From tournament result: recommendation is Two-tool head: Soft arm + Suction cup, completion 100% (8/8), fidelity approximation, caveat verify on hardware. Best single off-the-shelf baseline: Industrial servo parallel gripper, 110 mm stroke, completion 0%. Provide build pack ID spack-2bd1c297dda8.\n\nLet's craft ~100 words."
+  },
+  {
+   "seq": 24,
+   "ts": "2026-10-19T05:15:29.451Z",
+   "t_s": 534.052,
+   "type": "llm.call",
+   "role": "summarizer",
+   "model": "nvidia/Nemotron-3_5-Lightning",
+   "prompt_tokens": 517,
+   "completion_tokens": 55,
+   "reasoning_tokens": 0,
+   "cost_usd": 4.4e-05,
+   "latency_s": 0.5401,
+   "cached": false,
+   "finish_reason": "stop"
+  },
+  {
+   "seq": 25,
+   "ts": "2026-10-19T05:15:29.452Z",
+   "t_s": 534.053,
+   "type": "summary",
+   "step": "session",
+   "text": "Recommendation: Two‑tool head – Soft arm + Suction cup (setup 72c634ec4fa3). Completed 8/8 runs (100%), fidelity ≈ approximation (verify on hardware).",
+   "model": "nvidia/Nemotron-3_5-Lightning"
+  },
+  {
+   "seq": 26,
+   "ts": "2026-10-19T05:15:29.455Z",
+   "t_s": 534.056,
+   "type": "session.finished",
+   "status": "completed",
+   "reason": null,
+   "answer": "Recommendation: Two‑tool head – Soft arm + Suction cup (setup 72c634ec4fa3). Completed 8/8 runs (100%), fidelity ≈ approximation (verify on hardware). Best single off‑the‑shelf baseline: Industrial servo parallel gripper, 110 mm stroke (setup d136ab4824c1) – 0/8 runs completed. Build pack ID: spack-2bd1c297dda8.",
+   "summary": "Recommendation: Two‑tool head – Soft arm + Suction cup (setup 72c634ec4fa3). Completed 8/8 runs (100%), fidelity ≈ approximation (verify on hardware).",
+   "verdicts": [
+    {
+     "kind": "studio_recommendation",
+     "tournament_id": "tour-b5c0cda36fea",
+     "plan_id": "plan-1d5070f90f9b",
+     "task_id": "e4586f3612e11b0eb490349c52a109bec75f43fdb0bcf9f1d91127f9e01a4ad5",
+     "recommendation": "recommended",
+     "setup_id": "72c634ec4fa3",
+     "setup_label": "Two-tool head: Soft arm + Suction cup",
+     "completion_pct": 100.0,
+     "completed_runs": 8,
+     "total_runs": 8,
+     "fidelity": "approximation",
+     "verify_on_hardware": true,
+     "best_single_label": "Industrial servo parallel gripper, 110 mm stroke",
+     "best_single_completion_pct": 0.0,
+     "label": "Product mode: not part of the pre-registered experiment"
+    }
+   ],
+   "spend": {
+    "session_cap_usd": 0.1,
+    "spent_usd": 0.003709,
+    "by_kind_usd": {
+     "llm": 0.003709
+    },
+    "reserved_usd": 0.0,
+    "session_remaining_usd": 0.096291,
+    "day_cap_usd": 0.1,
+    "day_spent_usd": 0.003709
+   },
+   "turns": 4,
+   "tool_calls": 3
+  }
+ ]
+}
