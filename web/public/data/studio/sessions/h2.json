@@ -1,0 +1,734 @@
+{
+ "format": "rtt-agent-session",
+ "version": 1,
+ "session_id": "sess-e563bd27e189",
+ "mode": "product",
+ "label": "Product mode: not part of the pre-registered experiment",
+ "status": "completed",
+ "created_at": "2026-10-19T05:15:45.437Z",
+ "kind": "recorded",
+ "case_id": "h2_coupling",
+ "use_case": "Pipe prefabrication: a threaded steel coupling (1 inch pipe size, about 40 mm across and 45 mm long) sits loosely on the threaded stub of a pipe spool that stands upright. Push it onto the thread start and turn it on until it is hand-tight (about 3 N m), never over 8 N m.",
+ "offline": false,
+ "spend": {
+  "session_cap_usd": 0.1,
+  "spent_usd": 0.00378,
+  "by_kind_usd": {
+   "llm": 0.00378
+  },
+  "reserved_usd": 0.0,
+  "session_remaining_usd": 0.09622,
+  "day_cap_usd": 0.1,
+  "day_spent_usd": 0.00378
+ },
+ "verdicts": [
+  {
+   "kind": "studio_recommendation",
+   "tournament_id": "tour-cc1096f27a9d",
+   "plan_id": "plan-99750b42bbd6",
+   "task_id": "33599e99ac277cf20e73d6acd349b9422330a255b3fe5ea48c6442a26c3decd6",
+   "recommendation": "recommended",
+   "setup_id": "48274cb2290c",
+   "setup_label": "Two-tool head: Two-finger parallel + Two-finger linkage",
+   "completion_pct": 100.0,
+   "completed_runs": 8,
+   "total_runs": 8,
+   "fidelity": "approximation",
+   "verify_on_hardware": true,
+   "best_single_label": "Parallel jaw, stock blade: Pipe coupling",
+   "best_single_completion_pct": 0.0,
+   "label": "Product mode: not part of the pre-registered experiment"
+  }
+ ],
+ "answer": "Recommendation: Two-tool head – Two-finger parallel + Two-finger linkage (setup 48274cb2290c) completes the task in all runs (8/8, 100%), fidelity approximation – verify on hardware. Best single off‑the‑shelf baseline: Parallel jaw, stock blade – Pipe coupling (setup 5367b08cfd97) completes 0/8 runs (0%). Build pack ID: spack-4c9115b94a60.",
+ "summary": "The simulator recommends setup 48274cb2290c (Two-tool head: Two-finger parallel + Two-finger linkage) with 100% completion across all 8 runs. The best single off‑the‑shelf baseline (Parallel jaw, stock blade: Pipe coupling) achieved 0% completion. Verify the approximation on hardware.",
+ "finished_at": "2026-10-19T05:19:33.342Z",
+ "events": [
+  {
+   "seq": 1,
+   "ts": "2026-10-19T05:15:45.439Z",
+   "t_s": 0.002,
+   "type": "session.started",
+   "kind": "studio",
+   "case_id": "h2_coupling",
+   "use_case": "Pipe prefabrication: a threaded steel coupling (1 inch pipe size, about 40 mm across and 45 mm long) sits loosely on the threaded stub of a pipe spool that stands upright. Push it onto the thread start and turn it on until it is hand-tight (about 3 N m), never over 8 N m.",
+   "goal": "Plan this use case, find the tool setup that does the whole task in simulation, and give me its build pack.",
+   "label": "Product mode: not part of the pre-registered experiment",
+   "models": {
+    "agent": "nvidia/nemotron-3-super-120b-a12b",
+    "task_engineer": "nvidia/nemotron-3-super-120b-a12b",
+    "summarizer": "nvidia/Nemotron-3_5-Lightning"
+   },
+   "offline": false,
+   "caps": {
+    "max_tool_calls": 6,
+    "max_concurrent_jobs": 2,
+    "session_usd": 0.1,
+    "day_usd": 0.1,
+    "max_llm_turns": 16,
+    "max_designs_per_job": 8,
+    "max_designs_per_proposal": 4,
+    "poll_wait_s": 120.0
+   },
+   "studio_caps": {
+    "plan_usd": 0.05,
+    "wall_s": 1800.0,
+    "workers": 4,
+    "n_conditions": 8,
+    "max_zip_bytes": 20971520
+   },
+   "unlocked": false,
+   "tools": [
+    "plan_task",
+    "run_task_tournament",
+    "export_build_pack",
+    "cost_ledger"
+   ]
+  },
+  {
+   "seq": 2,
+   "ts": "2026-10-19T05:15:47.753Z",
+   "t_s": 2.316,
+   "type": "llm.call",
+   "role": "agent",
+   "model": "nvidia/nemotron-3-super-120b-a12b",
+   "prompt_tokens": 1619,
+   "completion_tokens": 105,
+   "reasoning_tokens": 8,
+   "cost_usd": 0.00058,
+   "latency_s": 2.305,
+   "cached": false,
+   "finish_reason": "tool_calls"
+  },
+  {
+   "seq": 3,
+   "ts": "2026-10-19T05:15:47.754Z",
+   "t_s": 2.317,
+   "type": "agent.message",
+   "turn": 1,
+   "content": "",
+   "tool_calls": [
+    {
+     "name": "plan_task",
+     "call_id": "chatcmpl-tool-a6d365163d07330b"
+    }
+   ],
+   "reasoning": "We need to call plan_task first."
+  },
+  {
+   "seq": 4,
+   "ts": "2026-10-19T05:15:47.761Z",
+   "t_s": 2.324,
+   "type": "tool.call",
+   "call_id": "chatcmpl-tool-a6d365163d07330b",
+   "name": "plan_task",
+   "args": {
+    "text": "Pipe prefabrication: a threaded steel coupling (1 inch pipe size, about 40 mm across and 45 mm long) sits loosely on the threaded stub of a pipe spool that stands upright. Push it onto the thread start and turn it on until it is hand-tight (about 3 N m), never over 8 N m."
+   },
+   "n": 1
+  },
+  {
+   "seq": 5,
+   "ts": "2026-10-19T05:15:47.791Z",
+   "t_s": 2.354,
+   "type": "llm.call",
+   "role": "task_engineer",
+   "model": "nvidia/nemotron-3-super-120b-a12b",
+   "prompt_tokens": 20361,
+   "completion_tokens": 2069,
+   "reasoning_tokens": 1296,
+   "cost_usd": 0.0,
+   "latency_s": 27.0721,
+   "cached": true,
+   "finish_reason": "tool_calls",
+   "stage": "main",
+   "replay": true
+  },
+  {
+   "seq": 6,
+   "ts": "2026-10-19T05:15:47.792Z",
+   "t_s": 2.355,
+   "type": "llm.call",
+   "role": "task_engineer",
+   "model": "nvidia/nemotron-3-super-120b-a12b",
+   "prompt_tokens": 21005,
+   "completion_tokens": 1048,
+   "reasoning_tokens": 285,
+   "cost_usd": 0.0,
+   "latency_s": 21.0731,
+   "cached": true,
+   "finish_reason": "tool_calls",
+   "stage": "repair",
+   "replay": true
+  },
+  {
+   "seq": 7,
+   "ts": "2026-10-19T05:15:47.794Z",
+   "t_s": 2.356,
+   "type": "tool.result",
+   "call_id": "chatcmpl-tool-a6d365163d07330b",
+   "name": "plan_task",
+   "ok": true,
+   "duration_s": 0.032,
+   "result": {
+    "kind": "studio_plan",
+    "label": "Product mode: not part of the pre-registered experiment",
+    "plan_id": "plan-99750b42bbd6",
+    "source": "recorded",
+    "status": "valid",
+    "result": "valid_after_repair",
+    "task_id": "33599e99ac277cf20e73d6acd349b9422330a255b3fe5ea48c6442a26c3decd6",
+    "title": "Pipe coupling tightening",
+    "objects": [
+     {
+      "name": "pipe_coupling",
+      "kind": "threaded_joint"
+     }
+    ],
+    "steps": [
+     {
+      "id": "insert_coupling",
+      "primitive": "insert",
+      "object": "pipe_coupling",
+      "target": null,
+      "fidelity": "approximation"
+     },
+     {
+      "id": "tighten_coupling",
+      "primitive": "twist",
+      "object": "pipe_coupling",
+      "target": null,
+      "fidelity": "approximation"
+     }
+    ],
+    "problems": [],
+    "warnings": [],
+    "cost_usd": 0,
+    "next": "run_task_tournament with this plan_id"
+   },
+   "tool_calls_left": 5
+  },
+  {
+   "seq": 8,
+   "ts": "2026-10-19T05:15:48.211Z",
+   "t_s": 2.774,
+   "type": "llm.call",
+   "role": "summarizer",
+   "model": "nvidia/Nemotron-3_5-Lightning",
+   "prompt_tokens": 396,
+   "completion_tokens": 39,
+   "reasoning_tokens": 0,
+   "cost_usd": 3.3e-05,
+   "latency_s": 0.4157,
+   "cached": false,
+   "finish_reason": "stop"
+  },
+  {
+   "seq": 9,
+   "ts": "2026-10-19T05:15:48.212Z",
+   "t_s": 2.774,
+   "type": "summary",
+   "step": "plan_task",
+   "text": "Plan task completed: Product mode not part of pre-registered experiment. Next step is run_task_tournament with plan_id plan-99750b42bbd6.",
+   "model": "nvidia/Nemotron-3_5-Lightning"
+  },
+  {
+   "seq": 10,
+   "ts": "2026-10-19T05:15:49.068Z",
+   "t_s": 3.631,
+   "type": "llm.call",
+   "role": "agent",
+   "model": "nvidia/nemotron-3-super-120b-a12b",
+   "prompt_tokens": 1980,
+   "completion_tokens": 47,
+   "reasoning_tokens": 6,
+   "cost_usd": 0.000636,
+   "latency_s": 0.848,
+   "cached": false,
+   "finish_reason": "tool_calls"
+  },
+  {
+   "seq": 11,
+   "ts": "2026-10-19T05:15:49.069Z",
+   "t_s": 3.631,
+   "type": "agent.message",
+   "turn": 2,
+   "content": "",
+   "tool_calls": [
+    {
+     "name": "run_task_tournament",
+     "call_id": "chatcmpl-tool-a713d55d84e6982a"
+    }
+   ],
+   "reasoning": "We need to run tournament."
+  },
+  {
+   "seq": 12,
+   "ts": "2026-10-19T05:15:49.070Z",
+   "t_s": 3.633,
+   "type": "tool.call",
+   "call_id": "chatcmpl-tool-a713d55d84e6982a",
+   "name": "run_task_tournament",
+   "args": {
+    "plan_id": "plan-99750b42bbd6"
+   },
+   "n": 2
+  },
+  {
+   "seq": 13,
+   "ts": "2026-10-19T05:19:28.506Z",
+   "t_s": 223.069,
+   "type": "tool.result",
+   "call_id": "chatcmpl-tool-a713d55d84e6982a",
+   "name": "run_task_tournament",
+   "ok": true,
+   "duration_s": 219.436,
+   "result": {
+    "kind": "studio_tournament",
+    "label": "Product mode: not part of the pre-registered experiment",
+    "tournament_id": "tour-cc1096f27a9d",
+    "plan_id": "plan-99750b42bbd6",
+    "task_id": "33599e99ac277cf20e73d6acd349b9422330a255b3fe5ea48c6442a26c3decd6",
+    "verdict": "recommended",
+    "evidence": "accepted",
+    "recommendation": {
+     "setup_id": "48274cb2290c",
+     "label": "Two-tool head: Two-finger parallel + Two-finger linkage",
+     "kind": "multi_head",
+     "completion_pct": 100.0,
+     "completed_runs": 8,
+     "total_runs": 8,
+     "stops_at": null,
+     "tools": [
+      "Two-finger parallel gripper, fin-ray pads",
+      "Two-finger linkage gripper of a cobot arm"
+     ],
+     "cycle_time_s": 33.864,
+     "fidelity": "approximation",
+     "step_fidelity": {
+      "insert_coupling": "approximation",
+      "tighten_coupling": "approximation"
+     },
+     "caveat": "approximation: verify on hardware",
+     "verify_on_hardware": true,
+     "why": "Ties on completion (100%) and the weakest step, with the shorter cycle (33.9 s against 38.4 s), and is simpler: 2669 g against 2922 g."
+    },
+    "runner_up_rigid": {
+     "note": "no rigid-tier setup is eligible"
+    },
+    "best_single": {
+     "setup_id": "5367b08cfd97",
+     "label": "Parallel jaw, stock blade: Pipe coupling",
+     "kind": "single",
+     "completion_pct": 0.0,
+     "completed_runs": 0,
+     "total_runs": 8,
+     "stops_at": {
+      "step_id": "tighten_coupling",
+      "runs": 5,
+      "failure_modes": {
+       "slip": 5
+      }
+     },
+     "cycle_time_s": 31.894,
+     "fidelity": "approximation"
+    },
+    "versus_best_single": {
+     "same_setup": false,
+     "completion_delta_pct": 100.0,
+     "cycle_delta_s": 1.97,
+     "extra_tools": 1
+    },
+    "finalists": [
+     {
+      "setup_id": "48274cb2290c",
+      "label": "Two-tool head: Two-finger parallel + Two-finger linkage",
+      "kind": "multi_head",
+      "completion_pct": 100.0,
+      "completed_runs": 8,
+      "total_runs": 8,
+      "stops_at": null
+     },
+     {
+      "setup_id": "be1f80d0b045",
+      "label": "Tool change: Two-finger parallel > Two-finger linkage",
+      "kind": "tool_change",
+      "completion_pct": 100.0,
+      "completed_runs": 8,
+      "total_runs": 8,
+      "stops_at": null
+     },
+     {
+      "setup_id": "6ca596b8db61",
+      "label": "Tool change: Parallel jaw > Two-finger linkage gripper",
+      "kind": "tool_change",
+      "completion_pct": 62.5,
+      "completed_runs": 5,
+      "total_runs": 8,
+      "stops_at": {
+       "step_id": "insert_coupling",
+       "runs": 3,
+       "failure_modes": {
+        "criterion_not_met": 3
+       }
+      }
+     },
+     {
+      "setup_id": "5367b08cfd97",
+      "label": "Parallel jaw, stock blade: Pipe coupling",
+      "kind": "single",
+      "completion_pct": 0.0,
+      "completed_runs": 0,
+      "total_runs": 8,
+      "stops_at": {
+       "step_id": "tighten_coupling",
+       "runs": 5,
+       "failure_modes": {
+        "slip": 5
+       }
+      }
+     }
+    ],
+    "runs": 32,
+    "conditions": 8,
+    "wall_time_s": 219.4,
+    "workers": 4,
+    "next": "export_build_pack with this tournament_id"
+   },
+   "tool_calls_left": 4
+  },
+  {
+   "seq": 14,
+   "ts": "2026-10-19T05:19:29.375Z",
+   "t_s": 223.938,
+   "type": "llm.call",
+   "role": "summarizer",
+   "model": "nvidia/Nemotron-3_5-Lightning",
+   "prompt_tokens": 1102,
+   "completion_tokens": 49,
+   "reasoning_tokens": 0,
+   "cost_usd": 7.8e-05,
+   "latency_s": 0.8666,
+   "cached": false,
+   "finish_reason": "stop"
+  },
+  {
+   "seq": 15,
+   "ts": "2026-10-19T05:19:29.376Z",
+   "t_s": 223.939,
+   "type": "summary",
+   "step": "run_task_tournament",
+   "text": "The tournament recommends the multi-head setup: two-finger parallel plus two-finger linkage gripper, achieving 100% completion in 33.9 seconds, with a caveat to verify on hardware due to approximation fidelity.",
+   "model": "nvidia/Nemotron-3_5-Lightning"
+  },
+  {
+   "seq": 16,
+   "ts": "2026-10-19T05:19:30.199Z",
+   "t_s": 224.762,
+   "type": "llm.call",
+   "role": "agent",
+   "model": "nvidia/nemotron-3-super-120b-a12b",
+   "prompt_tokens": 2886,
+   "completion_tokens": 79,
+   "reasoning_tokens": 39,
+   "cost_usd": 0.000937,
+   "latency_s": 0.8149,
+   "cached": false,
+   "finish_reason": "tool_calls"
+  },
+  {
+   "seq": 17,
+   "ts": "2026-10-19T05:19:30.200Z",
+   "t_s": 224.763,
+   "type": "agent.message",
+   "turn": 3,
+   "content": "",
+   "tool_calls": [
+    {
+     "name": "export_build_pack",
+     "call_id": "chatcmpl-tool-83cb58934f76ebfc"
+    }
+   ],
+   "reasoning": "We need to export build pack for tournament. Use export_build_pack with tournament_id tour-cc1096f27a9d. No setup_id needed (defaults to recommendation)."
+  },
+  {
+   "seq": 18,
+   "ts": "2026-10-19T05:19:30.207Z",
+   "t_s": 224.77,
+   "type": "tool.call",
+   "call_id": "chatcmpl-tool-83cb58934f76ebfc",
+   "name": "export_build_pack",
+   "args": {
+    "tournament_id": "tour-cc1096f27a9d"
+   },
+   "n": 3
+  },
+  {
+   "seq": 19,
+   "ts": "2026-10-19T05:19:30.532Z",
+   "t_s": 225.094,
+   "type": "tool.result",
+   "call_id": "chatcmpl-tool-83cb58934f76ebfc",
+   "name": "export_build_pack",
+   "ok": true,
+   "duration_s": 0.323,
+   "result": {
+    "kind": "studio_build_pack",
+    "label": "Product mode: not part of the pre-registered experiment",
+    "pack_id": "spack-4c9115b94a60",
+    "tournament_id": "tour-cc1096f27a9d",
+    "setup_id": "48274cb2290c",
+    "setup_label": "Two-tool head: Two-finger parallel + Two-finger linkage",
+    "for": "recommended",
+    "files": [
+     {
+      "path": "ASSEMBLY.md",
+      "kind": "notes",
+      "license": "CC0-1.0",
+      "bytes": 2587
+     },
+     {
+      "path": "CREDITS.txt",
+      "kind": "licence",
+      "license": "CC0-1.0",
+      "bytes": 1191
+     },
+     {
+      "path": "README.txt",
+      "kind": "notes",
+      "license": "CC0-1.0",
+      "bytes": 1524
+     },
+     {
+      "path": "bom.csv",
+      "kind": "bom",
+      "license": "CC0-1.0",
+      "bytes": 621
+     },
+     {
+      "path": "bracket.stl",
+      "kind": "bracket",
+      "license": "CC0-1.0",
+      "bytes": 168284
+     },
+     {
+      "path": "certificate.html",
+      "kind": "certificate",
+      "license": "CC0-1.0",
+      "bytes": 9801
+     },
+     {
+      "path": "licences/tool0_LICENSE.txt",
+      "kind": "licence",
+      "license": "MIT",
+      "bytes": 1106
+     },
+     {
+      "path": "licences/tool1_LICENSE.txt",
+      "kind": "licence",
+      "license": "BSD-3-Clause",
+      "bytes": 1522
+     },
+     {
+      "path": "mjcf/meshes/tool0_06f366e008fc.stl",
+      "kind": "mjcf",
+      "license": "MIT",
+      "bytes": 47884
+     },
+     {
+      "path": "mjcf/meshes/tool0_09e7a73e0d2e.stl",
+      "kind": "mjcf",
+      "license": "MIT",
+      "bytes": 3984
+     },
+     {
+      "path": "mjcf/meshes/tool0_3c7632c7898b.stl",
+      "kind": "mjcf",
+      "license": "MIT",
+      "bytes": 3684
+     },
+     {
+      "path": "mjcf/meshes/tool0_40ac89a5f09d.stl",
+      "kind": "mjcf",
+      "license": "MIT",
+      "bytes": 3984
+     },
+     {
+      "path": "mjcf/meshes/tool0_81afb36d64fd.stl",
+      "kind": "mjcf",
+      "license": "MIT",
+      "bytes": 17684
+     },
+     {
+      "path": "mjcf/meshes/tool0_84dea871450b.stl",
+      "kind": "mjcf",
+      "license": "MIT",
+      "bytes": 3684
+     },
+     {
+      "path": "mjcf/meshes/tool1_8d7077d007c5.stl",
+      "kind": "mjcf",
+      "license": "BSD-3-Clause",
+      "bytes": 5084
+     },
+     {
+      "path": "mjcf/meshes/tool1_8d9a1c8a1ef0.stl",
+      "kind": "mjcf",
+      "license": "BSD-3-Clause",
+      "bytes": 8384
+     },
+     {
+      "path": "mjcf/meshes/tool1_924096430926.stl",
+      "kind": "mjcf",
+      "license": "BSD-3-Clause",
+      "bytes": 5084
+     },
+     {
+      "path": "mjcf/meshes/tool1_a9f884861a3c.stl",
+      "kind": "mjcf",
+      "license": "BSD-3-Clause",
+      "bytes": 8384
+     },
+     {
+      "path": "mjcf/meshes/tool1_d03a740e3af6.stl",
+      "kind": "mjcf",
+      "license": "BSD-3-Clause",
+      "bytes": 105584
+     },
+     {
+      "path": "mjcf/setup_tool0.xml",
+      "kind": "mjcf",
+      "license": "BSD-3-Clause",
+      "bytes": 26204
+     },
+     {
+      "path": "mjcf/setup_tool1.xml",
+      "kind": "mjcf",
+      "license": "BSD-3-Clause",
+      "bytes": 25775
+     }
+    ],
+    "n_files": 21,
+    "zip_bytes": 157240,
+    "links": 2,
+    "caveats": 6
+   },
+   "tool_calls_left": 3
+  },
+  {
+   "seq": 20,
+   "ts": "2026-10-19T05:19:31.041Z",
+   "t_s": 225.604,
+   "type": "llm.call",
+   "role": "summarizer",
+   "model": "nvidia/Nemotron-3_5-Lightning",
+   "prompt_tokens": 1224,
+   "completion_tokens": 53,
+   "reasoning_tokens": 0,
+   "cost_usd": 8.6e-05,
+   "latency_s": 0.5069,
+   "cached": false,
+   "finish_reason": "stop"
+  },
+  {
+   "seq": 21,
+   "ts": "2026-10-19T05:19:31.042Z",
+   "t_s": 225.605,
+   "type": "summary",
+   "step": "export_build_pack",
+   "text": "Exporting build pack spack-4c9115b94a60 with 21 files and 157240 bytes. Recommended setup: Two-tool head: Two-finger parallel + Two-finger linkage.",
+   "model": "nvidia/Nemotron-3_5-Lightning"
+  },
+  {
+   "seq": 22,
+   "ts": "2026-10-19T05:19:32.754Z",
+   "t_s": 227.317,
+   "type": "llm.call",
+   "role": "agent",
+   "model": "nvidia/nemotron-3-super-120b-a12b",
+   "prompt_tokens": 3889,
+   "completion_tokens": 237,
+   "reasoning_tokens": 115,
+   "cost_usd": 0.00138,
+   "latency_s": 1.7034,
+   "cached": false,
+   "finish_reason": "stop"
+  },
+  {
+   "seq": 23,
+   "ts": "2026-10-19T05:19:32.755Z",
+   "t_s": 227.318,
+   "type": "agent.message",
+   "turn": 4,
+   "content": "Recommendation: Two-tool head – Two-finger parallel + Two-finger linkage (setup 48274cb2290c) completes the task in all runs (8/8, 100%), fidelity approximation – verify on hardware. Best single off‑the‑shelf baseline: Parallel jaw, stock blade – Pipe coupling (setup 5367b08cfd97) completes 0/8 runs (0%). Build pack ID: spack-4c9115b94a60.",
+   "tool_calls": [],
+   "reasoning": "We need to produce final answer ≤120 words, plain text. Provide recommendation: Two-tool head: Two-finger parallel + Two-finger linkage, completion 100% (8/8), fidelity approximation, verify on hardware. Best single off-the-shelf baseline: Parallel jaw, stock blade: Pipe coupling, completion 0% (0/8). Provide build pack ID: spack-4c9115b94a60. Ensure numbers exactly as given. Word count approx: let's craft ~80 words."
+  },
+  {
+   "seq": 24,
+   "ts": "2026-10-19T05:19:33.333Z",
+   "t_s": 227.896,
+   "type": "llm.call",
+   "role": "summarizer",
+   "model": "nvidia/Nemotron-3_5-Lightning",
+   "prompt_tokens": 518,
+   "completion_tokens": 77,
+   "reasoning_tokens": 0,
+   "cost_usd": 5e-05,
+   "latency_s": 0.569,
+   "cached": false,
+   "finish_reason": "stop"
+  },
+  {
+   "seq": 25,
+   "ts": "2026-10-19T05:19:33.334Z",
+   "t_s": 227.897,
+   "type": "summary",
+   "step": "session",
+   "text": "The simulator recommends setup 48274cb2290c (Two-tool head: Two-finger parallel + Two-finger linkage) with 100% completion across all 8 runs. The best single off‑the‑shelf baseline (Parallel jaw, stock blade: Pipe coupling) achieved 0% completion. Verify the approximation on hardware.",
+   "model": "nvidia/Nemotron-3_5-Lightning"
+  },
+  {
+   "seq": 26,
+   "ts": "2026-10-19T05:19:33.342Z",
+   "t_s": 227.905,
+   "type": "session.finished",
+   "status": "completed",
+   "reason": null,
+   "answer": "Recommendation: Two-tool head – Two-finger parallel + Two-finger linkage (setup 48274cb2290c) completes the task in all runs (8/8, 100%), fidelity approximation – verify on hardware. Best single off‑the‑shelf baseline: Parallel jaw, stock blade – Pipe coupling (setup 5367b08cfd97) completes 0/8 runs (0%). Build pack ID: spack-4c9115b94a60.",
+   "summary": "The simulator recommends setup 48274cb2290c (Two-tool head: Two-finger parallel + Two-finger linkage) with 100% completion across all 8 runs. The best single off‑the‑shelf baseline (Parallel jaw, stock blade: Pipe coupling) achieved 0% completion. Verify the approximation on hardware.",
+   "verdicts": [
+    {
+     "kind": "studio_recommendation",
+     "tournament_id": "tour-cc1096f27a9d",
+     "plan_id": "plan-99750b42bbd6",
+     "task_id": "33599e99ac277cf20e73d6acd349b9422330a255b3fe5ea48c6442a26c3decd6",
+     "recommendation": "recommended",
+     "setup_id": "48274cb2290c",
+     "setup_label": "Two-tool head: Two-finger parallel + Two-finger linkage",
+     "completion_pct": 100.0,
+     "completed_runs": 8,
+     "total_runs": 8,
+     "fidelity": "approximation",
+     "verify_on_hardware": true,
+     "best_single_label": "Parallel jaw, stock blade: Pipe coupling",
+     "best_single_completion_pct": 0.0,
+     "label": "Product mode: not part of the pre-registered experiment"
+    }
+   ],
+   "spend": {
+    "session_cap_usd": 0.1,
+    "spent_usd": 0.00378,
+    "by_kind_usd": {
+     "llm": 0.00378
+    },
+    "reserved_usd": 0.0,
+    "session_remaining_usd": 0.09622,
+    "day_cap_usd": 0.1,
+    "day_spent_usd": 0.00378
+   },
+   "turns": 4,
+   "tool_calls": 3
+  }
+ ]
+}

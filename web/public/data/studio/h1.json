@@ -264,7 +264,7 @@
   "n_screened": 45,
   "n_conditions": 3,
   "runs": 351,
-  "wall_s": 367.7,
+  "wall_s": 259.3,
   "candidates": [
    {
     "effector_id": "ddddf0f1e2136d2fbec6fb5228cc06a4fd7c46f2dbfc3ec459e998fe17b1523b",
@@ -1351,6 +1351,54 @@
   ],
   "rows": [
    {
+    "effector_id": "f2ea72dff094ac3680a7b59e05a96a2e9bc4d8191c7bfee56d30f1755987dff2",
+    "display_name": "Industrial servo parallel gripper, 110 mm stroke",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "constraint_exceeded": 1,
+       "slip": 2
+      },
+      "context": "start"
+     },
+     "pick_carton": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "grasp",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "pick_pack": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "grasp",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
     "effector_id": "3907bc284d9e2c3399ddb8b45b1bf94dbb3b0ef0672705c6d90724839ecf7186",
     "display_name": "Suction cup, 16 mm bellows",
     "family_title": "Suction cup",
@@ -1513,8 +1561,8 @@
     }
    },
    {
-    "effector_id": "f2ea72dff094ac3680a7b59e05a96a2e9bc4d8191c7bfee56d30f1755987dff2",
-    "display_name": "Industrial servo parallel gripper, 110 mm stroke",
+    "effector_id": "f7faa3ddd45fee96149330bbf1bc6cd179305044806e9f178ed0735f6f184b80",
+    "display_name": "Two-finger adaptive linkage gripper, 85 mm",
     "family_title": "Industrial gripper",
     "fidelity": "rigid",
     "off_the_shelf": true,
@@ -1526,8 +1574,7 @@
       "successes": 0,
       "primitive_used": "hook_pull",
       "failure_modes": {
-       "constraint_exceeded": 1,
-       "slip": 2
+       "slip": 3
       },
       "context": "start"
      },
@@ -1541,23 +1588,16 @@
       "context": "carried"
      },
      "pick_pack": {
+      "state": "pruned",
+      "reason": "pack: the part is 100.0 mm across the closing axis; the gripper opens 86.6 mm"
+     },
+     "close_lid": {
       "state": "run",
       "rate": 1.0,
       "n": 3,
       "successes": 3,
-      "primitive_used": "grasp",
-      "failure_modes": {},
-      "context": "carried"
-     },
-     "close_lid": {
-      "state": "run",
-      "rate": 0.3333,
-      "n": 3,
-      "successes": 1,
       "primitive_used": "push",
-      "failure_modes": {
-       "constraint_exceeded": 2
-      },
+      "failure_modes": {},
       "context": "carried"
      }
     }
@@ -1595,13 +1635,11 @@
      },
      "close_lid": {
       "state": "run",
-      "rate": 0.6667,
+      "rate": 1.0,
       "n": 3,
-      "successes": 2,
+      "successes": 3,
       "primitive_used": "push",
-      "failure_modes": {
-       "constraint_exceeded": 1
-      },
+      "failure_modes": {},
       "context": "carried"
      }
     }
@@ -1637,6 +1675,57 @@
     }
    },
    {
+    "effector_id": "7d8ca167a7b3a93e3461ebca357e274ec9c9ca4fa9c2f4e50daa4c0a5e027724",
+    "display_name": "Angular-jaw gripper of an open hobby arm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "pick_carton": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "pick_pack": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
     "effector_id": "ec23d0f17374171b7fa9c62da8dd8d680df2e2c98a747068750a83777cfa38a3",
     "display_name": "Button-pusher tool",
     "family_title": "Industrial gripper",
@@ -1654,6 +1743,44 @@
      "pick_pack": {
       "state": "pruned",
       "reason": "it cannot pick or hold a part (grasp step)"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "25bb68ef395b04b7dddcb8a3adcae328743627edf36160b0ac26e75050f0dc27",
+    "display_name": "Designed four-finger hand, 1 joint per finger e352",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "open_lid": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "constraint_exceeded": 2,
+       "slip": 1
+      },
+      "context": "start"
+     },
+     "pick_carton": {
+      "state": "pruned",
+      "reason": "carton: too_narrow: open, digit 1 (at 135 deg on the part) has its inner face 33.5 mm from the centre; the part reaches 71.9 mm that way, so it needs 76.9 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 2 (at -135 deg on the part) has its inner face 33.5 mm from the centre; the part reaches 71.9 mm that way, so it needs 76.9 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 3 (at -45 deg on the part) has its inner face 33.5 mm from the centre; the part reaches 71.9 mm that way, so it needs 76.9 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 4 (at 45 deg on the part) has its inner face 33.5 mm from the centre; the part reaches 71.9 mm that way, so it needs 76.9 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)"
+     },
+     "pick_pack": {
+      "state": "pruned",
+      "reason": "pack: too_narrow: open, digit 1 (at 135 deg on the part) has its inner face 33.5 mm from the centre; the part reaches 89.9 mm that way, so it needs 94.9 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 2 (at -135 deg on the part) has its inner face 33.5 mm from the centre; the part reaches 89.9 mm that way, so it needs 94.9 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 3 (at -45 deg on the part) has its inner face 33.5 mm from the centre; the part reaches 89.9 mm that way, so it needs 94.9 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 4 (at 45 deg on the part) has its inner face 33.5 mm from the centre; the part reaches 89.9 mm that way, so it needs 94.9 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)"
      },
      "close_lid": {
       "state": "run",
@@ -1741,6 +1868,43 @@
     }
    },
    {
+    "effector_id": "890c6cb500dacbda950e3a31a2b543d39b89da3c2dfa1a61e7ae5c17cb25f65e",
+    "display_name": "Designed three-finger hand, 1 joint per finger ca8b",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "open_lid": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "pick_carton": {
+      "state": "pruned",
+      "reason": "carton: too_narrow: open, digit 1 (at -60 deg on the part) has its inner face 30.5 mm from the centre; the part reaches 68.1 mm that way, so it needs 73.1 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 2 (at 60 deg on the part) has its inner face 30.5 mm from the centre; the part reaches 68.1 mm that way, so it needs 73.1 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 3 (at 180 deg on the part) has its inner face 30.5 mm from the centre; the part reaches 64.4 mm that way, so it needs 69.4 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)"
+     },
+     "pick_pack": {
+      "state": "pruned",
+      "reason": "pack: too_narrow: open, digit 1 (at -60 deg on the part) has its inner face 30.5 mm from the centre; the part reaches 85.1 mm that way, so it needs 90.1 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 2 (at 60 deg on the part) has its inner face 30.5 mm from the centre; the part reaches 85.1 mm that way, so it needs 90.1 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 3 (at 180 deg on the part) has its inner face 30.5 mm from the centre; the part reaches 80.5 mm that way, so it needs 85.5 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
     "effector_id": "d4997bd4b38665bca7af77aeef09cc396279ecd231787f9df5fa34aa37fb5996",
     "display_name": "Designed three-finger hand, 2 joints per finger d55e",
     "family_title": "Designed morphology",
@@ -1765,6 +1929,81 @@
      "pick_pack": {
       "state": "pruned",
       "reason": "pack: too_narrow: open, digit 1 (at 90 deg on the part) has its inner face 35.0 mm from the centre; the part reaches 58.8 mm that way, so it needs 63.8 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 2 (at -150 deg on the part) has its inner face 35.0 mm from the centre; the part reaches 90.1 mm that way, so it needs 95.1 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 3 (at -30 deg on the part) has its inner face 35.0 mm from the centre; the part reaches 90.1 mm that way, so it needs 95.1 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "6148cfd23eae2b2e8959cc78a8c2b6ef324c0878a66bd0eee45e4a4105e20cb7",
+    "display_name": "Designed three-finger sliding hook gripper da49",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "open_lid": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "pick_carton": {
+      "state": "pruned",
+      "reason": "carton: too_narrow: open, digit 1 (at 90 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 47.0 mm that way, so it needs 52.0 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 2 (at -150 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 72.1 mm that way, so it needs 77.1 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 3 (at -30 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 72.1 mm that way, so it needs 77.1 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_short: the digits reach 60.0 mm below the palm; gripping studio_probe (60.0 mm tall) with the lowest point at 9.0 mm needs 61.0 mm to keep the palm 10 mm above the part (longer digits or a higher grip)"
+     },
+     "pick_pack": {
+      "state": "pruned",
+      "reason": "pack: too_narrow: open, digit 1 (at 90 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 58.8 mm that way, so it needs 63.8 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 2 (at -150 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 90.1 mm that way, so it needs 95.1 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 3 (at -30 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 90.1 mm that way, so it needs 95.1 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "38850807f92bc307da9f0519004f6c9a30606ed04934014a6791ad01acf0c88b",
+    "display_name": "Drawer-pull hook tool",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "constraint_exceeded": 1,
+       "slip": 2
+      },
+      "context": "start"
+     },
+     "pick_carton": {
+      "state": "pruned",
+      "reason": "it cannot pick or hold a part (grasp step)"
+     },
+     "pick_pack": {
+      "state": "pruned",
+      "reason": "it cannot pick or hold a part (grasp step)"
      },
      "close_lid": {
       "state": "run",
@@ -1816,6 +2055,94 @@
        "criterion_not_met": 3
       },
       "context": "carried"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "594c4f4d5088689c599fdd9884d2675a7a3d69f8f7df8489ef57b6484db711f0",
+    "display_name": "Five-finger 22-joint hand, pinch",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "pick_carton": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "pick_pack": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "6d286bacbd7431187a1a4bd5a48d194ea5e59399afb0a9e2227332f4fe006cf7",
+    "display_name": "Force-controlled parallel gripper, 48 mm stroke",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "pick_carton": {
+      "state": "pruned",
+      "reason": "carton: the part is 80.0 mm across the closing axis; the gripper opens 47.0 mm"
+     },
+     "pick_pack": {
+      "state": "pruned",
+      "reason": "pack: the part is 100.0 mm across the closing axis; the gripper opens 47.0 mm"
      },
      "close_lid": {
       "state": "run",
@@ -2178,261 +2505,6 @@
     }
    },
    {
-    "effector_id": "f7faa3ddd45fee96149330bbf1bc6cd179305044806e9f178ed0735f6f184b80",
-    "display_name": "Two-finger adaptive linkage gripper, 85 mm",
-    "family_title": "Industrial gripper",
-    "fidelity": "rigid",
-    "off_the_shelf": true,
-    "cells": {
-     "open_lid": {
-      "state": "run",
-      "rate": 0.0,
-      "n": 3,
-      "successes": 0,
-      "primitive_used": "hook_pull",
-      "failure_modes": {
-       "slip": 3
-      },
-      "context": "start"
-     },
-     "pick_carton": {
-      "state": "run",
-      "rate": 1.0,
-      "n": 3,
-      "successes": 3,
-      "primitive_used": "grasp",
-      "failure_modes": {},
-      "context": "carried"
-     },
-     "pick_pack": {
-      "state": "pruned",
-      "reason": "pack: the part is 100.0 mm across the closing axis; the gripper opens 86.6 mm"
-     },
-     "close_lid": {
-      "state": "run",
-      "rate": 0.0,
-      "n": 3,
-      "successes": 0,
-      "primitive_used": "push",
-      "failure_modes": {
-       "constraint_exceeded": 3
-      },
-      "context": "carried"
-     }
-    }
-   },
-   {
-    "effector_id": "7d8ca167a7b3a93e3461ebca357e274ec9c9ca4fa9c2f4e50daa4c0a5e027724",
-    "display_name": "Angular-jaw gripper of an open hobby arm",
-    "family_title": "Industrial gripper",
-    "fidelity": "rigid",
-    "off_the_shelf": true,
-    "cells": {
-     "open_lid": {
-      "state": "run",
-      "rate": 0.0,
-      "n": 3,
-      "successes": 0,
-      "primitive_used": "hook_pull",
-      "failure_modes": {
-       "slip": 3
-      },
-      "context": "start"
-     },
-     "pick_carton": {
-      "state": "run",
-      "rate": 0.0,
-      "n": 3,
-      "successes": 0,
-      "primitive_used": "grasp",
-      "failure_modes": {
-       "criterion_not_met": 3
-      },
-      "context": "carried"
-     },
-     "pick_pack": {
-      "state": "run",
-      "rate": 0.0,
-      "n": 3,
-      "successes": 0,
-      "primitive_used": "grasp",
-      "failure_modes": {
-       "criterion_not_met": 3
-      },
-      "context": "carried"
-     },
-     "close_lid": {
-      "state": "run",
-      "rate": 0.6667,
-      "n": 3,
-      "successes": 2,
-      "primitive_used": "push",
-      "failure_modes": {
-       "constraint_exceeded": 1
-      },
-      "context": "carried"
-     }
-    }
-   },
-   {
-    "effector_id": "25bb68ef395b04b7dddcb8a3adcae328743627edf36160b0ac26e75050f0dc27",
-    "display_name": "Designed four-finger hand, 1 joint per finger e352",
-    "family_title": "Designed morphology",
-    "fidelity": "rigid",
-    "off_the_shelf": false,
-    "cells": {
-     "open_lid": {
-      "state": "run",
-      "rate": 0.0,
-      "n": 3,
-      "successes": 0,
-      "primitive_used": "hook_pull",
-      "failure_modes": {
-       "constraint_exceeded": 2,
-       "slip": 1
-      },
-      "context": "start"
-     },
-     "pick_carton": {
-      "state": "pruned",
-      "reason": "carton: too_narrow: open, digit 1 (at 135 deg on the part) has its inner face 33.5 mm from the centre; the part reaches 71.9 mm that way, so it needs 76.9 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 2 (at -135 deg on the part) has its inner face 33.5 mm from the centre; the part reaches 71.9 mm that way, so it needs 76.9 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 3 (at -45 deg on the part) has its inner face 33.5 mm from the centre; the part reaches 71.9 mm that way, so it needs 76.9 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 4 (at 45 deg on the part) has its inner face 33.5 mm from the centre; the part reaches 71.9 mm that way, so it needs 76.9 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)"
-     },
-     "pick_pack": {
-      "state": "pruned",
-      "reason": "pack: too_narrow: open, digit 1 (at 135 deg on the part) has its inner face 33.5 mm from the centre; the part reaches 89.9 mm that way, so it needs 94.9 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 2 (at -135 deg on the part) has its inner face 33.5 mm from the centre; the part reaches 89.9 mm that way, so it needs 94.9 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 3 (at -45 deg on the part) has its inner face 33.5 mm from the centre; the part reaches 89.9 mm that way, so it needs 94.9 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 4 (at 45 deg on the part) has its inner face 33.5 mm from the centre; the part reaches 89.9 mm that way, so it needs 94.9 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)"
-     },
-     "close_lid": {
-      "state": "run",
-      "rate": 0.6667,
-      "n": 3,
-      "successes": 2,
-      "primitive_used": "push",
-      "failure_modes": {
-       "constraint_exceeded": 1
-      },
-      "context": "carried"
-     }
-    }
-   },
-   {
-    "effector_id": "6148cfd23eae2b2e8959cc78a8c2b6ef324c0878a66bd0eee45e4a4105e20cb7",
-    "display_name": "Designed three-finger sliding hook gripper da49",
-    "family_title": "Designed morphology",
-    "fidelity": "rigid",
-    "off_the_shelf": false,
-    "cells": {
-     "open_lid": {
-      "state": "run",
-      "rate": 0.0,
-      "n": 3,
-      "successes": 0,
-      "primitive_used": "hook_pull",
-      "failure_modes": {
-       "slip": 3
-      },
-      "context": "start"
-     },
-     "pick_carton": {
-      "state": "pruned",
-      "reason": "carton: too_narrow: open, digit 1 (at 90 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 47.0 mm that way, so it needs 52.0 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 2 (at -150 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 72.1 mm that way, so it needs 77.1 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 3 (at -30 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 72.1 mm that way, so it needs 77.1 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_short: the digits reach 60.0 mm below the palm; gripping studio_probe (60.0 mm tall) with the lowest point at 9.0 mm needs 61.0 mm to keep the palm 10 mm above the part (longer digits or a higher grip)"
-     },
-     "pick_pack": {
-      "state": "pruned",
-      "reason": "pack: too_narrow: open, digit 1 (at 90 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 58.8 mm that way, so it needs 63.8 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 2 (at -150 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 90.1 mm that way, so it needs 95.1 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 3 (at -30 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 90.1 mm that way, so it needs 95.1 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)"
-     },
-     "close_lid": {
-      "state": "run",
-      "rate": 0.6667,
-      "n": 3,
-      "successes": 2,
-      "primitive_used": "push",
-      "failure_modes": {
-       "constraint_exceeded": 1
-      },
-      "context": "carried"
-     }
-    }
-   },
-   {
-    "effector_id": "38850807f92bc307da9f0519004f6c9a30606ed04934014a6791ad01acf0c88b",
-    "display_name": "Drawer-pull hook tool",
-    "family_title": "Industrial gripper",
-    "fidelity": "rigid",
-    "off_the_shelf": true,
-    "cells": {
-     "open_lid": {
-      "state": "run",
-      "rate": 0.0,
-      "n": 3,
-      "successes": 0,
-      "primitive_used": "hook_pull",
-      "failure_modes": {
-       "constraint_exceeded": 1,
-       "slip": 2
-      },
-      "context": "start"
-     },
-     "pick_carton": {
-      "state": "pruned",
-      "reason": "it cannot pick or hold a part (grasp step)"
-     },
-     "pick_pack": {
-      "state": "pruned",
-      "reason": "it cannot pick or hold a part (grasp step)"
-     },
-     "close_lid": {
-      "state": "run",
-      "rate": 0.6667,
-      "n": 3,
-      "successes": 2,
-      "primitive_used": "push",
-      "failure_modes": {
-       "constraint_exceeded": 1
-      },
-      "context": "carried"
-     }
-    }
-   },
-   {
-    "effector_id": "890c6cb500dacbda950e3a31a2b543d39b89da3c2dfa1a61e7ae5c17cb25f65e",
-    "display_name": "Designed three-finger hand, 1 joint per finger ca8b",
-    "family_title": "Designed morphology",
-    "fidelity": "rigid",
-    "off_the_shelf": false,
-    "cells": {
-     "open_lid": {
-      "state": "run",
-      "rate": 0.0,
-      "n": 3,
-      "successes": 0,
-      "primitive_used": "hook_pull",
-      "failure_modes": {
-       "slip": 3
-      },
-      "context": "start"
-     },
-     "pick_carton": {
-      "state": "pruned",
-      "reason": "carton: too_narrow: open, digit 1 (at -60 deg on the part) has its inner face 30.5 mm from the centre; the part reaches 68.1 mm that way, so it needs 73.1 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 2 (at 60 deg on the part) has its inner face 30.5 mm from the centre; the part reaches 68.1 mm that way, so it needs 73.1 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 3 (at 180 deg on the part) has its inner face 30.5 mm from the centre; the part reaches 64.4 mm that way, so it needs 69.4 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)"
-     },
-     "pick_pack": {
-      "state": "pruned",
-      "reason": "pack: too_narrow: open, digit 1 (at -60 deg on the part) has its inner face 30.5 mm from the centre; the part reaches 85.1 mm that way, so it needs 90.1 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 2 (at 60 deg on the part) has its inner face 30.5 mm from the centre; the part reaches 85.1 mm that way, so it needs 90.1 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it); too_narrow: open, digit 3 (at 180 deg on the part) has its inner face 30.5 mm from the centre; the part reaches 80.5 mm that way, so it needs 85.5 mm (3.5 mm placement error + 1.5 mm clearance; palm_radius_mm sets it)"
-     },
-     "close_lid": {
-      "state": "run",
-      "rate": 0.3333,
-      "n": 3,
-      "successes": 1,
-      "primitive_used": "push",
-      "failure_modes": {
-       "constraint_exceeded": 2
-      },
-      "context": "carried"
-     }
-    }
-   },
-   {
     "effector_id": "9aff5d8ef53e119ab1943eef6d8ba55af4795f806c1a2e111b89c7c0444c770b",
     "display_name": "Two-finger parallel cobot hand, 80 mm",
     "family_title": "Industrial gripper",
@@ -2461,13 +2533,49 @@
      },
      "close_lid": {
       "state": "run",
-      "rate": 0.3333,
+      "rate": 1.0,
       "n": 3,
-      "successes": 1,
+      "successes": 3,
       "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "79372f1ed2ab4e3a5467c38ed239aa0795a8df3e5ce6af900af10a5a3e252050",
+    "display_name": "Two-finger parallel gripper, fin-ray pads",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
       "failure_modes": {
-       "constraint_exceeded": 2
+       "constraint_exceeded": 1,
+       "slip": 2
       },
+      "context": "start"
+     },
+     "pick_carton": {
+      "state": "pruned",
+      "reason": "carton: the part is 80.0 mm across the closing axis; the gripper opens 83.4 mm"
+     },
+     "pick_pack": {
+      "state": "pruned",
+      "reason": "pack: the part is 100.0 mm across the closing axis; the gripper opens 83.4 mm"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
       "context": "carried"
      }
     }
@@ -2500,13 +2608,11 @@
      },
      "close_lid": {
       "state": "run",
-      "rate": 0.3333,
+      "rate": 1.0,
       "n": 3,
-      "successes": 1,
+      "successes": 3,
       "primitive_used": "push",
-      "failure_modes": {
-       "constraint_exceeded": 2
-      },
+      "failure_modes": {},
       "context": "carried"
      }
     }
@@ -2553,13 +2659,11 @@
      },
      "close_lid": {
       "state": "run",
-      "rate": 0.3333,
+      "rate": 1.0,
       "n": 3,
-      "successes": 1,
+      "successes": 3,
       "primitive_used": "push",
-      "failure_modes": {
-       "constraint_exceeded": 2
-      },
+      "failure_modes": {},
       "context": "carried"
      }
     }
@@ -2735,59 +2839,6 @@
     }
    },
    {
-    "effector_id": "594c4f4d5088689c599fdd9884d2675a7a3d69f8f7df8489ef57b6484db711f0",
-    "display_name": "Five-finger 22-joint hand, pinch",
-    "family_title": "Multi-finger hand",
-    "fidelity": "rigid",
-    "off_the_shelf": true,
-    "cells": {
-     "open_lid": {
-      "state": "run",
-      "rate": 0.0,
-      "n": 3,
-      "successes": 0,
-      "primitive_used": "hook_pull",
-      "failure_modes": {
-       "slip": 3
-      },
-      "context": "start"
-     },
-     "pick_carton": {
-      "state": "run",
-      "rate": 0.0,
-      "n": 3,
-      "successes": 0,
-      "primitive_used": "grasp",
-      "failure_modes": {
-       "criterion_not_met": 3
-      },
-      "context": "carried"
-     },
-     "pick_pack": {
-      "state": "run",
-      "rate": 0.0,
-      "n": 3,
-      "successes": 0,
-      "primitive_used": "grasp",
-      "failure_modes": {
-       "criterion_not_met": 3
-      },
-      "context": "carried"
-     },
-     "close_lid": {
-      "state": "run",
-      "rate": 0.0,
-      "n": 3,
-      "successes": 0,
-      "primitive_used": "push",
-      "failure_modes": {
-       "criterion_not_met": 3
-      },
-      "context": "carried"
-     }
-    }
-   },
-   {
     "effector_id": "a0fc12482a70670906acabab94f5bc4b91ebbbff57fe669e9725afd57c80c75e",
     "display_name": "Five-finger 22-joint hand, power grasp",
     "family_title": "Multi-finger hand",
@@ -2835,45 +2886,6 @@
       "primitive_used": "push",
       "failure_modes": {
        "criterion_not_met": 3
-      },
-      "context": "carried"
-     }
-    }
-   },
-   {
-    "effector_id": "6d286bacbd7431187a1a4bd5a48d194ea5e59399afb0a9e2227332f4fe006cf7",
-    "display_name": "Force-controlled parallel gripper, 48 mm stroke",
-    "family_title": "Industrial gripper",
-    "fidelity": "rigid",
-    "off_the_shelf": true,
-    "cells": {
-     "open_lid": {
-      "state": "run",
-      "rate": 0.0,
-      "n": 3,
-      "successes": 0,
-      "primitive_used": "hook_pull",
-      "failure_modes": {
-       "slip": 3
-      },
-      "context": "start"
-     },
-     "pick_carton": {
-      "state": "pruned",
-      "reason": "carton: the part is 80.0 mm across the closing axis; the gripper opens 47.0 mm"
-     },
-     "pick_pack": {
-      "state": "pruned",
-      "reason": "pack: the part is 100.0 mm across the closing axis; the gripper opens 47.0 mm"
-     },
-     "close_lid": {
-      "state": "run",
-      "rate": 0.0,
-      "n": 3,
-      "successes": 0,
-      "primitive_used": "push",
-      "failure_modes": {
-       "constraint_exceeded": 3
       },
       "context": "carried"
      }
@@ -3085,8 +3097,7 @@
       "successes": 0,
       "primitive_used": "push",
       "failure_modes": {
-       "constraint_exceeded": 2,
-       "physics_unreliable": 1
+       "constraint_exceeded": 3
       },
       "context": "carried"
      }
@@ -3197,46 +3208,6 @@
       "context": "carried"
      }
     }
-   },
-   {
-    "effector_id": "79372f1ed2ab4e3a5467c38ed239aa0795a8df3e5ce6af900af10a5a3e252050",
-    "display_name": "Two-finger parallel gripper, fin-ray pads",
-    "family_title": "Industrial gripper",
-    "fidelity": "rigid",
-    "off_the_shelf": true,
-    "cells": {
-     "open_lid": {
-      "state": "run",
-      "rate": 0.0,
-      "n": 3,
-      "successes": 0,
-      "primitive_used": "hook_pull",
-      "failure_modes": {
-       "constraint_exceeded": 1,
-       "slip": 2
-      },
-      "context": "start"
-     },
-     "pick_carton": {
-      "state": "pruned",
-      "reason": "carton: the part is 80.0 mm across the closing axis; the gripper opens 83.4 mm"
-     },
-     "pick_pack": {
-      "state": "pruned",
-      "reason": "pack: the part is 100.0 mm across the closing axis; the gripper opens 83.4 mm"
-     },
-     "close_lid": {
-      "state": "run",
-      "rate": 0.0,
-      "n": 3,
-      "successes": 0,
-      "primitive_used": "push",
-      "failure_modes": {
-       "constraint_exceeded": 3
-      },
-      "context": "carried"
-     }
-    }
    }
   ]
  },
@@ -3251,20 +3222,20 @@
  },
  "finalists": [
   {
-   "setup_id": "9d7829e0d8861c572779cefc3cfce3110b92c0150e87f45e6fa82785e7f26f3f",
+   "setup_id": "72c634ec4fa356473388d98dc594a1287959d4df49c9961941abf9e50964ab56",
    "kind": "multi_head",
    "kind_title": "Two-tool head",
    "label": "Two-tool head: Soft arm + Suction cup",
    "tools": [
     "Soft arm, 12 segments, 140 mm",
-    "Suction cup, 16 mm bellows"
+    "Suction cup, 40 mm bellows"
    ],
    "completion_rate": 1.0,
    "completed_runs": 8,
    "n_runs": 8,
    "fidelity": "approximation",
    "stops_at": null,
-   "cycle_time_s": 58.1,
+   "cycle_time_s": 62.57,
    "roles": [
     "recommended"
    ],
@@ -3282,8 +3253,8 @@
     },
     {
      "index": 1,
-     "effector_id": "3907bc284d9e2c3399ddb8b45b1bf94dbb3b0ef0672705c6d90724839ecf7186",
-     "display_name": "Suction cup, 16 mm bellows",
+     "effector_id": "a5d7b1667b4f0d6582a36df49b9e600eeedc31f54dc883ddf7803fe113091f1d",
+     "display_name": "Suction cup, 40 mm bellows",
      "family": "suction",
      "family_title": "Suction cup",
      "fidelity": "approximation",
@@ -3303,29 +3274,29 @@
    "complexity": {
     "n_tools": 2,
     "n_actuators": 2,
-    "total_mass_kg": 0.32,
+    "total_mass_kg": 0.373,
     "n_changes": 1,
     "bracket": true
    },
-   "payload_kg": 0.32,
+   "payload_kg": 0.373,
    "failure_modes": {},
    "stops_at_detail": {}
   },
   {
-   "setup_id": "d79d75bbf6c3bb21ca7acefb88e82096149ad6d9ed000d4c924d3d444578ab40",
+   "setup_id": "b22987c4aedb04e06cfa53288548c73d932184be45f4f3ed99c4fe45587ca532",
    "kind": "multi_head",
    "kind_title": "Two-tool head",
    "label": "Two-tool head: Soft arm + Suction cup",
    "tools": [
-    "Soft arm, 12 segments, 140 mm",
-    "Suction cup, 25 mm bellows"
+    "Soft arm, 16 segments, 160 mm",
+    "Suction cup, 40 mm bellows"
    ],
    "completion_rate": 1.0,
    "completed_runs": 8,
    "n_runs": 8,
    "fidelity": "approximation",
    "stops_at": null,
-   "cycle_time_s": 58.15,
+   "cycle_time_s": 62.67,
    "roles": [
     "finalist"
    ],
@@ -3334,8 +3305,8 @@
    "tool_details": [
     {
      "index": 0,
-     "effector_id": "e754a0d67325f2100c98c2f9af46bb60c49421f256a2026895fb59bcf82e547d",
-     "display_name": "Soft arm, 12 segments, 140 mm",
+     "effector_id": "743fc0bc1efc93c288065cff91b147fd993ad974831e50b7617f7f15a0ab66fc",
+     "display_name": "Soft arm, 16 segments, 160 mm",
      "family": "soft_arm",
      "family_title": "Soft arm",
      "fidelity": "approximation",
@@ -3343,8 +3314,8 @@
     },
     {
      "index": 1,
-     "effector_id": "e72e88518c0ebe7a74ec5db104b671180e9dbb5b51d0b11045814506657f31bf",
-     "display_name": "Suction cup, 25 mm bellows",
+     "effector_id": "a5d7b1667b4f0d6582a36df49b9e600eeedc31f54dc883ddf7803fe113091f1d",
+     "display_name": "Suction cup, 40 mm bellows",
      "family": "suction",
      "family_title": "Suction cup",
      "fidelity": "approximation",
@@ -3364,30 +3335,30 @@
    "complexity": {
     "n_tools": 2,
     "n_actuators": 2,
-    "total_mass_kg": 0.335,
+    "total_mass_kg": 0.376,
     "n_changes": 1,
     "bracket": true
    },
-   "payload_kg": 0.336,
+   "payload_kg": 0.376,
    "failure_modes": {},
    "stops_at_detail": {}
   },
   {
-   "setup_id": "12992b0e09393eb0552551533c3806e83aaed595492693fe363b98fd91e00eb3",
+   "setup_id": "69ba5d6b8d25f10fc47ddfe8b1d5c1b7e8a640ee48b6dba37e04290606e05295",
    "kind": "tool_change",
    "kind_title": "Tool change",
-   "label": "Tool change: Soft arm > Suction cup > Suction cup",
+   "label": "Tool change: Soft arm > Suction cup > Button-pusher tool",
    "tools": [
     "Soft arm, 12 segments, 140 mm",
     "Suction cup, 16 mm bellows",
-    "Suction cup, 10 mm bellows"
+    "Button-pusher tool"
    ],
    "completion_rate": 1.0,
    "completed_runs": 8,
    "n_runs": 8,
    "fidelity": "approximation",
    "stops_at": null,
-   "cycle_time_s": 68.08,
+   "cycle_time_s": 72.41,
    "roles": [
     "finalist"
    ],
@@ -3414,11 +3385,11 @@
     },
     {
      "index": 2,
-     "effector_id": "f0b6543ba012ad8f54c8860c61407708f1bdfaf1d1b395d00a64ada8e883d6de",
-     "display_name": "Suction cup, 10 mm bellows",
-     "family": "suction",
-     "family_title": "Suction cup",
-     "fidelity": "approximation",
+     "effector_id": "ec23d0f17374171b7fa9c62da8dd8d680df2e2c98a747068750a83777cfa38a3",
+     "display_name": "Button-pusher tool",
+     "family": "catalog_gripper",
+     "family_title": "Industrial gripper",
+     "fidelity": "rigid",
      "off_the_shelf": true
     }
    ],
@@ -3434,8 +3405,8 @@
    },
    "complexity": {
     "n_tools": 3,
-    "n_actuators": 3,
-    "total_mass_kg": 0.748,
+    "n_actuators": 2,
+    "total_mass_kg": 0.737,
     "n_changes": 2,
     "bracket": false
    },
@@ -3508,7 +3479,7 @@
   }
  ],
  "recommendation": {
-  "setup_id": "9d7829e0d8861c572779cefc3cfce3110b92c0150e87f45e6fa82785e7f26f3f",
+  "setup_id": "72c634ec4fa356473388d98dc594a1287959d4df49c9961941abf9e50964ab56",
   "kind": "multi_head",
   "kind_title": "Two-tool head",
   "label": "Two-tool head: Soft arm + Suction cup",
@@ -3525,8 +3496,8 @@
    },
    {
     "index": 1,
-    "effector_id": "3907bc284d9e2c3399ddb8b45b1bf94dbb3b0ef0672705c6d90724839ecf7186",
-    "display_name": "Suction cup, 16 mm bellows",
+    "effector_id": "a5d7b1667b4f0d6582a36df49b9e600eeedc31f54dc883ddf7803fe113091f1d",
+    "display_name": "Suction cup, 40 mm bellows",
     "family": "suction",
     "family_title": "Suction cup",
     "fidelity": "approximation",
@@ -3539,8 +3510,8 @@
   "n_runs": 8,
   "fidelity": "approximation",
   "stops_at": null,
-  "cycle_time_s": 58.1,
-  "why": "Ties on completion (100%) and the weakest step, with the shorter cycle (58.10 s against 58.15 s), and is simpler: 320 g against 335 g.",
+  "cycle_time_s": 62.57,
+  "why": "Ties on completion (100%) and the weakest step, with the shorter cycle (62.57 s against 62.67 s), and is simpler: 373 g against 376 g.",
   "caveat": "approximation: verify on hardware",
   "verify_on_hardware": true,
   "geometry": {
@@ -3580,7 +3551,7 @@
     "primitive": "grasp",
     "primitive_used": "suction",
     "tool": 1,
-    "tool_label": "Suction cup, 16 mm bellows",
+    "tool_label": "Suction cup, 40 mm bellows",
     "success_rate": 1.0,
     "fidelity": "approximation",
     "caveats": [
@@ -3593,7 +3564,7 @@
     "primitive": "grasp",
     "primitive_used": "suction",
     "tool": 1,
-    "tool_label": "Suction cup, 16 mm bellows",
+    "tool_label": "Suction cup, 40 mm bellows",
     "success_rate": 1.0,
     "fidelity": "approximation",
     "caveats": [
@@ -3606,7 +3577,7 @@
     "primitive": "push",
     "primitive_used": "push",
     "tool": 1,
-    "tool_label": "Suction cup, 16 mm bellows",
+    "tool_label": "Suction cup, 40 mm bellows",
     "success_rate": 1.0,
     "fidelity": "approximation",
     "caveats": [
@@ -3622,7 +3593,7 @@
   "versus_best_single": {
    "same_setup": false,
    "completion_delta": 1.0,
-   "cycle_delta_s": 41.817,
+   "cycle_delta_s": 46.289,
    "extra_tools": 1
   }
  },
@@ -3810,21 +3781,21 @@
   {
    "id": "recommended",
    "title": "Recommended",
-   "setup_id": "9d7829e0d8861c572779cefc3cfce3110b92c0150e87f45e6fa82785e7f26f3f",
+   "setup_id": "72c634ec4fa356473388d98dc594a1287959d4df49c9961941abf9e50964ab56",
    "kind": "multi_head",
    "label": "Two-tool head: Soft arm + Suction cup",
    "replay": "studio/replays/h1/recommended",
    "condition_id": "nominal",
    "seed": 0,
    "condition_text": "nominal placement, seed 0",
-   "traj_sha": "d635201dfc052d0a6f194bcc1fd1b93c1a95efc299630d2f63a7f4a1ec1a2c96",
+   "traj_sha": "b08d3a137b124890243053bcd2c1c1651074c4e33337f2c2bded0e69b3c5af4b",
    "completed": true,
-   "cycle_time_s": 58.098,
-   "fps": 15,
-   "n_frames": 872,
-   "duration_s": 58.067,
-   "bytes": 479457,
-   "asset_bytes": 122708,
+   "cycle_time_s": 62.57,
+   "fps": 10,
+   "n_frames": 626,
+   "duration_s": 62.5,
+   "bytes": 348584,
+   "asset_bytes": 124776,
    "segments": [
     {
      "index": 0,
@@ -3842,9 +3813,9 @@
     {
      "index": 1,
      "tool": 1,
-     "tool_label": "Suction cup, 16 mm bellows",
+     "tool_label": "Suction cup, 40 mm bellows",
      "start_s": 18.192,
-     "end_s": 58.098,
+     "end_s": 62.57,
      "change": "present",
      "change_s": 1.5,
      "change_start_s": 16.692,
@@ -3869,7 +3840,7 @@
       "angle_deg": 110.0,
       "force_n": 3.159,
       "penetration_mm": 0.447,
-      "slip_mm": 8.933
+      "slip_mm": 8.935
      }
     },
     {
@@ -3883,11 +3854,11 @@
      "fidelity": "approximation",
      "quantities": {
       "engaged": 1.0,
-      "force_n": 14.455,
-      "hold_s": 6.63,
+      "force_n": 77.778,
+      "hold_s": 6.73,
       "in_target": 1.0,
-      "lift_mm": 381.02,
-      "penetration_mm": 0.079,
+      "lift_mm": 381.0,
+      "penetration_mm": 0.073,
       "tilt_deg": 0.0
      }
     },
@@ -3902,12 +3873,12 @@
      "fidelity": "approximation",
      "quantities": {
       "engaged": 1.0,
-      "force_n": 14.452,
-      "hold_s": 6.7,
+      "force_n": 77.769,
+      "hold_s": 6.75,
       "in_target": 1.0,
-      "lift_mm": 381.2,
-      "penetration_mm": 0.081,
-      "tilt_deg": 0.001
+      "lift_mm": 381.204,
+      "penetration_mm": 0.049,
+      "tilt_deg": 0.0
      }
     },
     {
@@ -3915,14 +3886,14 @@
      "primitive": "push",
      "tool": 1,
      "start_s": 45.968,
-     "duration_s": 12.13,
+     "duration_s": 16.602,
      "success": true,
      "failure_mode": null,
      "fidelity": "approximation",
      "quantities": {
       "angle_deg": 0.0,
-      "force_n": 14.972,
-      "penetration_mm": 0.215
+      "force_n": 10.188,
+      "penetration_mm": 0.084
      }
     }
    ],
@@ -3989,9 +3960,9 @@
  ],
  "build_pack": {
   "zip": "studio/h1/build_pack.zip",
-  "bytes": 160240,
-  "sha256": "175a6a999fe15832d85c2c026528492189e8a9a4f2136fdec311b592e08967ff",
-  "setup_id": "9d7829e0d8861c572779cefc3cfce3110b92c0150e87f45e6fa82785e7f26f3f",
+  "bytes": 166695,
+  "sha256": "9832e1468c900ec48de01c381c573d52eb6f02c38810b693c28a41125b6caa4c",
+  "setup_id": "72c634ec4fa356473388d98dc594a1287959d4df49c9961941abf9e50964ab56",
   "label": "Two-tool head: Soft arm + Suction cup",
   "for": "recommended",
   "files": [
@@ -4021,7 +3992,7 @@
     "kind": "bom",
     "format": "csv",
     "license": "CC0-1.0",
-    "bytes": 640
+    "bytes": 641
    },
    {
     "path": "bracket.stl",
@@ -4042,28 +4013,28 @@
     "kind": "effector_cad",
     "format": "stl",
     "license": "CC0-1.0",
-    "bytes": 288084
+    "bytes": 326484
    },
    {
     "path": "certificate.html",
     "kind": "certificate",
     "format": "html",
     "license": "CC0-1.0",
-    "bytes": 13914
+    "bytes": 13921
    },
    {
     "path": "mjcf/setup_tool0.xml",
     "kind": "mjcf",
     "format": "xml",
     "license": "CC0-1.0",
-    "bytes": 21091
+    "bytes": 21035
    },
    {
     "path": "mjcf/setup_tool1.xml",
     "kind": "mjcf",
     "format": "xml",
     "license": "CC0-1.0",
-    "bytes": 21611
+    "bytes": 21555
    }
   ],
   "links": [],
@@ -4078,10 +4049,19 @@
   ]
  },
  "build_pack_note": null,
- "session": null,
+ "session": {
+  "file": "studio/sessions/h1.json",
+  "session_id": "sess-ea83d7a1de12",
+  "status": "completed",
+  "model": "nvidia/nemotron-3-super-120b-a12b",
+  "turns": 4,
+  "tool_calls": 3,
+  "spend_usd": 0.003709,
+  "answer": "Recommendation: Two‑tool head – Soft arm + Suction cup (setup 72c634ec4fa3). Completed 8/8 runs (100%), fidelity ≈ approximation (verify on hardware). Best single off‑the‑shelf baseline: Industrial servo parallel gripper, 110 mm stroke (setup d136ab4824c1) – 0/8 runs completed. Build pack ID: spack-2bd1c297dda8."
+ },
  "provenance": {
-  "code_version": "591648aa39d3",
-  "report_sha256": "eee2800a8bfda94752122945ce5e6d2a428ead97b439e2056aef85295b681237",
+  "code_version": "67c08249edc8",
+  "report_sha256": "e9bccde001afe8b1d1cdecef8fc6edbe6113184c5a2d40a8f07feb1569b91829",
   "task_id": "e4586f3612e11b0eb490349c52a109bec75f43fdb0bcf9f1d91127f9e01a4ad5",
   "controllers": "default",
   "evidence": "accepted",
@@ -4247,12 +4227,12 @@
    }
   ],
   "fairness_sha": "50b63720fa729dd50092c1e915aa839aada2f0d1013083e93d57c6b8a91480b6",
-  "workers": 4,
+  "workers": 6,
   "timings": {
-   "screen_s": 367.7,
-   "combine_s": 8.9,
-   "finalists_s": 159.7,
-   "total_s": 537.2
+   "screen_s": 259.3,
+   "combine_s": 5.2,
+   "finalists_s": 78.4,
+   "total_s": 343.5
   },
   "determinism": [
    {
