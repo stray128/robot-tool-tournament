@@ -17,3 +17,7 @@ outputs/
 node_modules/
 .next/
 secrets/
+
+# API keys for the build tools (never commit)
+api_keys.json
+*api_keys*.json

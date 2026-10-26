@@ -92,6 +92,15 @@ env_values() {  # $1 = file, $2 = label, $3 = name filter (extended regex)
 # which holds a MysteryBox secret ID when a region references another project's secret)
 env_values "$nebius_env" "nebius.env" '(_ID$|_ID_|^NEBIUS_BUCKET_NAME(_[A-Z0-9]+)?$|^NEBIUS_SECRET_NAME_[A-Z0-9]+$)'
 env_values "$repo/.env" ".env" '(KEY|TOKEN|SECRET|PASSWORD)' prefix
+# the build tools' API keys (api_keys.json, git-ignored): each value, and its first 10 characters
+# as a key-shape prefix
+if [[ -r "$repo/api_keys.json" ]]; then
+  while IFS=$'\t' read -r name value; do
+    [[ -n "$value" ]] || continue
+    add_pattern "api_keys.json:$name" "$value"
+    add_exact "api_keys.json:$name prefix" "${value:0:10}"
+  done < <(python3 -c 'import json,sys; [print(k, v, sep="\t") for k, v in json.load(open(sys.argv[1])).items() if isinstance(v, str)]' "$repo/api_keys.json")
+fi
 # the held-out seed: until the results release reveals it, only its SHA-256 may appear
 seed_file="${RTT_HELDOUT_SEED_FILE:-$repo/secrets/heldout_seed.txt}"
 if [[ -r "$seed_file" ]]; then add_pattern "heldout seed" "$(head -n 1 "$seed_file")"; fi
