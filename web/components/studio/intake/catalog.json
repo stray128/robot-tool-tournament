@@ -24,7 +24,8 @@
       "lid",
       "door"
      ],
-     "default": "lid"
+     "default": "lid",
+     "optional": false
     },
     {
      "name": "width_mm",
@@ -34,7 +35,8 @@
      "low": 60.0,
      "high": 600.0,
      "choices": [],
-     "default": 300.0
+     "default": 300.0,
+     "optional": false
     },
     {
      "name": "depth_mm",
@@ -44,7 +46,8 @@
      "low": 40.0,
      "high": 600.0,
      "choices": [],
-     "default": 200.0
+     "default": 200.0,
+     "optional": false
     },
     {
      "name": "thickness_mm",
@@ -54,7 +57,8 @@
      "low": 2.0,
      "high": 30.0,
      "choices": [],
-     "default": 6.0
+     "default": 6.0,
+     "optional": false
     },
     {
      "name": "max_angle_deg",
@@ -64,7 +68,8 @@
      "low": 60.0,
      "high": 180.0,
      "choices": [],
-     "default": 110.0
+     "default": 110.0,
+     "optional": false
     },
     {
      "name": "open_torque_nm",
@@ -74,7 +79,8 @@
      "low": 0.0,
      "high": 5.0,
      "choices": [],
-     "default": 0.3
+     "default": 0.3,
+     "optional": false
     },
     {
      "name": "damping_nms",
@@ -84,7 +90,8 @@
      "low": 0.0,
      "high": 2.0,
      "choices": [],
-     "default": 0.05
+     "default": 0.05,
+     "optional": false
     },
     {
      "name": "feature",
@@ -97,7 +104,8 @@
       "lip",
       "handle"
      ],
-     "default": "lip"
+     "default": "lip",
+     "optional": false
     },
     {
      "name": "feature_mm",
@@ -107,7 +115,8 @@
      "low": 5.0,
      "high": 50.0,
      "choices": [],
-     "default": 15.0
+     "default": 15.0,
+     "optional": false
     }
    ],
    "handles": [
@@ -136,7 +145,8 @@
      "low": 80.0,
      "high": 600.0,
      "choices": [],
-     "default": 300.0
+     "default": 300.0,
+     "optional": false
     },
     {
      "name": "height_mm",
@@ -146,7 +156,8 @@
      "low": 40.0,
      "high": 300.0,
      "choices": [],
-     "default": 100.0
+     "default": 100.0,
+     "optional": false
     },
     {
      "name": "depth_mm",
@@ -156,7 +167,8 @@
      "low": 80.0,
      "high": 600.0,
      "choices": [],
-     "default": 350.0
+     "default": 350.0,
+     "optional": false
     },
     {
      "name": "travel_mm",
@@ -166,7 +178,8 @@
      "low": 20.0,
      "high": 500.0,
      "choices": [],
-     "default": 250.0
+     "default": 250.0,
+     "optional": false
     },
     {
      "name": "pull_force_n",
@@ -176,7 +189,8 @@
      "low": 0.5,
      "high": 50.0,
      "choices": [],
-     "default": 5.0
+     "default": 5.0,
+     "optional": false
     },
     {
      "name": "handle",
@@ -190,7 +204,8 @@
       "lip",
       "knob"
      ],
-     "default": "bar"
+     "default": "bar",
+     "optional": false
     },
     {
      "name": "handle_mm",
@@ -200,7 +215,8 @@
      "low": 10.0,
      "high": 60.0,
      "choices": [],
-     "default": 25.0
+     "default": 25.0,
+     "optional": false
     }
    ],
    "handles": [
@@ -232,7 +248,8 @@
       "slot",
       "wing"
      ],
-     "default": "wing"
+     "default": "wing",
+     "optional": false
     },
     {
      "name": "head_diameter_mm",
@@ -242,7 +259,8 @@
      "low": 10.0,
      "high": 60.0,
      "choices": [],
-     "default": 25.0
+     "default": 25.0,
+     "optional": false
     },
     {
      "name": "head_height_mm",
@@ -252,7 +270,8 @@
      "low": 3.0,
      "high": 40.0,
      "choices": [],
-     "default": 12.0
+     "default": 12.0,
+     "optional": false
     },
     {
      "name": "turn_deg",
@@ -262,7 +281,8 @@
      "low": 45.0,
      "high": 180.0,
      "choices": [],
-     "default": 90.0
+     "default": 90.0,
+     "optional": false
     },
     {
      "name": "torque_nm",
@@ -272,7 +292,8 @@
      "low": 0.05,
      "high": 5.0,
      "choices": [],
-     "default": 0.8
+     "default": 0.8,
+     "optional": false
     },
     {
      "name": "detent",
@@ -282,7 +303,8 @@
      "low": null,
      "high": null,
      "choices": [],
-     "default": true
+     "default": true,
+     "optional": false
     }
    ],
    "handles": [
@@ -314,7 +336,8 @@
       "coupling",
       "nut"
      ],
-     "default": "coupling"
+     "default": "coupling",
+     "optional": false
     },
     {
      "name": "diameter_mm",
@@ -324,7 +347,8 @@
      "low": 6.0,
      "high": 120.0,
      "choices": [],
-     "default": 27.0
+     "default": 27.0,
+     "optional": false
     },
     {
      "name": "length_mm",
@@ -334,7 +358,8 @@
      "low": 5.0,
      "high": 120.0,
      "choices": [],
-     "default": 40.0
+     "default": 40.0,
+     "optional": false
     },
     {
      "name": "pitch_mm",
@@ -344,7 +369,8 @@
      "low": 0.5,
      "high": 5.0,
      "choices": [],
-     "default": 1.8
+     "default": 1.8,
+     "optional": false
     },
     {
      "name": "engage_turns",
@@ -354,7 +380,8 @@
      "low": 0.25,
      "high": 10.0,
      "choices": [],
-     "default": 3.0
+     "default": 3.0,
+     "optional": false
     },
     {
      "name": "start_torque_nm",
@@ -364,7 +391,8 @@
      "low": 0.0,
      "high": 2.0,
      "choices": [],
-     "default": 0.1
+     "default": 0.1,
+     "optional": false
     },
     {
      "name": "final_torque_nm",
@@ -374,7 +402,8 @@
      "low": 0.1,
      "high": 20.0,
      "choices": [],
-     "default": 5.0
+     "default": 5.0,
+     "optional": false
     },
     {
      "name": "chamfer_mm",
@@ -384,7 +413,8 @@
      "low": 0.0,
      "high": 5.0,
      "choices": [],
-     "default": 1.0
+     "default": 1.0,
+     "optional": false
     }
    ],
    "handles": [
@@ -415,7 +445,8 @@
      "low": 40.0,
      "high": 400.0,
      "choices": [],
-     "default": 120.0
+     "default": 120.0,
+     "optional": false
     },
     {
      "name": "rim_section_mm",
@@ -425,7 +456,8 @@
      "low": 6.0,
      "high": 30.0,
      "choices": [],
-     "default": 12.0
+     "default": 12.0,
+     "optional": false
     },
     {
      "name": "spokes",
@@ -435,7 +467,8 @@
      "low": 0,
      "high": 6,
      "choices": [],
-     "default": 3
+     "default": 3,
+     "optional": false
     },
     {
      "name": "torque_nm",
@@ -445,7 +478,8 @@
      "low": 0.1,
      "high": 20.0,
      "choices": [],
-     "default": 3.0
+     "default": 3.0,
+     "optional": false
     },
     {
      "name": "travel_deg",
@@ -455,7 +489,8 @@
      "low": 30.0,
      "high": 1440.0,
      "choices": [],
-     "default": 90.0
+     "default": 90.0,
+     "optional": false
     }
    ],
    "handles": [
@@ -483,7 +518,8 @@
      "low": 3.0,
      "high": 60.0,
      "choices": [],
-     "default": 12.0
+     "default": 12.0,
+     "optional": false
     },
     {
      "name": "plug_length_mm",
@@ -493,7 +529,8 @@
      "low": 10.0,
      "high": 120.0,
      "choices": [],
-     "default": 40.0
+     "default": 40.0,
+     "optional": false
     },
     {
      "name": "clearance_mm",
@@ -503,7 +540,8 @@
      "low": 0.02,
      "high": 2.0,
      "choices": [],
-     "default": 0.2
+     "default": 0.2,
+     "optional": false
     },
     {
      "name": "chamfer_mm",
@@ -513,7 +551,8 @@
      "low": 0.0,
      "high": 5.0,
      "choices": [],
-     "default": 1.0
+     "default": 1.0,
+     "optional": false
     },
     {
      "name": "depth_mm",
@@ -523,7 +562,8 @@
      "low": 3.0,
      "high": 60.0,
      "choices": [],
-     "default": 15.0
+     "default": 15.0,
+     "optional": false
     },
     {
      "name": "insert_force_n",
@@ -533,7 +573,8 @@
      "low": 0.0,
      "high": 50.0,
      "choices": [],
-     "default": 5.0
+     "default": 5.0,
+     "optional": false
     },
     {
      "name": "latch",
@@ -543,7 +584,8 @@
      "low": null,
      "high": null,
      "choices": [],
-     "default": false
+     "default": false,
+     "optional": false
     }
    ],
    "handles": [
@@ -572,7 +614,8 @@
      "low": 60.0,
      "high": 800.0,
      "choices": [],
-     "default": 300.0
+     "default": 300.0,
+     "optional": false
     },
     {
      "name": "width_mm",
@@ -582,7 +625,8 @@
      "low": 60.0,
      "high": 600.0,
      "choices": [],
-     "default": 200.0
+     "default": 200.0,
+     "optional": false
     },
     {
      "name": "height_mm",
@@ -592,7 +636,8 @@
      "low": 20.0,
      "high": 400.0,
      "choices": [],
-     "default": 120.0
+     "default": 120.0,
+     "optional": false
     },
     {
      "name": "wall_mm",
@@ -602,7 +647,8 @@
      "low": 1.0,
      "high": 20.0,
      "choices": [],
-     "default": 4.0
+     "default": 4.0,
+     "optional": false
     },
     {
      "name": "fixed",
@@ -612,7 +658,8 @@
      "low": null,
      "high": null,
      "choices": [],
-     "default": true
+     "default": true,
+     "optional": false
     }
    ],
    "handles": [
@@ -642,7 +689,8 @@
       "box",
       "cylinder"
      ],
-     "default": "box"
+     "default": "box",
+     "optional": false
     },
     {
      "name": "size_x_mm",
@@ -652,7 +700,8 @@
      "low": 5.0,
      "high": 400.0,
      "choices": [],
-     "default": 40.0
+     "default": 40.0,
+     "optional": false
     },
     {
      "name": "size_y_mm",
@@ -662,7 +711,8 @@
      "low": 5.0,
      "high": 400.0,
      "choices": [],
-     "default": 40.0
+     "default": 40.0,
+     "optional": false
     },
     {
      "name": "size_z_mm",
@@ -672,7 +722,8 @@
      "low": 2.0,
      "high": 400.0,
      "choices": [],
-     "default": 40.0
+     "default": 40.0,
+     "optional": false
     },
     {
      "name": "mass_g",
@@ -682,7 +733,8 @@
      "low": 1.0,
      "high": 5000.0,
      "choices": [],
-     "default": 100.0
+     "default": 100.0,
+     "optional": false
     }
    ],
    "handles": [
@@ -693,6 +745,353 @@
     "tilt_deg"
    ],
    "needs_ref": true
+  },
+  {
+   "kind": "panel_rail",
+   "display_name": "Panel on mounting rails",
+   "description": "A large flat panel (a solar module) resting on two mounting rails against their end stops, with a threaded clamp on a post beside its edge.",
+   "note": "A solar module or any large flat panel on two mounting rails along local y, with a clamp (a 13 mm hex member on a post) at the middle of its -y long edge, 25 mm out. The panel starts resting on the rails, start_gap_mm short of their end stops at its +y edge; a pick (handle panel, target null) lifts it and sets it back on the rails, which stands for setting it down there (bringing it from a crate or stand is not modelled: list that in unsupported, nearest primitive suction), and gap_mm at_most says it sits against the stops. The clamp is a threaded member: insert it to its thread start (4 mm down), then twist cw; it seats after 3 turns of 1.25 mm pitch, its torque rising from 0.3 N m to clamp_torque_nm. clamp_torque_nm (the state) is how tight it got: judge the tightening by clamp_torque_nm at_least (at most the param), not by the wrist's torque_nm, which stays just under it. The panel's centre and the clamp lie (width_mm / 2 + 25) / 2 mm either side of the pose along local y.",
+   "model": "free rigid slab on two static rails with end stops; the clamp is a threaded member on a post (revolute and prismatic joints coupled by a helical tendon, with a friction torque ramp)",
+   "fidelity": "approximation",
+   "caveat": "The clamp is an approximation: a 13 mm hex modelled 15 mm tall so the simulated socket can seat (a standard M8 nut is 6.8 mm tall), on a helical joint with a torque ramp; it does not press the panel. The panel is a rigid slab.",
+   "params": [
+    {
+     "name": "length_mm",
+     "kind": "float",
+     "description": "Panel length (along x)",
+     "unit": "mm",
+     "low": 300.0,
+     "high": 1200.0,
+     "choices": [],
+     "default": 1000.0,
+     "optional": false
+    },
+    {
+     "name": "width_mm",
+     "kind": "float",
+     "description": "Panel width (along y, the way the rails run)",
+     "unit": "mm",
+     "low": 200.0,
+     "high": 800.0,
+     "choices": [],
+     "default": 600.0,
+     "optional": false
+    },
+    {
+     "name": "thickness_mm",
+     "kind": "float",
+     "description": "Panel thickness",
+     "unit": "mm",
+     "low": 10.0,
+     "high": 60.0,
+     "choices": [],
+     "default": 35.0,
+     "optional": false
+    },
+    {
+     "name": "mass_g",
+     "kind": "float",
+     "description": "Panel mass",
+     "unit": "g",
+     "low": 500.0,
+     "high": 25000.0,
+     "choices": [],
+     "default": 8000.0,
+     "optional": false
+    },
+    {
+     "name": "start_gap_mm",
+     "kind": "float",
+     "description": "Gap between the panel's edge and the rail stops at the start",
+     "unit": "mm",
+     "low": 0.0,
+     "high": 30.0,
+     "choices": [],
+     "default": 2.0,
+     "optional": false
+    },
+    {
+     "name": "clamp_torque_nm",
+     "kind": "float",
+     "description": "Torque that seats the clamp (its thread's final torque)",
+     "unit": "N m",
+     "low": 0.5,
+     "high": 10.0,
+     "choices": [],
+     "default": 6.0,
+     "optional": false
+    }
+   ],
+   "handles": [
+    "panel",
+    "member"
+   ],
+   "quantities": [
+    "gap_mm",
+    "clamp_torque_nm",
+    "depth_mm",
+    "turns",
+    "angle_deg"
+   ],
+   "needs_ref": false
+  },
+  {
+   "kind": "tile_bed",
+   "display_name": "Tile on a mortar bed",
+   "description": "A square floor tile laid on a fresh mortar bed, standing proud of its finished level until it is pressed in.",
+   "note": "A floor or wall tile on a fresh mortar or adhesive bed. The tile starts laid on the bed, proud_mm above its finished level. A pick (handle part, target null) lifts it and lays it back on the bed (laying it from a stack is not modelled: unsupported, nearest primitive suction). A push (handle part) presses it: the bed gives at bed_yield_n plus bed_hardening_n_mm for every mm it sinks (the tile's weight helps), keeps its set and lets the tile spring back up to 0.3 mm; it stops a tile 3 mm below its level. Judge the press by height_err_mm at_most (how far the top ends from its level, either way) and tilt_deg at_most.",
+   "model": "free rigid tile on a 3 x 3 grid of plastic bed cells (vertical slides that yield, harden and keep their set)",
+   "fidelity": "approximation",
+   "caveat": "The mortar bed is an approximation: nine plastic cells that yield and harden linearly and keep their set; no flow, suction or curing. A screen, not a promise.",
+   "params": [
+    {
+     "name": "tile_mm",
+     "kind": "float",
+     "description": "Tile side (square)",
+     "unit": "mm",
+     "low": 100.0,
+     "high": 600.0,
+     "choices": [],
+     "default": 300.0,
+     "optional": false
+    },
+    {
+     "name": "thickness_mm",
+     "kind": "float",
+     "description": "Tile thickness",
+     "unit": "mm",
+     "low": 5.0,
+     "high": 30.0,
+     "choices": [],
+     "default": 10.0,
+     "optional": false
+    },
+    {
+     "name": "mass_g",
+     "kind": "float",
+     "description": "Tile mass",
+     "unit": "g",
+     "low": 100.0,
+     "high": 20000.0,
+     "choices": [],
+     "default": 2160.0,
+     "optional": false
+    },
+    {
+     "name": "proud_mm",
+     "kind": "float",
+     "description": "How far the laid tile stands above its finished level",
+     "unit": "mm",
+     "low": 0.5,
+     "high": 6.0,
+     "choices": [],
+     "default": 2.0,
+     "optional": false
+    },
+    {
+     "name": "bed_yield_n",
+     "kind": "float",
+     "description": "Total force at which the fresh bed starts to give",
+     "unit": "N",
+     "low": 5.0,
+     "high": 200.0,
+     "choices": [],
+     "default": 30.0,
+     "optional": false
+    },
+    {
+     "name": "bed_hardening_n_mm",
+     "kind": "float",
+     "description": "Extra force per mm the bed needs as it gives",
+     "unit": "N/mm",
+     "low": 1.0,
+     "high": 100.0,
+     "choices": [],
+     "default": 15.0,
+     "optional": false
+    }
+   ],
+   "handles": [
+    "part"
+   ],
+   "quantities": [
+    "height_err_mm",
+    "tilt_deg"
+   ],
+   "needs_ref": false
+  },
+  {
+   "kind": "spring_button",
+   "display_name": "Push button",
+   "description": "A round spring-return push button in a bezel, on a wall or on a desk console; a press past its actuation point latches the call.",
+   "note": "A call button, a push button or a switch. mount wall: a plate standing on the table, its face through the pose and facing local -y (yaw_deg turns it), the button's centre height_mm up; push it with approach front. mount desk: a console height_mm tall, the button on top facing up; push it with approach top. A press past 70 % of its travel latches pressed to 1; the button springs back when the tool lets go, so travel_mm reads 0 at the end: judge it by pressed at_least 1.",
+   "model": "prismatic joint with a preloaded return spring and an end stop, and a latch that records a press past the actuation point",
+   "fidelity": "rigid",
+   "caveat": "",
+   "params": [
+    {
+     "name": "mount",
+     "kind": "choice",
+     "description": "On a wall (it faces sideways) or a desk console (it faces up)",
+     "unit": "",
+     "low": null,
+     "high": null,
+     "choices": [
+      "wall",
+      "desk"
+     ],
+     "default": "wall",
+     "optional": false
+    },
+    {
+     "name": "diameter_mm",
+     "kind": "float",
+     "description": "Button diameter",
+     "unit": "mm",
+     "low": 10.0,
+     "high": 80.0,
+     "choices": [],
+     "default": 40.0,
+     "optional": false
+    },
+    {
+     "name": "travel_mm",
+     "kind": "float",
+     "description": "Button travel to its stop",
+     "unit": "mm",
+     "low": 1.0,
+     "high": 10.0,
+     "choices": [],
+     "default": 3.0,
+     "optional": false
+    },
+    {
+     "name": "actuation_force_n",
+     "kind": "float",
+     "description": "Force that presses it to its actuation point",
+     "unit": "N",
+     "low": 0.5,
+     "high": 30.0,
+     "choices": [],
+     "default": 4.0,
+     "optional": false
+    },
+    {
+     "name": "proud_mm",
+     "kind": "float",
+     "description": "How far the button stands out of its bezel at rest",
+     "unit": "mm",
+     "low": 0.0,
+     "high": 10.0,
+     "choices": [],
+     "default": 1.0,
+     "optional": false
+    },
+    {
+     "name": "height_mm",
+     "kind": "float",
+     "description": "Wall: the button's centre above the table; desk: the console's height",
+     "unit": "mm",
+     "low": 30.0,
+     "high": 300.0,
+     "choices": [],
+     "default": 120.0,
+     "optional": false
+    }
+   ],
+   "handles": [
+    "button"
+   ],
+   "quantities": [
+    "travel_mm",
+    "pressed"
+   ],
+   "needs_ref": false
+  },
+  {
+   "kind": "sliding_door",
+   "display_name": "Sliding machine door",
+   "description": "A machine enclosure whose door slides sideways: a front leaf and a roof leaf over the loading opening, moved by a fin handle on the roof.",
+   "note": "A machine with a guard door that slides sideways, loaded from above (a machine tool, a test chamber, an enclosure): the pose is the centre of its loading opening (width_mm along local y, the machine depth_mm along local x, its front facing local -x). The door starts closed over the opening and slides toward local -y to open (travel_mm 0 closed, positive open): hook_pull its handle (a fin on top, approach top) to open it, push it (handle door) to shut it. A fixture bin or a part inside the machine stands on the machine bed under the opening, inside its interior (see the layout rules).",
+   "model": "prismatic joint with friction loss and end stops (a drawer's slide, turned sideways)",
+   "fidelity": "rigid",
+   "caveat": "",
+   "params": [
+    {
+     "name": "width_mm",
+     "kind": "float",
+     "description": "Loading opening width, along the slide",
+     "unit": "mm",
+     "low": 120.0,
+     "high": 400.0,
+     "choices": [],
+     "default": 250.0,
+     "optional": false
+    },
+    {
+     "name": "depth_mm",
+     "kind": "float",
+     "description": "Machine depth, front to back",
+     "unit": "mm",
+     "low": 150.0,
+     "high": 500.0,
+     "choices": [],
+     "default": 300.0,
+     "optional": false
+    },
+    {
+     "name": "height_mm",
+     "kind": "float",
+     "description": "Machine height",
+     "unit": "mm",
+     "low": 120.0,
+     "high": 400.0,
+     "choices": [],
+     "default": 250.0,
+     "optional": false
+    },
+    {
+     "name": "travel_mm",
+     "kind": "float",
+     "description": "Door travel to the open stop",
+     "unit": "mm",
+     "low": 50.0,
+     "high": 450.0,
+     "choices": [],
+     "default": 260.0,
+     "optional": false
+    },
+    {
+     "name": "pull_force_n",
+     "kind": "float",
+     "description": "Friction force that resists sliding",
+     "unit": "N",
+     "low": 0.5,
+     "high": 60.0,
+     "choices": [],
+     "default": 10.0,
+     "optional": false
+    },
+    {
+     "name": "handle_mm",
+     "kind": "float",
+     "description": "Height of the fin handle above the roof",
+     "unit": "mm",
+     "low": 15.0,
+     "high": 60.0,
+     "choices": [],
+     "default": 40.0,
+     "optional": false
+    }
+   ],
+   "handles": [
+    "door",
+    "handle"
+   ],
+   "quantities": [
+    "travel_mm"
+   ],
+   "needs_ref": false
   }
  ],
  "primitives": [
@@ -704,12 +1103,15 @@
    "objects": [
     "part",
     "port_plug",
-    "threaded_joint"
+    "threaded_joint",
+    "panel_rail",
+    "tile_bed"
    ],
    "handles": [
     "part",
     "plug",
-    "member"
+    "member",
+    "panel"
    ],
    "targets": [
     "bin"
@@ -723,7 +1125,8 @@
      "low": 0.0,
      "high": 300.0,
      "choices": [],
-     "default": 100.0
+     "default": 100.0,
+     "optional": false
     },
     {
      "name": "hold_s",
@@ -733,7 +1136,8 @@
      "low": 0.0,
      "high": 10.0,
      "choices": [],
-     "default": 2.0
+     "default": 2.0,
+     "optional": false
     }
    ],
    "quantities": [
@@ -753,10 +1157,13 @@
    "fidelity": "approximation",
    "caveat": "Suction is an approximation: the seal is a geometric test gating a capped adhesion force; no air flow, leak rate or porosity.",
    "objects": [
-    "part"
+    "part",
+    "panel_rail",
+    "tile_bed"
    ],
    "handles": [
-    "part"
+    "part",
+    "panel"
    ],
    "targets": [
     "bin"
@@ -770,7 +1177,8 @@
      "low": 0.0,
      "high": 300.0,
      "choices": [],
-     "default": 100.0
+     "default": 100.0,
+     "optional": false
     },
     {
      "name": "hold_s",
@@ -780,7 +1188,8 @@
      "low": 0.0,
      "high": 10.0,
      "choices": [],
-     "default": 2.0
+     "default": 2.0,
+     "optional": false
     }
    ],
    "quantities": [
@@ -817,7 +1226,8 @@
      "low": 0.0,
      "high": 300.0,
      "choices": [],
-     "default": 100.0
+     "default": 100.0,
+     "optional": false
     },
     {
      "name": "hold_s",
@@ -827,7 +1237,8 @@
      "low": 0.0,
      "high": 10.0,
      "choices": [],
-     "default": 2.0
+     "default": 2.0,
+     "optional": false
     }
    ],
    "quantities": [
@@ -848,7 +1259,8 @@
    "caveat": "",
    "objects": [
     "hinged_lid",
-    "drawer"
+    "drawer",
+    "sliding_door"
    ],
    "handles": [
     "handle"
@@ -863,7 +1275,8 @@
      "low": 5.0,
      "high": 200.0,
      "choices": [],
-     "default": 50.0
+     "default": 50.0,
+     "optional": false
     },
     {
      "name": "approach",
@@ -876,7 +1289,8 @@
       "top",
       "front"
      ],
-     "default": "top"
+     "default": "top",
+     "optional": false
     }
    ],
    "quantities": [
@@ -895,7 +1309,8 @@
    "objects": [
     "quarter_turn_latch",
     "threaded_joint",
-    "handwheel_valve"
+    "handwheel_valve",
+    "panel_rail"
    ],
    "handles": [
     "head",
@@ -915,7 +1330,8 @@
       "cw",
       "ccw"
      ],
-     "default": "cw"
+     "default": "cw",
+     "optional": false
     },
     {
      "name": "speed_deg_s",
@@ -925,7 +1341,8 @@
      "low": 5.0,
      "high": 180.0,
      "choices": [],
-     "default": 60.0
+     "default": 60.0,
+     "optional": false
     }
    ],
    "quantities": [
@@ -944,7 +1361,8 @@
    "caveat": "",
    "objects": [
     "port_plug",
-    "threaded_joint"
+    "threaded_joint",
+    "panel_rail"
    ],
    "handles": [
     "plug",
@@ -960,7 +1378,8 @@
      "low": 1.0,
      "high": 50.0,
      "choices": [],
-     "default": 10.0
+     "default": 10.0,
+     "optional": false
     },
     {
      "name": "standoff_mm",
@@ -970,7 +1389,8 @@
      "low": 2.0,
      "high": 50.0,
      "choices": [],
-     "default": 10.0
+     "default": 10.0,
+     "optional": false
     }
    ],
    "quantities": [
@@ -991,13 +1411,18 @@
     "hinged_lid",
     "drawer",
     "part",
-    "port_plug"
+    "port_plug",
+    "sliding_door",
+    "tile_bed",
+    "spring_button"
    ],
    "handles": [
     "lid",
     "drawer",
     "part",
-    "plug"
+    "plug",
+    "door",
+    "button"
    ],
    "targets": [],
    "params": [
@@ -1009,7 +1434,22 @@
      "low": 1.0,
      "high": 100.0,
      "choices": [],
-     "default": 20.0
+     "default": 20.0,
+     "optional": false
+    },
+    {
+     "name": "approach",
+     "kind": "choice",
+     "description": "Where the tool comes from: top (straight down) or front (tilted square to an upright face)",
+     "unit": "",
+     "low": null,
+     "high": null,
+     "choices": [
+      "top",
+      "front"
+     ],
+     "default": "top",
+     "optional": true
     }
    ],
    "quantities": [
@@ -1033,7 +1473,7 @@
    "unit": "mm",
    "low": -1000.0,
    "high": 1000.0,
-   "description": "slide travel of the object from its start (drawer)"
+   "description": "slide travel of the object from its start (drawer, sliding door, button)"
   },
   {
    "name": "depth_mm",
@@ -1124,21 +1564,52 @@
    "unit": "mm",
    "low": 0.0,
    "high": 100.0,
-   "description": "deepest tool-object penetration (physics validity)"
+   "description": "deepest penetration between any two bodies, designed contacts excepted (physics validity)"
+  },
+  {
+   "name": "gap_mm",
+   "unit": "mm",
+   "low": 0.0,
+   "high": 1000.0,
+   "description": "gap between a panel's edge and its rail stops"
+  },
+  {
+   "name": "clamp_torque_nm",
+   "unit": "N m",
+   "low": 0.0,
+   "high": 100.0,
+   "description": "the highest torque a clamp reached as it was driven home (its rated torque once seated)"
+  },
+  {
+   "name": "height_err_mm",
+   "unit": "mm",
+   "low": 0.0,
+   "high": 1000.0,
+   "description": "how far a tile's top stands from its finished level"
+  },
+  {
+   "name": "pressed",
+   "unit": "flag",
+   "low": 0.0,
+   "high": 1.0,
+   "description": "1 once a button has been pressed past its actuation point"
   }
  ],
  "handles": {
   "lid": "the panel itself (push it closed)",
-  "handle": "the lip or handle at the free edge or front (hook it to pull open)",
+  "handle": "the lip or handle at the free edge or front, or a sliding door's fin (hook it to pull open)",
   "drawer": "the drawer front (push it shut)",
   "head": "the latch head, a slot or a wing (twist it)",
-  "member": "the cap, coupling or nut, captive on its stub (insert or twist it)",
+  "member": "the cap, coupling, nut or clamp, captive on its stub or post (insert or twist it)",
   "seat": "the fixed threaded seat (no primitive acts on it)",
   "wheel": "the handwheel rim (twist it)",
   "plug": "the free plug or connector (grasp, insert or push it)",
   "socket": "the fixed socket (no primitive acts on it; the plug goes in)",
   "bin": "the open box (a destination for picks)",
-  "part": "the part itself"
+  "part": "the part itself, or a tile on its bed (pick it, or press it)",
+  "panel": "the panel on its rails (a pick lifts it and sets it back)",
+  "button": "the button's face (push it in)",
+  "door": "the sliding door (push it shut)"
  },
  "library_parts": [
   "pipe_tee",
@@ -1152,10 +1623,18 @@
   "twist_sense": {
    "quarter_turn_latch": "ccw",
    "handwheel_valve": "ccw",
-   "threaded_joint": "cw"
+   "threaded_joint": "cw",
+   "panel_rail": "cw"
   },
   "no_pick": [
    "threaded_joint"
+  ],
+  "no_pick_handles": [
+   "member"
+  ],
+  "set_back": [
+   "panel_rail",
+   "tile_bed"
   ],
   "picks": [
    "grasp",
@@ -1169,6 +1648,37 @@
   "wrist_torque_share": 0.95,
   "lid_hinge_mm": 120.0,
   "lid_open_deg": 95.0,
+  "clamp": {
+   "turns": 3.0,
+   "pitch_mm": 1.25,
+   "chamfer_mm": 1.0,
+   "start_nm": 0.3,
+   "wrist_share": 0.95
+  },
+  "button_press_factor": 1.5,
+  "press_n": 10.0,
+  "force_goal_margin": 0.03,
+  "insert_past_mm": 0.5,
+  "limit_only": [
+   "penetration_mm",
+   "slip_mm",
+   "slip_deg",
+   "jam",
+   "lateral_force_n"
+  ],
+  "set_back_slack_mm": 0.5,
+  "tile_rebound_mm": 0.3,
+  "tile_over_mm": 3.0,
+  "slide_slip_min_mm": 40.0,
+  "slide_push_max_mm_s": 40.0,
+  "pick_force_min_n": 100.0,
+  "pick_give_mm": 10.0,
+  "slide_pull_factor": 3.0,
+  "lift_give_mm": 3.0,
+  "lift_give_mm_per_kg": 2.5,
+  "lift_give_margin_mm": 1.5,
+  "hold_lift_min_mm": 10.0,
+  "hold_lift_share": 0.5,
   "depth_tolerance_mm": 0.5,
   "window_min": {
    "depth_mm": 1.0,
@@ -1183,7 +1693,10 @@
    "torque_nm": 0.2,
    "force_n": 1.0,
    "lateral_force_n": 1.0,
-   "hold_s": 0.2
+   "hold_s": 0.2,
+   "clamp_torque_nm": 0.2,
+   "gap_mm": 1.0,
+   "height_err_mm": 0.5
   },
   "layout": {
    "clearance_mm": 20.0,
@@ -1205,9 +1718,39 @@
    "port_sides": 16,
    "plug_gap_mm": 40.0,
    "lid_back_wall_mm": 8.0,
-   "arc_step_deg": 15.0
+   "arc_step_deg": 15.0,
+   "panel_rail_past_mm": 10.0,
+   "panel_stop_mm": 10.0,
+   "panel_post_mm": 20.0,
+   "panel_clamp_out_mm": 25.0,
+   "tile_border_mm": 20.0,
+   "button_plate_mm": [
+    160.0,
+    20.0,
+    80.0
+   ],
+   "button_console_mm": [
+    120.0,
+    40.0
+   ],
+   "machine_wall_mm": 10.0,
+   "machine_leaf_mm": 6.0,
+   "machine_gap_mm": 2.0,
+   "machine_overlap_mm": 10.0,
+   "inside_margin_mm": 10.0,
+   "finger_room_mm": 40.0,
+   "work_limit_mm": 338.0,
+   "front_reach_mm": 400.0
   }
  },
+ "tools": [
+  "two- and three-finger grippers (parallel and adaptive, with stock, padded or part-shaped jaws)",
+  "dexterous hands (four and five fingers) and soft arms",
+  "suction cups (10 to 25 mm) and vacuum area frames (2 x 2 cups over 300 mm, 2 x 3 cups over 600 mm) for large flat faces",
+  "a nut runner: a 13 mm hex socket turned by the wrist roll through a slipping clutch (insert and twist only)",
+  "a tamper pad: a flat 200 mm pad on a spring stage that slips at its force (push only)",
+  "designed tools from the effector library"
+ ],
  "limit_quantities": [
   "force_n",
   "jam",

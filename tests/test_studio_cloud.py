@@ -449,11 +449,11 @@ def test_the_frozen_config_pins_the_heroes_arms_and_held_out_commitment() -> Non
     """The committed config is frozen: its frozen block is the script's output (complete and
     self-consistent: every setup hashes to its id, the primary rule follows from the arms, the arms
     were verified on the code), and the held-out secret appears only as its SHA-256 commitment."""
-    from test_studio_engineer import FROZEN_HERO_TASK_IDS
+    from test_studio_engineer import FROZEN_V1_HERO_TASK_IDS
 
     cfg = uc.load_config(CONFIG)
     assert cfg["label"] == PRODUCT_MODE_LABEL and cfg["status"] == "frozen"
-    assert cfg["heroes"]["cases"] == FROZEN_HERO_TASK_IDS
+    assert cfg["heroes"]["cases"] == FROZEN_V1_HERO_TASK_IDS
     assert cfg["heldout"]["conditions"] == 32 and cfg["heldout"]["placement_mm"] == 2.0
     assert cfg["development"]["conditions"] == 8 and cfg["development"]["screen"] == 3
     assert cfg["analysis"]["alpha"] == 0.05 and cfg["analysis"]["multiplicity"] == "holm"

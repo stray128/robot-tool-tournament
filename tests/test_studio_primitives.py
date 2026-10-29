@@ -21,7 +21,7 @@ import rtt.studio.primitives as primitives_pkg
 from rtt.effectors.registry import get_family
 from rtt.effectors.types import EffectorSpec
 from rtt.studio.episode import StudioCondition, StudioJob, run_task, run_task_jobs
-from rtt.studio.plan import HELD_PENETRATION_MAX_MM, get_primitive
+from rtt.studio.plan import HELD_PENETRATION_MAX_MM, PENETRATION_TRANSIENT_MS, get_primitive
 from rtt.studio.types import (
     FidelityTier,
     ObjectInstance,
@@ -280,6 +280,33 @@ def test_reference_succeeds_and_wrong_effector_fails(
         assert out.duration_s <= 30.0
 
 
+def gate_conditions(spec: TaskSpec) -> list[StudioCondition]:
+    """The S2 gate's 14 conditions (``docs/STUDIO_PRIMITIVES.md`` section 6): 10 seeds (the v1
+    jitter) and 4 placement errors of 2 mm (+x, -x, +y, -y) on every object, hidden from the
+    controller."""
+    out = [StudioCondition(f"seed{s}", s) for s in range(10)]
+    for i, (dx, dy) in enumerate(((2.0, 0.0), (-2.0, 0.0), (0.0, 2.0), (0.0, -2.0))):
+        out.append(StudioCondition(f"place{i}", 10 + i, {o.name: (dx, dy) for o in spec.objects}))
+    return out
+
+
+@pytest.mark.parametrize("name", sorted(GATE))
+def test_the_s2_gate_table_holds_on_its_14_conditions(name: str) -> None:
+    """The S2 gate table: every reference 13 or 14 of 14 (a successful step within 1 mm of
+    penetration), every wrong effector 0 of 14 with its row's failure mode, no MuJoCo reset."""
+    spec, ref, wrong, mode = GATE[name]
+    conds = gate_conditions(spec)
+    jobs = [
+        StudioJob(Setup.single(preset(*key), spec.step_ids), spec, c) for key in (ref, wrong) for c in conds
+    ]
+    runs = [r.steps[0] for r in run_task_jobs(jobs, workers=4)]
+    refs, wrongs = runs[: len(conds)], runs[len(conds) :]
+    assert sum(o.success for o in refs) >= 13, [(o.failure_mode, dict(o.quantities)) for o in refs]
+    assert all(not o.success and o.failure_mode == mode for o in wrongs), [o.failure_mode for o in wrongs]
+    assert all(o.quantities["penetration_mm"] <= HELD_PENETRATION_MAX_MM for o in refs if o.success)
+    assert all(o.failure_mode != "physics_invalid" for o in runs)
+
+
 def test_fidelity_tiers_follow_template_primitive_and_effector(
     gate_runs: dict[str, dict[str, TaskResult]],
 ) -> None:
@@ -477,7 +504,9 @@ def test_a_lidded_tote_task_runs_end_to_end_across_a_tool_change() -> None:
     assert r.completed, [(s.step_id, s.failure_mode, dict(s.quantities)) for s in r.steps]
     assert r.n_tool_changes == 2 and r.steps[0].quantities["angle_deg"] > 95.0  # stays open past vertical
     assert r.steps[3].quantities["force_n"] <= 40.0
-    assert all(s.quantities["penetration_mm"] <= HELD_PENETRATION_MAX_MM for s in r.steps)
+    # a flagged impact transient above 1 mm may pass (docs/STUDIO.md 3.3), a held penetration may not
+    assert all(s.failure_mode != "physics_unreliable" for s in r.steps)
+    assert all(s.quantities["penetration_ms"] <= PENETRATION_TRANSIENT_MS for s in r.steps)
 
 
 def test_a_part_lifted_and_lost_is_dropped_and_a_part_never_lifted_is_not() -> None:
@@ -641,7 +670,6 @@ def test_a_soft_arm_hooks_under_a_lid_lip_and_opens_it(tote_width_mm: int | None
 @pytest.mark.parametrize(
     ("key", "tote_width_mm"),
     [
-        (("catalog_gripper", "adaptive-2f", "pinch"), None),  # straight fingers: no hook
         (("soft_arm", "tentacle-12", None), 300),  # the lid inset in the rim: no gap to hook into
     ],
 )
@@ -651,6 +679,57 @@ def test_a_lip_without_a_hook_or_without_room_under_it_stays_shut(
     out = run_task(job(_lip_task(280, tote_width_mm), key)).steps[0]
     assert not out.success and out.failure_mode == "slip", (out.failure_mode, dict(out.quantities))
     assert out.quantities["angle_deg"] < 5.0
+
+
+#: The frozen hero plans (Task Engineer gate S4e); H1 is the returns tote with its lipped lid.
+HERO_MANIFEST = (
+    Path(__file__).resolve().parents[1] / "src/rtt/studio/engineer/recorded/gate-2026-10-18-s4e/manifest.json"
+)
+
+
+def _h1_task() -> TaskSpec:
+    import json
+
+    from rtt.studio.types import task_spec_from_tool_args
+
+    cases = json.loads(HERO_MANIFEST.read_text(encoding="utf-8"))["cases"]
+    plan = next(c for c in cases if c["case_id"] == "h1_tote")["plan"]["plan"]
+    keys = (
+        "title",
+        "description",
+        "objects",
+        "steps",
+        "assumptions",
+        "clarifications",
+        "unsupported",
+        "refusal",
+    )
+    return task_spec_from_tool_args({k: plan[k] for k in keys}, source="recorded")
+
+
+def test_a_two_finger_gripper_tilts_and_pinches_a_lid_lip() -> None:
+    """Wrist pitch: a parallel gripper whose opening fits the lip tilts its wrist (the pitch axis
+    along the hinge, the tool pointing at the hinge), comes in from the front under the overhang,
+    pinches the lip and carries it along the arc, yielding along the tool axis. The frozen H1 lid
+    (6 mm thick, a 20 mm lip over its tote, at least 95 deg within 20 N) opens with the 110 mm servo
+    gripper, which has no sideways hook, on all 8 conditions of the hero grid, deterministically
+    (two in-process runs and a spawned worker give the same trajectory)."""
+    from rtt.studio.runner import condition_grid
+    from rtt.studio.search import default_candidates, sub_task
+
+    full = _h1_task()
+    spec = sub_task(full, ("open_lid",))
+    servo = next(c.spec for c in default_candidates() if c.spec.model == "gripper-2f-servo-110")
+    conds = condition_grid(full, 8)
+    jobs = [StudioJob(Setup.single(servo, spec.step_ids), spec, c) for c in conds]
+    runs = run_task_jobs(jobs, workers=4)
+    # deterministic: two in-process runs give the spawned worker's trajectory
+    assert run_task(jobs[0]).traj_sha == run_task(jobs[0]).traj_sha == runs[0].traj_sha
+    for c, r in zip(conds, runs, strict=True):
+        out = r.steps[0]
+        assert out.success, (c.condition_id, out.failure_mode, dict(out.quantities))
+        assert out.quantities["angle_deg"] >= 95.0 and out.quantities["force_n"] <= 20.0, c.condition_id
+        assert out.quantities["penetration_mm"] <= HELD_PENETRATION_MAX_MM, c.condition_id
 
 
 def test_a_door_pulled_by_its_handle_stays_within_1_mm_of_penetration() -> None:
@@ -1001,6 +1080,109 @@ def test_a_push_meets_its_force_goal_and_its_observed_travel_goal() -> None:
     assert r.completed, [(s.step_id, s.failure_mode, dict(s.quantities)) for s in r.steps]
 
 
+def test_a_push_that_loses_travel_to_its_fist_goes_on_until_the_drawer_is_shut() -> None:
+    """The drawer of the S2d test on seed 3. The adaptive gripper's fist (both tendons at
+    their limit, the tips pressed together) has no lateral stiffness: on contact it swings and uses
+    up most of the push's 18 mm ``over``, so the push let go with the drawer 37.8 mm open. A push to
+    an observed-state criterion now goes on past ``over`` while the state is unmet and the force is
+    under the limit (:data:`~rtt.studio.primitives.push.PUSH_ON_MAX` at most, within its budget)."""
+    from rtt.studio.primitives.push import PUSH_ON_MAX
+
+    drawer = ObjectInstance.of("dr", "drawer", "Drawer", ObjectPose(0.0, 120.0, 0.0))
+    steps = (
+        Step.of(
+            "open",
+            "hook_pull",
+            "dr",
+            "handle",
+            "Pull the drawer open",
+            [SuccessCriterion("travel_mm", at_least=120), SuccessCriterion("slip_mm", at_most=15)],
+        ),
+        Step.of(
+            "close",
+            "push",
+            "dr",
+            "drawer",
+            "Push the drawer shut",
+            [SuccessCriterion("travel_mm", at_most=5)],
+            constraints=StepConstraints(max_force_n=40),
+        ),
+    )
+    spec = TaskSpec("drawer shut", "", (drawer,), steps, source="test")
+    r = run_task(job(spec, ("catalog_gripper", "adaptive-2f", "pinch"), seed=3))
+    assert r.completed, [(s.step_id, s.failure_mode, dict(s.quantities)) for s in r.steps]
+    q = r.steps[1].quantities
+    assert q["travel_mm"] <= 5.0 and q["force_n"] <= 40.0 and q["penetration_mm"] <= 1.0, dict(q)
+    assert PUSH_ON_MAX == pytest.approx(0.060)
+
+
+def test_a_held_part_stays_held_through_a_step_that_is_not_tried() -> None:
+    """A step that is not tried holds still for 0.2 s. Its tool used to open,
+    dropping what the previous step holds (``hold_after``). A frame lifts a panel at (0, -300 mm)
+    and holds it; the next step starts its clamp, 462.5 mm out, which is refused as out of reach.
+    The panel stays up: the idle tool keeps holding what the previous step holds."""
+    from rtt.studio.runner import run_segments
+    from rtt.studio.search import default_candidates
+
+    lift = Step.of(
+        "lift",
+        "suction",
+        "panel",
+        "panel",
+        "Lift the panel and hold it",
+        [SuccessCriterion("lift_mm", at_least=25.0)],
+        params={"lift_mm": 60.0, "hold_s": 0.5},
+        hold_after=True,
+    )
+    start = Step.of(
+        "start", "insert", "panel", "member", "Start the clamp", [SuccessCriterion("depth_mm", at_least=3.5)]
+    )
+    panel = ObjectInstance.of("panel", "panel_rail", "Solar panel on its rails", ObjectPose(0.0, -300.0, 0.0))
+    spec = TaskSpec("held", "", (panel,), (lift, start), source="test")
+    frame = next(c.spec for c in default_candidates() if c.spec.model == "vacuum-frame-2x3-600")
+    setup = Setup.single(frame, spec.step_ids)
+    r, state = run_segments(setup, spec, StudioCondition("nominal", 0))
+    held, refused = r.steps
+    assert held.success and held.quantities["lift_mm"] >= 25.0, (held.failure_mode, dict(held.quantities))
+    assert refused.failure_mode == "out_of_reach" and refused.duration_s <= 0.25
+    free = next(name for name in state.qpos if name.endswith("free"))
+    rest_z = 0.0575  # m: the panel's free joint at rest on its rails
+    assert state.qpos[free][2] >= rest_z + 0.025, state.qpos[free]  # still up after the 0.2 s
+
+
+def test_the_reach_helpers_live_in_common_and_keep_their_margin() -> None:
+    """One ``out_of_reach`` for every primitive, in :mod:`~rtt.studio.primitives._common`:
+    a pose is out of reach past the palm's +-350 mm travel less a margin (5 mm by default; the lid
+    pinch and hook keep 12 mm)."""
+    from rtt.studio.primitives import _common, insert, twist
+    from rtt.studio.primitives.hook_pull import PINCH_REACH_MARGIN
+
+    assert twist.reach_problem is _common.reach_problem and insert.reach_problem is _common.reach_problem
+    assert _common.REACH_MARGIN == pytest.approx(0.005)
+    pose = np.array([0.0, 0.341, 0.4, 0.0, 0.0, 0.0])
+    assert _common.reach_problem(pose) is None
+    far = _common.reach_problem(pose, margin=PINCH_REACH_MARGIN)
+    assert far is not None and far["reach_y_mm"] == pytest.approx(341.0) and far["palm_limit_mm"] == 350.0
+
+
+def test_a_retreat_stops_at_the_palms_travel_and_is_whole_inside_it() -> None:
+    """A hook pull's retreat is never refused: it is cut where the palm meets its travel less the
+    margin, and left whole (the same float, so an in-reach run is unchanged) everywhere else."""
+    from rtt.studio.primitives._common import REACH_MARGIN
+    from rtt.studio.primitives.hook_pull import RETRACT_OUT, _retreat_within
+
+    out = np.array([-1.0, 0.0, 0.0])
+    near = np.array([-0.2, 0.1, 0.3, 0.0, 0.0, 0.0])
+    assert _retreat_within(near, out, RETRACT_OUT, REACH_MARGIN) == RETRACT_OUT
+    edge = np.array([-0.3152, 0.0123, 0.3, 0.0, 0.0, 0.0])  # the hotel door's pull end
+    assert _retreat_within(edge, out, RETRACT_OUT, REACH_MARGIN) == pytest.approx(0.0298)
+    slant = np.array([0.6, -0.8, 0.0])
+    corner = np.array([0.33, -0.33, 0.3, 0.0, 0.0, 0.0])
+    assert _retreat_within(corner, slant, RETRACT_OUT, REACH_MARGIN) == pytest.approx(0.015 / 0.8)
+    beyond = np.array([0.35, 0.0, 0.3, 0.0, 0.0, 0.0])
+    assert _retreat_within(beyond, np.array([1.0, 0.0, 0.0]), RETRACT_OUT, REACH_MARGIN) == 0.0
+
+
 # --------------------------------------------------------------------------- S2e: a push's approach
 
 
@@ -1046,3 +1228,330 @@ def test_a_lid_opened_past_vertical_is_pushed_shut_within_the_step_force_limit()
         out = r.steps[0]
         assert out.success, (tool.model, out.failure_mode, dict(out.quantities))
         assert out.quantities["force_n"] <= 40.0 and out.quantities["angle_deg"] <= 3.0
+
+
+# --------------------------------------------------------------------------- S2f: set down, close gently
+
+
+def _gap_below_mm(model: object, data: object, body: int, skip: np.ndarray) -> float:
+    """How far (mm) a part's lowest point is above what it rests on or will land on: the highest
+    top of the colliding geoms (not the part's, not ``skip``) whose boxes overlap the part's in x
+    and y and do not reach more than 2 mm above its bottom (true state, the test's own reading)."""
+    m, d = model, data
+
+    def box(g: int) -> tuple[np.ndarray, np.ndarray]:
+        c = d.geom_xpos[g] + d.geom_xmat[g].reshape(3, 3) @ m.geom_aabb[g][:3]  # type: ignore[attr-defined]
+        e = np.abs(d.geom_xmat[g].reshape(3, 3)) @ m.geom_aabb[g][3:]  # type: ignore[attr-defined]
+        return c - e, c + e
+
+    own = np.flatnonzero(m.geom_bodyid == body)  # type: ignore[attr-defined]
+    lo = np.min([box(int(g))[0] for g in own], axis=0)
+    hi = np.max([box(int(g))[1] for g in own], axis=0)
+    live = np.flatnonzero((m.geom_contype != 0) | (m.geom_conaffinity != 0))  # type: ignore[attr-defined]
+    top = -np.inf
+    for g in live:
+        if g in own or g in skip:
+            continue
+        a, b = box(int(g))
+        if a[0] < hi[0] and b[0] > lo[0] and a[1] < hi[1] and b[1] > lo[1] and b[2] <= lo[2] + 0.002:
+            top = max(top, float(b[2]))
+    return 1000.0 * (float(lo[2]) - top)
+
+
+#: step id -> the part's gap above its support at the release (mm), filled by :class:`_ReleaseWatch`
+RELEASES: dict[str, float] = {}
+
+
+def _release_watch(kind: PrimitiveKind) -> object:
+    from dataclasses import dataclass
+
+    from rtt.studio.primitives._common import schedule, tool_geoms
+    from rtt.studio.primitives._pick import PickPredicate, pick_body
+
+    @dataclass(frozen=True)
+    class _ReleaseWatch(PickPredicate):
+        """The pick predicate, also reading the part's gap above its support when it is let go."""
+
+        def observe(self, t, ctx, model, data, acc) -> None:  # type: ignore[no-untyped-def]
+            super().observe(t, ctx, model, data, acc)
+            rel = schedule(ctx).released
+            if not np.isnan(rel) and t >= rel and ctx.step.id not in RELEASES:
+                RELEASES[ctx.step.id] = _gap_below_mm(model, data, pick_body(ctx), tool_geoms(ctx.scene))
+
+    return _ReleaseWatch(kind, name=f"studio_{kind.value}")
+
+
+@pytest.mark.parametrize("name", ["grasp", "suction", "wrap"])
+def test_a_placed_part_is_released_within_20_mm_of_its_support(name: str) -> None:
+    """Every acquire primitive sets its part down before it lets go: at the release the part's
+    lowest point is at most RELEASE_HEIGHT_MAX_MM above what it rests on (the bin floor for grasp
+    and suction, the table it was lifted from for wrap). The 600 g suction item used to be let go
+    145 mm above the tote floor: the cup's lip, pressing the item away from the cup while the
+    vacuum holds it, read as "landed" to the old guard, which never lowered it."""
+    from rtt.studio.plan import override_primitive
+    from rtt.studio.primitives._common import RELEASE_HEIGHT_MAX_MM
+    from rtt.studio.primitives._pick import PickController
+
+    spec, ref, _, _ = GATE[name]
+    kind = PrimitiveKind(name)
+    RELEASES.clear()
+    with override_primitive(PickController(kind, name=f"studio_{name}"), _release_watch(kind)):  # type: ignore[arg-type]
+        out = run_task(job(spec, ref)).steps[0]
+    gap = RELEASES[spec.steps[0].id]
+    assert -1.0 <= gap <= RELEASE_HEIGHT_MAX_MM, (name, gap)
+    assert out.success, (name, out.failure_mode, dict(out.quantities))
+    assert out.quantities["penetration_mm"] <= HELD_PENETRATION_MAX_MM, (name, dict(out.quantities))
+
+
+def test_a_lid_pushed_shut_is_not_dropped() -> None:
+    """A push that closes a lid open past vertical used to push it over to 80 deg and let it fall
+    (the frozen H1 tote lid met its stop at 340 to 400 deg/s, with a 6 to 10 ms penetration
+    transient on the tote's rim). A two-finger gripper now pinches the lid's lip, which overhangs
+    the tote, carries it down its arc and lets go only once it is shut, so it meets its stop under
+    30 deg/s (the push's own ``lid_release_deg`` and ``lid_stop_dps``, sampled every physics step)
+    and the step carries no fall caveat; on all 8 conditions of the hero grid, within 20 N."""
+    from rtt.studio.primitives.push import LID_STOP_DPS_MAX
+    from rtt.studio.runner import condition_grid
+    from rtt.studio.search import default_candidates, sub_task
+
+    full = _h1_task()
+    spec = sub_task(full, ("open_lid", "close_lid"))
+    servo = next(c.spec for c in default_candidates() if c.spec.model == "gripper-2f-servo-110")
+    jobs = [StudioJob(Setup.single(servo, spec.step_ids), spec, c) for c in condition_grid(full, 8)]
+    for r in run_task_jobs(jobs, workers=4):
+        assert r.completed, [(s.step_id, s.failure_mode, dict(s.quantities)) for s in r.steps]
+        close = r.steps[1]
+        q = close.quantities
+        assert q["lid_release_deg"] <= 1.0 and q["lid_stop_dps"] < LID_STOP_DPS_MAX, dict(q)
+        assert not [c for c in close.caveats if "fell shut" in c], close.caveats
+        assert q["force_n"] <= 20.0 and q["angle_deg"] <= 5.0, dict(q)
+        assert q["penetration_mm"] <= HELD_PENETRATION_MAX_MM, dict(q)
+
+
+def _s2e_lid(
+    y_mm: float,
+    *,
+    depth_mm: float = 200.0,
+    box: bool = False,
+    feature: str = "handle",
+    feature_mm: float = 15.0,
+) -> TaskSpec:
+    """A lid to push shut (at most 3 deg, 40 N); ``box``: a default bin under it, flush with its
+    edge (the S2e lid with ``feature="handle"`` and no box)."""
+    lid = ObjectInstance.of(
+        "lid",
+        "hinged_lid",
+        "Lid",
+        ObjectPose(0.0, y_mm, 0.0),
+        depth_mm=depth_mm,
+        feature=feature,
+        feature_mm=feature_mm,
+    )
+    objs = (ObjectInstance.of("bin", "bin", "Bin", ObjectPose(0.0, y_mm, 0.0)), lid) if box else (lid,)
+    close = Step.of(
+        "close",
+        "push",
+        "lid",
+        "lid",
+        "Push the lid shut",
+        [SuccessCriterion("angle_deg", at_most=3)],
+        constraints=StepConstraints(max_force_n=40),
+    )
+    return TaskSpec("lid shut", "", objs, (close,), source="test")
+
+
+def _close(spec: TaskSpec, tool: EffectorSpec) -> tuple[object, list[str]]:
+    """Push the lid of ``spec`` shut with ``tool`` from its 110 deg stop: the step's outcome and the
+    push plan's notes."""
+    import math
+
+    from rtt.sim.task import default_task_v2
+    from rtt.studio.episode import WorldState
+    from rtt.studio.primitives.push import PushController
+    from rtt.studio.runner import run_segments
+    from rtt.studio.scene import build_studio_scene
+
+    setup = Setup.single(tool, spec.step_ids)
+    scene = build_studio_scene(setup, spec, 0, task=default_task_v2())
+    hinge = scene.objects["lid"].handles.joints["hinge"]
+    state = WorldState({hinge: (math.radians(110.0),)}, 0.0)
+    notes: list[str] = []
+    plan = PushController.plan
+
+    def spy(self: PushController, ctx: object, model: object, data: object) -> object:
+        out = plan(self, ctx, model, data)  # type: ignore[arg-type]
+        notes.append(out.note)
+        return out
+
+    with pytest.MonkeyPatch.context() as mp:
+        mp.setattr(PushController, "plan", spy)
+        r, _ = run_segments(setup, spec, StudioCondition("seed0", 0), initial=state)
+    return r.steps[0], notes
+
+
+def test_a_lid_that_falls_shut_is_flagged_on_its_step() -> None:
+    """A lid the tool cannot hold (a cup pushes it over from behind) falls onto its
+    stop. That is not a failure (a lid with a catch snaps shut), but the step says so: its
+    ``lid_release_deg`` (where it fell from) and ``lid_stop_dps`` (sampled every physics step: a
+    fall crosses its last 2 deg in about 5 ms) and a plain caveat on the outcome."""
+    from rtt.studio.primitives.push import LID_STOP_DPS_MAX
+
+    out, notes = _close(_s2e_lid(120.0), preset("suction", "cup-25mm"))
+    q = out.quantities  # type: ignore[attr-defined]
+    assert out.success, (out.failure_mode, dict(q))  # type: ignore[attr-defined]
+    assert q["lid_release_deg"] > 80.0 and q["lid_stop_dps"] > LID_STOP_DPS_MAX, dict(q)
+    fell = [c for c in out.caveats if "The lid fell shut from" in c]  # type: ignore[attr-defined]
+    assert fell and "deg/s" in fell[0], out.caveats  # type: ignore[attr-defined]
+    assert "pushed over, not carried shut: the tool cannot hold it" in notes[-1], notes
+
+
+def test_a_carry_the_palm_cannot_follow_is_not_taken() -> None:
+    """At the lid's stop the palm sits the tool's length beyond its free edge, so a
+    deep lid at the front of the table took it past its 350 mm travel mid-carry (a 360 mm lid at
+    y = -80 mm: the palm stopped and the turn back reopened the lid to 31 deg). The carry is checked
+    along its whole path, in the controller and in the search's tilted poses alike: such a lid is
+    pushed over (and falls, flagged), and the search sees no tilted pose for it; the H1 lid, whose
+    carry stays in reach, is carried, and the search checks that arc."""
+    import math
+
+    import mujoco
+
+    from rtt.sim.task import default_task_v2
+    from rtt.studio.scene import build_studio_scene
+    from rtt.studio.search import default_candidates, sub_task, tilted_poses
+
+    servo = next(c.spec for c in default_candidates() if c.spec.model == "gripper-2f-servo-110")
+    deep = _s2e_lid(-80.0, depth_mm=360.0, feature="lip")
+    out, notes = _close(deep, servo)
+    assert out.success and out.quantities["angle_deg"] <= 3.0, dict(out.quantities)  # type: ignore[attr-defined]
+    assert "not carried shut: the carry would take the palm" in notes[-1], notes
+    assert [c for c in out.caveats if "The lid fell shut from" in c], out.caveats  # type: ignore[attr-defined]
+    task = default_task_v2()
+    for spec, carried in ((deep, False), (sub_task(_h1_task(), ("open_lid", "close_lid")), True)):
+        setup = Setup.single(servo, spec.step_ids)
+        scene = build_studio_scene(setup, spec, 0, task=task)
+        data = mujoco.MjData(scene.model)
+        mujoco.mj_kinematics(scene.model, data)
+        step = next(st for st in spec.steps if st.primitive is PrimitiveKind.PUSH)
+        poses = tilted_poses(setup, step, 0, scene, data, task, scene.active.tcp_wrist)
+        assert bool(poses) is carried, spec.title
+        if carried:  # from the lid's stop (110 deg: pitch -20) to shut (pitch 90)
+            pitches = [math.degrees(p) for _, _, _, p in poses]
+            assert min(pitches) == pytest.approx(-20.0, abs=0.5) and max(pitches) == pytest.approx(90.0)
+
+
+def test_a_lid_flush_with_its_box_is_let_go_above_the_wall_and_flagged() -> None:
+    """A lid flush with its box leaves no room under its free edge, so the finger
+    under the edge used to be carried onto the box's wall (12 to 37 N on it) before the lid was let
+    go. The hold is now sized from what lies under the lid: nothing of the edge clears the wall here
+    and the bar handle is too close to the face for these fingers, so the lid is carried down to
+    just above where a finger would meet the wall, let go there and flagged when it falls the rest
+    (the plan says so); the finger never presses on the wall."""
+    out, notes = _close(_s2e_lid(0.0, box=True), preset("catalog_gripper", "adaptive-2f", "pinch"))
+    q = out.quantities  # type: ignore[attr-defined]
+    assert out.success and q["angle_deg"] <= 3.0, (out.failure_mode, dict(q))  # type: ignore[attr-defined]
+    assert "where a finger would meet what lies under it" in notes[-1], notes
+    assert 0.0 < q["lid_release_deg"] <= 15.0, dict(q)
+    assert [c for c in out.caveats if "The lid fell shut from" in c], out.caveats  # type: ignore[attr-defined]
+    assert q["force_n"] <= 10.0 and q["penetration_ms"] <= PENETRATION_TRANSIENT_MS, dict(q)
+
+
+def test_a_part_stopped_on_a_bin_rim_is_not_dropped() -> None:
+    """The set-down stops when the wrist feels a support take the load, which a
+    tool landing on a bin's rim also does. A 110 x 80 mm box into a 130 x 100 mm bin stopped 96 mm
+    above the floor and was let go there (it fell 98 mm at 1.3 m/s, scored a success). Before it
+    opens, the controller now compares where the part is (its observed site) with where it was to
+    be set down: more than RELEASE_HEIGHT_MAX_MM above it, it is not let go, and the step fails
+    with a plain reason."""
+    from rtt.studio.primitives._common import RELEASE_HEIGHT_MAX_MM
+    from rtt.studio.search import default_candidates
+
+    box = ObjectInstance.of(
+        "box",
+        "part",
+        "Box",
+        ObjectPose(-80.0, -100.0, 0.0),
+        size_x_mm=110,
+        size_y_mm=80,
+        size_z_mm=40,
+        mass_g=300,
+    )
+    tight = ObjectInstance.of(
+        "tote", "bin", "Tote", ObjectPose(0.0, 150.0, 0.0), length_mm=130, width_mm=100, height_mm=100
+    )
+    step = Step.of(
+        "pick",
+        "grasp",
+        "box",
+        "part",
+        "Box into the tight bin",
+        [SuccessCriterion("in_target", at_least=1)],
+        target="tote",
+        params={"lift_mm": 150, "hold_s": 1.0},
+    )
+    spec = TaskSpec("tight bin", "", (box, tight), (step,), source="test")
+    servo = next(c.spec for c in default_candidates() if c.spec.model == "gripper-2f-servo-110")
+    out = run_task(StudioJob(Setup.single(servo, spec.step_ids), spec, StudioCondition("seed0", 0))).steps[0]
+    assert not out.success and out.failure_mode == "criterion_not_met", (
+        out.failure_mode,
+        dict(out.quantities),
+    )
+    assert out.quantities["held_high_mm"] > RELEASE_HEIGHT_MAX_MM
+    assert [c for c in out.caveats if "it was not let go, since releasing it would drop it" in c], out.caveats
+    assert out.quantities["penetration_ms"] <= PENETRATION_TRANSIENT_MS
+
+
+def test_a_flush_lid_with_room_under_its_bar_is_carried_by_the_bar() -> None:
+    """Where the fingers fit between a bar handle and the face (here a 50 mm
+    clearance), the gripper pinches the bar and rides above the lid, so a lid flush with its box
+    is carried all the way to its stop: no fall, no caveat."""
+    from rtt.studio.primitives.push import LID_STOP_DPS_MAX
+
+    spec = _s2e_lid(0.0, box=True, feature_mm=50.0)
+    out, notes = _close(spec, preset("catalog_gripper", "adaptive-2f", "pinch"))
+    q = out.quantities  # type: ignore[attr-defined]
+    assert out.success and q["angle_deg"] <= 3.0, (out.failure_mode, dict(q))  # type: ignore[attr-defined]
+    assert "pinch the bar handle" in notes[-1] and "carry the lid to its stop" in notes[-1], notes
+    assert q["lid_release_deg"] <= 1.0 and q["lid_stop_dps"] < LID_STOP_DPS_MAX, dict(q)
+    assert not [c for c in out.caveats if "fell shut" in c], out.caveats  # type: ignore[attr-defined]
+
+
+def test_a_heavy_part_on_a_cup_is_released_resting() -> None:
+    """A guard that holds the descent back for a moment lets it go on once the
+    load is off again. Ending the set-down on the first trip let a 4 kg item on a 40 mm cup go
+    about 9 mm up (it fell 9.6 mm at 0.36 m/s); it is let go resting on the tote floor."""
+    from rtt.studio.plan import override_primitive
+    from rtt.studio.primitives._pick import PickController
+    from rtt.studio.search import default_candidates
+
+    flat = ObjectInstance.of(
+        "flat",
+        "part",
+        "Heavy flat item",
+        ObjectPose(80.0, -100.0, 0.0),
+        size_x_mm=150,
+        size_y_mm=120,
+        size_z_mm=20,
+        mass_g=4000,
+    )
+    step = Step.of(
+        "pick",
+        "suction",
+        "flat",
+        "part",
+        "Heavy item into the tote",
+        [SuccessCriterion("in_target", at_least=1)],
+        target="tote",
+        params={"lift_mm": 150, "hold_s": 1.0},
+    )
+    spec = TaskSpec("heavy cup", "", (flat, TOTE), (step,), source="test")
+    cup = next(c.spec for c in default_candidates() if c.spec.model == "cup-40mm")
+    kind = PrimitiveKind.SUCTION
+    RELEASES.clear()
+    with override_primitive(PickController(kind, name="studio_suction"), _release_watch(kind)):  # type: ignore[arg-type]
+        out = run_task(StudioJob(Setup.single(cup, spec.step_ids), spec, StudioCondition("seed0", 0))).steps[
+            0
+        ]
+    assert out.success, (out.failure_mode, dict(out.quantities))
+    assert -1.0 <= RELEASES["pick"] <= 1.0, RELEASES
+    assert out.quantities["penetration_mm"] <= HELD_PENETRATION_MAX_MM

@@ -29,6 +29,7 @@ Contract version: `rtt-effectors/1`. Code: `src/rtt/effectors/`. Contract tests:
 10. [Fidelity caveats](#10-fidelity-caveats)
 11. [Build plan: four parallel tracks](#11-build-plan-four-parallel-tracks)
 12. [Risks](#12-risks)
+13. [Studio v2: vacuum area frames and process tools](#13-studio-v2-vacuum-area-frames-and-process-tools)
 
 ## 1. What is frozen, what is new
 
@@ -82,6 +83,7 @@ run_native_episode: frozen controller phases,│
 | `soft_arm` | `rtt.effectors.soft_arm` | `approximation` | `wrap` | wrap (`no_wrap`) | nominal episode | B2 |
 | `suction` | `rtt.effectors.suction` | `approximation` | `seal` | seal (`no_seal`) | nominal episode | B2 |
 | `designed` | `rtt.effectors.designed` | `rigid` | `power`, `pinch` | contacts | nominal episode | B3 |
+| `process_tool` | `rtt.effectors.process_tool` | `approximation` | `drive` (nut runner), `press` (tamper pad) | socket on the member's flats, pad on the part (`few_contacts`) | nominal episode | Studio v2 (section 13) |
 
 A family module registers itself on import (`register_family(Impl())`). `get_family`
 imports `rtt.effectors.<family value>` on first use, so a spawned worker finds every
@@ -100,7 +102,8 @@ One concrete effector (`rtt.effectors.types.EffectorSpec`):
 * `effector_id`: sha256 of the canonical form (everything but the display name).
 * `group`: the tournament budget group, from origin then family (`reference`, `catalog`,
   `soft_arm`, `suction`, `designed` for every Nemotron recipe whatever builds it, `random`
-  for the equal-budget random control).
+  for the equal-budget random control; `process` for the Studio's process tools, which are
+  never in the per-part tournament).
 * Specs pickle (worker processes) and their params cannot be mutated.
 
 ### 2.3 Building into the shared scene
@@ -164,9 +167,10 @@ Every effector runs at its own documented limits, and every limit is printed on 
 |---|---|
 | parallel jaw | 50 N grip on the mean-closure tendon (25 N per jaw), as frozen |
 | catalog hands and grippers | the upstream model's own actuator gains and `forcerange`, unmodified (changes would be listed in `SOURCE.json`) |
-| suction | vacuum 60 kPa maximum (a typical single-stage ejector); holding force = vacuum x lip area |
+| suction | vacuum 60 kPa maximum (a typical single-stage ejector); holding force = vacuum x lip area (a vacuum area frame: the sum of its sealed cups' caps) |
 | soft arm | cable tension at most 50 N (the jaw's grip force) |
 | designed | at most 50 N total closing force across fingers and 1.5 N m per joint |
+| process tools | nut runner: a clutch at 10 N m, the most the simulator delivers (the wrist's roll is 15 N m); tamper pad: a stage that slips at 60 N |
 
 The wrist, its servos, the phase timings, the lift (150 mm), the hold (2 s) and every
 physics check are identical for all families.
@@ -513,6 +517,19 @@ These are stated on every card and in the README section that introduces the lay
   porosity, vacuum build-up time (the switch is instantaneous), lip material hysteresis,
   peel dynamics beyond the contact distribution. The lip's friction is the part's (the
   priority rule). Treat suction results as a screen, then verify on hardware.
+* **Vacuum area frame (approximation).** Several suction cups on a rigid frame, each with its own
+  seal test and its own vacuum valve (a cup that does not seal stays off). Payload = holding
+  force over a safety factor (1.5 smooth, 2.0 porous, 2.5 swivelling, all [assumed]) at 1 g. Only
+  the smooth rating is a simulated claim: the porous and swivelling ratings are arithmetic on the same
+  force, because no leak, porosity or swivel is simulated. Not modelled: a shared vacuum source and
+  its flow, the leak of an unsealed cup into the others, the frame's flex, peel across a long face,
+  foam or needle area grippers.
+* **Process tools (approximation).** A hex-socket nut runner (the wrist's roll, through a
+  torque-limiting clutch, is its spindle, at the wrist's speed; the socket's walls are stacked slices
+  so the simulator's contacts are as stiff as steel; supported in the Studio: members at least 12 mm
+  tall) and a tamper pad on a spring stage that slips at its force cap.
+  Not modelled: a spindle motor, cross-threading, pad deformation, vibration or impact compaction,
+  mortar flow. Verify on hardware.
 * **Soft arm (approximation, octopus-inspired).** A chain of rigid capsule segments with
   spring-damper joints, curled by a cable (a spatial tendon through sites) with a tension
   limit. Not modelled: continuum mechanics, material non-linearity, suckers, hydrostatic
@@ -536,8 +553,8 @@ These are stated on every card and in the README section that introduces the lay
 ### 11.1 Rules for every track
 
 * Work in your own worktree from `effectors-contracts`:
-  `git worktree add -b effectors-<track> /home/ashwith/rtt-worktrees/effectors-<track> effectors-contracts`;
-  `PYTHONPATH=<worktree>/src`; the shared venv at `/home/ashwith/robot-tool-tournament/.venv`.
+  `git worktree add -b effectors-<track> <worktrees>/effectors-<track> effectors-contracts`;
+  `PYTHONPATH=<worktree>/src`; the shared venv at `<repo>/.venv`.
 * Edit only the files you own (below). Never edit the frozen contract files, the
   PREREG-frozen code or configs, `pyproject.toml` or `uv.lock`. Never touch Nebius, never
   push. Commit with plain `git commit`, no co-author trailers.
@@ -754,6 +771,11 @@ tool 1.5 h, web 3 h).
      margin above 0; `test_scene_refuses_a_family_that_breaks_the_contract["margin"]` proves
      it. No B1 to B3 preset or random recipe used a margin, so no family changed. The
      contract version stays `rtt-effectors/1` (the record shapes are unchanged).
+  2. `process_tool` (Studio v2): `types.py` adds `EffectorFamily.PROCESS_TOOL`
+     (module `rtt.effectors.process_tool`, fidelity `approximation`) and `EntrantGroup.PROCESS`
+     (`group_of`); `tournament.GROUP_ORDER` leaves the process group out, so the per-part
+     tournament, its budgets and its lanes are unchanged. The pinned hash of `types.py` in
+     `test_contract_files_are_frozen` is updated; the contract version stays `rtt-effectors/1`.
 * **Merge gate:** on the integration branch, the full suite, ruff, the leak check and the
   six-part tournament all pass.
 
@@ -774,3 +796,123 @@ tool 1.5 h, web 3 h).
 | A track edits a contract or frozen file to get unblocked | silent drift from the experiment | `test_prereg_frozen_code_and_files_are_unchanged` and `test_contract_files_are_frozen`; the change-request path |
 | Nemotron cost or latency spikes, malformed tool calls | the designed group comes up short | forced tool call, strict schema, validators, cached replay in tests, a spend cap per part, the random control fills the group's slots |
 | Payload of mesh collision geoms in lanes | slow pages | primitive collision geoms, decimation, 20 fps, the 300 KB gate |
+
+## 13. Studio v2: vacuum area frames and process tools
+
+Product mode, not part of the pre-registered experiment. Added by Studio v2; each tool is a
+labelled approximation and says so in its card notes (`EffectorBuild.notes[0]`). Tests:
+`tests/test_effectors_process.py`. The Studio's primitives, plan, episode, scene and search are
+unchanged: a frame is picked by the pick primitive, the nut runner is turned by the twist primitive
+and the tamper is pressed by the push primitive, the same controllers every other head gets.
+
+### 13.1 Vacuum area frames (`suction`, primitive `seal`)
+
+A rigid frame (a spine along x and one cross bar per cup column) carries `cups_x x cups_y` copies
+of the suction cup (section 2) at a fixed spacing. Each cup keeps its own bellows, tilt hinges,
+seal test and adhesion actuator, so a cup that does not seal (it hangs past the part's edge, or a
+bore is under it) stays off, as the check valve of each cup of a real frame closes it. The holding
+force is the sum of the sealed cups' caps (vacuum x lip area, at most 60 kPa).
+
+**Frames are for the Studio, not the per-part tournament.** A frame is an area tool for a large flat
+part (a panel, a tile) and every v1 part is at most 0.5 m across, so the per-part tournament, its lanes
+pages and `effectors/index.json` keep the three cups: `tournament.per_part_presets(family)` leaves the
+frames out (a test pins that the suction group still holds exactly `cup-10mm`, `cup-16mm` and
+`cup-25mm`), while `get_family("suction").presets()` and the Studio's search still offer them. A plan
+reads the part's height through `rtt.effectors.heights.top_height` (the cups, the frames and the process
+tools alike): `part_height`, or the bounding box's height for a part wider than a v1 mesh object
+allows (over 0.5 m), by the size check only.
+
+The **payload** is the holding force over a safety factor by face class [assumed: common industry
+practice for the theoretical holding force of a suction cup; no public source is named, so none of the
+three factors is sourced]: 1.5 for a smooth, dense face, 2.0 for a porous, rough or oily one, 2.5 when
+the load swivels, in kilograms at 1 g. **Only the smooth rating is a simulated claim** (the tests lift
+it); no leak, porosity or swivel is simulated, so the porous and swivelling ratings are arithmetic on
+the same holding force. A frame is engaged (`GraspCriterion.engaged`) when enough cups are sealed with
+their vacuum on, else `no_seal` [assumed rule]: half of them rounded up, but at least three, and never
+more than the frame has (so every cup of a frame of two or three, three of four or six, four of eight).
+The cup counts (at most four a side), the 10 mm clearance between neighbouring cups and the 50 mm
+frame margin are [assumed], and so are the preset cup diameters: they are sized to the test arm, not
+taken from a catalogue (the arm's z servo lifts and holds about 11 kg, so a frame rated above that
+could not be shown lifting its rated payload; the 2 x 3 frame's 21 mm cups rate 8.47 kg for the 8 kg
+panel).
+
+| Preset | Cups | Spacing | Frame | Holding force | Payload smooth / porous / swivelling | Sized for |
+|---|---|---|---|---|---|---|
+| `vacuum-frame-2x2-300` | 2 x 2 of 18 mm | 200 x 200 mm | 300 mm | 61.1 N | 4.15 / 3.11 / 2.49 kg | a 300 x 300 x 10 mm tile of 2.2 kg on every face class |
+| `vacuum-frame-2x3-600` | 2 x 3 of 21 mm | 250 x 250 mm | 600 mm | 124.7 N | 8.47 / 6.36 / 5.08 kg | the 8 kg, 1000 x 600 x 35 mm solar panel on a smooth face (not swivelling: 5.1 kg) |
+
+The tests lift the rated (smooth) payload in the Studio (tile frame: a 4.15 kg slab; panel frame: an
+8.47 kg 1000 x 600 x 35 mm slab) and show that 1.6 times it does not leave the table (1.6 is above
+the safety factor 1.5, so the cups' cap is below the weight). **A control shows the failure is the
+cups and not the arm:** the same layout on bigger cups (22 mm and 25 mm) lifts the same 1.6 times
+slab by 10 mm or more (24 mm for the panel frame). The arm's z servo is 150 N and lifts and holds only
+about 11 kg on the lift and hold criteria (an 11.0 kg slab lifts 30 mm and cannot then hold 0.8 s), not
+15 kg, so a frame rated above about 7 kg cannot be shown *succeeding* at 1.6 times, and the control is
+read from the lift, not from the step's success.
+
+### 13.2 Nut runner (`process_tool`, `nut-runner-socket-13`, primitive `drive`)
+
+From the mount plane down: the drive housing; a lateral float (two short slides, 0.02 N/mm,
++-7 mm); a spindle hinge about the tool axis with its clutch; a hex socket (13 mm across flats, 0.2 mm
+clearance a flat, 12 mm deep with a 6 mm guide funnel at the mouth and a closed end). The socket
+engages a hex member by shape, so the torque it passes does not depend on friction.
+
+* **The spindle is the wrist's roll** [assumed approximation], at the wrist's speed. The Studio's twist
+  primitive turns the wrist roll (at most 180 deg/s and 15 N m, `STUDIO_WRIST`); the tool has no motor
+  and no speed of its own (it has no `spindle_speed` param: a number that only changed the card's text
+  was removed), and the twist primitive is unchanged for every tool. A tool-side spindle actuator would
+  need a twist primitive that drives a head actuator for the turn. What the tool has is a **clutch**:
+  the one actuator, a spring and damper from the housing to the socket's neutral, limited to the
+  **torque cap, 10 N m** [assumed], so it passes the roll's torque up to the cap and slips beyond (a
+  torque limiter). Rated torque = cap / 1.5 = **6.7 N m** [assumed factor].
+* **The cap is the most the simulator can deliver, and the param refuses more.** `torque_cap_nm` is
+  accepted up to 10 N m only (`TORQUE_CAP_MAX_NM`); the wrist's 15 N m is not reachable through this
+  socket. Past about 10.5 N m the hex rides up over the member's corners. A time-boxed attempt to lift
+  the cap to 15 N m (a nominal 14 N m nut, clutch at 15 N m) with tighter walls (0.05 mm clearance), more
+  slices (36, 48) and both reached 11.2 to 12.1 N m on the nominal condition and none reached 14 N m,
+  so the cap stays at 10 N m (scratch runs, not pinned by a test).
+* **The clutch lets go at the release.** The threaded-joint template lets a member lift off its
+  flank freely (it is a 1.6 g part with 0.2 N of slide friction), so a socket that held the member
+  while the wrist rose would pull it up its thread (measured: 7.7 mm of seat lost). When the close
+  ramp falls (the release) the clutch lets go, a damper on the turning rate relative to the member
+  and a spring to the middle of the socket's clearance on the member's flats stand for the funnel's
+  self-aligning action, and the socket lifts off clear. Clear of the member the same actuator keeps
+  the flats square to the tool for the next engagement.
+* **The wall is built from slices** (24 steel slices a flat) [assumed, a solver artifact]. The soft-
+  contact solver gives every contact point the stiffness of the lightest body it touches (here the
+  1.6 g member), so one solid piece per flat rides up over the member's corners at 1.6 N m. The
+  torque a hex drive passes grows with the number of contact points: in a quasi-static bench (a seated
+  nut held at 20 N m, the roll turned at 10 deg/s) 1 piece a flat passes 1.6 N m and 4, 8, 12, 24 and
+  36 slices pass 3.6, 5.8, 7.5, 11.1 and 14.0 N m; in the Studio's twist (180 deg/s, with the clutch)
+  24 slices reach about 10 N m and the hex rides up at about 10.5 N m, and 32 and 40 slices gain little
+  (11.0 and 11.4 N m). These are scratch measurements, not pinned by a test.
+* **Supported members** (13 mm hex, 12 mm socket; the test pins the two ends): a member **at least
+  12 mm tall**, as tall as the socket is deep. Shorter members are unsupported in the Studio today,
+  for two reasons. The Studio's twist and insert controllers aim the tool's tip 3 mm above the member's
+  bottom, so only the member's height less 3 mm enters the socket, and the 3 mm guide funnel takes
+  that much of it; and the torque the socket passes grows with how much of its wall is engaged (the
+  slices above). At the rated 6.7 N m: 11.5 mm and taller pass (11.5 mm with no margin); 11 mm slips at
+  6.2 N m (its limit is 5.9 N m); 10.5 mm slips at 5.3 N m; 10 mm and below jam on insert (depth under
+  0.8 mm). **A shallower socket does not help:** an 8 mm and a 6 mm socket start a 6.8 to 8 mm nut and
+  slip at 1.2 to 3.3 N m. The aim fix is a Studio controller change, assigned to the process-tool step
+  of the search work, not made here.
+* Measured in the Studio (and pinned by `tests/test_effectors_process.py`) on a 13 mm hex nut of
+  16 mm, three turns to seat (an insert step to start it, then a twist at 180 deg/s): it starts and
+  tightens to the rated 6.7 N m on 4 of 4 conditions (the nominal and three of the placement grid,
+  aim errors to 2 mm), finishing seated (depth over 7 mm of 7.75); a 12 mm member does the same; a
+  nut needing 1.6 times the rated torque (10.7 N m, above the cap) fails; an 8 mm member jams on
+  insert. A 25 mm suction cup cannot turn it. A clearance of 0.05 mm jams the socket on a member's
+  top edge under the aim error.
+
+### 13.3 Tamper pad (`process_tool`, `tamper-pad-200`, primitive `press`)
+
+The housing on the mount plane, a stage (one slide, 60 mm of travel [assumed]) and a flat 200 mm
+square, 12 mm thick pad (0.43 kg) on it. The stage's stiffness (4 N/mm), its overload force (60 N)
+and its stroke (60 mm) are all [assumed], and so is the 1.5 safety factor. The pad stays level (no
+tilt compliance: a tamper levels a tile, it does not follow it). The stage's actuator applies `min(4 N/mm x compression + damping x speed, 60 N)`
+against the compression: a spring that slips at its overload force, so the pad never presses
+harder than **60 N** within the travel (a step whose force limit lets the wrist drive past 60 mm
+past contact bottoms the stage out and the cap no longer holds). Rated press force = cap / 1.5 =
+**40 N**. Measured: a step asking 40 N (force limit 100 N) presses 41.5 N and succeeds; asking
+64 N (1.6 times rated) peaks at 60.0 N and fails.
+

@@ -1,7 +1,7 @@
 import { ProvenanceChips } from "@/components/ProvenanceChips";
 import { formatBytes, formatDuration } from "@/lib/format";
 
-import { constantValue, humanize, type HeroPage } from "./schema";
+import { constantValue, humanize, type HeroPage, laneFramesText } from "./schema";
 import { SpecTagBadge } from "./ui";
 
 type Chip = Parameters<typeof ProvenanceChips>[0]["chips"][number];
@@ -15,7 +15,7 @@ export function studioChips(page: HeroPage): Chip[] {
     key: lane.id,
     subject: "Replay",
     headline: `${lane.title}: trajectory ${short(lane.traj_sha)}`,
-    facts: [lane.condition_text, `${lane.n_frames} frames at ${lane.fps} fps`, formatBytes(lane.bytes + lane.asset_bytes)],
+    facts: [lane.condition_text, laneFramesText(lane), formatBytes(lane.bytes + lane.asset_bytes)],
     scored: true,
   }));
   chips.push({

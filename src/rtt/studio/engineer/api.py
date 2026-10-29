@@ -51,7 +51,7 @@ from rtt.studio.engineer.engineer import (
     normalise_nulls,
     plan_task,
 )
-from rtt.studio.engineer.gate import RECORDED_GATE
+from rtt.studio.engineer.gate import RECORDED_GATE, replay_plan
 from rtt.studio.engineer.uploads import UploadInfo, UploadRegistry, install_upload_resolver
 
 if TYPE_CHECKING:
@@ -132,9 +132,8 @@ def studio_router(
             ) from None
 
     def recorded(text: str) -> PlanResult | None:
-        client = make_engineer_client(cfg.recorded, cache_mode="replay")
         try:
-            return plan_task(text, client=client)
+            return replay_plan(text, cfg.recorded)
         except CacheMiss:
             return None
 

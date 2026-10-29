@@ -6,10 +6,13 @@ Usage::
     python -m rtt.studio.engineer plan --case h1_tote            # a gate case, replayed
     python -m rtt.studio.engineer plan --text "..." --live --env-file PATH/.env --budget 0.05
     python -m rtt.studio.engineer gate --out DIR [--live --env-file PATH/.env --budget 0.50]
+    python -m rtt.studio.engineer gate --out DIR --recorded src/rtt/studio/engineer/recorded/gate-2026-10-18-s4e
     python -m rtt.studio.engineer export-web [--recorded DIR] [--out web/components/studio/intake]
 
-Without ``--live`` every call is replayed from a cache (by default the recorded gate run), with
-zero API calls and no key; a description that is not in the cache stops with a message.
+Without ``--live`` every call is replayed from a cache (by default the recorded Studio v2 gate
+run), with zero API calls and no key; a description that is not in the cache stops with a
+message. ``gate --recorded DIR`` replays any recorded gate run from its recorded responses (the
+v1 run, whose prompt the current code no longer renders: ``rtt.studio.engineer.gate``).
 ``--live`` calls Token Factory under a hard cap on everything recorded in the run's ledger
 (``--budget``), reading ``NEBIUS_API_KEY`` from ``--env-file`` (never printed).
 """
@@ -28,6 +31,7 @@ from rtt.llm.cache import CacheMiss
 from rtt.llm.client import BudgetExceededError, LLMAuthError, LLMBillingError
 from rtt.llm.ledger import Ledger, read_ledger
 from rtt.search.nemotron import PromptLeakError
+from rtt.studio.engineer import prompts
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 DEFAULT_RUNS = REPO_ROOT / "runs" / "studio"
@@ -80,7 +84,7 @@ def _print_plan(result: Any) -> None:
 def cmd_plan(args: argparse.Namespace) -> int:
     from rtt.studio.engineer.engineer import plan_task
     from rtt.studio.engineer.examples import GATE_CASES
-    from rtt.studio.engineer.gate import RECORDED_GATE
+    from rtt.studio.engineer.gate import RECORDED_GATE, replay_plan
     from rtt.studio.engineer.uploads import UploadRegistry, install_upload_resolver
 
     if (args.text is None) == (args.case is None):
@@ -100,9 +104,12 @@ def cmd_plan(args: argparse.Namespace) -> int:
         uploads.append(info)
     cache_dir = args.cache or (DEFAULT_RUNS / "engineer" / "cache" if args.live else RECORDED_GATE / "cache")
     ledger_path = args.ledger or DEFAULT_RUNS / "engineer" / "ledger.jsonl"
-    client = _client(args, cache_dir, ledger_path if args.live else None)
     try:
-        result = plan_task(text, client=client, uploads=uploads, compact=args.compact_tool)
+        if args.live:
+            client = _client(args, cache_dir, ledger_path)
+            result = plan_task(text, client=client, uploads=uploads, compact=args.compact_tool)
+        else:  # a recorded description, with the prompt it was recorded on
+            result = replay_plan(text, cache_dir, uploads, compact=args.compact_tool)
     except CacheMiss:
         print(
             "this description is not in the replay cache; run with --live (spends) or pick a --case",
@@ -124,19 +131,40 @@ def cmd_plan(args: argparse.Namespace) -> int:
 
 
 def cmd_gate(args: argparse.Namespace) -> int:
-    from rtt.studio.engineer.examples import GATE_CASES
-    from rtt.studio.engineer.gate import RECORDED_GATE, gate_manifest, run_gate
+    from rtt.studio.engineer import prompts
+    from rtt.studio.engineer.examples import GATE_CASES, V1_GATE_CASES
+    from rtt.studio.engineer.gate import (
+        RECORDED_GATE,
+        gate_manifest,
+        recorded_version,
+        recorded_versions,
+        replay_recorded,
+        run_gate,
+    )
 
     out: Path = args.out
-    cases = GATE_CASES
-    if args.cases:
-        wanted = args.cases.split(",")
-        cases = tuple(c for c in GATE_CASES if c.case_id in wanted)
+    version = args.prompt_version or prompts.CURRENT
+    # a replay of the packaged v2 run answers each case with the prompt it was recorded on
+    versions = (
+        recorded_versions(RECORDED_GATE)
+        if args.prompt_version is None and not args.live and args.cache is None
+        else None
+    )
+    wanted = args.cases.split(",") if args.cases else None
+    cases = tuple(
+        c for c in (V1_GATE_CASES if version == "v1" else GATE_CASES) if wanted is None or c.case_id in wanted
+    )
+    if args.recorded is not None and args.live:
+        raise SystemExit("--recorded replays a recorded run; it does not go with --live")
     cache_dir = out / "cache" if args.live else (args.cache or RECORDED_GATE / "cache")
     out.mkdir(parents=True, exist_ok=True)
-    client = _client(args, cache_dir, out / "ledger.jsonl" if args.live else None)
     try:
-        results = run_gate(client, cases, compact=args.compact_tool)
+        if args.recorded is not None:
+            version = recorded_version(args.recorded)
+            results = [r for r in replay_recorded(args.recorded) if wanted is None or r[0].case_id in wanted]
+        else:
+            client = _client(args, cache_dir, out / "ledger.jsonl" if args.live else None)
+            results = run_gate(client, cases, compact=args.compact_tool, version=version, versions=versions)
     except CacheMiss as exc:
         print(f"replay cache miss ({exc}); run with --live", file=sys.stderr)
         return 2
@@ -148,6 +176,8 @@ def cmd_gate(args: argparse.Namespace) -> int:
         mode="live" if args.live else "replay",
         budget_usd=args.budget if args.live else None,
         compact=args.compact_tool,
+        recorded=args.recorded if args.recorded is not None else (RECORDED_GATE if versions else None),
+        version=recorded_version(RECORDED_GATE) if versions else version,
     )
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print("| case | expect | result | calls | steps |")
@@ -203,6 +233,22 @@ def main(argv: Sequence[str] | None = None) -> int:
     g = sub.add_parser("gate", help="run the gate descriptions")
     g.add_argument("--out", type=Path, required=True)
     g.add_argument("--cases", default=None, help="comma-separated case ids (default: all)")
+    g.add_argument(
+        "--recorded",
+        type=Path,
+        default=None,
+        help="replay this recorded gate run from its recorded responses",
+    )
+    g.add_argument(
+        "--prompt-version",
+        default=None,
+        choices=prompts.VERSIONS,
+        help=(
+            f"prompt (and its rule set): {', '.join(prompts.FROZEN)} are frozen, {prompts.CURRENT} is the current "
+            "one and the default of a live run; a replay of the packaged run answers each case with its "
+            "recorded prompt (v1: pass the v1 recording's --cache)"
+        ),
+    )
     live_flags(g, 0.50)
     g.set_defaults(func=cmd_gate)
 

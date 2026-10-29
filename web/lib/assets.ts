@@ -16,6 +16,7 @@
 import type { Group, Object3D } from "three";
 
 import { BASE_PATH } from "./paths";
+import { poseBytes } from "./poses";
 import type { AssetRole, AssetSource, ReplayAsset, ReplayHeaderV2 } from "./types";
 import { Node } from "./validate";
 
@@ -247,7 +248,7 @@ export interface ReplayPayload {
  * overlay sizes follow from the header; `headerBytes` is the size of the JSON file.
  */
 export function replayPayload(header: ReplayHeaderV2, headerBytes: number): ReplayPayload {
-  const poses = header.n_frames * header.n_bodies * 7 * 4;
+  const poses = poseBytes(header);
   const overlays = header.overlays ? header.n_frames * header.overlays.channels.length * 2 : 0;
   const assets = referencedAssets(header).reduce((sum, id) => sum + (header.assets[id]?.bytes ?? 0), 0);
   return { header: headerBytes, poses, overlays, assets, total: headerBytes + poses + overlays + assets };

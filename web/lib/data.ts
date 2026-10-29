@@ -16,8 +16,7 @@ import path from "node:path";
 import { readGlb, unsupportedExtensions } from "./assets";
 import { type CertificateDoc, parseCertificateDoc } from "./certificate";
 import { parseRecordedSession, type RecordedSession, SessionError, type SessionSummary, summarizeSession } from "./session";
-import { isV2, parseAnyReplayHeader, referencedAssetFiles } from "./replay";
-import { POSE_STRIDE } from "./track.mjs";
+import { isV2, parseAnyReplayHeader, poseBytes, referencedAssetFiles } from "./replay";
 import type { Bout, BoutsIndex, Design, DesignsIndex, JobsIndex, ResultsIndex } from "./types";
 import { DataError, parseBouts, parseDesigns, parseJobs, parseResults } from "./validate";
 
@@ -54,7 +53,7 @@ export function checkReplayFiles(index: BoutsIndex, dataDir: string = DATA_DIR):
       const header = parseAnyReplayHeader(JSON.parse(readFileSync(headerFile, "utf8")), `${lane.replay}.json`);
       const binFile = path.join(path.dirname(headerFile), header.bin);
       if (!existsSync(binFile)) throw new DataError("bouts.json", where, `missing replay payload ${header.bin}`);
-      const expected = header.n_frames * header.n_bodies * POSE_STRIDE * 4;
+      const expected = poseBytes(header);
       const size = statSync(binFile).size;
       if (size !== expected) {
         throw new DataError("bouts.json", where, `${header.bin} is ${size} bytes; its header implies ${expected}`);

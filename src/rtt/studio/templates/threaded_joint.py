@@ -47,6 +47,8 @@ read within the joints' own limits (the seat stop and the helical flank).
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import ClassVar, Final
 
 import mujoco
@@ -54,10 +56,13 @@ import numpy as np
 
 from rtt.sim.scene import OBJECT_RGBA
 from rtt.studio.templates import (
+    FRAME_RGBA,
+    FRICTION_SOLIMP,
     ResolvedHandles,
     TemplateBuilder,
     TemplateContext,
     TemplateHandles,
+    quat_z,
     register_template_builder,
 )
 from rtt.studio.types import TemplateKind
@@ -66,10 +71,15 @@ __all__ = [
     "BASE_H",
     "BORE_CLEARANCE",
     "FRICTION_KP",
+    "Thread",
     "ThreadedJointBuilder",
     "add_friction_anchor",
+    "add_thread",
     "friction_anchor",
     "lead_of",
+    "ramp_torque",
+    "thread_passive",
+    "thread_state",
 ]
 
 BASE_H: Final = 0.020  # m [assumed]
@@ -80,8 +90,6 @@ HOLD_NM: Final = 0.02  # N m of dry friction always on the hinge [assumed]
 FRICTION_KP: Final = 100.0  # N m/rad: the friction anchor's torsion spring [assumed]
 FRICTION_KV: Final = 0.05  # N m s/rad: its damping (0.05 N m at a 57 deg/s turn) [assumed]
 MEMBER_CODES: Final = {"cap": 0.0, "coupling": 1.0, "nut": 2.0}
-FRAME_RGBA: Final = (0.55, 0.58, 0.62, 1.0)
-FRICTION_SOLIMP: Final = (0.999, 0.9999, 0.0001, 0.5, 2.0)  # a near-hard dry friction (no creep)
 
 
 def add_friction_anchor(spec: mujoco.MjSpec, name: str, joint: str, limit_nm: float) -> None:
@@ -120,10 +128,6 @@ def lead_of(chamfer_mm: float) -> float:
     return chamfer_mm / 1000.0 + 0.003
 
 
-def _quat_z(angle: float) -> list[float]:
-    return [math.cos(0.5 * angle), 0.0, 0.0, math.sin(0.5 * angle)]
-
-
 def _ring(n: int, r_in: float, r_out: float, z0: float, z1: float, twist: float = 0.0) -> list[np.ndarray]:
     """``n`` convex pieces of an ``n``-sided tube: inner and outer apothems ``r_in`` and ``r_out``."""
     half = math.pi / n
@@ -139,191 +143,259 @@ def _ring(n: int, r_in: float, r_out: float, z0: float, z1: float, twist: float 
     return pieces
 
 
+@dataclass(frozen=True)
+class Thread:
+    """A threaded member authored by :func:`add_thread`: its element names and its numbers."""
+
+    joints: Mapping[str, str]  # "slide", "hinge"
+    sites: Mapping[str, str]  # "member", "seat", "flat"
+    member_body: str
+    actuator: str
+    info: dict[str, float]
+
+
+def add_thread(
+    ctx: TemplateContext,
+    seat: mujoco.MjsBody,
+    q: str,
+    *,
+    member: str,
+    diameter: float,
+    length: float,
+    pitch: float,
+    engage_turns: float,
+    chamfer_mm: float,
+    start_nm: float,
+    final_nm: float,
+    base_h: float,
+    origin_z: float,
+    geoms: list[str],
+) -> Thread:
+    """Author a threaded member on ``seat`` (module docstring): the stub standing on ``base_h``
+    (m above the seat body's origin, which is ``origin_z`` in the world), the member on its slide and
+    hinge, the helical flank and the friction ramp's actuator. Every element is named ``q...``;
+    geom names are appended to ``geoms``. The ``threaded_joint`` template calls it on its base
+    plate, ``panel_rail`` for its clamp on a post."""
+    seat_travel = engage_turns * pitch
+    lead = lead_of(chamfer_mm)
+    r_out = 0.5 * diameter
+    wall = max(0.0015, 0.15 * diameter)
+    r_in = r_out - wall
+    r_stub = r_in - BORE_CLEARANCE
+    chamfer = min(chamfer_mm / 1000.0, 0.8 * r_stub)
+    z_seated = base_h + SEAT_GAP
+    z_start = z_seated + lead + seat_travel  # member bottom at the start = the stub top
+
+    def static(name: str, **kw: object) -> None:
+        seat.add_geom(name=f"{q}{name}", priority=1, rgba=list(FRAME_RGBA), **kw)
+        geoms.append(f"{q}{name}")
+
+    z_cyl = z_start - chamfer
+    static(
+        "stub",
+        type=mujoco.mjtGeom.mjGEOM_CYLINDER,
+        size=[r_stub, 0.5 * (z_cyl - base_h), 0.0],
+        pos=[0, 0, 0.5 * (z_cyl + base_h)],
+    )
+    if chamfer > 1e-5:
+        ring = [(math.cos(a), math.sin(a)) for a in np.linspace(0.0, 2.0 * math.pi, 16, endpoint=False)]
+        verts = [[r_stub * c, r_stub * s, z_cyl] for c, s in ring]
+        verts += [[(r_stub - chamfer) * c, (r_stub - chamfer) * s, z_start] for c, s in ring]
+        ctx.spec.add_mesh(name=f"{q}lead", uservert=np.ravel(verts).tolist())
+        static("lead", type=mujoco.mjtGeom.mjGEOM_MESH, meshname=f"{q}lead")
+
+    body = seat.add_body(name=f"{q}member", pos=[0.0, 0.0, z_start])
+    slide = body.add_joint(
+        name=f"{q}slide",
+        type=mujoco.mjtJoint.mjJNT_SLIDE,
+        axis=[0.0, 0.0, -1.0],
+        range=[0.0, lead + seat_travel],
+        armature=0.002,
+        damping=0.5,
+        solref_friction=list(ctx.task.physics.limit_solref),
+        solimp_friction=list(FRICTION_SOLIMP),
+        solimp_limit=list(FRICTION_SOLIMP),  # a near-hard seat
+    )
+    body.add_joint(
+        name=f"{q}hinge",
+        type=mujoco.mjtJoint.mjJNT_HINGE,
+        axis=[0.0, 0.0, -1.0],
+        limited=mujoco.mjtLimited.mjLIMITED_FALSE,
+        armature=0.0005,
+        damping=0.001,
+        frictionloss=min(HOLD_NM, start_nm),
+        solref_friction=list(ctx.task.physics.limit_solref),
+        solimp_friction=list(FRICTION_SOLIMP),
+    )
+    mass = 0.0
+    pieces: list[np.ndarray]
+    if member == "nut":
+        pieces = []
+        for k in range(6):
+            a = 2.0 * math.pi * k / 6.0
+            corner = r_out  # the hexagon's corner radius; flats at apothem r_out cos 30
+            inner = r_in / math.cos(math.pi / 6.0)
+            pts = [(inner * math.cos(b), inner * math.sin(b)) for b in (a - math.pi / 6, a + math.pi / 6)]
+            pts += [(corner * math.cos(b), corner * math.sin(b)) for b in (a - math.pi / 6, a + math.pi / 6)]
+            pieces.append(np.array([[x, y, z] for z in (0.0, length) for x, y in pts]))
+        mass = DENSITY * length * (1.5 * math.sqrt(3.0) * (r_out**2 - (r_in / math.cos(math.pi / 6)) ** 2))
+    else:
+        pieces = _ring(12, r_in, r_out, 0.0, length)
+        mass = DENSITY * length * 12 * math.tan(math.pi / 12) * (r_out**2 - r_in**2)
+    for k, verts in enumerate(pieces):
+        mesh = f"{q}piece{k:02d}"
+        ctx.spec.add_mesh(name=mesh, uservert=verts.ravel().tolist())
+        body.add_geom(
+            name=f"{q}piece{k:02d}",
+            type=mujoco.mjtGeom.mjGEOM_MESH,
+            meshname=mesh,
+            density=DENSITY,
+            priority=1,
+            rgba=list(OBJECT_RGBA),
+        )
+        geoms.append(f"{q}piece{k:02d}")
+    if member == "cap":
+        top = max(0.002, 0.15 * length)
+        body.add_geom(
+            name=f"{q}top",
+            type=mujoco.mjtGeom.mjGEOM_CYLINDER,
+            size=[r_out, 0.5 * top, 0.0],
+            pos=[0.0, 0.0, length - 0.5 * top],
+            density=DENSITY,
+            priority=1,
+            rgba=list(OBJECT_RGBA),
+        )
+        geoms.append(f"{q}top")
+        mass += DENSITY * math.pi * r_out**2 * top
+    # the slide's friction holds the member on the lead-in until it is pushed
+    slide.frictionloss = 1.5 * mass * 9.81 + 0.2
+    body.add_site(name=f"{q}member", pos=[0.0, 0.0, length], size=[0.003, 0.0, 0.0])
+    flat_r = r_out * (math.cos(math.pi / 6.0) if member == "nut" else 1.0)
+    body.add_site(name=f"{q}flat", pos=[flat_r, 0.0, 0.5 * length], size=[0.003, 0.0, 0.0])
+    seat.add_site(name=f"{q}seat", pos=[0.0, 0.0, z_start], size=[0.003, 0.0, 0.0])
+
+    tendon = ctx.spec.add_tendon(name=f"{q}flank")
+    tendon.wrap_joint(f"{q}slide", 1.0)
+    tendon.wrap_joint(f"{q}hinge", -pitch / (2.0 * math.pi))
+    tendon.limited = mujoco.mjtLimited.mjLIMITED_TRUE
+    tendon.range = [-1.0, lead]
+    tendon.solref_limit = list(ctx.task.physics.limit_solref)
+    tendon.solimp_limit = list(FRICTION_SOLIMP)  # a near-hard flank
+    ctx.spec.add_exclude(bodyname1=seat.name, bodyname2=f"{q}member")
+    add_friction_anchor(ctx.spec, f"{q}ramp", f"{q}hinge", final_nm)
+    return Thread(
+        joints={"slide": f"{q}slide", "hinge": f"{q}hinge"},
+        sites={"member": f"{q}member", "seat": f"{q}seat", "flat": f"{q}flat"},
+        member_body=f"{q}member",
+        actuator=f"{q}ramp",
+        info={
+            "member": MEMBER_CODES[member],
+            "diameter_m": diameter,
+            "length_m": length,
+            "pitch_m": pitch,
+            "lead_m": lead,
+            "seat_m": seat_travel,
+            "bore_m": r_in,
+            "stub_m": r_stub,
+            "flat_m": flat_r,
+            "start_nm": start_nm,
+            "final_nm": final_nm,
+            "hold_nm": min(HOLD_NM, start_nm),
+            "z_start": float(origin_z + z_start),
+            "base_z": float(origin_z + base_h),
+            "mass_kg": mass,
+            "period_s": float(ctx.task.controller.control_period),
+        },
+    )
+
+
+def thread_state(info: Mapping[str, float], phi: float, slide: float) -> dict[str, float]:
+    """``turns``, ``angle_deg`` and ``depth_mm`` of a threaded member (its info, hinge angle and
+    slide travel), read within the joints' own limits: the seat stop and the helical flank (whose
+    soft limit lets a member pushed onto the thread start sit a fraction of a micrometre past it)."""
+    flank = info["lead_m"] + info["pitch_m"] * phi / (2.0 * math.pi)
+    depth = min(max(slide, 0.0), info["lead_m"] + info["seat_m"], flank)
+    return {
+        "turns": phi / (2.0 * math.pi),
+        "angle_deg": math.degrees(phi),
+        "depth_mm": 1000.0 * max(depth, 0.0),
+    }
+
+
+def ramp_torque(info: Mapping[str, float], depth: float) -> float:
+    """The friction ramp's torque at slide travel ``depth`` (m): 0 on the lead-in, ``start_nm`` at the
+    thread start rising linearly to ``final_nm`` when seated (and beyond)."""
+    if depth < info["lead_m"] - 0.0003:
+        return 0.0
+    s = min(1.0, max(0.0, (depth - info["lead_m"]) / max(info["seat_m"], 1e-6)))
+    return info["start_nm"] + (info["final_nm"] - info["start_nm"]) * s
+
+
+def thread_passive(obj: ResolvedHandles, data: mujoco.MjData, info: Mapping[str, float]) -> float:
+    """The friction anchor of a threaded member's ramp for this control tick (module docstring)."""
+    depth = float(data.qpos[obj.joint_qpos["slide"]])
+    torque = 0.0  # on the lead-in: only the dry friction loss
+    if depth >= info["lead_m"] - 0.0003:
+        torque = ramp_torque(info, depth) - info["hold_nm"]
+    return friction_anchor(obj, data, "hinge", torque, info["period_s"])
+
+
 class ThreadedJointBuilder(TemplateBuilder):
     kind: ClassVar[TemplateKind] = TemplateKind.THREADED_JOINT
 
     def add(self, ctx: TemplateContext) -> TemplateHandles:
         prm, p, pose = ctx.instance.params, ctx.prefix, ctx.instance.pose
-        d, length = float(prm["diameter_mm"]) / 1000.0, float(prm["length_mm"]) / 1000.0
-        pitch = float(prm["pitch_mm"]) / 1000.0
-        seat_travel = float(prm["engage_turns"]) * pitch
-        lead = lead_of(float(prm["chamfer_mm"]))
-        member = str(prm["member"])
-        r_out = 0.5 * d
-        wall = max(0.0015, 0.15 * d)
-        r_in = r_out - wall
-        r_stub = r_in - BORE_CLEARANCE
-        chamfer = min(float(prm["chamfer_mm"]) / 1000.0, 0.8 * r_stub)
+        d = float(prm["diameter_mm"]) / 1000.0
         yaw = math.radians(pose.yaw_deg)
-        z_seated = BASE_H + SEAT_GAP
-        z_start = z_seated + lead + seat_travel  # member bottom at the start = the stub top
         side = max(1.6 * d, 0.040)
         seat = ctx.spec.worldbody.add_body(
             name=f"{p}seat",
             pos=[pose.x_mm / 1000.0, pose.y_mm / 1000.0, ctx.table_top_z],
-            quat=_quat_z(yaw),
+            quat=quat_z(yaw),
         )
         geoms: list[str] = []
-
-        def static(name: str, **kw: object) -> None:
-            seat.add_geom(name=f"{p}{name}", priority=1, rgba=list(FRAME_RGBA), **kw)
-            geoms.append(f"{p}{name}")
-
-        static(
-            "base",
+        seat.add_geom(
+            name=f"{p}base",
+            priority=1,
+            rgba=list(FRAME_RGBA),
             type=mujoco.mjtGeom.mjGEOM_BOX,
             size=[0.5 * side, 0.5 * side, 0.5 * BASE_H],
             pos=[0, 0, 0.5 * BASE_H],
         )
-        z_cyl = z_start - chamfer
-        static(
-            "stub",
-            type=mujoco.mjtGeom.mjGEOM_CYLINDER,
-            size=[r_stub, 0.5 * (z_cyl - BASE_H), 0.0],
-            pos=[0, 0, 0.5 * (z_cyl + BASE_H)],
+        geoms.append(f"{p}base")
+        thread = add_thread(
+            ctx,
+            seat,
+            p,
+            member=str(prm["member"]),
+            diameter=d,
+            length=float(prm["length_mm"]) / 1000.0,
+            pitch=float(prm["pitch_mm"]) / 1000.0,
+            engage_turns=float(prm["engage_turns"]),
+            chamfer_mm=float(prm["chamfer_mm"]),
+            start_nm=float(prm["start_torque_nm"]),
+            final_nm=float(prm["final_torque_nm"]),
+            base_h=BASE_H,
+            origin_z=ctx.table_top_z,
+            geoms=geoms,
         )
-        if chamfer > 1e-5:
-            ring = [(math.cos(a), math.sin(a)) for a in np.linspace(0.0, 2.0 * math.pi, 16, endpoint=False)]
-            verts = [[r_stub * c, r_stub * s, z_cyl] for c, s in ring]
-            verts += [[(r_stub - chamfer) * c, (r_stub - chamfer) * s, z_start] for c, s in ring]
-            ctx.spec.add_mesh(name=f"{p}lead", uservert=np.ravel(verts).tolist())
-            static("lead", type=mujoco.mjtGeom.mjGEOM_MESH, meshname=f"{p}lead")
-
-        body = seat.add_body(name=f"{p}member", pos=[0.0, 0.0, z_start])
-        slide = body.add_joint(
-            name=f"{p}slide",
-            type=mujoco.mjtJoint.mjJNT_SLIDE,
-            axis=[0.0, 0.0, -1.0],
-            range=[0.0, lead + seat_travel],
-            armature=0.002,
-            damping=0.5,
-            solref_friction=list(ctx.task.physics.limit_solref),
-            solimp_friction=list(FRICTION_SOLIMP),
-            solimp_limit=list(FRICTION_SOLIMP),  # a near-hard seat
-        )
-        body.add_joint(
-            name=f"{p}hinge",
-            type=mujoco.mjtJoint.mjJNT_HINGE,
-            axis=[0.0, 0.0, -1.0],
-            limited=mujoco.mjtLimited.mjLIMITED_FALSE,
-            armature=0.0005,
-            damping=0.001,
-            frictionloss=min(HOLD_NM, float(prm["start_torque_nm"])),
-            solref_friction=list(ctx.task.physics.limit_solref),
-            solimp_friction=list(FRICTION_SOLIMP),
-        )
-        mass = 0.0
-        pieces: list[np.ndarray]
-        if member == "nut":
-            pieces = []
-            for k in range(6):
-                a = 2.0 * math.pi * k / 6.0
-                corner = r_out  # the hexagon's corner radius; flats at apothem r_out cos 30
-                inner = r_in / math.cos(math.pi / 6.0)
-                pts = [(inner * math.cos(b), inner * math.sin(b)) for b in (a - math.pi / 6, a + math.pi / 6)]
-                pts += [
-                    (corner * math.cos(b), corner * math.sin(b)) for b in (a - math.pi / 6, a + math.pi / 6)
-                ]
-                pieces.append(np.array([[x, y, z] for z in (0.0, length) for x, y in pts]))
-            mass = (
-                DENSITY * length * (1.5 * math.sqrt(3.0) * (r_out**2 - (r_in / math.cos(math.pi / 6)) ** 2))
-            )
-        else:
-            pieces = _ring(12, r_in, r_out, 0.0, length)
-            mass = DENSITY * length * 12 * math.tan(math.pi / 12) * (r_out**2 - r_in**2)
-        for k, verts in enumerate(pieces):
-            mesh = f"{p}piece{k:02d}"
-            ctx.spec.add_mesh(name=mesh, uservert=verts.ravel().tolist())
-            body.add_geom(
-                name=f"{p}piece{k:02d}",
-                type=mujoco.mjtGeom.mjGEOM_MESH,
-                meshname=mesh,
-                density=DENSITY,
-                priority=1,
-                rgba=list(OBJECT_RGBA),
-            )
-            geoms.append(f"{p}piece{k:02d}")
-        if member == "cap":
-            top = max(0.002, 0.15 * length)
-            body.add_geom(
-                name=f"{p}top",
-                type=mujoco.mjtGeom.mjGEOM_CYLINDER,
-                size=[r_out, 0.5 * top, 0.0],
-                pos=[0.0, 0.0, length - 0.5 * top],
-                density=DENSITY,
-                priority=1,
-                rgba=list(OBJECT_RGBA),
-            )
-            geoms.append(f"{p}top")
-            mass += DENSITY * math.pi * r_out**2 * top
-        # the slide's friction holds the member on the lead-in until it is pushed
-        slide.frictionloss = 1.5 * mass * 9.81 + 0.2
-        body.add_site(name=f"{p}member", pos=[0.0, 0.0, length], size=[0.003, 0.0, 0.0])
-        flat_r = r_out * (math.cos(math.pi / 6.0) if member == "nut" else 1.0)
-        body.add_site(name=f"{p}flat", pos=[flat_r, 0.0, 0.5 * length], size=[0.003, 0.0, 0.0])
-        seat.add_site(name=f"{p}seat", pos=[0.0, 0.0, z_start], size=[0.003, 0.0, 0.0])
-
-        tendon = ctx.spec.add_tendon(name=f"{p}flank")
-        tendon.wrap_joint(f"{p}slide", 1.0)
-        tendon.wrap_joint(f"{p}hinge", -pitch / (2.0 * math.pi))
-        tendon.limited = mujoco.mjtLimited.mjLIMITED_TRUE
-        tendon.range = [-1.0, lead]
-        tendon.solref_limit = list(ctx.task.physics.limit_solref)
-        tendon.solimp_limit = list(FRICTION_SOLIMP)  # a near-hard flank
-        ctx.spec.add_exclude(bodyname1=f"{p}seat", bodyname2=f"{p}member")
-        final = float(prm["final_torque_nm"])
-        add_friction_anchor(ctx.spec, f"{p}ramp", f"{p}hinge", final)
         return TemplateHandles(
             instance=ctx.instance.name,
             kind=self.kind,
-            bodies=(f"{p}seat", f"{p}member"),
+            bodies=(f"{p}seat", thread.member_body),
             geoms=tuple(geoms),
-            joints={"slide": f"{p}slide", "hinge": f"{p}hinge"},
-            sites={"member": f"{p}member", "seat": f"{p}seat", "flat": f"{p}flat"},
-            actuators=(f"{p}ramp",),
-            info={
-                "member": MEMBER_CODES[member],
-                "diameter_m": d,
-                "length_m": length,
-                "pitch_m": pitch,
-                "lead_m": lead,
-                "seat_m": seat_travel,
-                "bore_m": r_in,
-                "stub_m": r_stub,
-                "flat_m": flat_r,
-                "start_nm": float(prm["start_torque_nm"]),
-                "final_nm": final,
-                "hold_nm": min(HOLD_NM, float(prm["start_torque_nm"])),
-                "z_start": float(ctx.table_top_z + z_start),
-                "base_z": float(ctx.table_top_z + BASE_H),
-                "mass_kg": mass,
-                "period_s": float(ctx.task.controller.control_period),
-            },
+            joints=thread.joints,
+            sites=thread.sites,
+            actuators=(thread.actuator,),
+            info=thread.info,
         )
 
     def state(self, obj: ResolvedHandles, model: mujoco.MjModel, data: mujoco.MjData) -> dict[str, float]:
-        info = obj.handles.info
         phi = float(data.qpos[obj.joint_qpos["hinge"]])
-        # within the joints' own limits: the seat stop and the helical flank (whose soft limit
-        # lets a member pushed onto the thread start sit a fraction of a micrometre past it)
-        flank = info["lead_m"] + info["pitch_m"] * phi / (2.0 * math.pi)
-        depth = min(
-            max(float(data.qpos[obj.joint_qpos["slide"]]), 0.0), info["lead_m"] + info["seat_m"], flank
-        )
-        return {
-            "turns": phi / (2.0 * math.pi),
-            "angle_deg": math.degrees(phi),
-            "depth_mm": 1000.0 * max(depth, 0.0),
-        }
+        return thread_state(obj.handles.info, phi, float(data.qpos[obj.joint_qpos["slide"]]))
 
     def passive(self, obj: ResolvedHandles, model: mujoco.MjModel, data: mujoco.MjData) -> np.ndarray:
-        info = obj.handles.info
-        depth = float(data.qpos[obj.joint_qpos["slide"]])
-        torque = 0.0  # on the lead-in: only the dry friction loss
-        if depth >= info["lead_m"] - 0.0003:
-            s = min(1.0, max(0.0, (depth - info["lead_m"]) / max(info["seat_m"], 1e-6)))
-            torque = info["start_nm"] + (info["final_nm"] - info["start_nm"]) * s - info["hold_nm"]
-        return np.array([friction_anchor(obj, data, "hinge", torque, info["period_s"])])
+        return np.array([thread_passive(obj, data, obj.handles.info)])
 
 
 register_template_builder(ThreadedJointBuilder())

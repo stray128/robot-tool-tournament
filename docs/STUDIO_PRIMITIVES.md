@@ -25,6 +25,9 @@ candidate effector, and each one is a named constant in its module.
 9. [S2c: tool stacks and the friction torques](#9-s2c-tool-stacks-and-the-friction-torques)
 10. [S2d: every goal of a step](#10-s2d-every-goal-of-a-step)
 11. [S2e: a push's approach](#11-s2e-a-pushs-approach)
+12. [Studio v2: the wrist pitch in the primitives](#12-studio-v2-the-wrist-pitch-in-the-primitives)
+13. [Studio v2: four job templates](#13-studio-v2-four-job-templates)
+14. [Studio v2: a push that falls behind, and reach for every primitive](#14-studio-v2-a-push-that-falls-behind-and-reach-for-every-primitive)
 
 ## 1. Rules every controller follows
 
@@ -50,7 +53,9 @@ candidate effector, and each one is a named constant in its module.
   TCP meets a part (`grip_centre`), the tool's sideways hook (`hook`: the geoms near the tip that
   reach furthest beyond the rest, a soft arm's horizontal arm) and the sides a push can use. It
   never touches the step's `MjData` and is cached per compiled scene.
-* **Wrist.** The palm yaw and the continuous roll turn about the same vertical axis. Controllers
+* **Wrist.** Every controller commands all six wrist servos (x, y, z, yaw, roll, pitch). With the
+  tool straight down (pitch 0) the palm yaw and the continuous roll turn about the same vertical
+  axis; the tool tilts only where it matters (section 12). Controllers
   set headings with the yaw and turn objects with the roll; the roll target never moves faster
   than 98 % of the 180 deg/s cap [assumed, STUDIO.md 4.1]. The roll torque limit is 15 N m
   [assumed]. Free-space moves are min-jerk at 0.4 m/s peak [assumed]; transits rise to a height
@@ -153,19 +158,49 @@ Auxiliary sites beyond the handles exist only for controllers to observe geometr
 ## 3. Primitives
 
 All seven register on import (`rtt.studio.primitives.<primitive>`, names `studio_<primitive>`).
-Each predicate ends with `criteria_verdict` (penetration above 1 mm is `physics_unreliable`,
-a force or torque above the step's limit `constraint_exceeded`, an unmet criterion
-`criterion_not_met`), then names the specific failure where it applies.
+Each predicate ends with `criteria_verdict` (penetration: the runner measures it over every
+contact pair except the designed ones, the tool's own links and a port's pads, STUDIO.md 3.3; a
+pair held more than 1 mm deep for more than 10 ms is `physics_unreliable`, a shorter excursion is
+flagged `penetration_transient` and not failed; a force or torque above the step's limit
+`constraint_exceeded`, an unmet criterion `criterion_not_met`), then names the specific failure
+where it applies.
+
+**Letting go** (S2f, studio v2). A part is set down before it is let go, its lowest point at most
+`RELEASE_HEIGHT_MAX_MM` = 20 mm [assumed] above what it comes to rest on (`_common`); a lid is
+carried to its stop rather than dropped onto it (sections 3.2 and 3.5).
 
 ### 3.1 `grasp`, `suction`, `wrap` (the picks)
 
 The v1 phases with the v1 arithmetic (`rtt.sim.controller`): transit, SETTLE 0.3 s at the
 approach height, DESCEND 1.0 s to the tip height the head's v1 primitive plans, CLOSE 1.0 s plus
 0.3 s squeeze, LIFT by `lift_mm` in 1.5 s, HOLD for `hold_s`. With a target bin: carry the part
-over the bin (bottom 20 mm above its rim), lower it until its bottom is 12 mm above the floor,
-open over 0.5 s, wait 0.4 s, retract 80 mm. Without a target: put it back and release; with
-`hold_after`: end holding it. The step's primitive names the intended mechanism and sets its
-tier; the physics is the tool's own.
+over the bin (bottom 20 mm above its rim) and set it down on the floor, or on whatever already
+lies in the bin under it (its top seen as the transit height is seen); without a target: set it
+back down where it was; then open over 0.5 s, wait 0.4 s, retract 80 mm. With `hold_after`: end
+holding it. The step's primitive names the intended mechanism and sets its tier; the physics is
+the tool's own. A pick whose grasp, or whose set-down in its target bin, would put the palm outside
+its travel (+-350 mm less 5 mm) is not attempted: it fails `out_of_reach` (section 14).
+
+**Setting down** (S2f): the part is lowered (at the transit's 0.4 m/s peak) until its bottom is 15 mm
+above the support as planned, then slowly (16 mm/s mean, 30 mm/s peak [assumed]) on toward 5 mm
+below it; both moves are guarded on the wrist's force sensor (every contact of the tool with the
+world): they stop advancing once the vertical load the tool carries has changed by 3 N [assumed]
+from what it carried when the descent began, that is once the support has taken the part (a part
+that hangs lower than planned lands early and stops there). The descent runs its whole planned
+time: a guard that holds it back for a moment lets it go on once the load is off again (ending it
+at the first trip let a 4 kg item on a 40 mm cup go 9 mm up, to fall 9.6 mm at 0.36 m/s). Before it
+opens, the controller compares where the part is (its observed site, as the plan saw it, so a part
+that slid in the grip is seen where it is) with where it was to be set down (the bin floor, the
+top of what already lies in the bin under it, or where it was picked from): more than 20 mm above
+it, the part is **not let go** (a tool or a part caught on a bin's rim also takes the load off the
+wrist: a 110 x 80 mm box into a 130 x 100 mm bin stopped 96 mm above the floor and used to fall
+98 mm at 1.3 m/s), the step fails
+(`criterion_not_met`, with `held_high_mm`) and its outcome says why in a plain caveat. The old
+lowering stopped when the tool pushed the part down by 5 N and opened 12 mm above the floor; a
+cup's lip pushes its part away from the cup while the vacuum holds it (23.5 N on the 600 g item),
+so that guard never lowered the suction gate's item and let it go 145 mm above the tote floor (it
+hit the floor at 1.6 m/s, 2.2 to 3.3 mm deep for 10 to 16 ms: `physics_unreliable` under the
+all-pairs rule).
 
 Observed: `lift_mm` (peak rise during the step), `hold_s` (longest time lifted at least half the
 planned lift, at least 10 mm, while touched), `in_target` (ends inside the bin's interior,
@@ -186,15 +221,35 @@ goes on along the motion, toward the object's end and into it by the pull limit 
 servo's stiffness plus 2 mm (80 % of `max_force_n`, else 30 N [assumed]; not when the step bounds
 the motion on both sides), while the measured force is under that limit, until the force goal is
 met, within the equal budget `force_press` plus that travel; then it lets go. Release to the
-pre-shape (so no finger shoves the panel), back off 40 mm from the face, rise 60 mm.
+pre-shape (so no finger shoves the panel), back off 40 mm from the face, rise 60 mm. An at_most
+alone on a lid's angle takes it all the way shut (S2f): let go above its stop, a lid falls onto
+it.
 
-**A lid's lip** (S2b) has nothing to grip or pinch: the tool's calibrated sideways hook is turned
+**A lid's lip** (S2b) has nothing to grip from above. A two-finger head whose opening fits the lip
+tilts and pinches it from the front (studio v2, section 12); a pull on to a `force_n` at_least goal
+then goes on along the lid's arc with the pitch held at the goal's, the arc the search's
+swept-volume check covers (S2f: it used to turn on with the lid, to -44 deg on a 40 mm lid at 8 N
+where the check ends at -13 deg). The pinch is taken only when the palm stays 12 mm inside its
+travel along the whole pull (past vertical it sits the tool's length beyond the free edge): a 240
+mm lid at y = 150 mm, whose pinch commanded the palm to 365 mm against the slide's 350 mm, is
+hooked instead, and the plan's note says why. Any other tool hooks it: the tool's
+calibrated sideways hook is turned
 toward the hinge, lowered outside the free edge (10 mm out, plus whatever of the tool reaches
 further toward the lid than the hook), moved in under it, guarded, by the hook's depth less 3 mm
 (at most the lip less 2 mm and 40 mm), raised 3 mm onto the underside and carried along the arc,
 open. The soft arms' horizontal arms are such hooks (131, 151 and 171 mm); grippers, hands, cups
 and the designed sliding hook gripper (whose hooks point inward, 4 mm) have none, reach nothing
 under the lip and fail honestly.
+
+**Reach** (section 14): a grip checks its engagement, its whole pull and a pull on to a `force_n`
+goal against the palm's travel (+-350 mm less 5 mm), and a hook the same from under the lip, less
+the pinch's 12 mm; a step that would leave it is not attempted and fails `out_of_reach` with a
+plain reason. The retreat after the pull (the grip's 40 mm off the face, the hook's draw back out
+from under the lip) never refuses a step: it stops at the travel less the same margin, then the
+tool rises. The hotel door (handle 330 mm out at its stop) is opened this way: its retreat would
+have put the palm at 355 mm. A tool without a hook lifts nothing, so its pull on to a force goal runs along the lid's
+whole arc and past its stop: that is how the hook of the 240 mm lid at y = 150 mm with a 20 N goal
+commanded the palm to 368.7 mm.
 
 Observed: the template state after the release, `slip_mm` (largest displacement of the handle
 relative to the tool, in the tool frame, or the panel's for a hooked lip, engaged to release,
@@ -274,8 +329,37 @@ outer face 15 mm in from the free edge along the arc to the goal (3 deg past it)
 handle stands off the face (S2e), a lid is pushed on the bar's outer side, 5 mm on the hinge side
 of it (the tool reaches from its tip toward the free edge, so it meets the whole bar), and a door
 at the middle of its outer face, clear of the bar that runs up it. A lid open past vertical that
-must close is pushed only to 80 deg, its weight closes it, and the tool then presses the closed
-lid home from above, at the middle of its outer face. **Approach** (S2e): a transit to 30 mm
+must close (a goal below 80 deg, no `force_n` at_least) is **carried** when the tool can hold it
+(S2f): a two-finger gripper whose fingers fit the lid's thickness pinches it from the front as
+`hook_pull` pinches a lip and carries it down its arc at the step's peak speed (at least 60 mm/s
+[assumed]), guarded (it stops advancing on anything but the lid over 5 N, or on the lid over the
+push limit; held back for 0.3 s it lets go there), lets go, draws back off it, rises until the
+tool hanging straight down clears everything, and turns back. What it holds is sized from what
+lies under the lid (every other object and the table, seen as the transit height is seen; the
+pre-shaped fingers swept along the carry with 2 mm kept clear [assumed]), in order:
+
+* the free edge, its tips in by the lip's depth less 4 mm (or stopping 4 mm short of a bar
+  handle), less where needed so the lower finger clears what the edge overhangs: such a lid is
+  carried to its stop (the H1 lid, whose 20 mm lip overhangs its tote);
+* a bar handle, pinched across with the inner finger between the bar and the face, when the
+  fingers fit there (the fingers then ride above the lid, so a lid flush with its box closes all
+  the way);
+* else the free edge, carried down to 2 deg above where its lower finger would meet the box, and
+  let go there: a lid flush with its box (a default handle lid on a default bin: let go at 7 to
+  12 deg, it falls the rest from 1.1 to 5.8 deg at 124 to 259 deg/s) falls shut, and its step says
+  so (below). A bar handle with room under it (50 mm) is held by the bar instead: carried to its
+  stop.
+
+The whole carry must keep the palm within its travel (at the lid's stop the palm sits the tool's
+length beyond the free edge, so a deep lid near the front of the table takes it past 350 mm) and
+the plan must fit a step (30 s); the palm is kept 12 mm inside its travel on the whole path (the
+wrist's 10 mm yield along the tool and 2 mm of aim error, `hook_pull.PINCH_REACH_MARGIN`), and the
+search's tilted poses check the same hold and the same path (`push.lid_hold`,
+`hook_pull.pinch_reach`). Otherwise, or with any other tool, the plan's note says
+why and the lid is pushed only to 80 deg; its weight closes it (a push from outside cannot hold
+it back: the frozen H1 lid met its stop at 340 to 400 deg/s), and the tool then presses the closed
+lid home from above, at the middle of its outer face.
+**Approach** (S2e): a transit to 30 mm
 above the standoff point, then a guarded move in over 0.8 s (it stops on contact with any object
 over 5 N or the push limit, and the push then starts where it stopped); the standoff, 10 mm, is
 the whole tool's (whatever reaches further toward the face than the contact point, a wrist flange
@@ -289,14 +373,27 @@ to the goal depth. The push advances at `speed_mm_s` while the tool's net force 
 the object's state (S2d) ends when the **observed** state meets it (1 deg, 1 mm or 0.2 mm inside
 its bounds [assumed]), not when the command arrives: the wrist servo lags behind the command under
 the object's resistance (a drawer pushed shut stopped 7.7 mm open against a 5 mm criterion), so
-the push goes on, up to the limit over the servo's stiffness plus 2 mm past its path. A
+the push goes on, up to the limit over the servo's stiffness plus 2 mm past its path (`over`),
+and while the state is still unmet on past that, by 60 mm at most [assumed] (section 14: the
+tool's own give takes travel too; the gripper's fist still flexes under contact). A
 `force_n` at_least is a goal of the last push on top of its travel: it presses on, within that
 reach and while the observed state still meets its criteria, until the force is reached and held
 0.5 s, within the equal budget `force_press` plus that travel. A push whose observed state meets
 its criteria while it is held at its limit (shut against its stop) is done. Then the wrist target
 comes back to where the wrist is (the push stops), hold 0.3 s, back off 30 mm, rise 60 mm.
+With `approach = front` (studio v2, section 12) a push on an upright face tilts the tool at it.
+A push whose tool the palm cannot put on the face where the push starts or ends fails
+`out_of_reach`, and a button the step's limit cannot latch is not pressed (section 14).
 
-Observed: the template state at the end, `force_n` (peak net force), `penetration_mm`.
+Observed: the template state at the end, `force_n` (peak net force), `penetration_mm`; on a lid,
+sampled every physics step (a lid falling at 385 deg/s crosses its last 2 deg in about 5 ms, between
+two check ticks), `lid_release_deg` (the angle a lid that fell shut fell from: where it last closed
+faster than 5 deg/s with nothing of the tool on it; 0 when it never fell) and `lid_stop_dps` (the
+fastest it closed within 5 deg of its stop). A lid that met its stop faster than 30 deg/s
+[assumed] is not a failure (a lid with a catch snaps shut), but its step's outcome carries a plain
+caveat ("The lid fell shut from 5.8 deg and met its stop at about 260 deg/s: the tool let go of it
+above its stop").
+
 
 ## 4. Equal budgets
 
@@ -348,21 +445,29 @@ cases (the hero-task limits, section 8) added below the line.
 
 | Primitive | Task | Reference effector | Success | Wrong effector | Success | Max penetration on success | Median step time |
 |---|---|---|---|---|---|---|---|
-| grasp | steel slug into a tote | two-finger adaptive, pinch | 14/14 | rigid-pad gripper A (4.1 N grip) | 0/14 (criterion not met) | 0.32 mm | 11.4 s |
-| suction | 600 g flat item into a tote | 25 mm cup | 14/14 | 10 mm cup (4.7 N hold) | 0/14 (criterion not met) | 0.08 mm | 11.6 s |
-| wrap | lift a flanged bushing | 16-segment soft arm | 14/14 | 16 mm cup (bore) | 0/14 (criterion not met) | 0.28 mm | 10.4 s |
+| grasp | steel slug into a tote | two-finger adaptive, pinch | 14/14 | rigid-pad gripper A (4.1 N grip) | 0/14 (criterion not met) | 0.43 mm | 12.6 s |
+| suction | 600 g flat item into a tote | 25 mm cup | 14/14 | 10 mm cup (4.7 N hold) | 0/14 (criterion not met) | 0.11 mm | 12.8 s |
+| wrap | lift a flanged bushing | 16-segment soft arm | 14/14 | 16 mm cup (bore) | 0/14 (criterion not met) | 0.27 mm | 10.6 s |
 | hook_pull | drawer by its bar, 120 mm | two-finger adaptive, pinch | 14/14 | 25 mm cup | 0/14 (slip) | 0.22 mm | 11.0 s |
 | twist | handwheel a quarter turn (3 N m) | two-finger adaptive, pinch | 14/14 | 25 mm cup | 0/14 (slip) | 0.20 mm | 9.5 s |
 | insert | 20 mm plug, 0.4 mm clearance, 2 mm chamfer | two-finger adaptive, power | 13/14 | 12-segment soft arm | 0/14 (jam) | 0.57 mm | 18.2 s |
-| push | press a box down (5 N) | two-finger adaptive, pinch | 14/14 | 12-segment soft arm | 0/14 (criterion not met) | 0.06 mm | 5.3 s |
+| push | press a box down (5 N) | two-finger adaptive, pinch | 14/14 | 12-segment soft arm | 0/14 (criterion not met) | 0.06 mm | 6.0 s |
 | insert (S2b) | 8 mm plug, 30 mm, 0.2 mm, 1 mm chamfer, to 15 mm at 20 N | fin-ray pad gripper | 14/14 | two-finger adaptive, power | 0/14 (physics unreliable) | 0.81 mm | 18.5 s |
 | insert (S2b) | the same, rigid-pad gripper A | rigid-pad gripper A | 11/14 (jam: its 4.1 N grip lets the plug slide) | | | 0.62 mm | 18.1 s |
 | insert (S2b) | the same port, 12 mm plug | rigid-pad gripper A | 13/14 | two-finger adaptive, power | 0/14 (jam) | 0.38 mm | 18.2 s |
-| hook_pull (S2b) | free 380 x 280 lid by its lip to 90-110 deg at 20 N | 12-segment soft arm | 14/14 | two-finger adaptive, pinch | 0/14 (slip) | 0.44 mm | 24.6 s |
+| hook_pull (S2b) | free 380 x 280 lid by its lip to 90-110 deg at 20 N | 12-segment soft arm | 14/14 | | | 0.44 mm | 24.6 s |
+| hook_pull (studio v2) | the same lid, pinched with the wrist tilted (section 3.2) | two-finger adaptive, pinch | 12/14 (2 constraint exceeded) | | | 0.58 mm | 25.5 s |
 | hook_pull (S2b) | 400 x 300 door by its handle to 80 deg at 30 N, off the home pose | two-finger adaptive, pinch | 14/14 | 25 mm cup | 0/14 (constraint exceeded) | 0.26 mm | 18.2 s |
 
 The insert step times grew by 1.8 s (16.4 s in S2): every tool on a port now carries the same
 press-home budget (section 4).
+
+Rerun after S2f (2026-10-26), under the all-pairs penetration rule (section 3): the three pick rows
+with the set-down (section 3.1). Their step times grew by 1.2, 1.2 and 0.2 s (the guarded descent
+onto the support); the suction reference was 1/14 under the all-pairs rule before it (its 600 g
+item let go 145 mm above the tote floor, `physics_unreliable`), and is 14/14 again with no flagged
+transient. The lip row of the two-finger adaptive gripper is the pinch (studio v2): it was the
+wrong effector, 0/14 (slip), when it could only hook.
 
 No MuJoCo reset (`physics_invalid`) in any gate run. Two in-process runs and a spawned worker
 give the same `traj_sha` for every gate task.
@@ -412,8 +517,20 @@ inserts):
   whole push sideways (2.9 N m at 50 mm is 58 N), so a two-finger gripper on a three-spoke wheel
   exceeds a 10 N force limit honestly; three fingers 120 deg apart share it (5 to 7 N).
 * **A lid's lip** is hooked from under its free edge (S2b), which needs a hook (the soft arms'
-  horizontal arms) and room under the edge: a lid flush with, or inset in, its bin's walls cannot
-  be opened by any top-down tool (section 8); a straight-fingered tool never can.
+  horizontal arms) and room under the edge, or pinched by a two-finger gripper with the wrist
+  tilted (studio v2): a lid flush with, or inset in, its bin's walls cannot be opened by any
+  top-down tool (section 8).
+* **A lid pushed shut falls unless the tool can hold it all the way** (S2f). A two-finger gripper
+  carries a lid open past vertical down to its stop (section 3.5) where its whole carry stays in
+  the palm's reach and something of the lid clears what lies under it. A cup, a hand, a soft arm,
+  or a gripper whose palm would leave its travel (at the lid's stop it sits the tool's length
+  beyond the free edge; at the start it sits as far back past the hinge, so lids near the back or
+  the front of the table, and deep lids, are out of reach) pushes it over and it falls onto its
+  stop: 340 to 400 deg/s on the frozen H1 lid before S2f, 1.8 mm into its tote's rim for 8 ms on
+  the lidded-tote test lid (a flagged transient). A lid flush with its box, held by its edge, is
+  let go a few degrees up (7 to 12 deg) and falls the rest at 124 to 259 deg/s (`lid_stop_dps`).
+  Each such step carries the fall caveat. Carried to its stop, the H1 lid meets it at about
+  5 deg/s.
 * **Small plugs.** Two-finger adaptive grippers curl into a V around an 8 or 12 mm plug and
   squeeze it out (`jam`, or `physics_unreliable` when the pin is flung); parallel pads seat
   them (S2b). The catalog hands' pinch closes away from their TCP and knocks a slim standing
@@ -671,3 +788,367 @@ the lid 1/3 before (2 x `constraint_exceeded`, 24.8 N: its impact at 60 mm/s) an
 **Gate.** The S2 gate's push and hook_pull rows end as before (14/14 with their references,
 0/14 with the wrong effectors, the same failure modes and penetrations); the push step's median
 time grows from 5.3 to 6.0 s (the touch speed). The S2d probes end as in section 10.
+
+## 12. Studio v2: the wrist pitch in the primitives
+
+The contract's wrist gained a pitch (STUDIO.md 4.1: +-90 deg about the palm's x axis between the
+yaw and the roll, 180 deg/s). The primitives use it as follows (`primitives/_common.py`,
+`hook_pull.py`, `push.py`).
+
+**Six targets.** Every controller returns all six wrist targets (`_common.wrist_target(point,
+tool_point, yaw, roll, pitch=0)` puts a wrist-frame tool point at a world point through
+`scene.wrist_rotation`, `_common.start_pose(ctx)` is the step's six-value start). Every motion
+keeps the tool straight down except the two below. A move that changes the pitch lasts at least
+1.1 x the min-jerk time the scene's own pitch cap allows (`Path.start(pose, pitch_dps)`,
+`Path.to`), so a step that starts tilted turns back to straight down within the cap in its first
+move. Proprioception reads the pitch joint too
+(`tool_point_world` is `scene.world_tcp`, `_common.wrist_frame`). `StepContext.wrist_start` stays
+five values beside `wrist_pitch_start` (the five-target runner rule is unchanged).
+
+**The lip pinch** (`hook_pull`, mode `pinch`). A lid's lip (`orientation = lid`, `feature = lip`)
+is pinched by a two-finger gripper (`two_finger`: a parallel or part-shaped jaw, a catalog gripper
+with two fingers, parallel, angular or adaptive, a designed fingered hand with two) whose
+calibrated open aperture clears the lip by 6 mm a side and whose shut aperture is under the lip's
+thickness (`lip_pinch_fits`); any other tool hooks it as before, hands with three or more
+fingers, hook grippers and tentacles included (their apertures would clear a 6 mm lip, but they
+are not pinching tools). The yaw sets the pitch axis along the hinge (`pinch_yaw`), the
+pitch is 90 deg so the tool points along the lid toward the hinge with its closing axis across
+the lid's thickness, the roll goes to the nearest half turn. The wrist rises to the transit
+height, turns (within the pitch and roll caps, 1.1 x margin), descends with the tips 20 mm out
+from the free edge at the lip's height, pre-shapes as closed as still clears the lip, and moves in
+from the front, guarded (5 N on any object), until the tips are the lip less 4 mm under the
+overhang (at most 25 mm: 16 mm on the hero tote's 20 mm lip) [assumed]. It closes (1.0 s plus
+0.3 s), then carries the pinch point along the arc to the pull's goal with the pitch at 90 deg
+less the lid's angle (`pinch_pitches`), so the grip turns with the lid; the carry, and a force
+goal's pull-on after it, are no faster than the pitch cap allows (a 60 mm lid at 200 mm/s slows
+to it), and a start a hair past the range (a lid observed just below closed), within 2 deg, is
+clamped to it. While pinched the wrist
+yields along the tool axis to the force the tool puts on the lid along it, 5 mm per N s, at most
+10 mm [assumed; force feedback through the wrist command]. At the goal (a lid that must stay open
+goes to 103 deg for an at_least of 95) it opens to the pre-shape, draws back along the tool axis
+off the lip (20 mm past the free edge), rises 60 mm while the pitch turns back to straight down,
+timed from the pitch where it let go.
+A goal the pitch cannot follow within +-90 deg, or a tilted approach that would put the palm past
+its travel (+-0.35 m: the palm sits the tool's length out from the lip), falls back to the hook.
+Slip is measured as for a hook, the pinch point in the panel's frame.
+
+**The push from the front** (`push`, `approach = front`). A push on a face whose normal is within
+30 deg of horizontal tilts the tool 90 deg, the yaw square to the face (it follows a door as it
+turns), and pushes with the tool's tip on its axis (the lowest point of its calibrated footprint
+at the push closure); nothing of the tool reaches further toward the face, so the standoff is
+10 mm. The transit turns the pitch at the transit height, the guarded move goes in horizontally,
+the push runs as before, and the retract backs off 30 mm, rises until the tool hanging straight
+down would clear every object by 30 mm (at least 60 mm), and only then turns the pitch back (a
+tilted tool's tip swings down by its length as it turns). A face the tilted palm cannot reach is
+pushed from the top. Faces pushed from above ignore it. A required `approach` row would have
+invalidated every frozen plan's push step, so `approach` is an optional push param (section 13.5):
+omitted at its default `top`, read as `step.params.get("approach", "top")`.
+
+**Measured** (frozen H1 plan, `h1_tote`, its 8-condition grid, `sub_task(open_lid)` and the full
+task, a single tool):
+
+| Tool | `open_lid` | Peak force | Full H1 |
+|---|---|---|---|
+| library servo gripper, 110 mm | 8/8, 110 deg (its stop) | 2.93 to 2.94 N | 8/8, 66.4 s cycle |
+| library adaptive gripper, 85 mm | 8/8, 110 deg (its stop) | 6.7 to 9.1 N | 0/8 (`pick_pack` not in the tote, not a pitch matter) |
+
+The adaptive 85 mm gripper passes `open_lid` only with the yield along the tool axis (without
+it: 6/8, 2 x `constraint_exceeded` at 20.3 to 21.1 N, prototype run). The servo gripper's
+trajectories equal the prototype's run for run.
+
+**Gate.** The S2 gate table re-run on its 14 conditions (seeds 0 to 9 and placement errors of
+2 mm in +x, -x, +y and -y, `test_the_s2_gate_table_holds_on_its_14_conditions`), before (the
+Studio v2 contract) and after:
+
+| Primitive | Reference, before | After | Wrong, before | After | Max penetration on success, after |
+|---|---|---|---|---|---|
+| grasp | 14/14 | 14/14 | 0/14 (criterion not met) | 0/14 (criterion not met) | 0.36 mm |
+| suction | 14/14 | 14/14 | 0/14 (criterion not met) | 0/14 (criterion not met) | 0.08 mm |
+| wrap | 14/14 | 14/14 | 0/14 (criterion not met) | 0/14 (criterion not met) | 0.27 mm |
+| hook_pull | 14/14 | 14/14 | 0/14 (slip) | 0/14 (slip) | 0.23 mm |
+| twist | 14/14 | 14/14 | 0/14 (slip) | 0/14 (slip) | 0.23 mm |
+| insert | 13/14 | 13/14 | 0/14 (jam) | 0/14 (jam) | 0.56 mm |
+| push | 14/14 | 14/14 | 0/14 (criterion not met) | 0/14 (criterion not met) | 0.06 mm |
+
+Every trajectory but insert's is the same bit for bit (none of them tilts); insert's 28 differ
+in the last digits because its alignment now reads the tool's frame with the pitch joint's
+servo deflection. The insert failure is the same condition (+2 mm in y, `jam`). The S2b row
+"free lid by its lip, two-finger adaptive 0/14 (slip)" no longer holds by design: the adaptive
+gripper's opening fits a 5 mm lip, so it pinches it
+(`test_a_lip_without_a_hook_or_without_room_under_it_stays_shut` keeps the soft arm on a lid inset
+in its rim; `test_a_two_finger_gripper_tilts_and_pinches_a_lid_lip` replaces the adaptive case).
+
+## 13. Studio v2: four job templates
+
+Four templates for the real-job heroes (solar install, tile setting, machine tending, a call
+button): `src/rtt/studio/templates/{panel_rail,tile_bed,spring_button,sliding_door}.py`, tests in
+`tests/test_studio_templates.py` (each builds, rests without drift, reports its quantities, its
+params and physics, and the S2 rule: a fitting tool succeeds where a wrong one fails). They run in
+the Studio now and are **not offered to the Task Engineer yet** (`ObjectTemplate.planner = False`,
+and their quantities and the push's `approach` likewise): its prompt, tool schema and web catalog
+render `types.planner_templates()` and its siblings, so the recorded prompts, the tool hash and the
+committed web catalog are unchanged until the Engineer is taught them. Every default in the tables
+below is [assumed] except the panel's 1000 x 600 x 35 mm and 8 kg and the tile's 300 x 300 x 10 mm
+(the heroes' sizes) and the standard sizes cited (ISO 4032, ISO 261).
+
+### 13.1 `panel_rail` (approximation)
+
+| Item | Model |
+|---|---|
+| Panel | a free box `length_mm x width_mm x thickness_mm` (default 1000 x 600 x 35 mm) of `mass_g` (8000 g) resting on the rails; the template's last body (the one a pick lifts) |
+| Rails | two static rails along local y at x = +-length/4, 40 x 40 mm [assumed], each with an end stop 10 mm along y and 20 mm above the rail [assumed] at the panel's +y edge, `start_gap_mm` (2 mm) from it at the start |
+| Clamp | at the middle of the panel's -y edge, 25 mm beyond it [assumed], on a short bracket rail (ending 5 mm short of the panel): a 20 mm post rising 5 mm above the panel's top [assumed] (a socket over the clamp stays above the panel) carrying the `threaded_joint` model (`threaded_joint.add_thread`, the same code): a 13 mm across-flats hex (the M8 nut's size, ISO 4032), **modelled as a tall 13 mm hex so the simulated socket can seat; a standard M8 nut is 6.8 mm tall** (15 mm [assumed]; the nut runner engages members at least 12 mm tall), on an M8 coarse thread (1.25 mm, ISO 261), three turns from the thread start to seated [assumed], a 1 mm lead-in chamfer, its friction ramp from 0.3 N m [assumed] to `clamp_torque_nm` |
+| `clamp_torque_nm` | default 6.0 N m [assumed], at most 10 (the nut runner's clutch cap), below the nut runner's 6.7 N m rating. The clamp does not press the panel: seating it is the clamping |
+| Reach | the pose is midway between the panel's top centre (a frame's lift) and the clamp, on local y: each is `(width/2 + 25 mm)/2` (162.5 mm) from it, so both stay inside the palm's +-350 mm travel for every pose within +-182 mm on x and y at any yaw (tested at the poses and corners of 13.7). A twist or an insert whose target the palm cannot reach fails `out_of_reach` |
+| Clamp latch | a light, gravity-compensated slide with no spring (0.02 N friction, 20 N s/m damping [assumed]) that a tendon pushes along as the clamp goes down its thread; it stays, so it records the deepest the clamp went. A tightened clamp springs back 0.03 to 0.06 mm off its seat stop when the socket lets go (measured); the latch still reads it tightened |
+| Sites | `panel` (the panel's top centre), `member` (the clamp's top), `seat`, `flat` (aux) |
+| State | `gap_mm` (the larger gap between the panel's +y edge and the two stops, at the rails), `clamp_torque_nm` (the ramp at the latch: 0 on the lead-in, 0.3 N m at the thread start, `clamp_torque_nm` on the seat stop; the clamp goes no deeper than a torque over the ramp takes it, so it is the torque it was tightened to), and the clamp's present `depth_mm`, `turns`, `angle_deg` (a threaded joint's, which twist and insert read) |
+| Picks | the picks plan a part from `info["diameter_m"]` and `info["length_m"]`: a round stand-in 400 mm across, as thick as the panel (only its height places the tool; the frozen parts library caps a part at 0.5 m) |
+
+Twist and insert reach the clamp through `templates.thread_info` (its `clamp_` keys under a
+threaded joint's names) and `templates.member_body` (the clamp member, not the panel, is the v1
+view's object body, which the nut runner's alignment reads).
+
+### 13.2 `tile_bed` (approximation): a bed that keeps its set
+
+The tamper's press is read after the pad lifts (the template state when the step ends), so an
+elastic bed springs back and hides the press (Studio v2 measured the same lift for 5, 40 and
+60 N on softened contacts). The bed therefore **keeps its set**: it is plastic. Reading the height
+under load instead would need the push predicate to sample the state at a chosen moment of the
+press (a change to a primitive another track is editing) and would make the result depend on how
+hard the tool happens to press when the step ends.
+
+| Item | Model |
+|---|---|
+| Tile | a free box `tile_mm` square (300), `thickness_mm` (10) thick, `mass_g` (2160 g), the template's last body; site `part` on its top centre (a push reads it there; no `height_m`) |
+| Bed | a static substrate slab and a 3 x 3 grid of cells (90 % of their 100 mm pitch, 10 mm tall [assumed]) on vertical slides; their tops start `proud_mm` (2) above the tile's finished bottom, 20 mm above the table [assumed]; a cell sinks at most 3 mm below the level [assumed] |
+| Plasticity | each cell's own actuator is a stiff spring (100 kN/m, damped 150 N s/m, armature 0.1 kg [assumed]) to an anchor that `passive()` moves each control tick only as far as keeps the spring within the cell's share of the yield (the threaded joint's stick-slip friction on a slide). The whole bed yields at `bed_yield_n` (30 N) plus `bed_hardening_n_mm` (15 N/mm) per mm of plastic sink [assumed], so a steady press P on a tile of weight W sinks it until yield + hardening x sink = P + W |
+| State | `height_err_mm` (how far the tile's top centre stands from its finished level, above or below) and `tilt_deg` |
+| Checks | an instance is refused (plainly) when the tile's weight is at or over the bed's yield (it would sink by itself) or its density is outside 800 to 4000 kg/m^3 [assumed] |
+
+Measured (a steady press at the tile's centre for 1 s, then let go, `test_tile_bed_keeps_its_set...`):
+unpressed it rests 1.85 mm proud (its 21.2 N is under the 30 N yield; the cells and contacts give
+0.15 mm); 15 N leaves it 1.44 mm proud; 40 N seats it 0.23 mm below its level; 60 N over-presses it
+1.56 mm below. Let go, it springs back 0.09 to 0.31 mm (the cells' elastic give and the contacts'
+softness): the set is kept.
+
+### 13.3 `spring_button` (rigid)
+
+| Item | Model |
+|---|---|
+| Mount | `wall`: a plate 160 mm wide, 20 mm thick, reaching 60 mm above the button [assumed], its face through the pose facing local -y, the button's centre `height_mm` (120) above the table; `desk`: a 120 mm square console [assumed] `height_mm` tall with the button on top |
+| Bezel | a square opening 1 mm wider than the button each side [assumed] |
+| Button | a cylinder `diameter_mm` (40) across, 15 mm long [assumed], its face `proud_mm` (1) out of the bezel; a slide into the bezel, range `travel_mm` (3); a return spring preloaded to 30 % of `actuation_force_n` (4 N) against its rest stop, rising to `actuation_force_n` at its actuation point, 70 % of the travel [assumed] |
+| Latch | a light slide with no spring (0.05 N friction [assumed]) that a tendon pushes along once the button passes its actuation point, and that stays: the call is recorded after the button springs back |
+| Sites | `button` (its face centre), `face` (aux, the bezel at the button) |
+| State | `travel_mm` (how far it is in now), `pressed` (1 once the latch moved 0.2 mm [assumed]) |
+
+A button standing out less than its actuation point can be pressed only by a tool narrower than
+the opening: a broad pad stops on the bezel. A push presses a button with at least 1.5 x its
+actuation force (past its bottom-out at 1.3 x), within the step's limit (80 % of `max_force_n`).
+A press whose cap is under the button's actuation force is not tried (section 14).
+
+### 13.4 `sliding_door` (rigid)
+
+A machine enclosure whose door slides sideways, for overhead loading: a front leaf over the doorway
+and a roof leaf over the roof opening move together (the shape of a machine door that opens into
+its roof), so a closed door blocks a load from above. The pose is the opening's centre (a fixture
+`bin` at the same pose sits under it); the door slides along local -y to open (as a drawer pulls
+out) and the machine's front faces local -x.
+
+| Item | Model |
+|---|---|
+| Enclosure | static walls 10 mm and a roof 10 mm thick [assumed], `depth_mm` (300) by `height_mm` (250), long enough along y to park the open door over it; the opening is `width_mm` (250) along y and the interior's depth along x, through the roof and the front wall |
+| Door | one body on a slide along local -y, range `[0, travel_mm]` (260), friction loss `pull_force_n` (10 N [assumed]), damping 2 N s/m (the drawer's); leaves 6 mm thick, 2 mm clear of the enclosure, 10 mm past the opening each side, 1200 kg/m^3 [assumed] |
+| Handle | a fin 6 mm thick (along the slide) and 80 mm long standing `handle_mm` (40) up from the roof leaf at the opening's centre [assumed] |
+| Sites | `door` (the travel reference), `handle` (the fin's centre), `front` and `opening` (aux, static) |
+| State | `travel_mm` (0 closed), within the slide's stops |
+
+It reuses the drawer's machinery (`types.SLIDE_KINDS`): the same slide info keys (`pull_x`/`pull_y`,
+`travel_m`, `grip_m`, `push_out_m`, `front_gap_m`), and its fin is the drawer's `lip` handle (code
+2: a plate standing up, gripped across its thickness along the slide, its face up).
+
+### 13.5 The optional `approach` step param, and the frozen ids
+
+`PrimitiveInfo.optional` holds params a step may leave out. A step omits one set to its default, so
+a step written before the param existed hashes as it did. Push's `approach` (`top`, the default, or
+`front`) is one: `Step.of(..., params={"approach": "front"})` carries it, `"top"` is dropped from the
+step, anything else is refused. Hook_pull's `approach` stays the required row it has been since S1:
+every recorded hook_pull step carries `"approach": "top"`, so dropping it would change their ids.
+`test_frozen_hero_task_ids_are_unchanged` re-hashes the three heroes of use-case benchmark v1 from
+the recorded plans and compares them with the ids pinned in `configs/usecase_v1.yaml` (h1_tote
+e4586f36..., h2_coupling 33599e99..., h3_cabinet 3297a111...): equal.
+
+### 13.6 Primitive changes
+
+The new kinds reuse the existing controllers; the changes are kind sets and one branch:
+
+* `_common.observed_state`: a sliding door reads like a drawer (its moving site is `door`); a
+  panel's clamp reads like a threaded joint (`thread_info`).
+* `hook_pull`: `_face_out` and `_closing_axis` take `SLIDE_KINDS` (a door's fin is a lip).
+* `push`: a sliding door closes like a drawer; a **button** branch presses its face in along its
+  axis, its travel and 2 mm more, until the press force holds: the push's `press` force (10 N, or
+  60 % of the step's force limit, or its `force_n` goal) but at least 1.5 x the button's actuation
+  force, within the step's limit. A tile is pressed by the part path.
+* `twist`, `insert`: a panel's clamp turns and starts like a threaded joint (`axis_site`,
+  `THREAD_KINDS`, `thread_info`, `member_body`). **Out of reach**: a twist whose engagement pose,
+  or an insert whose planned moves or seat, would put the palm outside its travel (+-350 mm less
+  5 mm) is not attempted: it holds still 0.2 s and fails `out_of_reach` (a new step failure mode),
+  reporting `reach_x_mm`, `reach_y_mm` and `palm_limit_mm`, not a slip or a jam. Every other
+  primitive checks its targets the same way (section 14).
+
+### 13.7 The S2 rule on each
+
+The cases of `tests/test_studio_templates.py`, the nominal condition and, for the fitting tools,
+three more placement conditions of the 4-condition grid (`runner.condition_grid`):
+
+| Template | Step | Fitting tool | Result | Wrong tool | Result |
+|---|---|---|---|---|---|
+| `panel_rail` | lift 60 mm, hold 1.5 s, set back (lift >= 25 mm, hold >= 1 s, gap <= 10 mm) | `vacuum-frame-2x3-600` | 4/4: lift 37.0 mm, hold 2.3 s, gap 2.0 mm, penetration at most 0.07 mm | a parallel gripper (84 mm) | fails: lift 0.008 mm (its fingers land on the flat panel) |
+| `panel_rail` | the same lift | `vacuum-frame-2x3-600` | | `vacuum-frame-2x2-300` (61 N) | the mass decides: a 2 kg panel lifts 51.9 mm and holds 2.79 s; the 8 kg one lifts 0.01 mm |
+| `panel_rail` | insert (depth >= 3.5 mm), then twist (clamp_torque >= 6.0 N m, 15 N m limit) | `nut-runner-socket-13` | 4/4: clamp 6.0 N m, wrist torque 5.96 N m, seated (7.69 to 7.75 mm after the release), penetration 0.53 mm; and at 8 more poses across the reach envelope (below) | the adaptive two-finger gripper | the twist slips: 0.20 N m, clamp 0.36 N m |
+| `tile_bed` | press (force >= F, height_err <= 1 mm, tilt <= 0.5 deg, 60 N limit) | `tamper-pad-200`, F = 40 N | 4/4: 41.4 N, height_err 0.31 mm, tilt 0.00 deg | the same tamper, F = 10 N | fails: height_err 1.75 mm |
+| `tile_bed` | lay: lift 40 mm, hold 0.8 s, set back | `vacuum-frame-2x2-300` | 4/4: lift 31.6 mm, hold 1.96 s | | |
+| `spring_button` | wall, push from the front (pressed >= 1, 20 N limit) | the adaptive two-finger gripper | 4/4: pressed, 10.0 N | `tamper-pad-200` (its 200 mm pad) | fails: not pressed (the pad stops on the bezel) |
+| `spring_button` | desk, push from the top | the adaptive two-finger gripper | 4/4: pressed, 10.2 N | | |
+| `spring_button` | wall, a 15 N button at a 20 N limit, no force goal | the adaptive two-finger gripper | pressed at 16.3 N | | |
+| `sliding_door` | hook_pull open (travel >= 200 mm), push shut (travel <= 5 mm, 40 N limit) | the adaptive two-finger gripper | 4/4: open 202.8 to 205.2 mm, shut 3.9 mm | `cup-25mm` | the pull slips: travel 0.0 mm |
+
+The gripper's pull on the door reads `slip_mm` 31.6 to 33.3 mm: the adaptive fingers give 33 mm
+along the pull as the force on the fin builds to the door's 10 N friction (a ramp, then the door
+slides), so a step that bounds `slip_mm` needs a stiffer gripper or a lighter door.
+
+**Reach** (`test_the_nut_runner_seats_the_clamp_across_the_reach_envelope`): the nut runner starts and
+seats the clamp (6.0 N m, 7.75 mm) at panel poses (0, -60 mm), (130, 0 mm), yaw +30 and -30 deg,
+and at the envelope's corners turned so the clamp lands at its extreme: (180, -180 mm, 0 deg),
+(-180, 180, 180), (180, 180, 90) and (-180, -180, -90), the clamp 342.5 mm out on one axis; the
+2 x 3 frame lifts the panel with its centre 342.5 mm out ((180, 180, 0) and (-180, 180, 90)). A panel
+at (0, -300 mm) puts the clamp at y -462.7 mm: its insert and its twist each fail `out_of_reach` in
+0.2 s (`test_a_clamp_out_of_reach_fails_as_out_of_reach_not_slip_or_jam`).
+
+## 14. Studio v2: a push that falls behind, and reach for every primitive
+
+From the machine-tending composite (section 13).
+
+### 14.1 A push that falls behind its tool's give
+
+The machine-tending task: a `sliding_door` at (0, 100 mm), a fixture `bin` 150 x 150 x 60 mm at the
+same pose, a 40 mm part at (200, 100 mm), the adaptive two-finger gripper; open the door
+(`hook_pull`, travel >= 200 mm), load the part into the fixture (`grasp`), push the door shut
+(travel <= 5 mm, 40 N limit). At the door's default 10 N of friction the shut ended 40.1 mm open
+(`criterion_not_met`) at every speed from 10 to 100 mm/s. It passed at 3 N, and at 10 N without
+the load.
+
+The cause is the tool's give. A push closes the fingers into a fist (closure 1); on this gripper
+that drives both tendons to their 40 N limit with the tips pressed together, so the fist has no
+lateral stiffness. After the pick lets go fully open, the fist settles differently and swings on
+contact with the door (a proximal joint from 24 to 48 deg, the other finger to its -0.2 rad stop):
+43 mm of the push go into the swing. The push is planned in position and went on only `over` past
+its path while the door was still open (18 mm: the 32 N limit over the 2000 N/m servo, plus 2 mm),
+then counted as arrived and let go.
+
+A push to a criterion on the object's observed state now goes on past `over` while that state is
+unmet, by `push.PUSH_ON_MAX` at most (60 mm [assumed]: the 43 mm measured, with 40 % to spare,
+still short of the fist's 110 mm length). It goes on only while the force on the object is under
+the step's limit, while the tool presses on nothing else harder than 5 N, and while the palm stays
+within its travel, all within the segment's budget (unchanged). It goes at the step's speed while
+the observed object is more than 20 mm from the segment's goal, then at the touch speed, so the
+object still meets its stop at 15 mm/s at most. A push whose state is met within `over` runs
+exactly as before (section 14.4). **The fist still flexes under contact**: only the travel it takes
+is made up. A fist closure per family that does not saturate is not part of this change.
+
+| Case (shut, nominal) | Speed (mm/s) | Before | After |
+|---|---|---|---|
+| load, 10 N | 20 (default), 40 | 40.1 mm open, fails | 3.9 mm, 10.4 to 11.6 N |
+| load, 10 N | 60, 80, 100 | 40.1 mm open, fails | 6.3, 8.1, 8.8 mm, fails: the segment's budget runs out in the last 20 mm at the touch speed |
+| load, 10 N | 10 | 39.9 mm open, fails | 29.3 mm, fails: a 10 mm/s push of 235 mm reaches the 30 s step cap |
+| load, 3 N | 10 to 100 | 4.3 to 6.7 mm (fails at 10 and 100) | 3.9 to 4.5 mm, passes at every speed |
+| no load, 3 N and 10 N | 10 to 100 | passes | the same `traj_sha` at all 12 points |
+| S2d drawer shut, seeds 3 and 9 | 20 | 37.8 mm open, fails (both) | 3.9 mm, 6.7 N (both) |
+
+The drawer of the S2d test fails the same way on seeds 3 and 9 (its fist swings on the drawer's
+front).
+`test_a_door_shut_after_loading_the_fixture_closes_within_5_mm` and
+`test_a_push_that_loses_travel_to_its_fist_goes_on_until_the_drawer_is_shut` hold both.
+
+### 14.2 Out of reach for every primitive
+
+Only twist and insert used to check their targets against the palm's travel. The helpers now live
+in `_common` (`reach_problem`, `hold_out_of_reach`, `out_of_reach_verdict`, `REACH_MARGIN`) and every
+controller calls them at plan time. A step whose target lies outside the travel holds still 0.2 s
+and fails `out_of_reach` with `reach_x_mm`, `reach_y_mm`, `palm_limit_mm` and a plain caveat ("Out of
+reach: the pull would take the palm to x 0 mm, y 515 mm, past its +-350 mm travel less 5 mm; the
+step was not attempted"), instead of running in vain to a silent `criterion_not_met` or a `slip`.
+
+* **Picks**: the grasp pose, and the set-down over a target bin.
+* **Hook pull, grip**: the engagement, the pull (every 2 deg of an arc) and a pull on to a `force_n`
+  goal. **Hook** (a lid's lip): the same from under the lip, with the pinch's 12 mm margin
+  (`hook_pull.PINCH_REACH_MARGIN`). The retreat after either (off the handle, or back out from
+  under the lip) is not a reason to refuse: it stops at the travel less the margin
+  (`hook_pull._retreat_within`), then the tool rises.
+* **Push**: the tool on the face where each push starts and where it ends.
+
+A step that is not tried keeps its tool as it was for its 0.2 s (`_common.idle_command`): closed
+when the previous step ends holding the step's object (`hold_after`), open otherwise. An open tool
+used to drop the held part: a frame holding a panel 37 mm up, whose next step starts the clamp out
+of reach, let the panel fall back onto its rails.
+
+The margin is 5 mm (`_common.REACH_MARGIN` [assumed], the twist's and the insert's) everywhere but
+on a lid's lip. The 12 mm of the pinch is its 10 mm yield along the tilted tool plus the 2 mm aim
+error; a straight-down tool has no such yield. The panel rail's reach envelope is sized on 5 mm:
+its frame lifts the panel with its centre 342.5 mm out (section 13.7), which a 12 mm margin would
+refuse. The free moves to a standoff are not checked: a palm held at its travel's end short of the
+standoff still meets the face or the feature from its side. The cup's transit above its standoff
+on the 110 deg S2e lid is 371 mm out, its standoff 343 mm and the face 318 mm, and it pushes the
+lid over as before.
+
+| Case | Before | After |
+|---|---|---|
+| a 2 x 3 frame lifting a panel at (0, 300 mm), its centre at y 462 mm | `criterion_not_met` after 11.5 s | `out_of_reach` in 0.2 s, y 462.3 mm |
+| the gripper on the same panel | silent failure | `out_of_reach`, y 462.3 mm |
+| a door at (0, 300 mm, 180 deg) pulled 200 mm open (toward +y) | `slip` | `out_of_reach`, the pull's end at y 514.8 mm |
+| the door at (0, -300 mm) left 200 mm open, pushed shut | `criterion_not_met` after 22 s, 0 N | `out_of_reach`, the face at y -460 mm or further |
+| N8: the servo gripper's hook on the 240 mm lip lid at y 150 mm, 20 N force goal | `slip`, the palm commanded to 368.7 mm for 865 ticks | `out_of_reach`, the pull on's first pose past 338 mm at y 341.3 mm |
+
+### 14.3 A button the limit cannot actuate
+
+A push presses a button with at least 1.5 x its actuation force, within 80 % of the step's limit.
+Where that cap is under the button's actuation force, the press used to run its whole budget
+(8.35 s from the front, 5.87 s from the top) and fail silently. Such a press is not tried: it fails
+`criterion_not_met` in 0.2 s with `press_cap_n`, `actuation_force_n` and the reason ("The step's
+force limit allows 24 N; this button needs at least 25 N to actuate, so it was not pressed": a
+25 N button at a 30 N limit).
+
+A cap at or over the actuation force is tried, and the physics decides. The latch counts a call
+0.2 mm past the actuation point (about 1.07 x the actuation force on a 3 mm travel, plus the
+latch's 0.05 N), but how close a press gets to that depends on the mount. On the wall, pressed
+from the front, the press goes 0.27 to 0.32 N over its cap. On the desk, pressed from the top, it
+goes 0.42 to 0.54 N over and the button latches below that force. Measured with the adaptive
+gripper (cap, then the result):
+
+| Button | Limit | Cap | Wall, from the front | Desk, from the top |
+|---|---|---|---|---|
+| 8 N | 10 N | 8.0 N | fails, 8.36 N peak | latches, 8.42 N |
+| 15 N | 18 N | 14.4 N | not tried (fails on base, 14.73 N) | not tried (fails on base, 14.92 N) |
+| 15 N | 19 N | 15.2 N | fails, 15.48 N | latches, 15.69 N |
+| 15 N | 20 N | 16.0 N | latches, 16.32 N | latches, 16.48 N |
+| 25 N | 30 N | 24.0 N | not tried (fails on base, 24.32 N) | |
+| 25 N | 32 N | 25.6 N | fails, 25.86 N | latches, 26.06 N |
+| 25 N | 33 N | 26.4 N | fails, 26.67 N | latches, 26.94 N |
+| 25 N | 34 N | 27.2 N | latches, 27.50 N | latches, 27.74 N |
+
+Every tried point runs exactly as on base (the same `traj_sha`); only the three caps under the
+actuation force are refused, and each of them fails on base too. The borderline wall points are
+tried and fail slowly, as on base.
+
+### 14.4 Unchanged runs
+
+`traj_sha` before (4aa5e96) and after, on the S2 gate (7 primitives, the reference and the wrong
+tool, 14 conditions each), the H1 lane (8 conditions, 4 steps), the S2b lip pinch and hook, the
+lidded tote, the S2f set-down picks, the template cases (button, door, panel, tile, reach), the
+drawers and presses, the lids pushed shut from 110 deg and the N8 lids: 268 of the 272 runs are
+identical step for step; the four whose push or pull this change is for: the door shut after the load at
+3 N and at 10 N (both shut now to 3.9 mm), the S2d drawer on seed 3, and the N8 hook (now
+`out_of_reach`) changed, as intended.
+
+`rules.THREADED_TEMPLATES` is now derived from `types.THREAD_KINDS` (one set).

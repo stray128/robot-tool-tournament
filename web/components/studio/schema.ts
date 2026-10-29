@@ -14,6 +14,8 @@
  */
 
 import { PRODUCT_MODE_LABEL } from "@/lib/effectors";
+import { STEP_FAILURE_LABELS, STEP_FAILURE_MODES } from "@/lib/labels";
+import type { ReplayHeaderV2 } from "@/lib/types";
 import { Node } from "@/lib/validate";
 
 export { PRODUCT_MODE_LABEL };
@@ -30,7 +32,7 @@ export const SETUP_KINDS = ["single", "multi_head", "tool_change"] as const;
 export type SetupKind = (typeof SETUP_KINDS)[number];
 export const OUTCOMES = ["recommended", "no_recommendation"] as const;
 export type Outcome = (typeof OUTCOMES)[number];
-export const ROLES = ["recommended", "best_single", "closest", "runner_up_rigid", "finalist"] as const;
+export const ROLES = ["recommended", "best_single", "baseline", "closest", "runner_up_rigid", "finalist"] as const;
 export type Role = (typeof ROLES)[number];
 export const CHANGES = ["none", "tool_change", "present"] as const;
 export type Change = (typeof CHANGES)[number];
@@ -49,23 +51,17 @@ export const TIER_NOTES: Record<Tier, string> = {
   not_simulated: "No physics model yet: never scored as a pass.",
 };
 
-/** Step failure modes (rtt.studio.types.STEP_FAILURE_MODES) in plain words. */
-export const FAILURE_LABELS: Record<string, string> = {
-  criterion_not_met: "criterion not met",
-  constraint_exceeded: "limit exceeded",
-  slip: "slip",
-  jam: "jam",
-  dropped: "dropped",
-  physics_invalid: "physics reset",
-  physics_unreliable: "penetration over 1 mm",
-  invalid_build: "cannot be built",
-  not_simulated: "not simulated",
-  not_reached: "not reached",
-};
+/**
+ * Step failure modes (rtt.studio.types.STEP_FAILURE_MODES) in plain words (lib/labels.ts). The
+ * parsers refuse any other mode, so a code never reaches the screen.
+ */
+export const FAILURE_LABELS: Record<string, string> = STEP_FAILURE_LABELS;
+export { STEP_FAILURE_MODES };
 
 export const ROLE_LABELS: Record<Role, string> = {
   recommended: "Recommended",
   best_single: "Best single off-the-shelf",
+  baseline: "Best single tool (baseline)",
   closest: "Closest",
   runner_up_rigid: "Rigid runner-up",
   finalist: "Finalist",
@@ -91,6 +87,10 @@ export interface ToolBrief {
   fidelity: Tier | null;
   off_the_shelf: boolean | null;
   caveat: string | null;
+  /** A Studio-only tool (a process tool or a vacuum area frame): never in a per-part tournament. */
+  studio_only: boolean;
+  /** Its rated load, in words ("rated 6.7 N m ..."), for a Studio-only tool; else null. */
+  rating: string | null;
 }
 
 export interface SetupBrief {
@@ -197,6 +197,10 @@ export interface Candidate {
   status: "screened" | "pruned";
   pruned_reason: string | null;
   pruned_steps: { step_id: string; reason: string }[];
+  /** A Studio-only tool (a process tool or a vacuum area frame), with its rating and caveat. */
+  studio_only: boolean;
+  rating: string | null;
+  caveat: string | null;
 }
 
 export interface Screen {
@@ -273,6 +277,38 @@ export interface Recommendation extends SetupBrief {
   steps: RecStep[];
   runner_up_rigid: { label: string | null; basis: string } | null;
   versus_best_single: { same_setup: boolean; completion_delta: number; cycle_delta_s: number | null; extra_tools: number } | null;
+  /** The pick against the baseline, the best eligible single tool (rtt.studio.recommend, rule R01); null in older pages. */
+  versus_baseline: VersusBaseline | null;
+}
+
+/**
+ * What decided the pick against the baseline (rtt.studio.recommend._versus_baseline): it is the
+ * baseline; a same-complexity tie; the baseline has a soft arm (R09) or a hand (R10), which rank
+ * below rigid setups; the baseline fails a step outright; the pick clears the margin its added
+ * pieces must earn; or the ranking.
+ */
+export const BASELINE_BASES = ["baseline", "tie", "R09", "R10", "step_floor", "margin", "ranking"] as const;
+export type BaselineBasis = (typeof BASELINE_BASES)[number];
+
+export interface VersusBaseline {
+  same_setup: boolean;
+  completion_delta: number;
+  cycle_delta_s: number | null;
+  added_pieces: number;
+  /** The completion gain the added pieces had to earn; null when a rule ranked the baseline lower. */
+  needed_gain: number | null;
+  basis: BaselineBasis;
+  note: string | null;
+}
+
+/**
+ * The baseline printed beside the pick: the best eligible single tool (its finalist row), or,
+ * when no single tool is eligible, the recommender's reason (kept for the record; the page words
+ * it from the single tools' own rows).
+ */
+export interface Baseline {
+  row: FinalistRow | null;
+  basis: string | null;
 }
 
 export interface BlockerFamily {
@@ -350,6 +386,17 @@ export interface StudioLane {
   segments: LaneSegment[];
   steps: LaneStep[];
   credits: { text: string; anchor: string | null }[];
+  /** Seconds of every stored frame of a keyframed lane (its replay header's `t`), or null. */
+  t: number[] | null;
+  /** Frame indices where a segment starts (its replay header's `cuts`); empty for a uniform lane. */
+  cuts: number[];
+  /** Its poses are int16 (the replay header's `quantised`). */
+  quantised: boolean;
+  /**
+   * A keyframed lane's farthest vertex from the recording its keys were chosen from, in mm (its
+   * header's `meta.keyframes.max_error_vs_recording_mm`); null for a uniform lane.
+   */
+  max_error_vs_recording_mm: number | null;
 }
 
 export interface BuildPack {
@@ -424,6 +471,8 @@ export interface HeroPage {
   finalists: FinalistRow[];
   recommendation: Recommendation | null;
   best_single: FinalistRow | null;
+  /** The recommender's baseline (null in pages exported before it had one). */
+  baseline: Baseline | null;
   no_winner: NoWinner | null;
   sensitivity: Sensitivity | null;
   constants: Constant[];
@@ -534,6 +583,21 @@ function countMap(n: Node): Record<string, number> {
   return Object.fromEntries(n.entries().map(([k, v]) => [k, count(v)]));
 }
 
+/** A failure mode: one of STEP_FAILURE_MODES, each of which has its plain label. */
+function failureMode(n: Node): string {
+  return n.oneOf(STEP_FAILURE_MODES);
+}
+
+/** Runs per failure mode, keyed only by known modes. */
+function modeCounts(n: Node): Record<string, number> {
+  return Object.fromEntries(
+    n.entries().map(([k, v]) => {
+      if (!(STEP_FAILURE_MODES as readonly string[]).includes(k)) v.fail(`unknown failure mode ${JSON.stringify(k)} (rtt.studio.types.STEP_FAILURE_MODES)`);
+      return [k, count(v)];
+    }),
+  );
+}
+
 function rateMap(n: Node): Record<string, number> {
   return Object.fromEntries(n.entries().map(([k, v]) => [k, v.unit()]));
 }
@@ -561,9 +625,9 @@ function strList(n: Node): string[] {
 
 function readTool(n: Node, i: number): ToolBrief {
   if (typeof n.value === "string") {
-    return { index: i, display_name: n.nonEmpty(), effector_id: null, family: null, family_title: null, fidelity: null, off_the_shelf: null, caveat: null };
+    return { index: i, display_name: n.nonEmpty(), effector_id: null, family: null, family_title: null, fidelity: null, off_the_shelf: null, caveat: null, studio_only: false, rating: null };
   }
-  return {
+  const tool: ToolBrief = {
     index: n.has("index") ? count(n.get("index")) : i,
     display_name: n.get("display_name").nonEmpty(),
     effector_id: opt(n, "effector_id", sha),
@@ -572,7 +636,22 @@ function readTool(n: Node, i: number): ToolBrief {
     fidelity: opt(n, "fidelity", tier),
     off_the_shelf: opt(n, "off_the_shelf", (x) => x.bool()),
     caveat: opt(n, "caveat", (x) => x.nonEmpty()),
+    studio_only: n.has("studio_only") ? n.get("studio_only").bool() : false,
+    rating: opt(n, "rating", (x) => x.nonEmpty()),
   };
+  studioOnlyRules(n, tool);
+  return tool;
+}
+
+/**
+ * A process tool or a vacuum area frame says so (`studio_only`) and carries its caveat; only such
+ * a tool states a rating (scripts/export_studio_web.py studio_tool).
+ */
+function studioOnlyRules(n: Node, t: { family: string | null; display_name: string; studio_only: boolean; rating: string | null; caveat: string | null }): void {
+  const kind = t.family === "process_tool" || /^Vacuum area frame\b/.test(t.display_name);
+  if (kind && !t.studio_only) n.fail(`${t.display_name} is a Studio-only tool and says so (studio_only)`);
+  if (t.studio_only && !t.caveat) n.fail(`${t.display_name} is a Studio-only tool and carries its caveat`);
+  if (t.rating !== null && !t.studio_only) n.get("rating").fail("only a Studio-only tool states a rating");
 }
 
 function readBrief(n: Node): SetupBrief {
@@ -765,7 +844,11 @@ function readCandidate(n: Node): Candidate {
           .items()
           .map((p) => ({ step_id: p.get("step_id").nonEmpty(), reason: p.get("reason").nonEmpty() }))
       : [],
+    studio_only: n.has("studio_only") ? n.get("studio_only").bool() : false,
+    rating: opt(n, "rating", (x) => x.nonEmpty()),
+    caveat: opt(n, "caveat", (x) => x.nonEmpty()),
   };
+  studioOnlyRules(n, c);
   // Pruned from everything: one reason, or a reason per step (the export gives either).
   if (c.status === "pruned" && c.pruned_reason === null && c.pruned_steps.length === 0) n.get("pruned_reason").fail("a pruned candidate says why");
   return c;
@@ -800,7 +883,7 @@ function readCell(n: Node): MatrixCell {
     n: count(n.get("n")),
     successes: count(n.get("successes")),
     primitive_used: opt(n, "primitive_used", slug),
-    failure_modes: n.has("failure_modes") ? countMap(n.get("failure_modes")) : {},
+    failure_modes: n.has("failure_modes") ? modeCounts(n.get("failure_modes")) : {},
     context: opt(n, "context", (x) => x.nonEmpty()),
   };
   if (cell.successes > cell.n) n.get("successes").fail(`${cell.successes} successes of ${cell.n}`);
@@ -863,12 +946,12 @@ function readFinalist(n: Node): FinalistRow {
       bracket: c.get("bracket").bool(),
     },
     payload_kg: opt(n, "payload_kg", (x) => x.nonNeg()),
-    failure_modes: countMap(n.get("failure_modes")),
+    failure_modes: modeCounts(n.get("failure_modes")),
     stops_at_detail: Object.fromEntries(
       n
         .get("stops_at_detail")
         .entries()
-        .map(([k, v]) => [k, { runs: count(v.get("runs")), failure_modes: countMap(v.get("failure_modes")) }]),
+        .map(([k, v]) => [k, { runs: count(v.get("runs")), failure_modes: modeCounts(v.get("failure_modes")) }]),
     ),
   };
 }
@@ -931,12 +1014,44 @@ function readRecommendation(n: Node, stepIds: string[]): Recommendation {
       cycle_delta_s: optNum(v.get("cycle_delta_s")),
       extra_tools: v.get("extra_tools").int(),
     })),
+    versus_baseline: opt(n, "versus_baseline", (v) => {
+      if (v.has("rule")) v.get("rule").literal("R01");
+      return {
+        same_setup: v.get("same_setup").bool(),
+        completion_delta: v.get("completion_delta").num(),
+        cycle_delta_s: optNum(v.get("cycle_delta_s")),
+        added_pieces: v.get("added_pieces").int(),
+        needed_gain: optNum(v.get("needed_gain")),
+        basis: v.get("basis").oneOf(BASELINE_BASES),
+        note: opt(v, "note", (x) => x.nonEmpty()),
+      };
+    }),
   };
   const approx = steps.some((s) => s.fidelity === "approximation") || rec.fidelity === "approximation";
   if (approx && !rec.verify_on_hardware) n.get("verify_on_hardware").fail("an approximation-tier recommendation asks to verify on hardware");
   if (rec.verify_on_hardware && rec.caveat !== VERIFY_CAVEAT) n.get("caveat").fail(`expected ${JSON.stringify(VERIFY_CAVEAT)}`);
   if (approx && rec.runner_up_rigid === null) n.get("runner_up_rigid").fail("an approximation-tier recommendation carries its rigid runner-up (or why there is none)");
   return rec;
+}
+
+/** The page's baseline: a finalist single tool by id (carrying the "baseline" role), or why there is none. */
+function readBaseline(n: Node, finalists: FinalistRow[], rec: Recommendation | null): Baseline {
+  const id = n.get("setup_id").nullable(sha);
+  const basis = opt(n, "basis", (x) => x.nonEmpty());
+  if (id === null) {
+    if (basis === null) n.get("basis").fail("no baseline: the page says why");
+    if (finalists.some((f) => f.roles.includes("baseline"))) n.fail("a finalist carries the baseline role, but the page names no baseline");
+    if (rec?.versus_baseline) n.fail("the recommendation is compared with a baseline the page does not name");
+    return { row: null, basis };
+  }
+  const row = finalists.find((f) => f.setup_id === id);
+  if (!row) return n.get("setup_id").fail("the baseline is not among the finalists");
+  if (row.kind !== "single") n.get("setup_id").fail("the baseline is a single tool");
+  const marked = finalists.filter((f) => f.roles.includes("baseline")).map((f) => f.setup_id);
+  if (marked.length !== 1 || marked[0] !== id) n.fail("exactly the baseline's finalist row carries the baseline role");
+  const vs = rec?.versus_baseline;
+  if (vs && vs.same_setup !== (rec!.setup_id === id)) n.fail("versus_baseline.same_setup disagrees with the baseline's id");
+  return { row, basis: null };
 }
 
 function readBlocker(n: Node): Blocker {
@@ -959,7 +1074,7 @@ function readBlocker(n: Node): Blocker {
         n_runs: count(f.get("n_runs")),
         peak: optNum(f.get("peak")),
         best: opt(f, "best", (x) => x.nonEmpty()),
-        failure_modes: f.has("failure_modes") ? countMap(f.get("failure_modes")) : {},
+        failure_modes: f.has("failure_modes") ? modeCounts(f.get("failure_modes")) : {},
       })),
     max_peak: opt(n, "max_peak", (x) => x.num()),
   };
@@ -991,7 +1106,7 @@ function readLaneStep(n: Node): LaneStep {
     start_s: n.get("start_s").nonNeg(),
     duration_s: n.get("duration_s").nonNeg(),
     success: n.get("success").bool(),
-    failure_mode: optStr(n.get("failure_mode")),
+    failure_mode: n.get("failure_mode").nullable(failureMode),
     fidelity: tier(n.get("fidelity")),
     quantities: n.has("quantities") ? Object.fromEntries(n.get("quantities").entries().map(([k, v]) => [k, optNum(v)])) : {},
   };
@@ -1000,6 +1115,8 @@ function readLaneStep(n: Node): LaneStep {
 }
 
 function readLane(n: Node, hero: string): StudioLane {
+  // The exporter renamed it: the error is measured against the recording, not the simulation.
+  if (n.has("max_error_mm")) n.get("max_error_mm").fail("renamed max_error_vs_recording_mm");
   const replay = dataPath(n.get("replay"));
   if (!replay.startsWith(`studio/replays/${hero}/`)) n.get("replay").fail(`expected a lane under studio/replays/${hero}/`);
   const lane: StudioLane = {
@@ -1022,6 +1139,10 @@ function readLane(n: Node, hero: string): StudioLane {
     asset_bytes: n.has("asset_bytes") ? count(n.get("asset_bytes")) : 0,
     segments: n.get("segments").items().map(readSegment),
     steps: n.get("steps").items().map(readLaneStep),
+    t: null,
+    cuts: [],
+    quantised: n.has("quantised") ? n.get("quantised").bool() : false,
+    max_error_vs_recording_mm: opt(n, "max_error_vs_recording_mm", (x) => x.nonNeg()),
     credits: n.has("credits")
       ? n
           .get("credits")
@@ -1036,8 +1157,26 @@ function readLane(n: Node, hero: string): StudioLane {
   // The contract's condition_text is optional in the export; fall back to the id and seed.
   lane.condition_text = opt(n, "condition_text", (x) => x.nonEmpty()) ?? `${lane.condition_id === "nominal" ? "nominal placement" : `condition ${lane.condition_id}`}, seed ${lane.seed}`;
   if (lane.fps < 1 || lane.n_frames < 1) n.fail("a lane has at least one frame at a positive fps");
-  const span = (lane.n_frames - 1) / lane.fps;
-  if (Math.abs(lane.duration_s - span) > 2 / lane.fps + 1e-6) n.get("duration_s").fail(`${lane.duration_s} s, but ${lane.n_frames} frames at ${lane.fps} fps span ${span.toFixed(3)} s`);
+  if (n.has("t") && n.get("t").value !== null) {
+    const t = n.get("t").nums();
+    if (t.length !== lane.n_frames) n.get("t").fail(`expected one time per frame (${lane.n_frames}), got ${t.length}`);
+    t.forEach((v, i) => {
+      if (!(v >= 0) || (i > 0 && v <= t[i - 1]!)) n.get("t").items()[i]!.fail("frame times are non-negative and strictly increasing");
+    });
+    lane.t = t;
+  }
+  if (n.has("cuts")) {
+    lane.cuts = n.get("cuts").items().map((c) => count(c));
+    lane.cuts.forEach((c, i) => {
+      if (c >= lane.n_frames || (i > 0 && c <= lane.cuts[i - 1]!)) n.get("cuts").items()[i]!.fail(`cuts are increasing frame indices below ${lane.n_frames}`);
+    });
+  }
+  // A lane with its own frame times must end on its last one. Every other lane's clock is checked
+  // against its replay header at build time (app/studio/data.ts), since a keyframed lane's times may
+  // live only in the header.
+  if (lane.t && Math.abs(lane.duration_s - lane.t[lane.t.length - 1]!) > 1e-3) {
+    n.get("duration_s").fail(`${lane.duration_s} s, but its last frame is at ${lane.t[lane.t.length - 1]!.toFixed(3)} s`);
+  }
   if (lane.segments.length === 0) n.get("segments").fail("a lane has at least one segment");
   lane.segments.forEach((seg, i) => {
     if (i === 0 && seg.change !== "none") n.get("segments").items()[i]!.get("change").fail("the first segment has no change before it");
@@ -1045,6 +1184,71 @@ function readLane(n: Node, hero: string): StudioLane {
     if (i > 0 && seg.change_start_s + 1e-6 < lane.segments[i - 1]!.end_s) n.get("segments").items()[i]!.get("start_s").fail("segments overlap");
   });
   return lane;
+}
+
+/**
+ * How a lane stores its run, in words: "56 keyframes from a 100 Hz recording, within 1.0 mm of it"
+ * (a keyframed lane: its fps is the recording's, not its frames'), or "601 frames at 30 fps".
+ */
+export function laneFramesText(lane: Pick<StudioLane, "n_frames" | "fps" | "quantised" | "max_error_vs_recording_mm" | "t">): string {
+  if (lane.max_error_vs_recording_mm === null && !lane.t) return `${lane.n_frames} frames at ${lane.fps} fps`;
+  const within = lane.max_error_vs_recording_mm !== null ? `, within ${lane.max_error_vs_recording_mm.toFixed(1)} mm of it` : "";
+  return `${lane.n_frames} keyframes from a ${lane.fps} Hz recording${within}${lane.quantised ? ", int16 poses" : ""}`;
+}
+
+/** Validate one lane entry of a page (`$.lanes[i]` of studio/<hero>.json) on its own. */
+export function parseStudioLane(raw: unknown, hero: string, file = "studio/hero.json"): StudioLane {
+  return readLane(new Node(file, "$", raw), hero);
+}
+
+/**
+ * What a lane's page entry and its replay header disagree on (empty when they agree): frames and
+ * fps, the int16 flag, the keyframing error, frame times and cuts, the clock's end, and a frame
+ * exactly at each segment's start (scripts/export_studio_web.py check_lane, on the site's side).
+ * A keyframed lane's fps is nominal (its recording's rate), so its clock comes from `t` only.
+ */
+export function laneHeaderProblems(lane: StudioLane, header: ReplayHeaderV2): string[] {
+  const out: string[] = [];
+  if (header.n_frames !== lane.n_frames || header.fps !== lane.fps) {
+    out.push(`the header has ${header.n_frames} frames at ${header.fps} fps; the page says ${lane.n_frames} at ${lane.fps}`);
+  }
+  if (header.quantised !== lane.quantised) out.push(`the header's poses are ${header.quantised ? "int16" : "float32"}; the page says ${lane.quantised ? "int16" : "float32"}`);
+  const kf = header.meta.keyframes;
+  if (kf && lane.max_error_vs_recording_mm === null) out.push("a keyframed lane states its error against the recording (max_error_vs_recording_mm)");
+  if (lane.max_error_vs_recording_mm !== null && (!kf || Math.abs(kf.max_error_vs_recording_mm - lane.max_error_vs_recording_mm) > 1e-9)) {
+    out.push(`the page's error against the recording (${lane.max_error_vs_recording_mm} mm) is not its replay's (${kf ? `${kf.max_error_vs_recording_mm} mm` : "none"})`);
+  }
+  if (lane.t && (!header.t || header.t.length !== lane.t.length || lane.t.some((v, k) => Math.abs(v - header.t![k]!) > 1e-9))) {
+    out.push("the page's frame times differ from its replay's");
+  }
+  if (lane.cuts.length && (lane.cuts.length !== header.cuts.length || lane.cuts.some((c, k) => c !== header.cuts[k]))) {
+    out.push(`the page's cuts [${lane.cuts.join(", ")}] differ from its replay's [${header.cuts.join(", ")}]`);
+  }
+  const clock = laneTimelineEnd(lane, header.t);
+  if (Math.abs(lane.duration_s - clock.end) > clock.tolerance) out.push(`lasts ${lane.duration_s} s, but its replay's ${clock.why}`);
+  if (header.t) {
+    // A keyframed lane cuts exactly where a segment starts, so a player never interpolates across a change.
+    if (header.cuts.length !== lane.segments.length - 1) out.push(`${header.cuts.length} cuts for ${lane.segments.length} segments`);
+    header.cuts.forEach((c, k) => {
+      const seg = lane.segments[k + 1];
+      if (seg && Math.abs(header.t![c]! - seg.start_s) > 1e-3) out.push(`the frame at cut ${c} (${header.t![c]} s) is not at segment ${seg.index}'s start (${seg.start_s} s)`);
+    });
+  }
+  return out;
+}
+
+/**
+ * Where a lane's clock ends: the last of its frame times (the lane's `t`, else its replay header's),
+ * or, for a uniform lane, its frames at `fps`.
+ */
+export function laneTimelineEnd(
+  lane: Pick<StudioLane, "t" | "n_frames" | "fps">,
+  headerT: readonly number[] | null = null,
+): { end: number; tolerance: number; why: string } {
+  const t = lane.t ?? headerT;
+  if (t && t.length) return { end: t[t.length - 1]!, tolerance: 1e-3, why: `last frame is at ${t[t.length - 1]!.toFixed(3)} s` };
+  const span = (lane.n_frames - 1) / lane.fps;
+  return { end: span, tolerance: 2 / lane.fps + 1e-6, why: `${lane.n_frames} frames at ${lane.fps} fps span ${span.toFixed(3)} s` };
 }
 
 function readBuildPack(n: Node, hero: string): BuildPack {
@@ -1160,6 +1364,7 @@ export function parseStudioHero(raw: unknown, file = "studio/hero.json", opts: P
   const finalists = root.get("finalists").items().map(readFinalist);
   const best_single = root.get("best_single").nullable(readFinalist);
   if (best_single && best_single.kind !== "single") root.get("best_single").get("kind").fail("the best single off-the-shelf setup is a single tool");
+  const baseline = opt(root, "baseline", (b) => readBaseline(b, finalists, recommendation));
   if (recommendation && finalists[0]?.setup_id !== recommendation.setup_id) root.get("finalists").fail("the recommended setup ranks first among the finalists");
   const lanes = root
     .get("lanes")
@@ -1210,6 +1415,7 @@ export function parseStudioHero(raw: unknown, file = "studio/hero.json", opts: P
     finalists,
     recommendation,
     best_single,
+    baseline,
     no_winner,
     sensitivity: opt(root, "sensitivity", (s) => ({
       recommendation_changes: s.get("recommendation_changes").bool(),
@@ -1257,8 +1463,17 @@ export function humanize(code: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+/**
+ * A reason from the recommender in plain words: a failure-mode code inside it becomes its label
+ * ("a run reset the simulator (physics_invalid)" reads "... (physics reset)").
+ */
+export function plainReason(text: string): string {
+  return text.replace(/\b[a-z]+(?:_[a-z]+)+\b/g, (code) => FAILURE_LABELS[code] ?? code);
+}
+
+/** A failure mode in plain words (the parsers admit only labelled modes; anything else reads "failed"). */
 export function failureLabel(mode: string): string {
-  return FAILURE_LABELS[mode] ?? mode.replace(/_/g, " ");
+  return FAILURE_LABELS[mode] ?? "failed";
 }
 
 /** "slip 5, limit exceeded 3", most frequent first; "none" for an empty map. */
@@ -1366,6 +1581,62 @@ export function laneAt(lane: Pick<StudioLane, "segments" | "steps" | "duration_s
   }
   if (t >= runEnd(lane)) return { kind: "ended" };
   return { kind: "idle", segment: segmentAt(lane, t) };
+}
+
+/** What the "Changing tool" card over a replay says while the replay holds a pose at a cut. */
+export interface ChangeCard {
+  title: "Changing tool";
+  /** "Tool change: a fixed 7.5 s, not simulated" or the head-switch equivalent. */
+  detail: string;
+  /** "Next: tool 2, Suction cup, 40 mm bellows", when the lane names the next tool. */
+  next: string | null;
+  start_s: number;
+  end_s: number;
+  /** How far through the change the clock is, 0 to 1. */
+  progress: number;
+}
+
+/**
+ * The card to show at time `t`, or null. The lane's segments give the change window and the
+ * next tool; a keyframed replay's own cut gap (Replay.cutGapAt) covers a jump the lane does not
+ * describe. Every gap at a cut shows the card (`minGapS` can hide very short ones).
+ */
+export function changeCardAt(
+  lane: Pick<StudioLane, "segments" | "steps" | "duration_s">,
+  t: number,
+  gap: { start_s: number; end_s: number } | null = null,
+  minGapS = 0,
+): ChangeCard | null {
+  const m = laneAt(lane, t);
+  const progress = (a: number, b: number) => (b > a ? Math.min(Math.max((t - a) / (b - a), 0), 1) : 1);
+  if (m.kind === "change") {
+    const start = m.to.change_start_s;
+    const end = m.to.start_s;
+    const s = Number.isInteger(m.change_s) ? String(m.change_s) : String(Number(m.change_s.toFixed(2)));
+    return {
+      title: "Changing tool",
+      detail:
+        m.change === "present"
+          ? `Head switch: the wrist turns the next tool to the work, a fixed ${s} s, not simulated`
+          : `Tool change: a fixed ${s} s, not simulated`,
+      next: `Next: tool ${m.to.tool + 1}, ${m.to.tool_label}`,
+      start_s: start,
+      end_s: end,
+      progress: progress(start, end),
+    };
+  }
+  if (gap && gap.end_s - gap.start_s >= minGapS && t >= gap.start_s && t < gap.end_s) {
+    const next = lane.segments.find((s) => s.start_s >= gap.end_s - 1e-6) ?? null;
+    return {
+      title: "Changing tool",
+      detail: `Not simulated: the replay holds for ${(gap.end_s - gap.start_s).toFixed(1)} s, then cuts to the next segment`,
+      next: next ? `Next: tool ${next.tool + 1}, ${next.tool_label}` : null,
+      start_s: gap.start_s,
+      end_s: gap.end_s,
+      progress: progress(gap.start_s, gap.end_s),
+    };
+  }
+  return null;
 }
 
 /** The run's outcome stamp: "Completed in 58.1 s" or "Stopped at 1. Open lid: slip". */

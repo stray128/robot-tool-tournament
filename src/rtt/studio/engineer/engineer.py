@@ -4,8 +4,9 @@
 :class:`rtt.llm.client.LLMClient`: cache, ledger, spend cap, retries) for one forced
 ``submit_task_plan`` call. The prompt (``prompts/``) carries the use case, any uploaded part,
 every object template and primitive with its bounded params (:mod:`rtt.studio.engineer.catalog`),
-the quantities, every rule the checks enforce, the action-to-primitive mapping, the wrist and
-table limits and one worked example of a different use case.
+the quantities, the rules the checks enforce, the action-to-primitive mapping, the wrist and
+table limits, the kinds of tool the search tries (what exists, never which wins) and one worked
+example of a different use case.
 
 **Judge.** The arguments are parsed by :func:`~rtt.studio.types.task_spec_from_tool_args`
 (structure, bounds, cross-references; every problem with its path) and then checked by
@@ -72,8 +73,15 @@ from rtt.studio.engineer.catalog import (
     render_quantities,
     render_rules,
     render_templates,
+    render_tools,
 )
-from rtt.studio.engineer.checks import check_parts, check_plan, nearest_primitive
+from rtt.studio.engineer.checks import (
+    check_parts,
+    check_plan,
+    claim_problems,
+    claimed_inside,
+    nearest_primitive,
+)
 from rtt.studio.engineer.examples import worked_example
 from rtt.studio.engineer.layout import fix_layout, layout_problems
 from rtt.studio.engineer.uploads import UploadInfo
@@ -122,6 +130,11 @@ ENGINEER_MODEL: Final = NEMOTRON_SUPER
 #: call that keeps generating after a complete tool call (7 recorded calls ran on to the cap). With
 #: a ~20k-token prompt the worst case is about $0.011.
 ENGINEER_SAMPLING: Final[dict[str, float | int]] = {"temperature": 0.6, "top_p": 0.95, "max_tokens": 5000}
+#: Retries of a call: the client's statuses and Token Factory's 529 "System is overloaded", which a
+#: draft re-record met on 7 of 12 calls (not part of a request, so recordings are unaffected).
+ENGINEER_RETRY: Final = RetryPolicy(
+    max_retries=4, base_delay_s=5.0, retry_statuses=RetryPolicy().retry_statuses | {529}
+)
 #: The default tool is the contract's own schema, descriptions included (module docstring).
 COMPACT_TOOL: Final = False
 MAX_USE_CASE_CHARS: Final = 2000
@@ -197,8 +210,11 @@ def _strip_descriptions(schema: Any) -> Any:
     return schema
 
 
-def engineer_tool(*, compact: bool = COMPACT_TOOL) -> dict[str, Any]:
-    """The forced tool (module docstring): the contract's, optionally without schema descriptions."""
+def engineer_tool(*, compact: bool = COMPACT_TOOL, version: str = prompts.CURRENT) -> dict[str, Any]:
+    """The forced tool (module docstring): the contract's, optionally without schema descriptions;
+    a frozen prompt's (v1, v2) is its tool as it was sent (:func:`prompts.frozen`)."""
+    if version in prompts.FROZEN:
+        return copy.deepcopy(prompts.frozen(version)["tool_compact" if compact else "tool"])
     tool = submit_task_plan_tool()
     if not compact:
         return tool
@@ -213,8 +229,8 @@ def engineer_tool(*, compact: bool = COMPACT_TOOL) -> dict[str, Any]:
     }
 
 
-def tool_sha256(*, compact: bool = COMPACT_TOOL) -> str:
-    return hashlib.sha256(wire_json(engineer_tool(compact=compact)).encode()).hexdigest()
+def tool_sha256(*, compact: bool = COMPACT_TOOL, version: str = prompts.CURRENT) -> str:
+    return hashlib.sha256(wire_json(engineer_tool(compact=compact, version=version)).encode()).hexdigest()
 
 
 def _schema_order(value: Any, schema: Mapping[str, Any]) -> Any:
@@ -270,21 +286,29 @@ def _uploads_text(uploads: Sequence[UploadInfo]) -> str:
     return "\n".join(lines)
 
 
-def build_messages(use_case: str, uploads: Sequence[UploadInfo] = ()) -> list[dict[str, str]]:
-    """The system and user messages for one use case (already sanitised, :func:`sanitize_use_case`)."""
-    user = prompts.render(
-        "user.md",
-        use_case=use_case,
-        uploads=_uploads_text(uploads),
-        templates=render_templates(),
-        primitives=render_primitives(),
-        quantities=render_quantities(),
-        rules=render_rules(),
-        mapping=render_mapping(),
-        limits=render_limits(),
-        example=render_example(),
-    )
-    return [{"role": "system", "content": prompts.render("system.md")}, {"role": "user", "content": user}]
+def build_messages(
+    use_case: str, uploads: Sequence[UploadInfo] = (), *, version: str = prompts.CURRENT
+) -> list[dict[str, str]]:
+    """The system and user messages for one use case (already sanitised, :func:`sanitize_use_case`),
+    in prompt ``version`` (v1, v2: their frozen sections, :func:`prompts.frozen`)."""
+    if version in prompts.FROZEN:
+        sections = dict(prompts.frozen(version)["sections"])
+    else:
+        sections = {
+            "templates": render_templates(),
+            "primitives": render_primitives(),
+            "quantities": render_quantities(),
+            "rules": render_rules(),
+            "mapping": render_mapping(),
+            "limits": render_limits(),
+            "tools": render_tools(),
+            "example": render_example(),
+        }
+    user = prompts.render("user.md", version, use_case=use_case, uploads=_uploads_text(uploads), **sections)
+    return [
+        {"role": "system", "content": prompts.render("system.md", version)},
+        {"role": "user", "content": user},
+    ]
 
 
 # --------------------------------------------------------------------------- client
@@ -377,7 +401,7 @@ def make_engineer_client(
         ledger=ledger if ledger is not None else Ledger(ledger_path, budget_usd=budget_usd),
         transport=transport,
         timeout_s=300.0,
-        retry=RetryPolicy(max_retries=3, base_delay_s=2.0),
+        retry=ENGINEER_RETRY,
         limiter=limiter,
     )
 
@@ -390,7 +414,7 @@ class PlanAttempt:
     """One model call of a plan and its verdict (no message bodies; the hash points into the cache)."""
 
     stage: Literal["main", "repair"]
-    outcome: Literal["valid", "refused", "invalid", "parse_error", "call_failed", "spend_cap"]
+    outcome: Literal["valid", "refused", "invalid", "parse_error", "call_failed", "spend_cap", "truncated"]
     problems: tuple[str, ...]
     request_hash: str | None
     cached: bool
@@ -402,6 +426,12 @@ class PlanAttempt:
     finish_reason: str | None = None
     notes: tuple[str, ...] = ()
     error: str | None = None
+
+    @property
+    def truncated(self) -> bool:
+        """The call was cut off at ``max_tokens`` (finish_reason ``length``): under rule set v2 its
+        plan, should it parse, is never judged (``truncated``); the recorder marks it either way."""
+        return self.finish_reason == "length"
 
     def to_dict(self) -> dict[str, Any]:
         return {k: (list(v) if isinstance(v, tuple) else v) for k, v in self.__dict__.items()}
@@ -429,6 +459,7 @@ class PlanResult:
     tool_sha256: str = ""
     ledger: tuple[LedgerEntry, ...] = ()
     layout_moves: tuple[str, ...] = ()
+    version: str = prompts.CURRENT
 
     @property
     def ok(self) -> bool:
@@ -463,6 +494,11 @@ class PlanResult:
     def cost_usd(self) -> float:
         return sum(a.cost_usd for a in self.attempts if not a.cached)
 
+    @property
+    def truncated(self) -> tuple[str, ...]:
+        """The stages whose call was cut off at ``max_tokens`` (:attr:`PlanAttempt.truncated`)."""
+        return tuple(a.stage for a in self.attempts if a.truncated)
+
     def to_dict(self) -> dict[str, Any]:
         spec = self.spec
         return {
@@ -487,6 +523,7 @@ class PlanResult:
             "cost_usd": round(self.cost_usd, 6),
             "template_hashes": dict(self.template_hashes),
             "tool_sha256": self.tool_sha256,
+            "prompt_version": self.version,
         }
 
 
@@ -530,16 +567,22 @@ def normalise_nulls(args: Mapping[str, Any]) -> tuple[dict[str, Any], tuple[str,
     return out, note
 
 
-def _field_hint(list_name: str, key: str, item: Any) -> str:
-    """The full schema's description of ``key`` in an object or step (``""`` if none)."""
-    schema = task_plan_json_schema()["properties"][list_name]["items"]["anyOf"]
+def _field_hint(list_name: str, key: str, item: Any, version: str = prompts.CURRENT) -> str:
+    """The full schema's description of ``key`` in an object or step (``""`` if none), in the tool
+    of prompt ``version``."""
+    params = (
+        task_plan_json_schema() if version != "v1" else engineer_tool(version="v1")["function"]["parameters"]
+    )
+    schema = params["properties"][list_name]["items"]["anyOf"]
     disc = "kind" if list_name == "objects" else "primitive"
     value = item.get(disc) if isinstance(item, Mapping) else None
     branch = next((b for b in schema if b["properties"][disc].get("const") == value), schema[0])
     return str(branch["properties"].get(key, {}).get("description", ""))
 
 
-def explain_problems(problems: Sequence[str], args: Mapping[str, Any]) -> list[str]:
+def explain_problems(
+    problems: Sequence[str], args: Mapping[str, Any], version: str = prompts.CURRENT
+) -> list[str]:
     """The contract parser's problems, reworded where its text is terse (a bare missing key, a
     refusal next to steps), with the entry's name in the path."""
     out: list[str] = []
@@ -550,7 +593,7 @@ def explain_problems(problems: Sequence[str], args: Mapping[str, Any]) -> list[s
             i = int(m["i"])
             item = items[i] if i < len(items) else None
             name = item.get("name" if m["list"] == "objects" else "id") if isinstance(item, Mapping) else None
-            hint = _field_hint(m["list"], m["key"], item)
+            hint = _field_hint(m["list"], m["key"], item, version)
             label = f" ({name})" if isinstance(name, str) else ""
             out.append(f"{m['list']}[{i}]{label}: missing {m['key']!r}" + (f": {hint}" if hint else ""))
         elif p == "a refused task has no steps":
@@ -568,8 +611,11 @@ def judge_args(
     *,
     uploads: Sequence[UploadInfo] = (),
     source: Literal["nemotron", "manual", "recorded", "test"] = "nemotron",
+    rules: str = prompts.CURRENT_RULES,
+    paths: bool = True,
 ) -> tuple[TaskSpec | None, list[str], list[str]]:
-    """``(spec or None, problems, warnings)`` of a plan's tool arguments.
+    """``(spec or None, problems, warnings)`` of a plan's tool arguments, under rule set ``rules``
+    (:mod:`rtt.studio.engineer.checks`).
 
     ``spec`` is ``None`` when the arguments do not parse into a :class:`TaskSpec`. The uploads
     given are the ones that exist and the ones the plan must use.
@@ -578,10 +624,10 @@ def judge_args(
     try:
         spec = task_spec_from_tool_args(args, source=source)
     except TaskSpecError as exc:
-        problems = explain_problems(exc.problems, args)
+        problems = explain_problems(exc.problems, args, rules)
         if args.get("refusal") is None:
             objects, steps = _parse_parts(args)
-            extra = check_parts(objects, steps, uploads=ids, required_uploads=ids)
+            extra = check_parts(objects, steps, uploads=ids, required_uploads=ids, rules=rules, paths=paths)
             problems += [p for p in extra if p not in problems]
         return None, problems, []
     except (TypeError, ValueError, KeyError, AttributeError) as exc:
@@ -590,7 +636,7 @@ def judge_args(
             [f"$: the arguments do not match the submit_task_plan schema ({type(exc).__name__}: {exc})"],
             [],
         )
-    problems, warnings = check_plan(spec, uploads=ids, required_uploads=ids)
+    problems, warnings = check_plan(spec, uploads=ids, required_uploads=ids, rules=rules, paths=paths)
     return spec, problems, warnings
 
 
@@ -723,14 +769,22 @@ _MAX_ASSUMPTIONS: Final = 10
 
 
 def _fix_layout(
-    spec: TaskSpec, problems: Sequence[str], uploads: Sequence[UploadInfo]
+    spec: TaskSpec,
+    problems: Sequence[str],
+    uploads: Sequence[UploadInfo],
+    rules: str = prompts.CURRENT_RULES,
+    paths: bool = True,
 ) -> tuple[TaskSpec, tuple[str, ...], tuple[str, ...]] | str:
-    """The layout fixer on a plan whose only problems are layout problems: ``(spec, warnings,
-    moves)`` when the moved plan passes every check, else a note (empty when it did not apply)."""
-    layout = layout_problems(spec.objects, spec.steps)
-    if not problems or not layout or not set(problems) <= set(layout):
+    """The layout fixer on a plan whose only problems are layout problems (and, under rule set v2,
+    words that put a thing inside a machine it does not stand inside, which the fixer places there):
+    ``(spec, warnings, moves)`` when the moved plan passes every check, else a note (empty when it
+    did not apply)."""
+    layout = layout_problems(spec.objects, spec.steps, rules=rules)
+    claims = claim_problems(spec) if rules == "v2" else []
+    if not problems or not (layout or claims) or not set(problems) <= {*layout, *claims}:
         return ""
-    fixed = fix_layout(spec.objects, spec.steps)
+    inside = claimed_inside(spec) if rules == "v2" else None
+    fixed = fix_layout(spec.objects, spec.steps, rules=rules, inside=inside)
     if fixed is None:
         return (
             "The layout fixer found no spot within reach that clears every object; the layout problems stand."
@@ -747,7 +801,7 @@ def _fix_layout(
     except TaskSpecError as exc:
         return f"The layout fixer's moves do not construct ({'; '.join(exc.problems)[:200]}); the layout problems stand."
     ids = [u.upload_id for u in uploads]
-    left, warnings = check_plan(moved, uploads=ids, required_uploads=ids)
+    left, warnings = check_plan(moved, uploads=ids, required_uploads=ids, rules=rules, paths=paths)
     if left:
         return "The layout fixer's moves left other problems; the layout problems stand."
     return moved, tuple(warnings), lines
@@ -772,14 +826,19 @@ def plan_task(
     repairs: int = 1,
     compact: bool = COMPACT_TOOL,
     tag: str | None = None,
+    version: str = prompts.CURRENT,
 ) -> PlanResult:
-    """Turn a use case into a validated task plan (module docstring)."""
+    """Turn a use case into a validated task plan (module docstring), with prompt ``version`` and
+    its rule set (:data:`prompts.RULES_OF`; v1 and v2 rebuild their recordings' requests byte for
+    byte)."""
     if repairs not in (0, 1):
         raise ValueError("at most one repair call per plan")
     use_case, notes_in = sanitize_use_case(text)
     notes = list(notes_in)
-    tool = engineer_tool(compact=compact)
-    messages = build_messages(use_case, uploads)
+    rules = prompts.rules_of(version)
+    paths = prompts.field_paths(version)
+    tool = engineer_tool(compact=compact, version=version)
+    messages = build_messages(use_case, uploads, version=version)
     digest = hashlib.sha256(use_case.encode()).hexdigest()[:12]
     tag = tag or f"studio-engineer/{digest}"
     ledger_start = len(client.ledger.session_entries())
@@ -791,11 +850,18 @@ def plan_task(
             attempts.append(_attempt(stage, failure, [error or failure], meta, error))
             return _Verdict(None, failure, (error or failure,), (), failure, args, error)
         assert args is not None
+        if rules == "v2" and meta is not None and meta.finish_reason == "length":
+            # cut off at max_tokens: what parsed is a prefix of the plan the model meant, never judged
+            error = (
+                "truncated: the call was cut off at max_tokens (finish_reason length); its plan is not judged"
+            )
+            attempts.append(_attempt(stage, "truncated", [error], meta, error))
+            return _Verdict(None, "truncated", (error,), (), "truncated", args, error)
         args, null_note = normalise_nulls(args)
         for n in null_note:
             if n not in notes:
                 notes.append(n)
-        spec, problems, warnings = judge_args(args, uploads=uploads)
+        spec, problems, warnings = judge_args(args, uploads=uploads, rules=rules, paths=paths)
         outcome = "invalid" if problems or spec is None else ("refused" if spec.refusal else "valid")
         attempts.append(_attempt(stage, outcome, problems, meta))
         return _Verdict(spec, outcome, tuple(problems), tuple(warnings), None, args, None)
@@ -804,6 +870,7 @@ def plan_task(
     if main.outcome not in ("valid", "refused") and repairs and main.failure != "spend_cap":
         repair_text = prompts.render(
             "repair.md",
+            version,
             previous=_previous_text(main.args, main.error),
             problems="\n".join(f"- {scrub_text(p)[:300]}" for p in main.problems[:_MAX_PROBLEMS]),
         )
@@ -818,7 +885,7 @@ def plan_task(
     spec, problems, warnings = final.spec, list(final.problems), final.warnings
     layout_moves: tuple[str, ...] = ()
     if final.failure is None and final.outcome == "invalid" and spec is not None and spec.refusal is None:
-        fixed = _fix_layout(spec, problems, uploads)
+        fixed = _fix_layout(spec, problems, uploads, rules, paths)
         if isinstance(fixed, str):
             if fixed:
                 notes.append(fixed)
@@ -857,8 +924,9 @@ def plan_task(
         warnings=tuple(warnings),
         notes=tuple(notes),
         uploads=tuple(uploads),
-        template_hashes=prompts.template_hashes(),
-        tool_sha256=tool_sha256(compact=compact),
+        template_hashes=prompts.template_hashes(version),
+        tool_sha256=tool_sha256(compact=compact, version=version),
         ledger=ledger,
         layout_moves=layout_moves,
+        version=version,
     )

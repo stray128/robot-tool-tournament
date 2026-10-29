@@ -8,8 +8,8 @@ Frozen contract ``rtt-effectors/2`` (track S1):
 
 * :mod:`rtt.studio.types`: task specs, steps, object templates, setups, results, build packs and
   the Task Engineer's JSON schema.
-* :mod:`rtt.studio.scene`: the Studio scene (core wrist plus a continuous roll; single,
-  multi-tool head and tool-change tool stacks; template objects).
+* :mod:`rtt.studio.scene`: the Studio scene (core wrist plus a limited pitch and a continuous
+  roll; single, multi-tool head and tool-change tool stacks; template objects).
 * :mod:`rtt.studio.plan`: the primitive controller and success predicate protocols and registry.
 * :mod:`rtt.studio.episode`: segments, carried world state, the tool-change hook, full-task runs.
 * :mod:`rtt.studio.fairness`: identical wrist, constants, conditions and seeds across candidates.

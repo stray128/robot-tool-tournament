@@ -10,11 +10,11 @@ import { PRODUCT_MODE_LABEL } from "@/lib/effectors";
 export function ProductModeBanner({ detail = true }: { detail?: boolean }) {
   return (
     <aside
-      className="mt-8 flex flex-wrap items-baseline gap-x-3 gap-y-1 border border-pending/60 bg-paper px-3 py-2 text-sm"
+      className="mt-8 flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-lg border border-pending/50 bg-pending-soft px-3 py-2 text-sm"
       aria-label="Product mode"
       data-product-mode
     >
-      <strong className="num text-xs uppercase tracking-wide text-pending">{PRODUCT_MODE_LABEL}</strong>
+      <strong className="text-sm font-semibold text-pending">{PRODUCT_MODE_LABEL}</strong>
       {detail ? (
         <span className="text-ink-2">
           A simulation ranking under stated conditions, not a hardware guarantee. The benchmark&apos;s pre-registered

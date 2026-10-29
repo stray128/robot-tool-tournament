@@ -3,7 +3,7 @@
   "$id": "urn:rtt:schema:replay-header:2",
   "title": "RTT replay header, version 2",
   "description": "The <stem>.json header of a v2 episode replay. Poses live in <stem>.bin with the v1 layout: little-endian float32 [frames x bodies x 7], each body frame's world pose (px, py, pz, qx, qy, qz, qw), Z up, metres. Bodies are drawn from content-addressed GLB assets placed in the body frame; v1-style primitive geoms are optional and serve as the collision overlay. Readers accept version 1 (the v1 header) and version 2 (this schema).",
-  "$comment": "Rules JSON Schema cannot express, checked by rtt.sim.replay.check_header and the tests: n_bodies == len(bodies); the .bin file holds n_frames * n_bodies * 7 float32 values; every visual's asset is a key of assets and every asset is drawn by some visual (assets holds exactly the referenced entries); each asset key equals sha256[:16] and its uri equals 'assets/' + key + '.glb'; sha256 and bytes match the file; the overlay sidecar, when present, holds n_frames * len(channels) float16 values.",
+  "$comment": "Rules JSON Schema cannot express, checked by rtt.studio.replay.check_lane_header and the tests (a plain float32 header without t, cuts or quantised, as the v1 writers make it, is still checked by rtt.sim.replay.check_header, which check_lane_header applies first): n_bodies == len(bodies); the .bin file holds n_frames * n_bodies * 7 float32 values (n_frames * n_bodies * 7 int16 words when quantised); t, when present, has one strictly increasing time per frame; cuts are strictly increasing frame indices below n_frames; every visual's asset is a key of assets and every asset is drawn by some visual (assets holds exactly the referenced entries); each asset key equals sha256[:16] and its uri equals 'assets/' + key + '.glb'; sha256 and bytes match the file; the overlay sidecar, when present, holds n_frames * len(channels) float16 values.",
   "type": "object",
   "required": [
     "format",
@@ -28,10 +28,15 @@
     "format": {"const": "rtt-replay"},
     "version": {"const": 2},
     "fps": {"type": "integer", "minimum": 1, "maximum": 1000},
-    "dtype": {"const": "float32"},
+    "dtype": {"enum": ["float32", "int16"]},
     "byte_order": {"const": "little"},
     "layout": {"const": ["frames", "bodies", "pose"]},
-    "pose_fields": {"const": ["px", "py", "pz", "qx", "qy", "qz", "qw"]},
+    "pose_fields": {
+      "anyOf": [
+        {"const": ["px", "py", "pz", "qx", "qy", "qz", "qw"]},
+        {"const": ["px", "py", "pz", "qa", "qb", "qc", "qi"]}
+      ]
+    },
     "up_axis": {"const": "z"},
     "units": {"const": "m"},
     "n_frames": {"type": "integer", "minimum": 1},
@@ -65,7 +70,34 @@
     },
     "meta": {"$ref": "#/$defs/meta"},
     "provenance": {"$ref": "#/$defs/provenance"},
-    "overlays": {"$ref": "#/$defs/overlays"}
+    "overlays": {"$ref": "#/$defs/overlays"},
+    "t": {
+      "description": "Keyframed lanes: the time in seconds of every stored frame (one per frame), strictly increasing and not uniform. Without it frame i is at i / fps.",
+      "type": "array",
+      "items": {"type": "number", "minimum": 0}
+    },
+    "cuts": {
+      "description": "Frame indices where a new segment starts (a tool change or a head switch). There is a frame exactly at each segment start and a player never interpolates across a cut. Without it the lane has no cuts.",
+      "type": "array",
+      "items": {"type": "integer", "minimum": 0}
+    },
+    "quantised": {
+      "description": "True: the .bin holds little-endian int16 [frames x bodies x 7] (dtype int16, pose_fields px py pz qa qb qc qi), frames then bodies in the header's order. A pose is [px, py, pz, qa, qb, qc, qi]: the position in units of 0.1 mm, round(mm * 10); the quaternion in smallest-three form: the component of largest magnitude (index qi, 0 to 3 for x y z w) is dropped after flipping the sign so that it is positive, and the other three, in x y z w order with qi skipped, are round(c / 0.70710678 * 32767); the dropped component is sqrt(max(0, 1 - sum of squares)).",
+      "type": "boolean"
+    }
+  },
+  "if": {"properties": {"quantised": {"const": true}}, "required": ["quantised"]},
+  "then": {
+    "properties": {
+      "dtype": {"const": "int16"},
+      "pose_fields": {"const": ["px", "py", "pz", "qa", "qb", "qc", "qi"]}
+    }
+  },
+  "else": {
+    "properties": {
+      "dtype": {"const": "float32"},
+      "pose_fields": {"const": ["px", "py", "pz", "qx", "qy", "qz", "qw"]}
+    }
   },
   "$defs": {
     "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},

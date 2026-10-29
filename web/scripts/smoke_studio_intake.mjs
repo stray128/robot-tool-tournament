@@ -1,16 +1,17 @@
 #!/usr/bin/env node
 /**
- * Headless smoke test of the Studio intake page, /studio/new/ (run `pnpm build` first).
+ * Headless smoke test of the Studio planner, on the Studio page (run `pnpm build` first; the old
+ * /studio/new/ route redirects there).
  *
  *   node scripts/smoke_studio_intake.mjs [--shots DIR] [--port 4175]
  *
  * Serves web/out and, at 1280 px and 375 px, fails on: a non-200 response, a console or page
  * error, horizontal page scroll, a missing product-mode label, or a brand token on screen
  * (BRAND_TOKENS read from src/rtt/effectors/types.py). It then drives the page: plays the
- * three hero examples' recorded plans (the cabinet one shows its repair call), breaks and fixes
+ * hero examples' recorded plans (the v2 tile one shows its repair call), breaks and fixes
  * an object parameter, reorders, deletes and adds steps, downloads the TaskSpec JSON (contract,
  * label, a 64-hex task id), plays a refused example (nearest primitive shown), plans a custom
- * text (the static site says it cannot), drops an STL (size readout) and builds a plan by hand.
+ * text (the static site says it runs in Explore mode), drops an STL (size readout) and builds a plan by hand.
  * Screenshots go to --shots (default web/.smoke/studio-intake).
  */
 
@@ -93,15 +94,15 @@ async function exercise(page, vp) {
   if (doc.steps?.length !== 4 || Object.keys(doc.fidelity ?? {}).length !== 4) problems.push("exported document has the wrong steps");
   await page.screenshot({ path: path.join(values.shots, `${vp}-tote.png`), fullPage: true });
 
-  // 2. the other heroes (the cabinet plan needed one repair call)
+  // 2. the other heroes (the Studio v2 hero examples; the tile plan needed one repair call)
   await playExample(page, "Pipe coupling");
   await waitText(page, "Plan is valid", problems, "coupling");
-  await playExample(page, "Equipment cabinet");
-  await waitText(page, "Call 2 (repair)", problems, "cabinet repair");
-  await waitText(page, "Plan is valid", problems, "cabinet");
-  const cabinet = await mainText(page);
-  if (!/APPROXIMATION/.test(cabinet)) problems.push("the cabinet plan shows no approximation tier");
-  await page.screenshot({ path: path.join(values.shots, `${vp}-cabinet.png`), fullPage: true });
+  await playExample(page, "Floor tile setting");
+  await waitText(page, "Call 2 (repair)", problems, "tile repair");
+  await waitText(page, "Plan is valid", problems, "tile");
+  const tile = await mainText(page);
+  if (!/APPROXIMATION/.test(tile)) problems.push("the tile plan shows no approximation tier");
+  await page.screenshot({ path: path.join(values.shots, `${vp}-tile.png`), fullPage: true });
 
   // 3. a refusal
   await page.locator("select").first().selectOption({ label: "unsupported: Fold a shirt (not simulated)" });
@@ -116,7 +117,7 @@ async function exercise(page, vp) {
   // 4. custom text on the static site
   await page.getByLabel("Use case", { exact: true }).fill("Juggle three balls on the bench.");
   await page.getByRole("button", { name: "Plan", exact: true }).click();
-  await waitText(page, "This static site has no model to call", problems, "custom text");
+  await waitText(page, "This public site runs in Explore mode: it has no model to call", problems, "custom text");
 
   // 5. an STL, then a plan by hand
   await page.setInputFiles('input[type="file"]', STL);
@@ -150,7 +151,7 @@ for (const vp of widths) {
     if (msg.type() === "error") errors.push(msg.text());
   });
   page.on("pageerror", (err) => errors.push(String(err)));
-  const res = await page.goto(`${origin}/studio/new/`, { waitUntil: "networkidle" });
+  const res = await page.goto(`${origin}/studio/`, { waitUntil: "networkidle" });
   const problems = [];
   if ((res?.status() ?? 0) !== 200) problems.push(`HTTP ${res?.status()}`);
   const first = await mainText(page);
@@ -162,7 +163,7 @@ for (const vp of widths) {
   if (hit) problems.push(`names a brand: ${hit[1]}`);
   problems.push(...errors);
   await page.screenshot({ path: path.join(values.shots, `${vp.name}-final.png`), fullPage: true });
-  console.log(`${problems.length ? "FAIL" : "ok  "} ${vp.name.padEnd(7)} /studio/new/ ${problems.join("; ")}`);
+  console.log(`${problems.length ? "FAIL" : "ok  "} ${vp.name.padEnd(7)} /studio/ ${problems.join("; ")}`);
   if (problems.length) failures.push({ viewport: vp.name, problems });
   await context.close();
 }

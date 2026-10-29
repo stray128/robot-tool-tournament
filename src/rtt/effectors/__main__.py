@@ -125,15 +125,27 @@ def _export(args: argparse.Namespace) -> int:
 
 
 def _families(_: argparse.Namespace) -> int:
-    from rtt.effectors.registry import get_family
-    from rtt.effectors.tournament import family_status
+    """The per-part tournament's families and presets (``per_part_presets``), then the presets that
+    only the Studio runs (the vacuum frames and the process tools) on one closing line."""
+    from rtt.effectors.registry import available_families, get_family
+    from rtt.effectors.tournament import family_status, per_part_presets
 
     fams, status = family_status(None)
     for fam, state in status.items():
         print(f"{fam}: {state}")
+    listed = set()
     for fam in fams:
-        for spec in get_family(fam).presets():
+        for spec in per_part_presets(fam):
+            listed.add(spec.effector_id)
             print(f"  {spec.group.value:<9} {spec.short_id} {spec.display_name}")
+    studio = [
+        s.display_name
+        for f in available_families()
+        for s in get_family(f).presets()
+        if s.effector_id not in listed
+    ]
+    if studio:
+        print("Studio only (not in the per-part tournament): " + "; ".join(studio))
     print(PRODUCT_MODE_LABEL)
     return 0
 
@@ -164,7 +176,10 @@ def main(argv: list[str] | None = None) -> int:
     e.add_argument("--web", default="web/public/data")
     e.add_argument("--parts", default=None)
     e.set_defaults(func=_export)
-    f = sub.add_parser("families", help="list the families and presets this build can run")
+    f = sub.add_parser(
+        "families",
+        help="list the families and presets of the per-part tournament, then the Studio-only presets",
+    )
     f.set_defaults(func=_families)
     args = parser.parse_args(argv)
     return int(args.func(args))

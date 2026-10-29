@@ -50,7 +50,7 @@ def test_upright_clamp_reads_the_effectors_own_actuators_in_a_studio_scene() -> 
     assert resolved
     for a, (_, lo, hi) in resolved.items():
         np.testing.assert_allclose((lo, hi), scene.model.actuator_ctrlrange[acts[a]])
-    assert int(acts[0]) == 5  # five wrist servos in front, so a fixed "4 + a" would read the roll
+    assert int(acts[0]) == 6  # six wrist servos in front, so a fixed "4 + a" would read a wrist servo
 
 
 def test_a_designed_pinch_hand_picks_a_part_in_the_studio() -> None:

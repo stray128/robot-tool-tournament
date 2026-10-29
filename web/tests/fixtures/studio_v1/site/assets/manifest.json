@@ -1,0 +1,1089 @@
+{
+ "assets": {
+  "0111a8f28cdcc0ea": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 2736,
+   "changes": [],
+   "label": "Studio task object: obj_service_valve_body",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "object",
+   "sha256": "0111a8f28cdcc0ea978096c7e56fad9a627e1248a8b4038cdc533546ec6463e3",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/0111a8f28cdcc0ea.glb"
+  },
+  "0123e5167ce25cba": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 2052,
+   "changes": [],
+   "label": "Studio task object: obj_pack_body",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "object",
+   "sha256": "0123e5167ce25cba97d908090a876f183bf7f6f86864bd59cade30012c3fdda0",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/0123e5167ce25cba.glb"
+  },
+  "0767adccdef3b2cd": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 3132,
+   "changes": [],
+   "label": "Studio task object: obj_test_port_plug",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "object",
+   "sha256": "0767adccdef3b2cd7f9642f22a526e42cd2d3dd647abee481f910a1279b41e93",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/0767adccdef3b2cd.glb"
+  },
+  "08ce7f8a4939e6f0": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 8412,
+   "changes": [],
+   "label": "Studio tool stack: eff_studio_bracket",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "08ce7f8a4939e6f0d6d67987081d4bfa9c4c27904c3724e843bd3d70338d2bcc",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/08ce7f8a4939e6f0.glb"
+  },
+  "104e44476ab087bc": {
+   "attribution": "Simulation model of an open-source industrial gripper, MIT, modified (full credit: /credits#effectors)",
+   "bytes": 3508,
+   "changes": [
+    "the simulation model's collision geometry only, as the simulator used it",
+    "re-posed into the replay body frame",
+    "re-encoded as GLB"
+   ],
+   "label": "Studio tool body: eff_right_finger_holder",
+   "license": "MIT",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "104e44476ab087bce029b6206d1e65d82a3921d2de8a037ede65f708efab964f",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/104e44476ab087bc.glb"
+  },
+  "11143c0648219275": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 4596,
+   "changes": [],
+   "label": "Studio task object: obj_test_port_pad0",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "object",
+   "sha256": "11143c064821927527a67bb2b626fe99195ce02be543c749cbb65909782d4e5d",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/11143c0648219275.glb"
+  },
+  "1ea6a12bad64f6d5": {
+   "attribution": "Simulation model of an open-source industrial gripper, BSD-3-Clause, modified (full credit: /credits#library)",
+   "bytes": 2312,
+   "changes": [
+    "the simulation model's collision geometry only, as the simulator used it",
+    "re-posed into the replay body frame",
+    "re-encoded as GLB"
+   ],
+   "label": "Studio tool body: eff_left_finger",
+   "license": "BSD-3-Clause",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "1ea6a12bad64f6d519a256682ef555e1978c83aec5fc149f3da226e021621b71",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/1ea6a12bad64f6d5.glb"
+  },
+  "30e503738711cdc2": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 3156,
+   "changes": [],
+   "label": "Studio task object: obj_pipe_coupling_seat",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "object",
+   "sha256": "30e503738711cdc2acf88d63ebbdab1ae9ae246d20d8b525d43373fca46fb8ed",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/30e503738711cdc2.glb"
+  },
+  "349d0809e2104964": {
+   "attribution": "Simulation model of an open-source industrial gripper, MIT, modified (full credit: /credits#effectors)",
+   "bytes": 3512,
+   "changes": [
+    "the simulation model's collision geometry only, as the simulator used it",
+    "re-posed into the replay body frame",
+    "re-encoded as GLB"
+   ],
+   "label": "Studio tool body: eff_left_finger_holder",
+   "license": "MIT",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "349d0809e2104964f7aa59d53c864e350c35a444ec3800b4d4a03d0979c40b29",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/349d0809e2104964.glb"
+  },
+  "36914fd652a388ac": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 2088,
+   "changes": [],
+   "label": "Studio task object: obj_tote_lid_panel",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "object",
+   "sha256": "36914fd652a388ac9cc9a063f0ddde12f2a6befc4829c85866bfafd262c6af34",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/36914fd652a388ac.glb"
+  },
+  "39aa094946a53fda": {
+   "attribution": "Simulation model of an open-source industrial gripper, Apache-2.0, modified (full credit: /credits#library)",
+   "bytes": 2892,
+   "changes": [
+    "the simulation model's collision geometry only, as the simulator used it",
+    "re-posed into the replay body frame",
+    "re-encoded as GLB"
+   ],
+   "label": "Studio tool body: eff_jaw2",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "39aa094946a53fda1a8a906f13f1550900333f48202c4ffddac815b4cfa9ca9d",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/39aa094946a53fda.glb"
+  },
+  "39b12a6333da5fca": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 4712,
+   "changes": [],
+   "label": "Studio tool body: eff_seg_01",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "39b12a6333da5fca088d93964ce00b8a46e14d38944b8a7e3a362675981ae299",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/39b12a6333da5fca.glb"
+  },
+  "3b4f5feb7d58485a": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 3464,
+   "changes": [],
+   "label": "Studio task object: obj_pipe_coupling_member",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "object",
+   "sha256": "3b4f5feb7d58485a33ffe98872e3d28fcf98c7b2a038954f481d2f1109bf1464",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/3b4f5feb7d58485a.glb"
+  },
+  "3c9248e31deef353": {
+   "attribution": "Simulation model of an open-source industrial gripper, BSD-2-Clause, modified (full credit: /credits#library)",
+   "bytes": 26468,
+   "changes": [
+    "the simulation model's collision geometry only, as the simulator used it",
+    "re-posed into the replay body frame",
+    "re-encoded as GLB"
+   ],
+   "label": "Studio tool body: eff_left_spring_link",
+   "license": "BSD-2-Clause",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "3c9248e31deef3538ece9558db3ebd4d0f6fb6107446d64a8d4833d556a7dac7",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/3c9248e31deef353.glb"
+  },
+  "3e963d733e6804a6": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 4712,
+   "changes": [],
+   "label": "Studio tool body: eff_seg_02",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "3e963d733e6804a6438cfb54dca99b05fa2ad1f9cd2328077c41878da05be239",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/3e963d733e6804a6.glb"
+  },
+  "41217c687f338a5c": {
+   "attribution": "Simulation model of an open-source industrial gripper, Apache-2.0, modified (full credit: /credits#library)",
+   "bytes": 9236,
+   "changes": [
+    "the simulation model's collision geometry only, as the simulator used it",
+    "re-posed into the replay body frame",
+    "re-encoded as GLB"
+   ],
+   "label": "Studio tool body: eff_gripper",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "41217c687f338a5c8fd1549adf6a21b813b715dc406545025e6bfc1084c5e189",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/41217c687f338a5c.glb"
+  },
+  "4202abb020a1d001": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 4676,
+   "changes": [],
+   "label": "Studio tool body: eff_seg_11",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "4202abb020a1d00102e06c4f10a9aefab692b3118e0289f40be67e858fe7bc3f",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/4202abb020a1d001.glb"
+  },
+  "435cbd1e5a2c189b": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 33996,
+   "changes": [],
+   "label": "Studio tool body: eff_cup",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "435cbd1e5a2c189b8c6e5f7008a3fa6c9ffe2b8137df7df84811d5a6ab8977f0",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/435cbd1e5a2c189b.glb"
+  },
+  "448271b973a7bfa2": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 2056,
+   "changes": [],
+   "label": "Studio task object: obj_carton_body",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "object",
+   "sha256": "448271b973a7bfa20ef875289f5c559fbd9ad7fd5da95381813891b7dcc53a3b",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/448271b973a7bfa2.glb"
+  },
+  "4c7b8fdcc0ea7ddf": {
+   "attribution": "Simulation model of an open-source industrial gripper, BSD-3-Clause, modified (full credit: /credits#library)",
+   "bytes": 3096,
+   "changes": [
+    "the simulation model's collision geometry only, as the simulator used it",
+    "re-posed into the replay body frame",
+    "re-encoded as GLB"
+   ],
+   "label": "Studio tool body: eff_left_outer_knuckle",
+   "license": "BSD-3-Clause",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "4c7b8fdcc0ea7ddf4fcd193a557e62b9a4ed3e055f9ad8a11ca6c1a408cee742",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/4c7b8fdcc0ea7ddf.glb"
+  },
+  "50e88ed5c0d5de4a": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 4824,
+   "changes": [],
+   "label": "Studio task object: obj_cabinet_door_panel",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "object",
+   "sha256": "50e88ed5c0d5de4a33adc1194ff6c68234cfa37eeed795ed5ff2a70e6b9a7718",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/50e88ed5c0d5de4a.glb"
+  },
+  "52011df46b9a7842": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 4684,
+   "changes": [],
+   "label": "Studio tool body: eff_seg_08",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "52011df46b9a78429a510f43b6040c7bd984d4c0a774aad12bfb25f96be99dc9",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/52011df46b9a7842.glb"
+  },
+  "573c7c3c0114e7d7": {
+   "attribution": "An open-source parallel gripper, CC BY 4.0, modified (full credit: /credits#gripper)",
+   "bytes": 2260,
+   "changes": [
+    "the simulation model's collision geometry only, as the simulator used it",
+    "re-posed into the replay body frame",
+    "re-encoded as GLB"
+   ],
+   "label": "Studio tool body: eff_pj_housing",
+   "license": "CC-BY-4.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "573c7c3c0114e7d795f25da902c4b6d319b0eb1332f2d3e6dc41f72e4e842427",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/573c7c3c0114e7d7.glb"
+  },
+  "57dddddb7e1b0cc0": {
+   "attribution": "Simulation model of an open-source industrial gripper, BSD-3-Clause, modified (full credit: /credits#library)",
+   "bytes": 3104,
+   "changes": [
+    "the simulation model's collision geometry only, as the simulator used it",
+    "re-posed into the replay body frame",
+    "re-encoded as GLB"
+   ],
+   "label": "Studio tool body: eff_right_outer_knuckle",
+   "license": "BSD-3-Clause",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "57dddddb7e1b0cc07e40bec95144af827e342407c1d77b99f6bd4658f1613811",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/57dddddb7e1b0cc0.glb"
+  },
+  "58c3d59126c06393": {
+   "attribution": "An open-source parallel gripper, CC BY 4.0, modified (full credit: /credits#gripper)",
+   "bytes": 18160,
+   "changes": [
+    "the simulation model's collision geometry only, as the simulator used it",
+    "re-posed into the replay body frame",
+    "re-encoded as GLB"
+   ],
+   "label": "Studio tool body: eff_pj_left",
+   "license": "CC-BY-4.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "58c3d59126c063935f874384d86f357b82cad4103a69345887ec9ce34930bb93",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/58c3d59126c06393.glb"
+  },
+  "5989c6d7aff06eee": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 2672,
+   "changes": [],
+   "label": "Studio tool body: eff_cup_base",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "5989c6d7aff06eee363cdf0522c9bf2f08eee137c0ea6e8c2db0a1660cfdeb33",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/5989c6d7aff06eee.glb"
+  },
+  "5bee4c32f50bac92": {
+   "attribution": "Simulation model of an open-source industrial gripper, Apache-2.0, modified (full credit: /credits#library)",
+   "bytes": 3760,
+   "changes": [
+    "the simulation model's collision geometry only, as the simulator used it",
+    "re-posed into the replay body frame",
+    "re-encoded as GLB"
+   ],
+   "label": "Studio tool body: eff_left_finger",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "5bee4c32f50bac92956b568fee81ad836501e2da14dbf251b14bc1c1f331e602",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/5bee4c32f50bac92.glb"
+  },
+  "61c1407e50d9d14a": {
+   "attribution": "Simulation model of an open-source industrial gripper, BSD-3-Clause, modified (full credit: /credits#library)",
+   "bytes": 2496,
+   "changes": [
+    "the simulation model's collision geometry only, as the simulator used it",
+    "re-posed into the replay body frame",
+    "re-encoded as GLB"
+   ],
+   "label": "Studio tool body: eff_right_finger",
+   "license": "BSD-3-Clause",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "61c1407e50d9d14a2fbcd139514552d7da0a6130d2bc3d47ae0eef3951e36892",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/61c1407e50d9d14a.glb"
+  },
+  "691688bf56f92703": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 2088,
+   "changes": [],
+   "label": "Studio task object: obj_tote_lid_frame",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "object",
+   "sha256": "691688bf56f927036edab42ba0a3ddd6c88ab150212c99b0d7884fd511f92b27",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/691688bf56f92703.glb"
+  },
+  "6b6e7e0b83070f9f": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 6356,
+   "changes": [],
+   "label": "Studio task object: obj_test_port_socket",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "object",
+   "sha256": "6b6e7e0b83070f9fd40d6d770013a58efc7593b8f638f035dc091530eae82850",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/6b6e7e0b83070f9f.glb"
+  },
+  "6e524adaad17f15a": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 4700,
+   "changes": [],
+   "label": "Studio tool body: eff_seg_04",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "6e524adaad17f15ac0ab408c49377879113e900dc4f72733584e341010a67bd8",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/6e524adaad17f15a.glb"
+  },
+  "6f328bea8487b346": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 2648,
+   "changes": [],
+   "label": "Studio tool body: eff_cup_bellows",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "6f328bea8487b346e382f2dbced6fbd61552d304d291cd5aaec7cd6ed945f81f",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/6f328bea8487b346.glb"
+  },
+  "6f7528ef2f895f67": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 4712,
+   "changes": [],
+   "label": "Studio tool body: eff_seg_00",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "6f7528ef2f895f67505609a629c952085c6af391c1cd15ae4009744ea4bbc8c3",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/6f7528ef2f895f67.glb"
+  },
+  "747a5326e8b7b8a2": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 4660,
+   "changes": [],
+   "label": "Studio tool body: eff_seg_10",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "747a5326e8b7b8a2792d9260237544b5dbe67e9e11f340cb16aef8ffc3f9ab89",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/747a5326e8b7b8a2.glb"
+  },
+  "75bc2dd28169012e": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 3172,
+   "changes": [],
+   "label": "Studio tool stack: eff_studio_changer",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "75bc2dd28169012e206d1f42fc05eddc41abddda7a9d372fd1b295e983f718c3",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/75bc2dd28169012e.glb"
+  },
+  "7bdfcef8829cfc1c": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 4696,
+   "changes": [],
+   "label": "Studio tool body: eff_arm_base",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "7bdfcef8829cfc1ca8a78cbf97dae350ede34feaa1c0f98920f383adbe8e7fcf",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/7bdfcef8829cfc1c.glb"
+  },
+  "7e1161a4dce7cb85": {
+   "attribution": "Simulation model of an open-source industrial gripper, BSD-2-Clause, modified (full credit: /credits#library)",
+   "bytes": 30636,
+   "changes": [
+    "the simulation model's collision geometry only, as the simulator used it",
+    "re-posed into the replay body frame",
+    "re-encoded as GLB"
+   ],
+   "label": "Studio tool body: eff_left_follower",
+   "license": "BSD-2-Clause",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "7e1161a4dce7cb8501b667d32b63377759b6ad2d6734005d9f80e97aa6a9d4bb",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/7e1161a4dce7cb85.glb"
+  },
+  "8093f4debda7427d": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 4676,
+   "changes": [],
+   "label": "Studio tool body: eff_seg_09",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "8093f4debda7427d6fad6fc60fa51389c583eee253e839cfe898e07a746feb3d",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/8093f4debda7427d.glb"
+  },
+  "82b2b51258f37301": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 2412,
+   "changes": [],
+   "label": "Tool stand (display only, not simulated)",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "prop",
+   "sha256": "82b2b51258f373014baa3134ccdb29880541f767283041b698437704a25cb11b",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/82b2b51258f37301.glb"
+  },
+  "8bc615c764c3dc33": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 4704,
+   "changes": [],
+   "label": "Studio tool body: eff_seg_03",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "8bc615c764c3dc334db6d972ba3643b8ec50d782ae9a4caf8c53502e6993640f",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/8bc615c764c3dc33.glb"
+  },
+  "8cb75f6c06fa32b0": {
+   "attribution": "Simulation model of an open-source industrial gripper, BSD-2-Clause, modified (full credit: /credits#library)",
+   "bytes": 30320,
+   "changes": [
+    "the simulation model's collision geometry only, as the simulator used it",
+    "re-posed into the replay body frame",
+    "re-encoded as GLB"
+   ],
+   "label": "Studio tool body: eff_right_follower",
+   "license": "BSD-2-Clause",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "8cb75f6c06fa32b0d6cd94041669551fc8d2cacb6bdb5a0b911deb63e783bbcb",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/8cb75f6c06fa32b0.glb"
+  },
+  "90e66ad496490711": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 2108,
+   "changes": [],
+   "label": "Studio task object: obj_cabinet_door_frame",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "object",
+   "sha256": "90e66ad496490711b9b808eba17b7f16259a5eaa4d160183140374fde2c458d5",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/90e66ad496490711.glb"
+  },
+  "93e877310dfbe849": {
+   "attribution": "Simulation model of an open-source industrial gripper, BSD-3-Clause, modified (full credit: /credits#library)",
+   "bytes": 13556,
+   "changes": [
+    "the simulation model's collision geometry only, as the simulator used it",
+    "re-posed into the replay body frame",
+    "re-encoded as GLB"
+   ],
+   "label": "Studio tool body: eff_n16",
+   "license": "BSD-3-Clause",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "93e877310dfbe8495e21f8d8439cb2d7172414a8c0e4177285f5615096d00ee6",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/93e877310dfbe849.glb"
+  },
+  "9bd8e3fed9f3ef2d": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 76408,
+   "changes": [],
+   "label": "Studio task object: obj_service_valve_wheel",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "object",
+   "sha256": "9bd8e3fed9f3ef2de86ca52d386d4a9f88ea0250b772c5d3ed9de57d624b1c40",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/9bd8e3fed9f3ef2d.glb"
+  },
+  "9e86861066bdb751": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 4684,
+   "changes": [],
+   "label": "Studio tool body: eff_seg_07",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "9e86861066bdb7516273312aaeb2254748011b6f2f41862552d019ef93f11140",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/9e86861066bdb751.glb"
+  },
+  "9eb45f41aba183d7": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 4696,
+   "changes": [],
+   "label": "Studio tool body: eff_seg_05",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "9eb45f41aba183d76b25572351a0f03e7965f04d806b0b163a5f5ebf35f654a2",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/9eb45f41aba183d7.glb"
+  },
+  "a5c41454829239dd": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 2080,
+   "changes": [],
+   "label": "Studio task object: obj_qt_latch_panel",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "object",
+   "sha256": "a5c41454829239dd3706c19a40d6d76cdabd96ba00d3d9a618fd3041503b0e17",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/a5c41454829239dd.glb"
+  },
+  "a6f0b7901c77fd20": {
+   "attribution": "Simulation model of an open-source industrial gripper, BSD-2-Clause, modified (full credit: /credits#library)",
+   "bytes": 27688,
+   "changes": [
+    "the simulation model's collision geometry only, as the simulator used it",
+    "re-posed into the replay body frame",
+    "re-encoded as GLB"
+   ],
+   "label": "Studio tool body: eff_left_coupler",
+   "license": "BSD-2-Clause",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "a6f0b7901c77fd2060308f9e174c272ebd5a325a1369e9eb8fee5d71968906d2",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/a6f0b7901c77fd20.glb"
+  },
+  "aad9db51e1bc19ca": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 2640,
+   "changes": [],
+   "label": "Studio wrist flange: wrist_flange",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "aad9db51e1bc19cad49ddcaff2d6fe9ccfd07a36e666c322d4810d01de1d87fd",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/aad9db51e1bc19ca.glb"
+  },
+  "ac4ffc8dd9ebb590": {
+   "attribution": "Simulation model of an open-source industrial gripper, BSD-3-Clause, modified (full credit: /credits#library)",
+   "bytes": 2496,
+   "changes": [
+    "the simulation model's collision geometry only, as the simulator used it",
+    "re-posed into the replay body frame",
+    "re-encoded as GLB"
+   ],
+   "label": "Studio tool body: eff_left_finger",
+   "license": "BSD-3-Clause",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "ac4ffc8dd9ebb5902b38ebd2a9987b32a4cac2ef91dc4167688f3181d8dafd11",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/ac4ffc8dd9ebb590.glb"
+  },
+  "ace1e94b4639c0d6": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 2792,
+   "changes": [],
+   "label": "Studio task object: obj_qt_latch_head",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "object",
+   "sha256": "ace1e94b4639c0d65b93bd753039c8b68e8957cc29577bf283d44e942cec9c51",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/ace1e94b4639c0d6.glb"
+  },
+  "b4099310e202affe": {
+   "attribution": "Simulation model of an open-source industrial gripper, BSD-2-Clause, modified (full credit: /credits#library)",
+   "bytes": 2452,
+   "changes": [
+    "the simulation model's collision geometry only, as the simulator used it",
+    "re-posed into the replay body frame",
+    "re-encoded as GLB"
+   ],
+   "label": "Studio tool body: eff_left_pad",
+   "license": "BSD-2-Clause",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "b4099310e202affec66eb6d40ff6bbbded9fe73de373dae89962dd055eab8f6a",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/b4099310e202affe.glb"
+  },
+  "be48841fd5cf12d6": {
+   "attribution": "Simulation model of an open-source industrial gripper, BSD-3-Clause, modified (full credit: /credits#library)",
+   "bytes": 3376,
+   "changes": [
+    "the simulation model's collision geometry only, as the simulator used it",
+    "re-posed into the replay body frame",
+    "re-encoded as GLB"
+   ],
+   "label": "Studio tool body: eff_right_inner_knuckle",
+   "license": "BSD-3-Clause",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "be48841fd5cf12d6da1417cbc4386cb97392f65638f4d96721d5cca369023bf9",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/be48841fd5cf12d6.glb"
+  },
+  "c436a7e1f96f43dd": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 2504,
+   "changes": [],
+   "label": "Studio task object: obj_tote_bin_frame",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "object",
+   "sha256": "c436a7e1f96f43dd2831c2596a2ecfc448082cfe4685217c876864d9ec3a5738",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/c436a7e1f96f43dd.glb"
+  },
+  "c902abbb26a4e20c": {
+   "attribution": "Simulation model of an open-source industrial gripper, BSD-2-Clause, modified (full credit: /credits#library)",
+   "bytes": 15516,
+   "changes": [
+    "the simulation model's collision geometry only, as the simulator used it",
+    "re-posed into the replay body frame",
+    "re-encoded as GLB"
+   ],
+   "label": "Studio tool body: eff_left_driver",
+   "license": "BSD-2-Clause",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "c902abbb26a4e20c6af85fb50df3d04520c401bba469601177ee0b5671851dd9",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/c902abbb26a4e20c.glb"
+  },
+  "d1c85485f8f25815": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 4696,
+   "changes": [],
+   "label": "Studio tool body: eff_seg_06",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "d1c85485f8f25815ab55b3f8e9278e74b0aa92fc7b75686bcd5f14a896af027a",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/d1c85485f8f25815.glb"
+  },
+  "d2ac455a5aa75cd4": {
+   "attribution": "Simulation model of an open-source industrial gripper, BSD-2-Clause, modified (full credit: /credits#library)",
+   "bytes": 38024,
+   "changes": [
+    "the simulation model's collision geometry only, as the simulator used it",
+    "re-posed into the replay body frame",
+    "re-encoded as GLB"
+   ],
+   "label": "Studio tool body: eff_base",
+   "license": "BSD-2-Clause",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "d2ac455a5aa75cd4ffd137a47e2106bdbc62635a84ce0236d8d931ef66a938ab",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/d2ac455a5aa75cd4.glb"
+  },
+  "e2483b48bb4bc16c": {
+   "attribution": "Simulation model of an open-source industrial gripper, Apache-2.0, modified (full credit: /credits#library)",
+   "bytes": 3372,
+   "changes": [
+    "the simulation model's collision geometry only, as the simulator used it",
+    "re-posed into the replay body frame",
+    "re-encoded as GLB"
+   ],
+   "label": "Studio tool body: eff_hand",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "e2483b48bb4bc16c9cf7ca2a9ade0e305c3882133a6fa33c793c1eebcca202b3",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/e2483b48bb4bc16c.glb"
+  },
+  "e2eaf86815cffba8": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 8352,
+   "changes": [],
+   "label": "Studio tool stack: eff_studio_bracket",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "e2eaf86815cffba89f35d46c0a46e2e1a9f3fbe008a895e614cc40e2da3a9ea1",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/e2eaf86815cffba8.glb"
+  },
+  "e44868ce5a36cf6c": {
+   "attribution": "Simulation model of an open-source industrial gripper, MIT, modified (full credit: /credits#effectors)",
+   "bytes": 8716,
+   "changes": [
+    "the simulation model's collision geometry only, as the simulator used it",
+    "re-posed into the replay body frame",
+    "re-encoded as GLB"
+   ],
+   "label": "Studio tool body: eff_base",
+   "license": "MIT",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "e44868ce5a36cf6cabb7e23f25d451fb9dff1340ebd215bdd00f5b4765af2a72",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/e44868ce5a36cf6c.glb"
+  },
+  "ee1adb6b38ef8bf8": {
+   "attribution": "Simulation model of an open-source industrial gripper, BSD-3-Clause, modified (full credit: /credits#library)",
+   "bytes": 2320,
+   "changes": [
+    "the simulation model's collision geometry only, as the simulator used it",
+    "re-posed into the replay body frame",
+    "re-encoded as GLB"
+   ],
+   "label": "Studio tool body: eff_body",
+   "license": "BSD-3-Clause",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "ee1adb6b38ef8bf8295327d04f790a6862f13f36f2a9fc2988474bcf8ea31d0c",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/ee1adb6b38ef8bf8.glb"
+  },
+  "f5d8d45facd5e3ee": {
+   "attribution": "An open-source parallel gripper, CC BY 4.0, modified (full credit: /credits#gripper)",
+   "bytes": 17752,
+   "changes": [
+    "the simulation model's collision geometry only, as the simulator used it",
+    "re-posed into the replay body frame",
+    "re-encoded as GLB"
+   ],
+   "label": "Studio tool body: eff_pj_right",
+   "license": "CC-BY-4.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "f5d8d45facd5e3ee76af6f610cf8b3066037aac97102b0f9fac8d9f30fc1174f",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/f5d8d45facd5e3ee.glb"
+  },
+  "f838665ea95f625d": {
+   "attribution": "Simulation model of an open-source industrial gripper, BSD-3-Clause, modified (full credit: /credits#library)",
+   "bytes": 3376,
+   "changes": [
+    "the simulation model's collision geometry only, as the simulator used it",
+    "re-posed into the replay body frame",
+    "re-encoded as GLB"
+   ],
+   "label": "Studio tool body: eff_left_inner_knuckle",
+   "license": "BSD-3-Clause",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "f838665ea95f625d156d8c0d3ee33edd441a701c9e7f768b509ea6c781a63638",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/f838665ea95f625d.glb"
+  },
+  "fa40b69ed2d4663b": {
+   "attribution": "Simulation model of an open-source industrial gripper, Apache-2.0, modified (full credit: /credits#library)",
+   "bytes": 2880,
+   "changes": [
+    "the simulation model's collision geometry only, as the simulator used it",
+    "re-posed into the replay body frame",
+    "re-encoded as GLB"
+   ],
+   "label": "Studio tool body: eff_jaw1",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "fa40b69ed2d4663b5ce8951a2e563b7747c4de41301974b068189d56790dc081",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/fa40b69ed2d4663b.glb"
+  },
+  "fcfdc409305a37cb": {
+   "attribution": "Robot Tool Tournament (Apache-2.0)",
+   "bytes": 2672,
+   "changes": [],
+   "label": "Studio tool body: eff_studio_mount",
+   "license": "Apache-2.0",
+   "media_type": "model/gltf-binary",
+   "role": "gripper_frame",
+   "sha256": "fcfdc409305a37cb7eb943d5e135a10c17316fdedf0907766c8e75fd3b2c8d83",
+   "source": {
+    "generator": "rtt.render.glb",
+    "kind": "generated"
+   },
+   "uri": "assets/fcfdc409305a37cb.glb"
+  }
+ },
+ "format": "rtt-asset-manifest",
+ "version": 1
+}

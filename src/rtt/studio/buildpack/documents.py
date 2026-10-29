@@ -16,7 +16,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any, Final
 
 from rtt.effectors.types import PRODUCT_MODE_LABEL, find_brand_tokens
-from rtt.studio.types import BomLine
+from rtt.studio.types import PRESENT_S, BomLine, ToolChanger
 
 __all__ = [
     "DISCLAIMER",
@@ -34,6 +34,8 @@ DISCLAIMER: Final = (
 )
 #: Fasteners per bolted interface (ISO 9409-1-50-4-M6 pattern) [assumed].
 SCREWS_PER_INTERFACE: Final = 4
+#: The contract's changer: what a manifest's changer record falls back to for a missing value.
+_CHANGER: Final = ToolChanger()
 
 
 def _tool_rows(setup: Mapping[str, Any]) -> list[Mapping[str, Any]]:
@@ -125,9 +127,9 @@ def bom_lines(
                 item="Automatic tool changer, master plate (wrist side)",
                 qty=1,
                 note=(
-                    f"{float(changer.get('changeover_s', 6.0)):g} s changeover, "
-                    f"{float(changer.get('master_mass_kg', 0.25)) * 1000:.0f} g, stack "
-                    f"{float(changer.get('stack_mm', 25.0)):g} mm [assumed]"
+                    f"{float(changer.get('changeover_s', _CHANGER.changeover_s)):g} s changeover, "
+                    f"{float(changer.get('master_mass_kg', _CHANGER.master_mass_kg)) * 1000:.0f} g, stack "
+                    f"{float(changer.get('stack_mm', _CHANGER.stack_mm)):g} mm [assumed]"
                 ),
             )
         )
@@ -135,7 +137,10 @@ def bom_lines(
             BomLine(
                 item="Automatic tool changer, tool plate",
                 qty=n,
-                note=f"one per tool, {float(changer.get('tool_plate_mass_kg', 0.1)) * 1000:.0f} g each [assumed]",
+                note=(
+                    f"one per tool, {float(changer.get('tool_plate_mass_kg', _CHANGER.tool_plate_mass_kg)) * 1000:.0f} g "
+                    "each [assumed]"
+                ),
             )
         )
     out.append(
@@ -206,7 +211,7 @@ def assembly_notes(finalist: Mapping[str, Any], report: Mapping[str, Any], files
         )
         lines.append(
             f"* To use head k the wrist tilts the whole bracket by minus that head's angle, so the head "
-            f"points straight down on the roll axis; each switch costs {float(setup.get('present_s') or 1.5):g} s "
+            f"points straight down on the roll axis; each switch costs {float(setup.get('present_s') or PRESENT_S):g} s "
             "[assumed]."
         )
     else:
@@ -216,8 +221,8 @@ def assembly_notes(finalist: Mapping[str, Any], report: Mapping[str, Any], files
             "(`changer_plate_tool<k>.stl`) and bolt it between the changer's tool plate and the tool."
         )
         lines.append(
-            f"* Changer stack {float(ch.get('stack_mm', 25)):g} mm, changeover "
-            f"{float(ch.get('changeover_s', 6)):g} s [assumed]."
+            f"* Changer stack {float(ch.get('stack_mm', _CHANGER.stack_mm)):g} mm, changeover "
+            f"{float(ch.get('changeover_s', _CHANGER.changeover_s)):g} s [assumed]."
         )
     lines += [
         "",

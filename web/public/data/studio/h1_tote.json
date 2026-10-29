@@ -1,0 +1,4124 @@
+{
+ "schema": "rtt-web-studio-hero",
+ "version": 1,
+ "label": "Product mode: not part of the pre-registered experiment",
+ "contract": "rtt-effectors/2",
+ "hero": "h1_tote",
+ "case_id": "h1_tote",
+ "title": "Returns tote",
+ "setting": "warehouse",
+ "use_case": "Warehouse returns: a plastic tote (300 x 200 mm, 120 mm tall) stands on the packing bench with its hinged lid shut; the lid overhangs the tote by a 15 mm lip all round. Open the lid, put a small rigid carton (about 120 x 80 x 60 mm, 300 g) and a flat shrink-wrapped pack (about 150 x 100 x 20 mm, 150 g) from the bench into the tote, then close the lid.",
+ "outcome": "recommended",
+ "headline": "A single tool completes the task in 8 of 8 runs.",
+ "plan": {
+  "task_id": "351218d6c47d46bba1e14ecb4cf230c592618cbe28e9bf1d8be29cb88085e4f8",
+  "title": "Warehouse returns tote packing",
+  "description": "Open the hinged lid on a tote, place a small carton and a shrink-wrapped pack inside the tote, then close the lid.",
+  "source": "nemotron",
+  "result": "valid_after_layout_fix",
+  "calls": 2,
+  "model": "nvidia/nemotron-3-super-120b-a12b",
+  "layout_moves": [
+   "Moved carton from (200, 130) to (250, 130) mm to clear the footprint of tote_bin",
+   "Moved pack from (-200, -130) to (-260, -130) mm to clear the footprint of tote_bin"
+  ],
+  "assumptions": [
+   "The lid overhangs the tote by a 15 mm lip on all sides.",
+   "The tote dimensions are 300 x 200 x 120 mm.",
+   "The carton is approximately 120 x 80 x 60 mm and 300 g.",
+   "The shrink-wrapped pack is approximately 150 x 100 x 20 mm and 150 g.",
+   "Moved carton from (200, 130) to (250, 130) mm to clear the footprint of tote_bin",
+   "Moved pack from (-200, -130) to (-260, -130) mm to clear the footprint of tote_bin"
+  ],
+  "clarifications": [],
+  "unsupported": [],
+  "objects": [
+   {
+    "name": "tote_bin",
+    "kind": "bin",
+    "kind_title": "Bin or tote",
+    "label": "Tote",
+    "params": {
+     "fixed": true,
+     "height_mm": 120,
+     "length_mm": 300,
+     "wall_mm": 4,
+     "width_mm": 200
+    },
+    "pose": {
+     "x_mm": 0.0,
+     "y_mm": 0.0,
+     "yaw_deg": 0.0
+    },
+    "ref": null
+   },
+   {
+    "name": "tote_lid",
+    "kind": "hinged_lid",
+    "kind_title": "Hinged lid or door",
+    "label": "Tote lid",
+    "params": {
+     "damping_nms": 0.05,
+     "depth_mm": 230,
+     "feature": "lip",
+     "feature_mm": 15,
+     "max_angle_deg": 110,
+     "open_torque_nm": 0.3,
+     "orientation": "lid",
+     "thickness_mm": 6,
+     "width_mm": 330
+    },
+    "pose": {
+     "x_mm": 0.0,
+     "y_mm": 0.0,
+     "yaw_deg": 0.0
+    },
+    "ref": null
+   },
+   {
+    "name": "carton",
+    "kind": "part",
+    "kind_title": "Rigid part",
+    "label": "Small carton",
+    "params": {
+     "mass_g": 300,
+     "shape": "box",
+     "size_x_mm": 120,
+     "size_y_mm": 80,
+     "size_z_mm": 60
+    },
+    "pose": {
+     "x_mm": 250.0,
+     "y_mm": 130.0,
+     "yaw_deg": 0.0
+    },
+    "ref": null
+   },
+   {
+    "name": "pack",
+    "kind": "part",
+    "kind_title": "Rigid part",
+    "label": "Shrink-wrapped pack",
+    "params": {
+     "mass_g": 150,
+     "shape": "box",
+     "size_x_mm": 150,
+     "size_y_mm": 100,
+     "size_z_mm": 20
+    },
+    "pose": {
+     "x_mm": -260.0,
+     "y_mm": -130.0,
+     "yaw_deg": 0.0
+    },
+    "ref": null
+   }
+  ],
+  "steps": [
+   {
+    "id": "open_lid",
+    "primitive": "hook_pull",
+    "primitive_title": "Hook pull",
+    "object": "tote_lid",
+    "handle": "handle",
+    "target": null,
+    "params": {
+     "approach": "top",
+     "speed_mm_s": 50
+    },
+    "constraints": {
+     "max_force_n": 20.0,
+     "max_torque_nm": null,
+     "precision_mm": null,
+     "precision_deg": null
+    },
+    "success": [
+     {
+      "quantity": "angle_deg",
+      "unit": "deg",
+      "at_least": 95.0,
+      "at_most": 110.0,
+      "text": "angle 95 to 110 deg"
+     }
+    ],
+    "after": [],
+    "hold_after": false,
+    "description": "Hook the lid's lip and pull it open past vertical.",
+    "fidelity": "rigid",
+    "caveats": []
+   },
+   {
+    "id": "pick_carton",
+    "primitive": "grasp",
+    "primitive_title": "Grasp",
+    "object": "carton",
+    "handle": "part",
+    "target": "tote_bin",
+    "params": {
+     "hold_s": 1,
+     "lift_mm": 150
+    },
+    "constraints": {
+     "max_force_n": null,
+     "max_torque_nm": null,
+     "precision_mm": null,
+     "precision_deg": null
+    },
+    "success": [
+     {
+      "quantity": "in_target",
+      "unit": "flag",
+      "at_least": 1.0,
+      "at_most": null,
+      "text": "ends inside the target"
+     },
+     {
+      "quantity": "tilt_deg",
+      "unit": "deg",
+      "at_least": null,
+      "at_most": 30.0,
+      "text": "tilt at most 30 deg"
+     }
+    ],
+    "after": [
+     "open_lid"
+    ],
+    "hold_after": false,
+    "description": "Pick the carton and place it in the tote.",
+    "fidelity": "rigid",
+    "caveats": []
+   },
+   {
+    "id": "pick_pack",
+    "primitive": "grasp",
+    "primitive_title": "Grasp",
+    "object": "pack",
+    "handle": "part",
+    "target": "tote_bin",
+    "params": {
+     "hold_s": 1,
+     "lift_mm": 150
+    },
+    "constraints": {
+     "max_force_n": null,
+     "max_torque_nm": null,
+     "precision_mm": null,
+     "precision_deg": null
+    },
+    "success": [
+     {
+      "quantity": "in_target",
+      "unit": "flag",
+      "at_least": 1.0,
+      "at_most": null,
+      "text": "ends inside the target"
+     },
+     {
+      "quantity": "tilt_deg",
+      "unit": "deg",
+      "at_least": null,
+      "at_most": 30.0,
+      "text": "tilt at most 30 deg"
+     }
+    ],
+    "after": [
+     "pick_carton"
+    ],
+    "hold_after": false,
+    "description": "Pick the pack and place it in the tote.",
+    "fidelity": "rigid",
+    "caveats": []
+   },
+   {
+    "id": "close_lid",
+    "primitive": "push",
+    "primitive_title": "Push",
+    "object": "tote_lid",
+    "handle": "lid",
+    "target": null,
+    "params": {
+     "speed_mm_s": 30
+    },
+    "constraints": {
+     "max_force_n": 20.0,
+     "max_torque_nm": null,
+     "precision_mm": null,
+     "precision_deg": null
+    },
+    "success": [
+     {
+      "quantity": "angle_deg",
+      "unit": "deg",
+      "at_least": 0.0,
+      "at_most": 5.0,
+      "text": "angle 0 to 5 deg"
+     }
+    ],
+    "after": [
+     "pick_pack"
+    ],
+    "hold_after": false,
+    "description": "Push the lid down until it closes.",
+    "fidelity": "rigid",
+    "caveats": []
+   }
+  ]
+ },
+ "screen": {
+  "n_candidates": 56,
+  "n_screened": 38,
+  "n_conditions": 3,
+  "runs": 249,
+  "wall_s": 585.0,
+  "candidates": [
+   {
+    "effector_id": "ddddf0f1e2136d2fbec6fb5228cc06a4fd7c46f2dbfc3ec459e998fe17b1523b",
+    "display_name": "Parallel jaw, configurator imprint: Small carton",
+    "family": "parallel_jaw",
+    "family_title": "Parallel jaw",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": "carton",
+    "status": "pruned",
+    "pruned_reason": "cannot be built: Parallel jaw, configurator imprint for carton: open clearance: part Small carton: at full open a jaw clears the part plus a 3.00 mm error envelope by -0.60 mm (minimum 3.00 mm)",
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "acde1725572c7d13f4e64f90febc71e3dfa65c95f1563a00b11393aa796e8f93",
+    "display_name": "Parallel jaw, flat pad: Small carton",
+    "family": "parallel_jaw",
+    "family_title": "Parallel jaw",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": "carton",
+    "status": "pruned",
+    "pruned_reason": "cannot be built: Parallel jaw, flat pad for carton: open clearance: part Small carton: at full open a jaw clears the part plus a 3.00 mm error envelope by -0.60 mm (minimum 3.00 mm)",
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "591283d9d29bb4da554715a7a9001a3d7826a08a6ffffd96f47176e2dc213b87",
+    "display_name": "Parallel jaw, stock blade: Small carton",
+    "family": "parallel_jaw",
+    "family_title": "Parallel jaw",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": "carton",
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "open_lid",
+      "reason": "its jaws are shaped and sized for carton; Tote lid gets part-shaped jaws of its own"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "its jaws are shaped and sized for carton; pack gets part-shaped jaws of its own"
+     },
+     {
+      "step_id": "close_lid",
+      "reason": "its jaws are shaped and sized for carton; Tote lid gets part-shaped jaws of its own"
+     }
+    ]
+   },
+   {
+    "effector_id": "ba072b85596522a0db8fc9fd9a1d5645365344e193baba391bfa320665603ef0",
+    "display_name": "Parallel jaw, configurator imprint: Shrink-wrapped pack",
+    "family": "parallel_jaw",
+    "family_title": "Parallel jaw",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": "pack",
+    "status": "pruned",
+    "pruned_reason": "cannot be built: Parallel jaw, configurator imprint for pack: seat range: part Shrink-wrapped pack: seat closure -7.60 mm is outside [2.00 mm, 40.00 mm]: the part is too wide for the opening",
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "58d3bf138694636c2bd6bdc58553fa41bb0eabb94fe3ba6d755202c5a0f329d6",
+    "display_name": "Parallel jaw, flat pad: Shrink-wrapped pack",
+    "family": "parallel_jaw",
+    "family_title": "Parallel jaw",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": "pack",
+    "status": "pruned",
+    "pruned_reason": "cannot be built: Parallel jaw, flat pad for pack: seat range: part Shrink-wrapped pack: seat closure -7.60 mm is outside [2.00 mm, 40.00 mm]: the part is too wide for the opening",
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "31faefbe777a618cd67e2bcc884c09606c19b9a80b69d6b400f6381da318899c",
+    "display_name": "Parallel jaw, stock blade: Shrink-wrapped pack",
+    "family": "parallel_jaw",
+    "family_title": "Parallel jaw",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": "pack",
+    "status": "pruned",
+    "pruned_reason": "cannot be built: Parallel jaw, stock blade for pack: seat range: part Shrink-wrapped pack: seat closure -7.60 mm is outside [2.00 mm, 40.00 mm]: the part is too wide for the opening",
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "e0152a5f29e1756ccd2ed7b3602b13ce3a4d3a80d1fe1709d383db30284f82b7",
+    "display_name": "Four-finger 16-joint hand, power grasp",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "open_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     },
+     {
+      "step_id": "close_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     }
+    ]
+   },
+   {
+    "effector_id": "f4363e74967e4429fc2203073f9a2f6e8eed447a156149eaf424544d589cef8d",
+    "display_name": "Four-finger 16-joint hand, pinch",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "open_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     },
+     {
+      "step_id": "close_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     }
+    ]
+   },
+   {
+    "effector_id": "bc347dd620c711c06e02bbf5b6c610413ae5b0ac8b182fdbb98f5ae997e177af",
+    "display_name": "Five-finger 18-actuator hand, power grasp",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "open_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     },
+     {
+      "step_id": "close_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     }
+    ]
+   },
+   {
+    "effector_id": "300d169b6786c96007dbe4ce8c0fea66549c0e081cfcfe3f3fe07d6e46ec6a3f",
+    "display_name": "Five-finger 18-actuator hand, pinch",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "open_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     },
+     {
+      "step_id": "close_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     }
+    ]
+   },
+   {
+    "effector_id": "a0fc12482a70670906acabab94f5bc4b91ebbbff57fe669e9725afd57c80c75e",
+    "display_name": "Five-finger 22-joint hand, power grasp",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "open_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     },
+     {
+      "step_id": "close_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     }
+    ]
+   },
+   {
+    "effector_id": "594c4f4d5088689c599fdd9884d2675a7a3d69f8f7df8489ef57b6484db711f0",
+    "display_name": "Five-finger 22-joint hand, pinch",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "open_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     },
+     {
+      "step_id": "close_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     }
+    ]
+   },
+   {
+    "effector_id": "79372f1ed2ab4e3a5467c38ed239aa0795a8df3e5ce6af900af10a5a3e252050",
+    "display_name": "Two-finger parallel gripper, fin-ray pads",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "pick_carton",
+      "reason": "Small carton: the part is 80.0 mm across the closing axis; the gripper opens 83.4 mm"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "Shrink-wrapped pack: the part is 100.0 mm across the closing axis; the gripper opens 83.4 mm"
+     }
+    ]
+   },
+   {
+    "effector_id": "a03002d6c5e1107f0bef73bc8cf24cd90b390550654aaa5d9e8899933971f6d7",
+    "display_name": "Two-finger parallel gripper, rigid pads A",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "pick_carton",
+      "reason": "Small carton: the part is 80.0 mm across the closing axis; the gripper opens 74.7 mm"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "Shrink-wrapped pack: the part is 100.0 mm across the closing axis; the gripper opens 74.7 mm"
+     }
+    ]
+   },
+   {
+    "effector_id": "bbb8214caaf4a70aac3e2c08331f0166c12470bf97db57db00dc834a77ff4dd1",
+    "display_name": "Two-finger adaptive gripper, power grasp",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "pick_carton",
+      "reason": "Small carton: the part is 80.0 mm across the closing axis; the gripper opens 52.0 mm"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "Shrink-wrapped pack: the part is 100.0 mm across the closing axis; the gripper opens 52.0 mm"
+     }
+    ]
+   },
+   {
+    "effector_id": "52613f2b72143b61b490ddfc05c4e3ed38c49de7005b77f07a5ccbfada0ab476",
+    "display_name": "Two-finger adaptive gripper, pinch",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "pick_carton",
+      "reason": "Small carton: the part is 80.0 mm across the closing axis; the gripper opens 52.0 mm"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "Shrink-wrapped pack: the part is 100.0 mm across the closing axis; the gripper opens 52.0 mm"
+     }
+    ]
+   },
+   {
+    "effector_id": "730fd283dd6b7dd046711dfef0b73a64f6a577e2cc7a643ee6affb86f74ed0aa",
+    "display_name": "Three-finger adaptive gripper, power grasp",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "pick_carton",
+      "reason": "Small carton: the part is 80.0 mm across the closing axis; the gripper opens 52.0 mm"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "Shrink-wrapped pack: the part is 100.0 mm across the closing axis; the gripper opens 52.0 mm"
+     }
+    ]
+   },
+   {
+    "effector_id": "9dbe8879e66bd4a935e6db502db88cdb0ce74390f469ada567cc93eb165b5b58",
+    "display_name": "Three-finger adaptive gripper, pinch",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "pick_carton",
+      "reason": "Small carton: the part is 80.0 mm across the closing axis; the gripper opens 52.0 mm"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "Shrink-wrapped pack: the part is 100.0 mm across the closing axis; the gripper opens 52.0 mm"
+     }
+    ]
+   },
+   {
+    "effector_id": "e754a0d67325f2100c98c2f9af46bb60c49421f256a2026895fb59bcf82e547d",
+    "display_name": "Soft arm, 12 segments, 140 mm",
+    "family": "soft_arm",
+    "family_title": "Soft arm",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "soft_arm",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "pick_carton",
+      "reason": "Small carton: the part is 80 mm wide; the arm hangs only 25 mm from the wrist axis"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "Shrink-wrapped pack: the part is 100 mm wide; the arm hangs only 25 mm from the wrist axis"
+     },
+     {
+      "step_id": "close_lid",
+      "reason": "a slack soft arm has no stiff face to push with"
+     },
+     {
+      "step_id": "open_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a soft arm or tentacle is used only if every rigid option fails"
+     }
+    ]
+   },
+   {
+    "effector_id": "743fc0bc1efc93c288065cff91b147fd993ad974831e50b7617f7f15a0ab66fc",
+    "display_name": "Soft arm, 16 segments, 160 mm",
+    "family": "soft_arm",
+    "family_title": "Soft arm",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "soft_arm",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "pick_carton",
+      "reason": "Small carton: the part is 80 mm wide; the arm hangs only 25 mm from the wrist axis"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "Shrink-wrapped pack: the part is 100 mm wide; the arm hangs only 25 mm from the wrist axis"
+     },
+     {
+      "step_id": "close_lid",
+      "reason": "a slack soft arm has no stiff face to push with"
+     },
+     {
+      "step_id": "open_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a soft arm or tentacle is used only if every rigid option fails"
+     }
+    ]
+   },
+   {
+    "effector_id": "2f5e4f974b13a6445127a6afead695a9e58a54cdeb12a3101724db21f6b368e9",
+    "display_name": "Soft arm, 20 soft segments, 180 mm",
+    "family": "soft_arm",
+    "family_title": "Soft arm",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "soft_arm",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "pick_carton",
+      "reason": "Small carton: the part is 80 mm wide; the arm hangs only 25 mm from the wrist axis"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "Shrink-wrapped pack: the part is 100 mm wide; the arm hangs only 25 mm from the wrist axis"
+     },
+     {
+      "step_id": "close_lid",
+      "reason": "a slack soft arm has no stiff face to push with"
+     },
+     {
+      "step_id": "open_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a soft arm or tentacle is used only if every rigid option fails"
+     }
+    ]
+   },
+   {
+    "effector_id": "f0b6543ba012ad8f54c8860c61407708f1bdfaf1d1b395d00a64ada8e883d6de",
+    "display_name": "Suction cup, 10 mm bellows",
+    "family": "suction",
+    "family_title": "Suction cup",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "suction",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "open_lid",
+      "reason": "a suction cup has no hook or fingers to engage a handle or lip"
+     }
+    ]
+   },
+   {
+    "effector_id": "3907bc284d9e2c3399ddb8b45b1bf94dbb3b0ef0672705c6d90724839ecf7186",
+    "display_name": "Suction cup, 16 mm bellows",
+    "family": "suction",
+    "family_title": "Suction cup",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "suction",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "open_lid",
+      "reason": "a suction cup has no hook or fingers to engage a handle or lip"
+     }
+    ]
+   },
+   {
+    "effector_id": "e72e88518c0ebe7a74ec5db104b671180e9dbb5b51d0b11045814506657f31bf",
+    "display_name": "Suction cup, 25 mm bellows",
+    "family": "suction",
+    "family_title": "Suction cup",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "suction",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "open_lid",
+      "reason": "a suction cup has no hook or fingers to engage a handle or lip"
+     }
+    ]
+   },
+   {
+    "effector_id": "1a3dddd3d68cc0b6df6d003946cc16fb895f371d0001906c7ba2e72d729721ac",
+    "display_name": "Vacuum area frame, 2 x 2 cups, 300 mm",
+    "family": "suction",
+    "family_title": "Vacuum area frame",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "suction",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "open_lid",
+      "reason": "a suction cup has no hook or fingers to engage a handle or lip"
+     },
+     {
+      "step_id": "pick_carton",
+      "reason": "the 120 x 80 mm top face of carton covers 0 of the frame's 4 cups; the frame holds a part only with at least 3 of them sealed [assumed]"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "the 150 x 100 mm top face of pack covers 0 of the frame's 4 cups; the frame holds a part only with at least 3 of them sealed [assumed]"
+     }
+    ],
+    "studio_only": true,
+    "rating": "rated 4.15 kg on a smooth face (holding force over a 1.5 safety factor)",
+    "caveat": "Vacuum area frame (approximation): the cups of the suction cup model on a rigid frame, each with its own seal test and its own vacuum valve (a cup that does not seal stays off). The holding force is the sum of the sealed cups' caps; the payload is that force over a safety factor (1.5 smooth, 2.0 porous, 2.5 swivelling, all [assumed]) at 1 g. Only the smooth rating is a simulated claim: the porous and swivelling ratings are arithmetic on the same force, because no leak, porosity or swivel is simulated. Not modelled: a shared vacuum source and its flow, the leak of an unsealed cup into the others, the frame's flex, peel across a long face, foam or needle area grippers. Treat frame results as a screen, then verify on hardware."
+   },
+   {
+    "effector_id": "530514a2ba01210b994060206aa74f49d498731eb80579282867d25195f8257a",
+    "display_name": "Vacuum area frame, 2 x 3 cups, 600 mm",
+    "family": "suction",
+    "family_title": "Vacuum area frame",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "suction",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "open_lid",
+      "reason": "a suction cup has no hook or fingers to engage a handle or lip"
+     },
+     {
+      "step_id": "pick_carton",
+      "reason": "the 120 x 80 mm top face of carton covers 0 of the frame's 6 cups; the frame holds a part only with at least 3 of them sealed [assumed]"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "the 150 x 100 mm top face of pack covers 0 of the frame's 6 cups; the frame holds a part only with at least 3 of them sealed [assumed]"
+     }
+    ],
+    "studio_only": true,
+    "rating": "rated 8.47 kg on a smooth face (holding force over a 1.5 safety factor)",
+    "caveat": "Vacuum area frame (approximation): the cups of the suction cup model on a rigid frame, each with its own seal test and its own vacuum valve (a cup that does not seal stays off). The holding force is the sum of the sealed cups' caps; the payload is that force over a safety factor (1.5 smooth, 2.0 porous, 2.5 swivelling, all [assumed]) at 1 g. Only the smooth rating is a simulated claim: the porous and swivelling ratings are arithmetic on the same force, because no leak, porosity or swivel is simulated. Not modelled: a shared vacuum source and its flow, the leak of an unsealed cup into the others, the frame's flex, peel across a long face, foam or needle area grippers. Treat frame results as a screen, then verify on hardware."
+   },
+   {
+    "effector_id": "722d18369aa469f5d390011a204ced8a74f3d3c3b4596e2fb4822b13597fb1d4",
+    "display_name": "Nut runner, 13 mm hex socket",
+    "family": "process_tool",
+    "family_title": "Process tool",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "process",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "open_lid",
+      "reason": "a nut runner turns a fastener; it is not a hook, so it cannot pull a lip or handle"
+     },
+     {
+      "step_id": "pick_carton",
+      "reason": "a nut runner turns a fastener; it cannot pick or hold a part"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "a nut runner turns a fastener; it cannot pick or hold a part"
+     },
+     {
+      "step_id": "close_lid",
+      "reason": "a nut runner turns a fastener; it cannot push"
+     }
+    ],
+    "studio_only": true,
+    "rating": "rated 6.7 N m (clutch cap 10 N m); members at least 12 mm tall",
+    "caveat": "Nut runner (approximation): a rigid hex socket with a guide funnel on a lateral float; it engages a hex member by shape. The Studio wrist's roll is its spindle [assumed], at the wrist's speed: a clutch limits the torque to its cap (10 N m, under the wrist's 15 N m) and lets go at the release. The socket's walls are stacked slices so the simulator's contacts are as stiff as steel (a solver artifact). Supported in the Studio: members at least 12 mm tall. Not modelled: a motor, a torque transducer, cross-threading, socket wear, a reaction arm. Simulated, verify on hardware."
+   },
+   {
+    "effector_id": "e678af7b9e64e5522adab03ac14717d9103435946e5778f8e578c1bc2c7bf710",
+    "display_name": "Tamper pad, 200 mm",
+    "family": "process_tool",
+    "family_title": "Process tool",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "process",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "open_lid",
+      "reason": "a tamper pad presses a face; it is not a hook, so it cannot pull a lip or handle"
+     },
+     {
+      "step_id": "pick_carton",
+      "reason": "a tamper pad presses a face; it cannot pick or hold a part"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "a tamper pad presses a face; it cannot pick or hold a part"
+     }
+    ],
+    "studio_only": true,
+    "rating": "rated 40 N (the stage slips at 60 N)",
+    "caveat": "Tamper pad (approximation): a rigid, level 200 mm square pad on a spring stage that slips at 60 N, so the pad never presses harder than that within the stage's 60 mm of travel. Not modelled: pad deformation, vibration or impact compaction, mortar flow, the pad's edge catching a joint. Simulated, verify on hardware."
+   },
+   {
+    "effector_id": "f7faa3ddd45fee96149330bbf1bc6cd179305044806e9f178ed0735f6f184b80",
+    "display_name": "Two-finger adaptive linkage gripper, 85 mm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "pick_pack",
+      "reason": "Shrink-wrapped pack: the part is 100.0 mm across the closing axis; the gripper opens 86.6 mm"
+     }
+    ]
+   },
+   {
+    "effector_id": "762b2cf206e7b33c97e3e70157492630c91ae3d28b3dae35580e25bfbbee9319",
+    "display_name": "Air-actuated mini parallel gripper",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "open_lid",
+      "reason": "it opens 18 mm; pre-shaping around the 6 mm feature needs 18 mm"
+     },
+     {
+      "step_id": "pick_carton",
+      "reason": "Small carton: the part is 80.0 mm across the closing axis; the gripper opens 18.0 mm"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "Shrink-wrapped pack: the part is 100.0 mm across the closing axis; the gripper opens 18.0 mm"
+     }
+    ]
+   },
+   {
+    "effector_id": "9aff5d8ef53e119ab1943eef6d8ba55af4795f806c1a2e111b89c7c0444c770b",
+    "display_name": "Two-finger parallel cobot hand, 80 mm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "pick_carton",
+      "reason": "Small carton: the part is 80.0 mm across the closing axis; the gripper opens 79.8 mm"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "Shrink-wrapped pack: the part is 100.0 mm across the closing axis; the gripper opens 79.8 mm"
+     }
+    ]
+   },
+   {
+    "effector_id": "6d286bacbd7431187a1a4bd5a48d194ea5e59399afb0a9e2227332f4fe006cf7",
+    "display_name": "Force-controlled parallel gripper, 48 mm stroke",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "pick_carton",
+      "reason": "Small carton: the part is 80.0 mm across the closing axis; the gripper opens 47.0 mm"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "Shrink-wrapped pack: the part is 100.0 mm across the closing axis; the gripper opens 47.0 mm"
+     }
+    ]
+   },
+   {
+    "effector_id": "5f28e092f268ff12c38c8c8a9da33cf6520bc235ddf0f15eef85705bf5abaa0d",
+    "display_name": "Rack-and-pinion parallel gripper for an open hobby arm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "02405ccb8d6393b7ca149262b1d03aad7a153238ce0bc32ea1d3eacad7657d39",
+    "display_name": "Two-finger linkage gripper of a cobot arm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "pick_pack",
+      "reason": "Shrink-wrapped pack: the part is 100.0 mm across the closing axis; the gripper opens 88.9 mm"
+     }
+    ]
+   },
+   {
+    "effector_id": "f2ea72dff094ac3680a7b59e05a96a2e9bc4d8191c7bfee56d30f1755987dff2",
+    "display_name": "Industrial servo parallel gripper, 110 mm stroke",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "19349473603b229ce8676b46cd97598dc1cd5b463f8f801d4455e1a7b01ba3e2",
+    "display_name": "Two-finger parallel gripper, teleop-arm fingers",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "7d8ca167a7b3a93e3461ebca357e274ec9c9ca4fa9c2f4e50daa4c0a5e027724",
+    "display_name": "Angular-jaw gripper of an open hobby arm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "5c8f1c25a0a4eb30f7b91746a547c19ff95ec2889aad7a739126582805adb41b",
+    "display_name": "Three-finger 12-joint industrial hand",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": "it weighs 4.14 kg; the arm carries at most 3 kg [assumed]",
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "2f59fe9db92cd4baa4bcc418531f685100bc2ce00459fe887fe591b7f4d5fd65",
+    "display_name": "Servo-driven four-finger hand, 13 actuators, power grasp",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "open_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     },
+     {
+      "step_id": "close_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     }
+    ]
+   },
+   {
+    "effector_id": "7f12d546e0d7714e3d2aae831d9ea52eb2494283c1ccd5487920ac69fa27a720",
+    "display_name": "Servo-driven four-finger hand, 13 actuators, pinch",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "open_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     },
+     {
+      "step_id": "close_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     }
+    ]
+   },
+   {
+    "effector_id": "d702e265cd1c213b47f352e50c6c3d54ec8b736f9da8714cfdf936bece063264",
+    "display_name": "Tendon-driven five-finger hand, 16 joints, power grasp",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "open_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     },
+     {
+      "step_id": "close_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     }
+    ]
+   },
+   {
+    "effector_id": "ba4075426cf13421509805b4367919c507f396904da831894f373d928292dd01",
+    "display_name": "Tendon-driven five-finger hand, 16 joints, pinch",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "open_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     },
+     {
+      "step_id": "close_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     }
+    ]
+   },
+   {
+    "effector_id": "a5d7b1667b4f0d6582a36df49b9e600eeedc31f54dc883ddf7803fe113091f1d",
+    "display_name": "Suction cup, 40 mm bellows",
+    "family": "suction",
+    "family_title": "Suction cup",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "suction",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "open_lid",
+      "reason": "a suction cup has no hook or fingers to engage a handle or lip"
+     }
+    ]
+   },
+   {
+    "effector_id": "ec23d0f17374171b7fa9c62da8dd8d680df2e2c98a747068750a83777cfa38a3",
+    "display_name": "Button-pusher tool",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "pick_carton",
+      "reason": "it cannot pick or hold a part (grasp step)"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "it cannot pick or hold a part (grasp step)"
+     }
+    ]
+   },
+   {
+    "effector_id": "38850807f92bc307da9f0519004f6c9a30606ed04934014a6791ad01acf0c88b",
+    "display_name": "Drawer-pull hook tool",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "open_lid",
+      "reason": "measured: its tip reaches 0 mm sideways past the rest of the tool and the flange; hooking a lip or handle needs 5 mm [assumed]"
+     },
+     {
+      "step_id": "pick_carton",
+      "reason": "it cannot pick or hold a part (grasp step)"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "it cannot pick or hold a part (grasp step)"
+     }
+    ]
+   },
+   {
+    "effector_id": "51bbed694beba24d5ba4332ad204033431cb1611ea4a4d092cc511f2bb3b9750",
+    "display_name": "Spring-loaded marker holder tool",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "open_lid",
+      "reason": "measured: its tip reaches 0 mm sideways past the rest of the tool and the flange; hooking a lip or handle needs 5 mm [assumed]"
+     },
+     {
+      "step_id": "pick_carton",
+      "reason": "it cannot pick or hold a part (grasp step)"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "it cannot pick or hold a part (grasp step)"
+     }
+    ]
+   },
+   {
+    "effector_id": "1c0215479859373feed025f8c8e3697830191fbbcded36d2720c98cf3f59c352",
+    "display_name": "Servo screwdriver attachment for a hobby arm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "open_lid",
+      "reason": "measured: its tip reaches 0 mm sideways past the rest of the tool and the flange; hooking a lip or handle needs 5 mm [assumed]"
+     },
+     {
+      "step_id": "pick_carton",
+      "reason": "it cannot pick or hold a part (grasp step)"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "it cannot pick or hold a part (grasp step)"
+     },
+     {
+      "step_id": "close_lid",
+      "reason": "its capability tags do not include push"
+     }
+    ]
+   },
+   {
+    "effector_id": "d4997bd4b38665bca7af77aeef09cc396279ecd231787f9df5fa34aa37fb5996",
+    "display_name": "Designed three-finger hand, 2 joints per finger d55e",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "pick_carton",
+      "reason": "Small carton: too narrow: open, digit 1 (at 90 deg on the part) has its inner face 35.0 mm from the centre; the part reaches 47.0 mm that way, so it needs 52.0 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 2 (at -150 deg on the part) has its inner face 35.0 mm from the centre; the part reaches 72.1 mm that way, so it needs 77.1 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 3 (at -30 deg on the part) has its inner face 35.0 mm from the centre; the part reaches 72.1 mm that way, so it needs 77.1 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it)"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "Shrink-wrapped pack: too narrow: open, digit 1 (at 90 deg on the part) has its inner face 35.0 mm from the centre; the part reaches 58.8 mm that way, so it needs 63.8 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 2 (at -150 deg on the part) has its inner face 35.0 mm from the centre; the part reaches 90.1 mm that way, so it needs 95.1 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 3 (at -30 deg on the part) has its inner face 35.0 mm from the centre; the part reaches 90.1 mm that way, so it needs 95.1 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it)"
+     },
+     {
+      "step_id": "open_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     },
+     {
+      "step_id": "close_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     }
+    ]
+   },
+   {
+    "effector_id": "ba0cc54331ca68ed6118c26302dc007b446c213c1d258f36631047ac5a2f05c8",
+    "display_name": "Designed four-finger hand, 3 joints per finger b56a",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "pick_carton",
+      "reason": "Small carton: too narrow: open, digit 1 (at -90 deg on the part) has its inner face 38.0 mm from the centre; the part reaches 47.0 mm that way, so it needs 52.0 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 2 (at 55 deg on the part) has its inner face 38.0 mm from the centre; the part reaches 69.9 mm that way, so it needs 74.9 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 3 (at 90 deg on the part) has its inner face 38.0 mm from the centre; the part reaches 47.0 mm that way, so it needs 52.0 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 4 (at 125 deg on the part) has its inner face 38.0 mm from the centre; the part reaches 69.9 mm that way, so it needs 74.9 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it)"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "Shrink-wrapped pack: too narrow: open, digit 1 (at -90 deg on the part) has its inner face 38.0 mm from the centre; the part reaches 58.8 mm that way, so it needs 63.8 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 2 (at 55 deg on the part) has its inner face 38.0 mm from the centre; the part reaches 87.3 mm that way, so it needs 92.3 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 3 (at 90 deg on the part) has its inner face 38.0 mm from the centre; the part reaches 58.8 mm that way, so it needs 63.8 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 4 (at 125 deg on the part) has its inner face 38.0 mm from the centre; the part reaches 87.3 mm that way, so it needs 92.3 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it)"
+     },
+     {
+      "step_id": "open_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     },
+     {
+      "step_id": "close_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     }
+    ]
+   },
+   {
+    "effector_id": "6148cfd23eae2b2e8959cc78a8c2b6ef324c0878a66bd0eee45e4a4105e20cb7",
+    "display_name": "Designed three-finger sliding hook gripper da49",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "pick_carton",
+      "reason": "Small carton: too narrow: open, digit 1 (at 90 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 47.0 mm that way, so it needs 52.0 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 2 (at -150 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 72.1 mm that way, so it needs 77.1 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 3 (at -30 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 72.1 mm that way, so it needs 77.1 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too short: the digits reach 60.0 mm below the palm; gripping the probe part (60.0 mm tall) with the lowest point at 9.0 mm needs 61.0 mm to keep the palm 10 mm above the part (longer digits or a higher grip)"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "Shrink-wrapped pack: too narrow: open, digit 1 (at 90 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 58.8 mm that way, so it needs 63.8 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 2 (at -150 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 90.1 mm that way, so it needs 95.1 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 3 (at -30 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 90.1 mm that way, so it needs 95.1 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it)"
+     }
+    ]
+   },
+   {
+    "effector_id": "d3b2b71d424b8c16205262a466257f916bc6e5e18f6b5873b0045f5632db2fe1",
+    "display_name": "Designed three-digit segmented tentacle f293",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "pick_carton",
+      "reason": "Small carton: too narrow: open, digit 1 (at 90 deg on the part) has its inner face 34.0 mm from the centre; the part reaches 47.0 mm that way, so it needs 52.0 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 2 (at -150 deg on the part) has its inner face 34.0 mm from the centre; the part reaches 72.1 mm that way, so it needs 77.1 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 3 (at -30 deg on the part) has its inner face 34.0 mm from the centre; the part reaches 72.1 mm that way, so it needs 77.1 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it)"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "Shrink-wrapped pack: too narrow: open, digit 1 (at 90 deg on the part) has its inner face 34.0 mm from the centre; the part reaches 58.8 mm that way, so it needs 63.8 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 2 (at -150 deg on the part) has its inner face 34.0 mm from the centre; the part reaches 90.1 mm that way, so it needs 95.1 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 3 (at -30 deg on the part) has its inner face 34.0 mm from the centre; the part reaches 90.1 mm that way, so it needs 95.1 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it)"
+     },
+     {
+      "step_id": "open_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a soft arm or tentacle is used only if every rigid option fails"
+     },
+     {
+      "step_id": "close_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a soft arm or tentacle is used only if every rigid option fails"
+     }
+    ]
+   },
+   {
+    "effector_id": "a4b30af09ff1818c87fcc9683805da8354923ecb0f35a77b14165fa5851bc3fa",
+    "display_name": "Designed three-finger hand, 2 joints per finger 3e58",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "pick_carton",
+      "reason": "Small carton: too narrow: open, digit 1 (at -75 deg on the part) has its inner face 34.0 mm from the centre; the part reaches 59.6 mm that way, so it needs 64.6 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 2 (at 55 deg on the part) has its inner face 34.0 mm from the centre; the part reaches 69.9 mm that way, so it needs 74.9 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 3 (at 155 deg on the part) has its inner face 34.0 mm from the centre; the part reaches 72.1 mm that way, so it needs 77.1 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it)"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "Shrink-wrapped pack: too narrow: open, digit 1 (at -75 deg on the part) has its inner face 34.0 mm from the centre; the part reaches 74.5 mm that way, so it needs 79.5 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 2 (at 55 deg on the part) has its inner face 34.0 mm from the centre; the part reaches 87.3 mm that way, so it needs 92.3 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 3 (at 155 deg on the part) has its inner face 34.0 mm from the centre; the part reaches 90.1 mm that way, so it needs 95.1 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it)"
+     },
+     {
+      "step_id": "open_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     },
+     {
+      "step_id": "close_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     }
+    ]
+   },
+   {
+    "effector_id": "25bb68ef395b04b7dddcb8a3adcae328743627edf36160b0ac26e75050f0dc27",
+    "display_name": "Designed four-finger hand, 1 joint per finger e352",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "pick_carton",
+      "reason": "Small carton: too narrow: open, digit 1 (at 135 deg on the part) has its inner face 33.5 mm from the centre; the part reaches 71.9 mm that way, so it needs 76.9 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 2 (at -135 deg on the part) has its inner face 33.5 mm from the centre; the part reaches 71.9 mm that way, so it needs 76.9 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 3 (at -45 deg on the part) has its inner face 33.5 mm from the centre; the part reaches 71.9 mm that way, so it needs 76.9 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 4 (at 45 deg on the part) has its inner face 33.5 mm from the centre; the part reaches 71.9 mm that way, so it needs 76.9 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it)"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "Shrink-wrapped pack: too narrow: open, digit 1 (at 135 deg on the part) has its inner face 33.5 mm from the centre; the part reaches 89.9 mm that way, so it needs 94.9 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 2 (at -135 deg on the part) has its inner face 33.5 mm from the centre; the part reaches 89.9 mm that way, so it needs 94.9 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 3 (at -45 deg on the part) has its inner face 33.5 mm from the centre; the part reaches 89.9 mm that way, so it needs 94.9 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 4 (at 45 deg on the part) has its inner face 33.5 mm from the centre; the part reaches 89.9 mm that way, so it needs 94.9 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it)"
+     },
+     {
+      "step_id": "open_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     },
+     {
+      "step_id": "close_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     }
+    ]
+   },
+   {
+    "effector_id": "890c6cb500dacbda950e3a31a2b543d39b89da3c2dfa1a61e7ae5c17cb25f65e",
+    "display_name": "Designed three-finger hand, 1 joint per finger ca8b",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "pick_carton",
+      "reason": "Small carton: too narrow: open, digit 1 (at -60 deg on the part) has its inner face 30.5 mm from the centre; the part reaches 68.1 mm that way, so it needs 73.1 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 2 (at 60 deg on the part) has its inner face 30.5 mm from the centre; the part reaches 68.1 mm that way, so it needs 73.1 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 3 (at 180 deg on the part) has its inner face 30.5 mm from the centre; the part reaches 64.4 mm that way, so it needs 69.4 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it)"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "Shrink-wrapped pack: too narrow: open, digit 1 (at -60 deg on the part) has its inner face 30.5 mm from the centre; the part reaches 85.1 mm that way, so it needs 90.1 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 2 (at 60 deg on the part) has its inner face 30.5 mm from the centre; the part reaches 85.1 mm that way, so it needs 90.1 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 3 (at 180 deg on the part) has its inner face 30.5 mm from the centre; the part reaches 80.5 mm that way, so it needs 85.5 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it)"
+     },
+     {
+      "step_id": "open_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     },
+     {
+      "step_id": "close_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     }
+    ]
+   },
+   {
+    "effector_id": "d6e87ec5705a8c93944dfc2db4945e98e2499a9aa761b0cc801420e51d5ec0ad",
+    "display_name": "Designed four-finger swinging hook gripper 052c",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "pick_carton",
+      "reason": "Small carton: too narrow: open, digit 1 (at 135 deg on the part) has its inner face 31.5 mm from the centre; the part reaches 71.9 mm that way, so it needs 76.9 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 2 (at -135 deg on the part) has its inner face 31.5 mm from the centre; the part reaches 71.9 mm that way, so it needs 76.9 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 3 (at -45 deg on the part) has its inner face 31.5 mm from the centre; the part reaches 71.9 mm that way, so it needs 76.9 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 4 (at 45 deg on the part) has its inner face 31.5 mm from the centre; the part reaches 71.9 mm that way, so it needs 76.9 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it)"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "Shrink-wrapped pack: too narrow: open, digit 1 (at 135 deg on the part) has its inner face 31.5 mm from the centre; the part reaches 89.9 mm that way, so it needs 94.9 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 2 (at -135 deg on the part) has its inner face 31.5 mm from the centre; the part reaches 89.9 mm that way, so it needs 94.9 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 3 (at -45 deg on the part) has its inner face 31.5 mm from the centre; the part reaches 89.9 mm that way, so it needs 94.9 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 4 (at 45 deg on the part) has its inner face 31.5 mm from the centre; the part reaches 89.9 mm that way, so it needs 94.9 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it)"
+     }
+    ]
+   },
+   {
+    "effector_id": "251cbe9cc23c1ea18d77c6143d68090fce2a1837927f826a7bcc9bd430de8a81",
+    "display_name": "Designed three-digit segmented tentacle 90e8",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "pick_carton",
+      "reason": "Small carton: too narrow: open, digit 1 (at -75 deg on the part) has its inner face 35.0 mm from the centre; the part reaches 59.6 mm that way, so it needs 64.6 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 2 (at 60 deg on the part) has its inner face 35.0 mm from the centre; the part reaches 68.1 mm that way, so it needs 73.1 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 3 (at 150 deg on the part) has its inner face 35.0 mm from the centre; the part reaches 72.1 mm that way, so it needs 77.1 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it)"
+     },
+     {
+      "step_id": "pick_pack",
+      "reason": "Shrink-wrapped pack: too narrow: open, digit 1 (at -75 deg on the part) has its inner face 35.0 mm from the centre; the part reaches 74.5 mm that way, so it needs 79.5 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 2 (at 60 deg on the part) has its inner face 35.0 mm from the centre; the part reaches 85.1 mm that way, so it needs 90.1 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 3 (at 150 deg on the part) has its inner face 35.0 mm from the centre; the part reaches 90.1 mm that way, so it needs 95.1 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it)"
+     },
+     {
+      "step_id": "open_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a soft arm or tentacle is used only if every rigid option fails"
+     },
+     {
+      "step_id": "close_lid",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a soft arm or tentacle is used only if every rigid option fails"
+     }
+    ]
+   }
+  ],
+  "pruned_reasons": [
+   {
+    "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails",
+    "count": 30
+   },
+   {
+    "reason": "Opens narrower than the part",
+    "count": 20
+   },
+   {
+    "reason": "Its open digits stand too close for the part",
+    "count": 18
+   },
+   {
+    "reason": "It cannot pick or hold a part",
+    "count": 12
+   },
+   {
+    "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a soft arm or tentacle is used only if every rigid option fails",
+    "count": 7
+   },
+   {
+    "reason": "A suction cup has no hook or fingers to engage a handle or lip",
+    "count": 6
+   },
+   {
+    "reason": "The part is wider than the soft arm reaches around",
+    "count": 6
+   },
+   {
+    "reason": "Cannot be built for this object (the family's own checks)",
+    "count": 5
+   },
+   {
+    "reason": "A slack soft arm has no stiff face to push with",
+    "count": 3
+   },
+   {
+    "reason": "Part-shaped jaws serve only the object they are shaped for",
+    "count": 3
+   },
+   {
+    "reason": "measured: its tip reaches 0 mm sideways past the rest of the tool and the flange; hooking a lip or handle needs 5 mm [assumed]",
+    "count": 3
+   },
+   {
+    "reason": "Heavier than the arm payload limit [assumed]",
+    "count": 1
+   },
+   {
+    "reason": "Its capability tags do not include the step's primitive",
+    "count": 1
+   },
+   {
+    "reason": "Opens too little to pre-shape around the feature",
+    "count": 1
+   },
+   {
+    "reason": "a nut runner turns a fastener; it cannot push",
+    "count": 1
+   },
+   {
+    "reason": "a nut runner turns a fastener; it is not a hook, so it cannot pull a lip or handle",
+    "count": 1
+   },
+   {
+    "reason": "a tamper pad presses a face; it is not a hook, so it cannot pull a lip or handle",
+    "count": 1
+   },
+   {
+    "reason": "the 120 x 80 mm top face of carton covers 0 of the frame's 4 cups; the frame holds a part only with at least 3 of them sealed [assumed]",
+    "count": 1
+   },
+   {
+    "reason": "the 120 x 80 mm top face of carton covers 0 of the frame's 6 cups; the frame holds a part only with at least 3 of them sealed [assumed]",
+    "count": 1
+   },
+   {
+    "reason": "the 150 x 100 mm top face of pack covers 0 of the frame's 4 cups; the frame holds a part only with at least 3 of them sealed [assumed]",
+    "count": 1
+   },
+   {
+    "reason": "the 150 x 100 mm top face of pack covers 0 of the frame's 6 cups; the frame holds a part only with at least 3 of them sealed [assumed]",
+    "count": 1
+   }
+  ]
+ },
+ "matrix": {
+  "steps": [
+   "open_lid",
+   "pick_carton",
+   "pick_pack",
+   "close_lid"
+  ],
+  "rows": [
+   {
+    "effector_id": "f2ea72dff094ac3680a7b59e05a96a2e9bc4d8191c7bfee56d30f1755987dff2",
+    "display_name": "Industrial servo parallel gripper, 110 mm stroke",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "hook_pull",
+      "failure_modes": {},
+      "context": "start"
+     },
+     "pick_carton": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "grasp",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "pick_pack": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "grasp",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "3907bc284d9e2c3399ddb8b45b1bf94dbb3b0ef0672705c6d90724839ecf7186",
+    "display_name": "Suction cup, 16 mm bellows",
+    "family_title": "Suction cup",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "pruned",
+      "reason": "a suction cup has no hook or fingers to engage a handle or lip"
+     },
+     "pick_carton": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "suction",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "pick_pack": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "suction",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "e72e88518c0ebe7a74ec5db104b671180e9dbb5b51d0b11045814506657f31bf",
+    "display_name": "Suction cup, 25 mm bellows",
+    "family_title": "Suction cup",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "pruned",
+      "reason": "a suction cup has no hook or fingers to engage a handle or lip"
+     },
+     "pick_carton": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "suction",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "pick_pack": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "suction",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "a5d7b1667b4f0d6582a36df49b9e600eeedc31f54dc883ddf7803fe113091f1d",
+    "display_name": "Suction cup, 40 mm bellows",
+    "family_title": "Suction cup",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "pruned",
+      "reason": "a suction cup has no hook or fingers to engage a handle or lip"
+     },
+     "pick_carton": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "suction",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "pick_pack": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "suction",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "f7faa3ddd45fee96149330bbf1bc6cd179305044806e9f178ed0735f6f184b80",
+    "display_name": "Two-finger adaptive linkage gripper, 85 mm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "hook_pull",
+      "failure_modes": {},
+      "context": "start"
+     },
+     "pick_carton": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "grasp",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "pick_pack": {
+      "state": "pruned",
+      "reason": "Shrink-wrapped pack: the part is 100.0 mm across the closing axis; the gripper opens 86.6 mm"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "02405ccb8d6393b7ca149262b1d03aad7a153238ce0bc32ea1d3eacad7657d39",
+    "display_name": "Two-finger linkage gripper of a cobot arm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "hook_pull",
+      "failure_modes": {},
+      "context": "start"
+     },
+     "pick_carton": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "grasp",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "pick_pack": {
+      "state": "pruned",
+      "reason": "Shrink-wrapped pack: the part is 100.0 mm across the closing axis; the gripper opens 88.9 mm"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "f0b6543ba012ad8f54c8860c61407708f1bdfaf1d1b395d00a64ada8e883d6de",
+    "display_name": "Suction cup, 10 mm bellows",
+    "family_title": "Suction cup",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "pruned",
+      "reason": "a suction cup has no hook or fingers to engage a handle or lip"
+     },
+     "pick_carton": {
+      "state": "run",
+      "rate": 0.6667,
+      "n": 3,
+      "successes": 2,
+      "primitive_used": "suction",
+      "failure_modes": {
+       "dropped": 1
+      },
+      "context": "carried"
+     },
+     "pick_pack": {
+      "state": "run",
+      "rate": 0.6667,
+      "n": 3,
+      "successes": 2,
+      "primitive_used": "suction",
+      "failure_modes": {
+       "criterion_not_met": 1
+      },
+      "context": "carried"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "ec23d0f17374171b7fa9c62da8dd8d680df2e2c98a747068750a83777cfa38a3",
+    "display_name": "Button-pusher tool",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "hook_pull",
+      "failure_modes": {},
+      "context": "start"
+     },
+     "pick_carton": {
+      "state": "pruned",
+      "reason": "it cannot pick or hold a part (grasp step)"
+     },
+     "pick_pack": {
+      "state": "pruned",
+      "reason": "it cannot pick or hold a part (grasp step)"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "6d286bacbd7431187a1a4bd5a48d194ea5e59399afb0a9e2227332f4fe006cf7",
+    "display_name": "Force-controlled parallel gripper, 48 mm stroke",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "hook_pull",
+      "failure_modes": {},
+      "context": "start"
+     },
+     "pick_carton": {
+      "state": "pruned",
+      "reason": "Small carton: the part is 80.0 mm across the closing axis; the gripper opens 47.0 mm"
+     },
+     "pick_pack": {
+      "state": "pruned",
+      "reason": "Shrink-wrapped pack: the part is 100.0 mm across the closing axis; the gripper opens 47.0 mm"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "9aff5d8ef53e119ab1943eef6d8ba55af4795f806c1a2e111b89c7c0444c770b",
+    "display_name": "Two-finger parallel cobot hand, 80 mm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "hook_pull",
+      "failure_modes": {},
+      "context": "start"
+     },
+     "pick_carton": {
+      "state": "pruned",
+      "reason": "Small carton: the part is 80.0 mm across the closing axis; the gripper opens 79.8 mm"
+     },
+     "pick_pack": {
+      "state": "pruned",
+      "reason": "Shrink-wrapped pack: the part is 100.0 mm across the closing axis; the gripper opens 79.8 mm"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "a03002d6c5e1107f0bef73bc8cf24cd90b390550654aaa5d9e8899933971f6d7",
+    "display_name": "Two-finger parallel gripper, rigid pads A",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "hook_pull",
+      "failure_modes": {},
+      "context": "start"
+     },
+     "pick_carton": {
+      "state": "pruned",
+      "reason": "Small carton: the part is 80.0 mm across the closing axis; the gripper opens 74.7 mm"
+     },
+     "pick_pack": {
+      "state": "pruned",
+      "reason": "Shrink-wrapped pack: the part is 100.0 mm across the closing axis; the gripper opens 74.7 mm"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "52613f2b72143b61b490ddfc05c4e3ed38c49de7005b77f07a5ccbfada0ab476",
+    "display_name": "Two-finger adaptive gripper, pinch",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "run",
+      "rate": 0.6667,
+      "n": 3,
+      "successes": 2,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "constraint_exceeded": 1
+      },
+      "context": "start"
+     },
+     "pick_carton": {
+      "state": "pruned",
+      "reason": "Small carton: the part is 80.0 mm across the closing axis; the gripper opens 52.0 mm"
+     },
+     "pick_pack": {
+      "state": "pruned",
+      "reason": "Shrink-wrapped pack: the part is 100.0 mm across the closing axis; the gripper opens 52.0 mm"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "bbb8214caaf4a70aac3e2c08331f0166c12470bf97db57db00dc834a77ff4dd1",
+    "display_name": "Two-finger adaptive gripper, power grasp",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "run",
+      "rate": 0.6667,
+      "n": 3,
+      "successes": 2,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "constraint_exceeded": 1
+      },
+      "context": "start"
+     },
+     "pick_carton": {
+      "state": "pruned",
+      "reason": "Small carton: the part is 80.0 mm across the closing axis; the gripper opens 52.0 mm"
+     },
+     "pick_pack": {
+      "state": "pruned",
+      "reason": "Shrink-wrapped pack: the part is 100.0 mm across the closing axis; the gripper opens 52.0 mm"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "762b2cf206e7b33c97e3e70157492630c91ae3d28b3dae35580e25bfbbee9319",
+    "display_name": "Air-actuated mini parallel gripper",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "pruned",
+      "reason": "it opens 18 mm; pre-shaping around the 6 mm feature needs 18 mm"
+     },
+     "pick_carton": {
+      "state": "pruned",
+      "reason": "Small carton: the part is 80.0 mm across the closing axis; the gripper opens 18.0 mm"
+     },
+     "pick_pack": {
+      "state": "pruned",
+      "reason": "Shrink-wrapped pack: the part is 100.0 mm across the closing axis; the gripper opens 18.0 mm"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "7d8ca167a7b3a93e3461ebca357e274ec9c9ca4fa9c2f4e50daa4c0a5e027724",
+    "display_name": "Angular-jaw gripper of an open hobby arm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "pick_carton": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "pick_pack": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "d6e87ec5705a8c93944dfc2db4945e98e2499a9aa761b0cc801420e51d5ec0ad",
+    "display_name": "Designed four-finger swinging hook gripper 052c",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "open_lid": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "pick_carton": {
+      "state": "pruned",
+      "reason": "Small carton: too narrow: open, digit 1 (at 135 deg on the part) has its inner face 31.5 mm from the centre; the part reaches 71.9 mm that way, so it needs 76.9 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 2 (at -135 deg on the part) has its inner face 31.5 mm from the centre; the part reaches 71.9 mm that way, so it needs 76.9 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 3 (at -45 deg on the part) has its inner face 31.5 mm from the centre; the part reaches 71.9 mm that way, so it needs 76.9 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 4 (at 45 deg on the part) has its inner face 31.5 mm from the centre; the part reaches 71.9 mm that way, so it needs 76.9 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it)"
+     },
+     "pick_pack": {
+      "state": "pruned",
+      "reason": "Shrink-wrapped pack: too narrow: open, digit 1 (at 135 deg on the part) has its inner face 31.5 mm from the centre; the part reaches 89.9 mm that way, so it needs 94.9 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 2 (at -135 deg on the part) has its inner face 31.5 mm from the centre; the part reaches 89.9 mm that way, so it needs 94.9 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 3 (at -45 deg on the part) has its inner face 31.5 mm from the centre; the part reaches 89.9 mm that way, so it needs 94.9 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 4 (at 45 deg on the part) has its inner face 31.5 mm from the centre; the part reaches 89.9 mm that way, so it needs 94.9 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it)"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "6148cfd23eae2b2e8959cc78a8c2b6ef324c0878a66bd0eee45e4a4105e20cb7",
+    "display_name": "Designed three-finger sliding hook gripper da49",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "open_lid": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "pick_carton": {
+      "state": "pruned",
+      "reason": "Small carton: too narrow: open, digit 1 (at 90 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 47.0 mm that way, so it needs 52.0 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 2 (at -150 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 72.1 mm that way, so it needs 77.1 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 3 (at -30 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 72.1 mm that way, so it needs 77.1 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too short: the digits reach 60.0 mm below the palm; gripping the probe part (60.0 mm tall) with the lowest point at 9.0 mm needs 61.0 mm to keep the palm 10 mm above the part (longer digits or a higher grip)"
+     },
+     "pick_pack": {
+      "state": "pruned",
+      "reason": "Shrink-wrapped pack: too narrow: open, digit 1 (at 90 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 58.8 mm that way, so it needs 63.8 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 2 (at -150 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 90.1 mm that way, so it needs 95.1 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 3 (at -30 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 90.1 mm that way, so it needs 95.1 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it)"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "38850807f92bc307da9f0519004f6c9a30606ed04934014a6791ad01acf0c88b",
+    "display_name": "Drawer-pull hook tool",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "pruned",
+      "reason": "measured: its tip reaches 0 mm sideways past the rest of the tool and the flange; hooking a lip or handle needs 5 mm [assumed]"
+     },
+     "pick_carton": {
+      "state": "pruned",
+      "reason": "it cannot pick or hold a part (grasp step)"
+     },
+     "pick_pack": {
+      "state": "pruned",
+      "reason": "it cannot pick or hold a part (grasp step)"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "591283d9d29bb4da554715a7a9001a3d7826a08a6ffffd96f47176e2dc213b87",
+    "display_name": "Parallel jaw, stock blade: Small carton",
+    "family_title": "Parallel jaw",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "pruned",
+      "reason": "its jaws are shaped and sized for carton; Tote lid gets part-shaped jaws of its own"
+     },
+     "pick_carton": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "grasp",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "pick_pack": {
+      "state": "pruned",
+      "reason": "its jaws are shaped and sized for carton; pack gets part-shaped jaws of its own"
+     },
+     "close_lid": {
+      "state": "pruned",
+      "reason": "its jaws are shaped and sized for carton; Tote lid gets part-shaped jaws of its own"
+     }
+    }
+   },
+   {
+    "effector_id": "5f28e092f268ff12c38c8c8a9da33cf6520bc235ddf0f15eef85705bf5abaa0d",
+    "display_name": "Rack-and-pinion parallel gripper for an open hobby arm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "pick_carton": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "pick_pack": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "51bbed694beba24d5ba4332ad204033431cb1611ea4a4d092cc511f2bb3b9750",
+    "display_name": "Spring-loaded marker holder tool",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "pruned",
+      "reason": "measured: its tip reaches 0 mm sideways past the rest of the tool and the flange; hooking a lip or handle needs 5 mm [assumed]"
+     },
+     "pick_carton": {
+      "state": "pruned",
+      "reason": "it cannot pick or hold a part (grasp step)"
+     },
+     "pick_pack": {
+      "state": "pruned",
+      "reason": "it cannot pick or hold a part (grasp step)"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "e678af7b9e64e5522adab03ac14717d9103435946e5778f8e578c1bc2c7bf710",
+    "display_name": "Tamper pad, 200 mm",
+    "family_title": "Process tool",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "pruned",
+      "reason": "a tamper pad presses a face; it is not a hook, so it cannot pull a lip or handle"
+     },
+     "pick_carton": {
+      "state": "pruned",
+      "reason": "a tamper pad presses a face; it cannot pick or hold a part"
+     },
+     "pick_pack": {
+      "state": "pruned",
+      "reason": "a tamper pad presses a face; it cannot pick or hold a part"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "9dbe8879e66bd4a935e6db502db88cdb0ce74390f469ada567cc93eb165b5b58",
+    "display_name": "Three-finger adaptive gripper, pinch",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "pick_carton": {
+      "state": "pruned",
+      "reason": "Small carton: the part is 80.0 mm across the closing axis; the gripper opens 52.0 mm"
+     },
+     "pick_pack": {
+      "state": "pruned",
+      "reason": "Shrink-wrapped pack: the part is 100.0 mm across the closing axis; the gripper opens 52.0 mm"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "730fd283dd6b7dd046711dfef0b73a64f6a577e2cc7a643ee6affb86f74ed0aa",
+    "display_name": "Three-finger adaptive gripper, power grasp",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "pick_carton": {
+      "state": "pruned",
+      "reason": "Small carton: the part is 80.0 mm across the closing axis; the gripper opens 52.0 mm"
+     },
+     "pick_pack": {
+      "state": "pruned",
+      "reason": "Shrink-wrapped pack: the part is 100.0 mm across the closing axis; the gripper opens 52.0 mm"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "79372f1ed2ab4e3a5467c38ed239aa0795a8df3e5ce6af900af10a5a3e252050",
+    "display_name": "Two-finger parallel gripper, fin-ray pads",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "constraint_exceeded": 2,
+       "slip": 1
+      },
+      "context": "start"
+     },
+     "pick_carton": {
+      "state": "pruned",
+      "reason": "Small carton: the part is 80.0 mm across the closing axis; the gripper opens 83.4 mm"
+     },
+     "pick_pack": {
+      "state": "pruned",
+      "reason": "Shrink-wrapped pack: the part is 100.0 mm across the closing axis; the gripper opens 83.4 mm"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "19349473603b229ce8676b46cd97598dc1cd5b463f8f801d4455e1a7b01ba3e2",
+    "display_name": "Two-finger parallel gripper, teleop-arm fingers",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "slip": 3
+      },
+      "context": "start"
+     },
+     "pick_carton": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "pick_pack": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "1a3dddd3d68cc0b6df6d003946cc16fb895f371d0001906c7ba2e72d729721ac",
+    "display_name": "Vacuum area frame, 2 x 2 cups, 300 mm",
+    "family_title": "Vacuum area frame",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "pruned",
+      "reason": "a suction cup has no hook or fingers to engage a handle or lip"
+     },
+     "pick_carton": {
+      "state": "pruned",
+      "reason": "the 120 x 80 mm top face of carton covers 0 of the frame's 4 cups; the frame holds a part only with at least 3 of them sealed [assumed]"
+     },
+     "pick_pack": {
+      "state": "pruned",
+      "reason": "the 150 x 100 mm top face of pack covers 0 of the frame's 4 cups; the frame holds a part only with at least 3 of them sealed [assumed]"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "300d169b6786c96007dbe4ce8c0fea66549c0e081cfcfe3f3fe07d6e46ec6a3f",
+    "display_name": "Five-finger 18-actuator hand, pinch",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "pruned",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     },
+     "pick_carton": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "pick_pack": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "close_lid": {
+      "state": "pruned",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     }
+    }
+   },
+   {
+    "effector_id": "bc347dd620c711c06e02bbf5b6c610413ae5b0ac8b182fdbb98f5ae997e177af",
+    "display_name": "Five-finger 18-actuator hand, power grasp",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "pruned",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     },
+     "pick_carton": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "pick_pack": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "close_lid": {
+      "state": "pruned",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     }
+    }
+   },
+   {
+    "effector_id": "594c4f4d5088689c599fdd9884d2675a7a3d69f8f7df8489ef57b6484db711f0",
+    "display_name": "Five-finger 22-joint hand, pinch",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "pruned",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     },
+     "pick_carton": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "pick_pack": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "close_lid": {
+      "state": "pruned",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     }
+    }
+   },
+   {
+    "effector_id": "a0fc12482a70670906acabab94f5bc4b91ebbbff57fe669e9725afd57c80c75e",
+    "display_name": "Five-finger 22-joint hand, power grasp",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "pruned",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     },
+     "pick_carton": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "pick_pack": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "close_lid": {
+      "state": "pruned",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     }
+    }
+   },
+   {
+    "effector_id": "f4363e74967e4429fc2203073f9a2f6e8eed447a156149eaf424544d589cef8d",
+    "display_name": "Four-finger 16-joint hand, pinch",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "pruned",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     },
+     "pick_carton": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "physics_unreliable": 3
+      },
+      "context": "carried"
+     },
+     "pick_pack": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "close_lid": {
+      "state": "pruned",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     }
+    }
+   },
+   {
+    "effector_id": "e0152a5f29e1756ccd2ed7b3602b13ce3a4d3a80d1fe1709d383db30284f82b7",
+    "display_name": "Four-finger 16-joint hand, power grasp",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "pruned",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     },
+     "pick_carton": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "pick_pack": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "close_lid": {
+      "state": "pruned",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     }
+    }
+   },
+   {
+    "effector_id": "7f12d546e0d7714e3d2aae831d9ea52eb2494283c1ccd5487920ac69fa27a720",
+    "display_name": "Servo-driven four-finger hand, 13 actuators, pinch",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "pruned",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     },
+     "pick_carton": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "pick_pack": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "close_lid": {
+      "state": "pruned",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     }
+    }
+   },
+   {
+    "effector_id": "2f59fe9db92cd4baa4bcc418531f685100bc2ce00459fe887fe591b7f4d5fd65",
+    "display_name": "Servo-driven four-finger hand, 13 actuators, power grasp",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "pruned",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     },
+     "pick_carton": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "physics_unreliable": 3
+      },
+      "context": "carried"
+     },
+     "pick_pack": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "close_lid": {
+      "state": "pruned",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     }
+    }
+   },
+   {
+    "effector_id": "ba4075426cf13421509805b4367919c507f396904da831894f373d928292dd01",
+    "display_name": "Tendon-driven five-finger hand, 16 joints, pinch",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "pruned",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     },
+     "pick_carton": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "physics_unreliable": 3
+      },
+      "context": "carried"
+     },
+     "pick_pack": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "close_lid": {
+      "state": "pruned",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     }
+    }
+   },
+   {
+    "effector_id": "d702e265cd1c213b47f352e50c6c3d54ec8b736f9da8714cfdf936bece063264",
+    "display_name": "Tendon-driven five-finger hand, 16 joints, power grasp",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "pruned",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     },
+     "pick_carton": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "pick_pack": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "close_lid": {
+      "state": "pruned",
+      "reason": "integrator rule R03: \"Tote lid\" is a mechanism to open or press, which the rigid gripper or tool does by moving along it; a dexterous hand is used only if every rigid option fails"
+     }
+    }
+   },
+   {
+    "effector_id": "530514a2ba01210b994060206aa74f49d498731eb80579282867d25195f8257a",
+    "display_name": "Vacuum area frame, 2 x 3 cups, 600 mm",
+    "family_title": "Vacuum area frame",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "open_lid": {
+      "state": "pruned",
+      "reason": "a suction cup has no hook or fingers to engage a handle or lip"
+     },
+     "pick_carton": {
+      "state": "pruned",
+      "reason": "the 120 x 80 mm top face of carton covers 0 of the frame's 6 cups; the frame holds a part only with at least 3 of them sealed [assumed]"
+     },
+     "pick_pack": {
+      "state": "pruned",
+      "reason": "the 150 x 100 mm top face of pack covers 0 of the frame's 6 cups; the frame holds a part only with at least 3 of them sealed [assumed]"
+     },
+     "close_lid": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "push",
+      "failure_modes": {
+       "out_of_reach": 3
+      },
+      "context": "carried"
+     }
+    }
+   }
+  ]
+ },
+ "combinations": {
+  "counts": {
+   "single": 4,
+   "tool_change": 81,
+   "multi_head": 0,
+   "multi_head_geometry_searched": 6
+  },
+  "rejected": [
+   {
+    "label": "",
+    "reason": "no bracket layout clears: during pick_carton the idle head 0 or the bracket comes within 5 mm of tote_lid (12 of 24 layouts); switching to head 1 at the home pose swings the heads through tote_lid (12 of 24 layouts)"
+   },
+   {
+    "label": "",
+    "reason": "no bracket layout clears: switching to head 1 at the home pose swings the heads through tote_lid (15 of 24 layouts); during pick_carton the idle head 0 or the bracket comes within 5 mm of tote_lid (9 of 24 layouts)"
+   },
+   {
+    "label": "",
+    "reason": "no bracket layout clears: switching to head 1 at the home pose swings the heads through tote_lid (15 of 24 layouts); during pick_carton the idle head 0 or the bracket comes within 5 mm of tote_lid (9 of 24 layouts)"
+   },
+   {
+    "label": "",
+    "reason": "no bracket layout clears: switching to head 1 at the home pose swings the heads through tote_lid (12 of 24 layouts); during pick_carton the idle head 0 or the bracket comes within 5 mm of tote_lid (4 of 24 layouts); during pick_carton the idle head 0 or the bracket comes within 5 mm of the table (2 of 24 layouts)"
+   },
+   {
+    "label": "",
+    "reason": "no bracket layout clears: switching to head 1 at the home pose swings the heads through tote_lid (12 of 24 layouts); during pick_carton the idle head 0 or the bracket comes within 5 mm of tote_lid (9 of 24 layouts); during pick_carton the idle head 0 or the bracket comes within 5 mm of the table (2 of 24 layouts)"
+   },
+   {
+    "label": "",
+    "reason": "no bracket layout clears: switching to head 1 at the home pose swings the heads through tote_lid (12 of 24 layouts); during pick_carton the idle head 0 or the bracket comes within 5 mm of tote_lid (4 of 24 layouts); during pick_carton the idle head 0 or the bracket comes within 5 mm of the table (2 of 24 layouts)"
+   }
+  ]
+ },
+ "finalists": [
+  {
+   "setup_id": "d136ab4824c1bad26b5ac84b7a481c14bedee5790c495f0eb8c1c9369bb11a57",
+   "kind": "single",
+   "kind_title": "Single tool",
+   "label": "Industrial servo parallel gripper, 110 mm stroke",
+   "tools": [
+    "Industrial servo parallel gripper, 110 mm stroke"
+   ],
+   "completion_rate": 1.0,
+   "completed_runs": 8,
+   "n_runs": 8,
+   "fidelity": "rigid",
+   "stops_at": null,
+   "cycle_time_s": 78.19,
+   "roles": [
+    "recommended",
+    "best_single",
+    "baseline"
+   ],
+   "eligible": true,
+   "reason": null,
+   "tool_details": [
+    {
+     "index": 0,
+     "effector_id": "f2ea72dff094ac3680a7b59e05a96a2e9bc4d8191c7bfee56d30f1755987dff2",
+     "display_name": "Industrial servo parallel gripper, 110 mm stroke",
+     "family": "catalog_gripper",
+     "family_title": "Industrial gripper",
+     "fidelity": "rigid",
+     "off_the_shelf": true,
+     "caveat": null
+    }
+   ],
+   "step_success": {
+    "open_lid": 1.0,
+    "pick_carton": 1.0,
+    "pick_pack": 1.0,
+    "close_lid": 1.0
+   },
+   "weakest_step": {
+    "step_id": "close_lid",
+    "success_rate": 1.0
+   },
+   "complexity": {
+    "n_tools": 1,
+    "n_actuators": 1,
+    "total_mass_kg": 1.089,
+    "n_changes": 0,
+    "bracket": false
+   },
+   "payload_kg": 1.089,
+   "failure_modes": {},
+   "stops_at_detail": {}
+  },
+  {
+   "setup_id": "9e5452b1f2b6dc4e655e30cd69a9ebe52eaeb10f962a8ab55b45608991aa5313",
+   "kind": "tool_change",
+   "kind_title": "Tool change",
+   "label": "Tool change: Button-pusher tool > Suction cup",
+   "tools": [
+    "Button-pusher tool",
+    "Suction cup, 16 mm bellows"
+   ],
+   "completion_rate": 1.0,
+   "completed_runs": 8,
+   "n_runs": 8,
+   "fidelity": "approximation",
+   "stops_at": null,
+   "cycle_time_s": 84.6,
+   "roles": [
+    "finalist"
+   ],
+   "eligible": true,
+   "reason": null,
+   "tool_details": [
+    {
+     "index": 0,
+     "effector_id": "ec23d0f17374171b7fa9c62da8dd8d680df2e2c98a747068750a83777cfa38a3",
+     "display_name": "Button-pusher tool",
+     "family": "catalog_gripper",
+     "family_title": "Industrial gripper",
+     "fidelity": "rigid",
+     "off_the_shelf": true,
+     "caveat": null
+    },
+    {
+     "index": 1,
+     "effector_id": "3907bc284d9e2c3399ddb8b45b1bf94dbb3b0ef0672705c6d90724839ecf7186",
+     "display_name": "Suction cup, 16 mm bellows",
+     "family": "suction",
+     "family_title": "Suction cup",
+     "fidelity": "approximation",
+     "off_the_shelf": true,
+     "caveat": "Suction cup (approximation): a compliant lip of rigid segments on a bellows spring with a limited tilt; the seal is a geometric test (every lip segment touching the face, part material under 13 rays inside the lip) gating a MuJoCo adhesion actuator capped at vacuum x lip area (at most 60 kPa). The lip must touch the face: no pull across a gap. Not modelled: air flow, leak rate, porosity, vacuum build-up time (the vacuum follows the shared close ramp and is cut the control tick the seal is lost), lip material hysteresis, peel dynamics beyond the contact distribution. The lip's friction is the part's. Treat suction results as a screen, then verify on hardware."
+    }
+   ],
+   "step_success": {
+    "open_lid": 1.0,
+    "pick_carton": 1.0,
+    "pick_pack": 1.0,
+    "close_lid": 1.0
+   },
+   "weakest_step": {
+    "step_id": "close_lid",
+    "success_rate": 1.0
+   },
+   "complexity": {
+    "n_tools": 2,
+    "n_actuators": 1,
+    "total_mass_kg": 0.541,
+    "n_changes": 2,
+    "bracket": false
+   },
+   "payload_kg": 0.405,
+   "failure_modes": {},
+   "stops_at_detail": {}
+  },
+  {
+   "setup_id": "12e6abad97522ba0a84dcd401bb9f18ff29cbc148125f90b5f5d3112378b3768",
+   "kind": "tool_change",
+   "kind_title": "Tool change",
+   "label": "Tool change: Button-pusher tool > Suction cup",
+   "tools": [
+    "Button-pusher tool",
+    "Suction cup, 25 mm bellows"
+   ],
+   "completion_rate": 1.0,
+   "completed_runs": 8,
+   "n_runs": 8,
+   "fidelity": "approximation",
+   "stops_at": null,
+   "cycle_time_s": 84.6,
+   "roles": [
+    "finalist"
+   ],
+   "eligible": true,
+   "reason": null,
+   "tool_details": [
+    {
+     "index": 0,
+     "effector_id": "ec23d0f17374171b7fa9c62da8dd8d680df2e2c98a747068750a83777cfa38a3",
+     "display_name": "Button-pusher tool",
+     "family": "catalog_gripper",
+     "family_title": "Industrial gripper",
+     "fidelity": "rigid",
+     "off_the_shelf": true,
+     "caveat": null
+    },
+    {
+     "index": 1,
+     "effector_id": "e72e88518c0ebe7a74ec5db104b671180e9dbb5b51d0b11045814506657f31bf",
+     "display_name": "Suction cup, 25 mm bellows",
+     "family": "suction",
+     "family_title": "Suction cup",
+     "fidelity": "approximation",
+     "off_the_shelf": true,
+     "caveat": "Suction cup (approximation): a compliant lip of rigid segments on a bellows spring with a limited tilt; the seal is a geometric test (every lip segment touching the face, part material under 13 rays inside the lip) gating a MuJoCo adhesion actuator capped at vacuum x lip area (at most 60 kPa). The lip must touch the face: no pull across a gap. Not modelled: air flow, leak rate, porosity, vacuum build-up time (the vacuum follows the shared close ramp and is cut the control tick the seal is lost), lip material hysteresis, peel dynamics beyond the contact distribution. The lip's friction is the part's. Treat suction results as a screen, then verify on hardware."
+    }
+   ],
+   "step_success": {
+    "open_lid": 1.0,
+    "pick_carton": 1.0,
+    "pick_pack": 1.0,
+    "close_lid": 1.0
+   },
+   "weakest_step": {
+    "step_id": "close_lid",
+    "success_rate": 1.0
+   },
+   "complexity": {
+    "n_tools": 2,
+    "n_actuators": 1,
+    "total_mass_kg": 0.556,
+    "n_changes": 2,
+    "bracket": false
+   },
+   "payload_kg": 0.42,
+   "failure_modes": {},
+   "stops_at_detail": {}
+  },
+  {
+   "setup_id": "687ab63eb0a0f91fe3676c918c01cdbc92ff3fc960a18068b13dcf11bf0f4a4f",
+   "kind": "tool_change",
+   "kind_title": "Tool change",
+   "label": "Tool change: Button-pusher tool > Suction cup",
+   "tools": [
+    "Button-pusher tool",
+    "Suction cup, 40 mm bellows"
+   ],
+   "completion_rate": 1.0,
+   "completed_runs": 8,
+   "n_runs": 8,
+   "fidelity": "approximation",
+   "stops_at": null,
+   "cycle_time_s": 84.6,
+   "roles": [
+    "finalist"
+   ],
+   "eligible": true,
+   "reason": null,
+   "tool_details": [
+    {
+     "index": 0,
+     "effector_id": "ec23d0f17374171b7fa9c62da8dd8d680df2e2c98a747068750a83777cfa38a3",
+     "display_name": "Button-pusher tool",
+     "family": "catalog_gripper",
+     "family_title": "Industrial gripper",
+     "fidelity": "rigid",
+     "off_the_shelf": true,
+     "caveat": null
+    },
+    {
+     "index": 1,
+     "effector_id": "a5d7b1667b4f0d6582a36df49b9e600eeedc31f54dc883ddf7803fe113091f1d",
+     "display_name": "Suction cup, 40 mm bellows",
+     "family": "suction",
+     "family_title": "Suction cup",
+     "fidelity": "approximation",
+     "off_the_shelf": true,
+     "caveat": "Suction cup (approximation): a compliant lip of rigid segments on a bellows spring with a limited tilt; the seal is a geometric test (every lip segment touching the face, part material under 13 rays inside the lip) gating a MuJoCo adhesion actuator capped at vacuum x lip area (at most 60 kPa). The lip must touch the face: no pull across a gap. Not modelled: air flow, leak rate, porosity, vacuum build-up time (the vacuum follows the shared close ramp and is cut the control tick the seal is lost), lip material hysteresis, peel dynamics beyond the contact distribution. The lip's friction is the part's. Treat suction results as a screen, then verify on hardware."
+    }
+   ],
+   "step_success": {
+    "open_lid": 1.0,
+    "pick_carton": 1.0,
+    "pick_pack": 1.0,
+    "close_lid": 1.0
+   },
+   "weakest_step": {
+    "step_id": "close_lid",
+    "success_rate": 1.0
+   },
+   "complexity": {
+    "n_tools": 2,
+    "n_actuators": 1,
+    "total_mass_kg": 0.594,
+    "n_changes": 2,
+    "bracket": false
+   },
+   "payload_kg": 0.457,
+   "failure_modes": {},
+   "stops_at_detail": {}
+  }
+ ],
+ "recommendation": {
+  "setup_id": "d136ab4824c1bad26b5ac84b7a481c14bedee5790c495f0eb8c1c9369bb11a57",
+  "kind": "single",
+  "kind_title": "Single tool",
+  "label": "Industrial servo parallel gripper, 110 mm stroke",
+  "tools": [
+   {
+    "index": 0,
+    "effector_id": "f2ea72dff094ac3680a7b59e05a96a2e9bc4d8191c7bfee56d30f1755987dff2",
+    "display_name": "Industrial servo parallel gripper, 110 mm stroke",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "caveat": null
+   }
+  ],
+  "completion_rate": 1.0,
+  "completed_runs": 8,
+  "n_runs": 8,
+  "fidelity": "rigid",
+  "stops_at": null,
+  "cycle_time_s": 78.19,
+  "why": "Ties on completion (100%) and the weakest step, with the shorter cycle (78.2 s against 84.6 s), and is simpler: 1 tool against 2.",
+  "caveat": null,
+  "verify_on_hardware": false,
+  "geometry": null,
+  "steps": [
+   {
+    "step_id": "open_lid",
+    "primitive": "hook_pull",
+    "primitive_used": "hook_pull",
+    "tool": 0,
+    "tool_label": "Industrial servo parallel gripper, 110 mm stroke",
+    "success_rate": 1.0,
+    "fidelity": "rigid",
+    "caveats": [],
+    "verify_on_hardware": false
+   },
+   {
+    "step_id": "pick_carton",
+    "primitive": "grasp",
+    "primitive_used": "grasp",
+    "tool": 0,
+    "tool_label": "Industrial servo parallel gripper, 110 mm stroke",
+    "success_rate": 1.0,
+    "fidelity": "rigid",
+    "caveats": [],
+    "verify_on_hardware": false
+   },
+   {
+    "step_id": "pick_pack",
+    "primitive": "grasp",
+    "primitive_used": "grasp",
+    "tool": 0,
+    "tool_label": "Industrial servo parallel gripper, 110 mm stroke",
+    "success_rate": 1.0,
+    "fidelity": "rigid",
+    "caveats": [],
+    "verify_on_hardware": false
+   },
+   {
+    "step_id": "close_lid",
+    "primitive": "push",
+    "primitive_used": "push",
+    "tool": 0,
+    "tool_label": "Industrial servo parallel gripper, 110 mm stroke",
+    "success_rate": 1.0,
+    "fidelity": "rigid",
+    "caveats": [],
+    "verify_on_hardware": false
+   }
+  ],
+  "runner_up_rigid": null,
+  "versus_best_single": {
+   "same_setup": true,
+   "completion_delta": 0.0,
+   "cycle_delta_s": 0.0,
+   "extra_tools": 0
+  },
+  "versus_baseline": {
+   "rule": "R01",
+   "same_setup": true,
+   "completion_delta": 0.0,
+   "cycle_delta_s": 0.0,
+   "added_pieces": 0,
+   "needed_gain": 0.0,
+   "basis": "baseline",
+   "note": null
+  }
+ },
+ "best_single": {
+  "setup_id": "d136ab4824c1bad26b5ac84b7a481c14bedee5790c495f0eb8c1c9369bb11a57",
+  "kind": "single",
+  "kind_title": "Single tool",
+  "label": "Industrial servo parallel gripper, 110 mm stroke",
+  "tools": [
+   "Industrial servo parallel gripper, 110 mm stroke"
+  ],
+  "completion_rate": 1.0,
+  "completed_runs": 8,
+  "n_runs": 8,
+  "fidelity": "rigid",
+  "stops_at": null,
+  "cycle_time_s": 78.19,
+  "roles": [
+   "recommended",
+   "best_single",
+   "baseline"
+  ],
+  "eligible": true,
+  "reason": null,
+  "tool_details": [
+   {
+    "index": 0,
+    "effector_id": "f2ea72dff094ac3680a7b59e05a96a2e9bc4d8191c7bfee56d30f1755987dff2",
+    "display_name": "Industrial servo parallel gripper, 110 mm stroke",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "caveat": null
+   }
+  ],
+  "step_success": {
+   "open_lid": 1.0,
+   "pick_carton": 1.0,
+   "pick_pack": 1.0,
+   "close_lid": 1.0
+  },
+  "weakest_step": {
+   "step_id": "close_lid",
+   "success_rate": 1.0
+  },
+  "complexity": {
+   "n_tools": 1,
+   "n_actuators": 1,
+   "total_mass_kg": 1.089,
+   "n_changes": 0,
+   "bracket": false
+  },
+  "payload_kg": 1.089,
+  "failure_modes": {},
+  "stops_at_detail": {}
+ },
+ "baseline": {
+  "setup_id": "d136ab4824c1bad26b5ac84b7a481c14bedee5790c495f0eb8c1c9369bb11a57",
+  "basis": null
+ },
+ "no_winner": null,
+ "sensitivity": {
+  "recommendation_changes": false,
+  "order_changes": 0,
+  "n_pairs": 15,
+  "tool_change_s": [
+   3.0,
+   6.0,
+   7.5,
+   10.0,
+   12.0
+  ],
+  "present_s": [
+   0.75,
+   1.5,
+   3.0
+  ],
+  "note": "change times are a fixed clock advance, so cycle times are recomputed exactly from the same runs"
+ },
+ "constants": [
+  {
+   "key": "roll_torque_nm",
+   "value": 15.0,
+   "unit": "N m",
+   "note": "wrist roll torque limit",
+   "tag": "assumed"
+  },
+  {
+   "key": "roll_speed_max_deg_s",
+   "value": 180.0,
+   "unit": "deg/s",
+   "note": "wrist roll speed cap",
+   "tag": "assumed"
+  },
+  {
+   "key": "pitch_range_deg",
+   "value": 90.0,
+   "unit": "deg",
+   "note": "wrist pitch limit, +- from straight down",
+   "tag": "assumed"
+  },
+  {
+   "key": "pitch_speed_dps",
+   "value": 180.0,
+   "unit": "deg/s",
+   "note": "wrist pitch speed cap",
+   "tag": "assumed"
+  },
+  {
+   "key": "pitch_torque_nm",
+   "value": 15.0,
+   "unit": "N m",
+   "note": "wrist pitch torque limit",
+   "tag": "assumed"
+  },
+  {
+   "key": "tool_change_s",
+   "value": 7.5,
+   "unit": "s",
+   "note": "automatic tool change time (a fixed clock advance)",
+   "tag": "assumed"
+  },
+  {
+   "key": "present_s",
+   "value": 1.5,
+   "unit": "s",
+   "note": "multi-tool head switch time (a fixed tilt, not simulated)",
+   "tag": "assumed"
+  },
+  {
+   "key": "changer_master_kg",
+   "value": 0.25,
+   "unit": "kg",
+   "note": "tool changer master plate (stays on the wrist)",
+   "tag": "assumed"
+  },
+  {
+   "key": "changer_tool_plate_kg",
+   "value": 0.1,
+   "unit": "kg",
+   "note": "tool changer plate on every tool",
+   "tag": "assumed"
+  },
+  {
+   "key": "changer_stack_mm",
+   "value": 52.0,
+   "unit": "mm",
+   "note": "tool changer stack height",
+   "tag": "assumed"
+  },
+  {
+   "key": "arm_payload_kg",
+   "value": 3.0,
+   "unit": "kg",
+   "note": "largest tool stack the arm may carry; heavier setups are refused",
+   "tag": "assumed"
+  },
+  {
+   "key": "bracket_density_kg_m3",
+   "value": 1300.0,
+   "unit": "kg/m^3",
+   "note": "printed carbon-filled polymer bracket",
+   "tag": "assumed"
+  },
+  {
+   "key": "placement_error_mm",
+   "value": 2.0,
+   "unit": "mm",
+   "note": "per-object placement error of the condition grid (uniform)",
+   "tag": "assumed"
+  },
+  {
+   "key": "simplicity_per_extra_effector",
+   "value": 0.05,
+   "unit": "rate",
+   "note": "integrator rule R01: completion a setup must add per added effector or changer",
+   "tag": "assumed"
+  },
+  {
+   "key": "simplicity_step_floor",
+   "value": 0.5,
+   "unit": "rate",
+   "note": "integrator rule R01: a weakest step under this fails outright",
+   "tag": "assumed"
+  },
+  {
+   "key": "tie_margin",
+   "value": 0.05,
+   "unit": "rate",
+   "note": "completion-rate tie among setups of the same complexity",
+   "tag": "assumed"
+  },
+  {
+   "key": "cycle_margin",
+   "value": 0.1,
+   "unit": "fraction",
+   "note": "among setups of the same complexity, a simpler one may be this much slower",
+   "tag": "assumed"
+  },
+  {
+   "key": "soft_arm_max_part_kg",
+   "value": 2.5,
+   "unit": "kg",
+   "note": "integrator rule R09: the heaviest part a soft arm may carry",
+   "tag": "assumed"
+  },
+  {
+   "key": "hook_min_mm",
+   "value": 5.0,
+   "unit": "mm",
+   "note": "a rigid tool hooks if its tip reaches this far sideways past the tool and flange",
+   "tag": "assumed"
+  },
+  {
+   "key": "hook_throat_mm",
+   "value": 6.0,
+   "unit": "mm",
+   "note": "room a lip needs between a hook and the flange, else the flange blocks it",
+   "tag": "assumed"
+  },
+  {
+   "key": "process_torque_nm",
+   "value": 4.0,
+   "unit": "N m",
+   "note": "integrator rule R05: tightening a threaded member to this torque or more needs a nut runner (1 N m above hand-tight)",
+   "tag": "assumed"
+  },
+  {
+   "key": "socket_fit_mm",
+   "value": 0.5,
+   "unit": "mm",
+   "note": "a nut runner's socket drives a hex at most this much under its own size",
+   "tag": "assumed"
+  },
+  {
+   "key": "sweep_clearance_mm",
+   "value": 5.0,
+   "unit": "mm",
+   "note": "multi-tool head swept-volume clearance",
+   "tag": "assumed"
+  }
+ ],
+ "fixed_caveats": [
+  "The floating wrist abstracts the arm: there is no arm reach or arm collision model.",
+  "Presenting a multi-tool head is a fixed tilt per segment plus a fixed time, not a simulated motion.",
+  "A tool change is a fixed time, not a simulated docking.",
+  "Controllers are scripted and open-loop on the placement error.",
+  "A recommendation is a simulation ranking under the stated conditions, not a hardware guarantee."
+ ],
+ "lanes": [
+  {
+   "id": "recommended",
+   "title": "Recommended",
+   "setup_id": "d136ab4824c1bad26b5ac84b7a481c14bedee5790c495f0eb8c1c9369bb11a57",
+   "kind": "single",
+   "label": "Industrial servo parallel gripper, 110 mm stroke",
+   "replay": "studio/replays/h1_tote/recommended",
+   "condition_id": "nominal",
+   "seed": 0,
+   "condition_text": "nominal placement, seed 0",
+   "traj_sha": "0e8c1e2f0580dfcfadc274f5437b3a1b321ccd18bd6a915a586d54a62f18e989",
+   "completed": true,
+   "cycle_time_s": 78.188,
+   "fps": 100,
+   "n_frames": 485,
+   "duration_s": 78.18,
+   "quantised": false,
+   "max_error_vs_recording_mm": 0.997,
+   "bytes": 105739,
+   "asset_bytes": 18060,
+   "segments": [
+    {
+     "index": 0,
+     "tool": 0,
+     "tool_label": "Industrial servo parallel gripper, 110 mm stroke",
+     "start_s": 0.0,
+     "end_s": 78.188,
+     "change": "none",
+     "change_s": 0.0,
+     "change_start_s": 0.0,
+     "steps": [
+      "open_lid",
+      "pick_carton",
+      "pick_pack",
+      "close_lid"
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "step_id": "open_lid",
+     "primitive": "hook_pull",
+     "tool": 0,
+     "start_s": 0.0,
+     "duration_s": 22.892,
+     "success": true,
+     "failure_mode": null,
+     "fidelity": "rigid",
+     "quantities": {
+      "angle_deg": 110.0,
+      "force_n": 2.864,
+      "penetration_mm": 0.036,
+      "penetration_ms": 0.0,
+      "penetration_transient": 0.0,
+      "slip_mm": 0.412
+     }
+    },
+    {
+     "step_id": "pick_carton",
+     "primitive": "grasp",
+     "tool": 0,
+     "start_s": 22.892,
+     "duration_s": 14.922,
+     "success": true,
+     "failure_mode": null,
+     "fidelity": "rigid",
+     "quantities": {
+      "engaged": 1.0,
+      "force_n": 56.411,
+      "hold_s": 5.69,
+      "in_target": 1.0,
+      "lift_mm": 374.287,
+      "penetration_mm": 0.087,
+      "penetration_ms": 0.0,
+      "penetration_transient": 0.0,
+      "tilt_deg": 0.0
+     }
+    },
+    {
+     "step_id": "pick_pack",
+     "primitive": "grasp",
+     "tool": 0,
+     "start_s": 37.814,
+     "duration_s": 16.106,
+     "success": true,
+     "failure_mode": null,
+     "fidelity": "rigid",
+     "quantities": {
+      "engaged": 1.0,
+      "force_n": 92.116,
+      "hold_s": 6.34,
+      "in_target": 1.0,
+      "lift_mm": 374.714,
+      "penetration_mm": 0.137,
+      "penetration_ms": 0.0,
+      "penetration_transient": 0.0,
+      "tilt_deg": 0.0
+     }
+    },
+    {
+     "step_id": "close_lid",
+     "primitive": "push",
+     "tool": 0,
+     "start_s": 53.92,
+     "duration_s": 24.268,
+     "success": true,
+     "failure_mode": null,
+     "fidelity": "rigid",
+     "quantities": {
+      "angle_deg": 0.0,
+      "force_n": 2.924,
+      "lid_release_deg": 0.0,
+      "lid_stop_dps": 5.398,
+      "penetration_mm": 0.042,
+      "penetration_ms": 0.0,
+      "penetration_transient": 0.0
+     }
+    }
+   ],
+   "credits": [
+    {
+     "text": "Simulation model of an open-source industrial gripper, BSD-3-Clause, modified",
+     "anchor": "library"
+    }
+   ]
+  }
+ ],
+ "build_pack": {
+  "zip": "studio/h1_tote/build_pack.zip",
+  "bytes": 10780,
+  "sha256": "635bcdee89e4162ec8f33eb9345af24d26e320efc2bd3bdcf3eb213d38b5f645",
+  "setup_id": "d136ab4824c1bad26b5ac84b7a481c14bedee5790c495f0eb8c1c9369bb11a57",
+  "label": "Industrial servo parallel gripper, 110 mm stroke",
+  "for": "recommended",
+  "files": [
+   {
+    "path": "ASSEMBLY.md",
+    "kind": "notes",
+    "format": "md",
+    "license": "CC0-1.0",
+    "bytes": 1650
+   },
+   {
+    "path": "CREDITS.txt",
+    "kind": "licence",
+    "format": "txt",
+    "license": "CC0-1.0",
+    "bytes": 596
+   },
+   {
+    "path": "README.txt",
+    "kind": "notes",
+    "format": "txt",
+    "license": "CC0-1.0",
+    "bytes": 1046
+   },
+   {
+    "path": "bom.csv",
+    "kind": "bom",
+    "format": "csv",
+    "license": "CC0-1.0",
+    "bytes": 344
+   },
+   {
+    "path": "certificate.html",
+    "kind": "certificate",
+    "format": "html",
+    "license": "CC0-1.0",
+    "bytes": 10731
+   },
+   {
+    "path": "licences/tool0_LICENSE.txt",
+    "kind": "licence",
+    "format": "txt",
+    "license": "BSD-3-Clause",
+    "bytes": 1470
+   },
+   {
+    "path": "mjcf/setup_tool0.xml",
+    "kind": "mjcf",
+    "format": "xml",
+    "license": "CC0-1.0",
+    "bytes": 8450
+   }
+  ],
+  "links": [
+   {
+    "name": "Tool 0: Industrial servo parallel gripper, 110 mm stroke",
+    "url": "https://github.com/RobotLocomotion/models",
+    "license": "BSD-3-Clause",
+    "reason": "the tool's own CAD and documentation are upstream; the pack carries its simulation meshes"
+   }
+  ],
+  "caveats": [
+   "The floating wrist abstracts the arm: there is no arm reach or arm collision model.",
+   "Presenting a multi-tool head is a fixed tilt per segment plus a fixed time, not a simulated motion.",
+   "A tool change is a fixed time, not a simulated docking.",
+   "Controllers are scripted and open-loop on the placement error.",
+   "A recommendation is a simulation ranking under the stated conditions, not a hardware guarantee."
+  ]
+ },
+ "build_pack_note": null,
+ "session": null,
+ "provenance": {
+  "code_version": "d4755dfc699a",
+  "report_sha256": "7758bd76e8cc7b3f7cd2f11d3d2de6db7991ed7aba9e7c003651da370df9921a",
+  "task_id": "351218d6c47d46bba1e14ecb4cf230c592618cbe28e9bf1d8be29cb88085e4f8",
+  "controllers": "default",
+  "evidence": "accepted",
+  "conditions": [
+   {
+    "condition_id": "nominal",
+    "seed": 0,
+    "aim_offsets_mm": {}
+   },
+   {
+    "condition_id": "place01",
+    "seed": 1,
+    "aim_offsets_mm": {
+     "carton": [
+      1.727,
+      0.13
+     ],
+     "pack": [
+      -0.98,
+      -0.174
+     ],
+     "tote_bin": [
+      0.306,
+      -0.193
+     ],
+     "tote_lid": [
+      0.542,
+      1.44
+     ]
+    }
+   },
+   {
+    "condition_id": "place02",
+    "seed": 2,
+    "aim_offsets_mm": {
+     "carton": [
+      1.043,
+      -0.225
+     ],
+     "pack": [
+      0.771,
+      -1.924
+     ],
+     "tote_bin": [
+      0.089,
+      0.245
+     ],
+     "tote_lid": [
+      0.415,
+      -0.251
+     ]
+    }
+   },
+   {
+    "condition_id": "place03",
+    "seed": 3,
+    "aim_offsets_mm": {
+     "carton": [
+      1.81,
+      -0.551
+     ],
+     "pack": [
+      0.485,
+      -1.966
+     ],
+     "tote_bin": [
+      -1.497,
+      -1.834
+     ],
+     "tote_lid": [
+      0.904,
+      1.979
+     ]
+    }
+   },
+   {
+    "condition_id": "place04",
+    "seed": 4,
+    "aim_offsets_mm": {
+     "carton": [
+      0.181,
+      0.812
+     ],
+     "pack": [
+      1.768,
+      -1.513
+     ],
+     "tote_bin": [
+      -0.003,
+      1.467
+     ],
+     "tote_lid": [
+      -0.785,
+      -1.133
+     ]
+    }
+   },
+   {
+    "condition_id": "place05",
+    "seed": 5,
+    "aim_offsets_mm": {
+     "carton": [
+      -1.073,
+      0.451
+     ],
+     "pack": [
+      -0.752,
+      1.153
+     ],
+     "tote_bin": [
+      -1.633,
+      -1.202
+     ],
+     "tote_lid": [
+      1.406,
+      -1.587
+     ]
+    }
+   },
+   {
+    "condition_id": "place06",
+    "seed": 6,
+    "aim_offsets_mm": {
+     "carton": [
+      -0.529,
+      0.317
+     ],
+     "pack": [
+      -1.476,
+      -1.311
+     ],
+     "tote_bin": [
+      -0.225,
+      0.272
+     ],
+     "tote_lid": [
+      0.659,
+      -0.034
+     ]
+    }
+   },
+   {
+    "condition_id": "place07",
+    "seed": 7,
+    "aim_offsets_mm": {
+     "carton": [
+      -0.89,
+      1.968
+     ],
+     "pack": [
+      0.238,
+      1.083
+     ],
+     "tote_bin": [
+      -1.498,
+      1.477
+     ],
+     "tote_lid": [
+      -0.578,
+      1.722
+     ]
+    }
+   }
+  ],
+  "fairness_sha": "82b5bcdac3b461e77bc17444036a535a9acb32f29bafd804947228e68090636d",
+  "workers": 4,
+  "timings": {
+   "screen_s": 585.0,
+   "combine_s": 49.0,
+   "finalists_s": 275.2,
+   "total_s": 910.5
+  },
+  "determinism": []
+ }
+}

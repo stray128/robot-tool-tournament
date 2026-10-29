@@ -13,7 +13,7 @@ one episode and the start of the next with the **world state carried over**
 advanced** by the change time: ``ToolChanger.changeover_s`` for a tool change, ``present_s`` for a
 multi-tool head presenting its other tool. The new scene contains the new tool (and, for a
 tool change, only it: the mass swap) and the wrist starts at its home pose (:func:`home_pose`): over
-the table centre, roll 0, :data:`HOME_HEIGHT` up or high enough to clear every object. Swapping a MuJoCo subtree inside one running episode was
+the table centre, roll and pitch 0, :data:`HOME_HEIGHT` up or high enough to clear every object. Swapping a MuJoCo subtree inside one running episode was
 rejected: MjSpec recompilation mid-episode would reset the contact warm-start and actuator state
 anyway, and carrying object joints by name is exact for resting objects.
 
@@ -31,6 +31,16 @@ moved. Identical conditions and seeds for every candidate are asserted by
 state reset makes it ``physics_invalid``. The task stops at the first failed step (the rest are
 ``not_reached``). A step whose primitive has no controller, or whose object has no physics,
 is ``not_simulated`` and never passes.
+
+**Penetration.** The runner, not the predicates, measures physics validity: at every control tick
+a :class:`PenetrationMonitor` reads every active contact except the designed ones
+(:func:`designed_pairs`: a tool's own links, a template's spring-loaded pads), so a part driven
+into a floor, a wall, a fixture or another part counts as much as the tool pressing on its object.
+It writes ``penetration_mm`` (the peak), ``penetration_ms`` (the longest unbroken time one body
+pair stayed above 1 mm) and ``penetration_transient`` (1 when it went above 1 mm for
+:data:`~rtt.studio.plan.PENETRATION_TRANSIENT_MS` or less: flagged, not failed) into the step's
+quantities before the predicate's verdict, whose shared rule
+(:func:`~rtt.studio.plan.criteria_verdict`) makes a longer excursion ``physics_unreliable``.
 """
 
 from __future__ import annotations
@@ -40,7 +50,9 @@ import hashlib
 import itertools
 import math
 import multiprocessing as mp
+import re
 import time
+import weakref
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Final
@@ -54,6 +66,8 @@ from rtt.sim.checks import bad_state_count
 from rtt.sim.episode import sample_jitter
 from rtt.sim.task import TaskV2, default_task_v2, task_digest
 from rtt.studio.plan import (
+    HELD_PENETRATION_MAX_MM,
+    PENETRATION_TRANSIENT_MS,
     ControllerSet,
     PrimitiveNotSimulated,
     StepContext,
@@ -68,6 +82,7 @@ from rtt.studio.types import (
     StepOutcome,
     TaskResult,
     TaskSpec,
+    TemplateKind,
     tier_of_effector,
     worst_tier,
 )
@@ -78,18 +93,20 @@ if TYPE_CHECKING:
 __all__ = [
     "HOME_CLEARANCE",
     "HOME_HEIGHT",
+    "PenetrationMonitor",
     "StudioCondition",
     "StudioJob",
     "WorldState",
     "apply_world_state",
     "capture_world_state",
+    "designed_pairs",
     "home_pose",
     "run_task",
     "run_task_jobs",
 ]
 
-#: m above the table top: the lowest wrist position (at the table centre, yaw and roll 0) at the
-#: start of every segment. :func:`home_pose` raises it when the tool stack would reach an object.
+#: m above the table top: the lowest wrist position (at the table centre, yaw, roll and pitch 0) at
+#: the start of every segment. :func:`home_pose` raises it when the tool stack would reach an object.
 HOME_HEIGHT: Final = 0.30
 #: m [assumed]: the gap between the tool stack's lowest point and the tallest object at home.
 HOME_CLEARANCE: Final = 0.03
@@ -107,7 +124,7 @@ def _z_range(model: mujoco.MjModel, data: mujoco.MjData, geoms: np.ndarray) -> t
 
 
 def home_pose(scene: StudioScene, task: TaskV2, state: WorldState | None = None) -> np.ndarray:
-    """The wrist's start pose for a segment of ``scene`` (x, y, z, yaw; roll is 0).
+    """The wrist's start pose for a segment of ``scene`` (x, y, z, yaw; roll and pitch are 0).
 
     Over the table centre, :data:`HOME_HEIGHT` above the table, or higher when needed so the whole
     tool stack (every head, the bracket, the changer) clears the tallest object, in the world
@@ -120,6 +137,7 @@ def home_pose(scene: StudioScene, task: TaskV2, state: WorldState | None = None)
     base = float(task.physics.table_top_z) + HOME_HEIGHT
     data.qpos[scene.ids.palm_qpos] = [0.0, 0.0, base, 0.0]
     data.qpos[scene.ids.roll_qpos] = 0.0
+    data.qpos[scene.ids.pitch_qpos] = 0.0
     if state is not None:
         apply_world_state(scene, data, state)
     mujoco.mj_forward(model, data)
@@ -133,6 +151,111 @@ def home_pose(scene: StudioScene, task: TaskV2, state: WorldState | None = None)
         _, top = _z_range(model, data, objects)
         z = max(base, top + (base - tool_lo) + HOME_CLEARANCE)
     return np.array([0.0, 0.0, z, 0.0])
+
+
+# --------------------------------------------------------------------------- penetration
+
+_PAD_GEOM: Final = re.compile(r"pad\d+$")
+_DESIGNED: weakref.WeakKeyDictionary[StudioScene, np.ndarray] = weakref.WeakKeyDictionary()
+
+
+def designed_pairs(scene: StudioScene) -> np.ndarray:
+    """``(ngeom, ngeom)`` booleans: the geom pairs that touch by design, so their penetration is not
+    counted (:class:`PenetrationMonitor`). What the mask covers, and why, is ``docs/STUDIO.md``
+    section 3.3 (Penetration):
+
+    * a tool's own links: both geoms on the wrist's kinematic tree (every head, the bracket, the
+      adapters, the changer), such as a closing linkage's links against each other;
+    * a template's own spring-loaded pads: a ``port_plug`` pad against any other geom of its own
+      instance (the plug it grips). The pad's contact is the insertion friction, and its stop sits
+      inside the socket wall by construction (that pair is excluded from collision).
+
+    Every other pair counts: tool and object, object and object, object and the table or a wall
+    or a fixture, and the lid and the box of one template.
+    """
+    cached = _DESIGNED.get(scene)
+    if cached is not None:
+        return cached
+    m = scene.model
+    on_tool = m.body_rootid[m.geom_bodyid] == m.body_rootid[scene.ids.palm_body]
+    mask = np.outer(on_tool, on_tool)
+    for obj in scene.objects.values():
+        if obj.kind is not TemplateKind.PORT_PLUG:
+            continue
+        pads = obj.geom_ids[[i for i, g in enumerate(obj.handles.geoms) if _PAD_GEOM.search(g)]]
+        mask[np.ix_(pads, obj.geom_ids)] = True
+        mask[np.ix_(obj.geom_ids, pads)] = True
+    mask.flags.writeable = False  # one shared mask per scene: nobody edits it
+    _DESIGNED[scene] = mask
+    return mask
+
+
+class PenetrationMonitor:
+    """The deepest penetration over every contact pair that is not by design, and how long it lasted.
+
+    Call :meth:`observe` once per control tick, after the physics step. It reads every active
+    contact (``efc_address >= 0``) that overlaps, skips the pairs ``designed`` marks
+    (:func:`designed_pairs`; ``None`` marks none), and keeps the peak depth. For the duration it
+    tracks each body pair separately: the number of control ticks in a row the pair stayed deeper
+    than ``limit_mm``; :attr:`longest` is the longest such run, so two different parts landing one
+    after the other are two transients, not one long one. A tick is one control period, and a run
+    of ``k`` ticks lasts ``k`` control periods (10 ms is 5 ticks at 2 ms).
+    """
+
+    def __init__(
+        self,
+        model: mujoco.MjModel,
+        designed: np.ndarray | None = None,
+        limit_mm: float = HELD_PENETRATION_MAX_MM,
+    ) -> None:
+        self._body = np.asarray(model.geom_bodyid)
+        self._designed = designed
+        self._limit = limit_mm / 1000.0
+        self._run: dict[tuple[int, int], int] = {}
+        self.peak_m = 0.0
+        self.longest = 0
+
+    def observe(self, data: mujoco.MjData) -> None:
+        n = int(data.ncon)
+        if not n:
+            self._run.clear()
+            return
+        con = data.contact
+        depth = -con.dist[:n]
+        idx = np.flatnonzero((depth > 0.0) & (con.efc_address[:n] >= 0))
+        if len(idx) and self._designed is not None:
+            geom = con.geom[:n][idx]
+            idx = idx[~self._designed[geom[:, 0], geom[:, 1]]]
+        if not len(idx):
+            self._run.clear()
+            return
+        depth = depth[idx]
+        self.peak_m = max(self.peak_m, float(depth.max()))
+        deep = idx[depth > self._limit]
+        if not len(deep):
+            self._run.clear()
+            return
+        pairs = np.sort(self._body[con.geom[:n][deep]], axis=1)
+        self._run = {(int(a), int(b)): self._run.get((int(a), int(b)), 0) + 1 for a, b in pairs}
+        self.longest = max(self.longest, max(self._run.values()))
+
+    def quantities(self, control_period_s: float) -> dict[str, float]:
+        """``penetration_mm`` (peak), ``penetration_ms`` (the longest run above the limit) and
+        ``penetration_transient`` (1 when it was above the limit for at most
+        :data:`~rtt.studio.plan.PENETRATION_TRANSIENT_MS`)."""
+        ms = round(1000.0 * control_period_s * self.longest, 6)
+        return {
+            "penetration_mm": 1000.0 * self.peak_m,
+            "penetration_ms": ms,
+            "penetration_transient": float(0.0 < ms <= PENETRATION_TRANSIENT_MS),
+        }
+
+    def merge(self, acc: dict[str, float], control_period_s: float) -> None:
+        """Write :meth:`quantities` into a step's ``acc``; ``penetration_mm`` keeps the larger of
+        its own and what a predicate observed (a predicate sees a subset of these pairs)."""
+        q = self.quantities(control_period_s)
+        q["penetration_mm"] = max(q["penetration_mm"], acc.get("penetration_mm", 0.0))
+        acc.update(q)
 
 
 _APPROX_EFFECTOR = "This effector family is a labelled approximation (docs/EFFECTORS.md section 10)."
@@ -252,6 +375,7 @@ def _outcome(
     duration_s: float = 0.0,
     traj_sha: str = "",
     controller: str = "",
+    observed: Sequence[str] = (),
 ) -> StepOutcome:
     tool = setup.assignment[step.id]
     effector = setup.tools[tool]
@@ -261,6 +385,7 @@ def _outcome(
         caveats.append(str(getattr(get_family(effector.family), "caveat", "") or _APPROX_EFFECTOR))
     if tier is FidelityTier.NOT_SIMULATED:
         caveats.append("Not simulated yet: this step has no physics model, so it is never scored as a pass.")
+    caveats.extend(observed)  # what the predicate saw happen (StepVerdict.caveats)
     return StepOutcome(
         step_id=step.id,
         primitive=step.primitive,
@@ -343,11 +468,12 @@ def run_task(job: StudioJob) -> TaskResult:
         home = home_pose(scene, task, state)
         data.qpos[scene.ids.palm_qpos] = home
         data.qpos[scene.ids.roll_qpos] = 0.0
+        data.qpos[scene.ids.pitch_qpos] = 0.0
         if state is not None:
             apply_world_state(scene, data, state)
         mujoco.mj_forward(model, data)
         ctrl = np.zeros(model.nu)
-        ctrl[:5] = [*home, 0.0]
+        ctrl[:6] = [*home, 0.0, 0.0]  # x, y, z, yaw, roll, pitch
         for h in scene.heads:
             if not h.active:
                 ctrl[[model.actuator(a).id for a in h.actuators]] = h.build.ctrl_open
@@ -421,6 +547,7 @@ def _run_step(
         seed=job.condition.seed,
         t0=clock,
         aim_offsets=FrozenDict({k: tuple(map(float, v)) for k, v in aims.items()}),
+        wrist_pitch_start=float(ctrl[5]),
     )
     plan = controller.plan(ctx, model, data)
     cp = task.controller.control_period
@@ -429,30 +556,47 @@ def _run_step(
     n_ticks = max(1, round(plan.duration_s / cp))
     n_act = len(scene.ids.effector_actuators)
     roll_cap = math.radians(scene.wrist.roll_speed_max_deg_s) * cp * (1.0 + 1e-6) + 1e-9
+    pitch_cap = math.radians(scene.wrist.pitch_speed_dps) * cp * (1.0 + 1e-6) + 1e-9
+    pitch_lim = math.radians(scene.wrist.pitch_range_deg) + 1e-9
+    pitch_hold = float(ctrl[5])  # a five-target controller holds the pitch here
     resets0 = bad_state_count(data)
     acc: dict[str, float] = {}
+    monitor = PenetrationMonitor(model, designed_pairs(scene))
     sha = hashlib.sha256()
     reset_at: float | None = None
+    observe_tick = getattr(predicate, "observe_tick", None)  # optional (rtt.studio.plan)
     for tick in range(n_ticks):
         t = tick * cp
         cmd = controller.command(t, ctx, plan, model, data)
         wrist = np.asarray(cmd.wrist, dtype=np.float64)
         u = np.asarray(cmd.effector, dtype=np.float64)
+        if wrist.shape == (5,):
+            wrist = np.append(wrist, pitch_hold)
         if (
-            wrist.shape != (5,)
+            wrist.shape != (6,)
             or u.shape != (n_act,)
             or not (np.all(np.isfinite(wrist)) and np.all(np.isfinite(u)))
         ):
             raise ContractError(
                 f"controller {controller.name!r} returned wrist {wrist.shape} and effector {u.shape}; "
-                f"needs 5 and {n_act} finite values"
+                f"needs 6 (or 5) and {n_act} finite values"
             )
         if abs(wrist[4] - ctrl[4]) > roll_cap:
             raise ContractError(
                 f"controller {controller.name!r} moved the roll target faster than "
                 f"{scene.wrist.roll_speed_max_deg_s:g} deg/s"
             )
-        ctrl[:5] = wrist
+        if abs(wrist[5] - ctrl[5]) > pitch_cap:
+            raise ContractError(
+                f"controller {controller.name!r} moved the pitch target faster than "
+                f"{scene.wrist.pitch_speed_dps:g} deg/s"
+            )
+        if abs(wrist[5]) > pitch_lim:
+            raise ContractError(
+                f"controller {controller.name!r} moved the pitch target past "
+                f"+-{scene.wrist.pitch_range_deg:g} deg"
+            )
+        ctrl[:6] = wrist
         ctrl[scene.ids.effector_actuators] = u
         for obj in scene.objects.values():
             if len(obj.actuator_ids):
@@ -466,12 +610,16 @@ def _run_step(
         if bad_state_count(data) > resets0:
             reset_at = (tick + 1) * cp
             break
+        monitor.observe(data)
+        if observe_tick is not None:
+            observe_tick((tick + 1) * cp, ctx, model, data, acc)
         if (tick + 1) % ticks_per_check == 0 or tick == n_ticks - 1:  # check ticks and the step's end
             sha.update(data.qpos.tobytes())
             sha.update(data.qvel.tobytes())
             predicate.observe((tick + 1) * cp, ctx, model, data, acc)
     digest = sha.hexdigest()
     seg_sha.update(digest.encode())
+    monitor.merge(acc, cp)
     if reset_at is not None:
         out = _outcome(
             step,
@@ -497,6 +645,7 @@ def _run_step(
         duration_s=n_ticks * cp,
         traj_sha=digest,
         controller=controller.name,
+        observed=v.caveats,
     )
     return out, ctrl
 

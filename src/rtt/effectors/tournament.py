@@ -89,6 +89,7 @@ __all__ = [
     "LANE_CONDITION",
     "MAX_SCREEN_CANDIDATES",
     "MAX_SCREEN_EPISODES",
+    "PART_FAMILIES",
     "RANDOM_RECIPES",
     "SCREEN_SEEDS",
     "Candidate",
@@ -104,6 +105,7 @@ __all__ = [
     "fairness_problems",
     "family_status",
     "jsonable",
+    "per_part_presets",
     "run_tournament",
     "spec_from_dict",
     "training_conditions",
@@ -112,8 +114,30 @@ __all__ = [
     "write_outputs",
 ]
 
-#: Groups in the order they are reported (the order of :class:`EntrantGroup`).
-GROUP_ORDER: Final[tuple[EntrantGroup, ...]] = tuple(EntrantGroup)
+#: Groups in the order they are reported (the order of :class:`EntrantGroup`). The process group
+#: (nut runner, tamper) is for the Studio's process steps: it never competes in a per-part pick.
+GROUP_ORDER: Final[tuple[EntrantGroup, ...]] = tuple(g for g in EntrantGroup if g is not EntrantGroup.PROCESS)
+#: The families the per-part tournament, its lanes pages and ``effectors/index.json`` report: every one
+#: but the process tools, which are never in a per-part pick.
+PART_FAMILIES: Final[tuple[EffectorFamily, ...]] = tuple(
+    f for f in EffectorFamily if f is not EffectorFamily.PROCESS_TOOL
+)
+
+
+def per_part_presets(family: EffectorFamily) -> tuple[EffectorSpec, ...]:
+    """The presets of ``family`` that enter the per-part tournament and its lanes: every preset but the
+    vacuum area frames. A frame is an area tool for a large flat part (a panel, a tile); every v1 part is
+    at most 0.5 m across, so the published v1 product pages keep the three cups. The Studio keeps the
+    frames (``get_family(...).presets()``)."""
+    from rtt.effectors.suction import is_frame
+
+    return tuple(
+        s
+        for s in get_family(family).presets()
+        if not (s.family is EffectorFamily.SUCTION and is_frame(s.params))
+    )
+
+
 #: Jitter seeds per screen condition (the ``train_v2`` suite has 2).
 SCREEN_SEEDS: Final = 2
 #: Screen candidates per group: 12 x 8 = 96 screen episodes at most.
@@ -941,8 +965,8 @@ def _part_doc(part: PartSpec) -> dict[str, Any]:
 def family_status(families: Sequence[EffectorFamily] | None) -> tuple[list[EffectorFamily], dict[str, str]]:
     status: dict[str, str] = {}
     out = []
-    pool = list(families) if families is not None else list(EffectorFamily)
-    for fam in EffectorFamily:
+    pool = list(families) if families is not None else list(PART_FAMILIES)
+    for fam in PART_FAMILIES:
         if fam not in pool:
             status[fam.value] = "not requested"
             continue
@@ -1138,6 +1162,16 @@ def run_tournament(
     wanted = tuple(EntrantGroup(g) for g in (groups if groups is not None else GROUP_ORDER))
     if not wanted:
         raise ValueError("run at least one group")
+    if families is not None and EffectorFamily.PROCESS_TOOL in {EffectorFamily(f) for f in families}:
+        raise ValueError(
+            "the process_tool family is not in the per-part tournament (its tools are Studio process "
+            f"tools): choose from {[f.value for f in PART_FAMILIES]}"
+        )
+    if outside := [g.value for g in wanted if g not in GROUP_ORDER]:
+        raise ValueError(
+            f"group {outside} is not in the per-part tournament (its tools are Studio process tools): "
+            f"choose from {[g.value for g in GROUP_ORDER]}"
+        )
     if conditions is None:
         conditions = training_conditions(part)
         suite = suite or "train_v2"
@@ -1158,7 +1192,7 @@ def run_tournament(
     # 1. presets of every available family, bucketed by their budget group
     seen: set[str] = set()
     for fam in fams:
-        for spec in get_family(fam).presets():
+        for spec in per_part_presets(fam):
             if spec.effector_id in seen or spec.group not in wanted:
                 continue
             seen.add(spec.effector_id)

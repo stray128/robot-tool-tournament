@@ -55,10 +55,12 @@ import numpy as np
 
 from rtt.sim.scene import OBJECT_RGBA
 from rtt.studio.templates import (
+    FRAME_RGBA,
     ResolvedHandles,
     TemplateBuilder,
     TemplateContext,
     TemplateHandles,
+    quat_z,
     register_template_builder,
 )
 from rtt.studio.types import TemplateKind
@@ -71,11 +73,6 @@ PANEL_DENSITY: Final = 700.0  # kg/m^3, a light panel (plywood, filled polymer) 
 BAR_DIAMETER: Final = 0.010  # m [assumed]
 BAR_LENGTH: Final = 0.090  # m, at most 60 % of the edge [assumed]
 CATCH_DEG: Final = 6.0  # deg, the catch acts over this much opening, fading out by twice it
-FRAME_RGBA: Final = (0.55, 0.58, 0.62, 1.0)
-
-
-def _quat_z(angle: float) -> list[float]:
-    return [math.cos(0.5 * angle), 0.0, 0.0, math.sin(0.5 * angle)]
 
 
 def _rot_z(angle: float) -> np.ndarray:
@@ -95,7 +92,7 @@ class HingedLidBuilder(TemplateBuilder):
         yaw = math.radians(pose.yaw_deg)
         rot = _rot_z(yaw)
         origin = np.array([pose.x_mm / 1000.0, pose.y_mm / 1000.0, ctx.table_top_z])
-        frame = ctx.spec.worldbody.add_body(name=f"{p}frame", pos=origin.tolist(), quat=_quat_z(yaw))
+        frame = ctx.spec.worldbody.add_body(name=f"{p}frame", pos=origin.tolist(), quat=quat_z(yaw))
         geoms: list[str] = []
         sites: dict[str, str] = {}
         r_bar = 0.5 * BAR_DIAMETER

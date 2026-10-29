@@ -4,11 +4,16 @@
 
 * ``catalog.json``: :func:`rtt.studio.engineer.catalog.web_catalog` (templates, primitives,
   quantities, limits): what the step editor offers and validates against.
-* ``recorded.json``: the recorded plans the static site plays (every gate case and the upload
-  example), each with its attempts, problems, warnings and the final plan.
+* ``recorded.json``: the recorded plans the static site plays, each with its attempts, problems,
+  warnings, the final plan and the day it was recorded: Studio v2's six heroes (recorded on the
+  current prompt; a hero whose recorded plan is not valid, h4_cnc, is listed but not offered as a
+  hero example), then the rest of the v1 test set (the cases the v2 heroes do not replace, recorded
+  on the v1 prompt), then the upload example.
 * ``parity.json``: edited versions of the recorded plans (the edits the step editor can make)
   with the exact problems the Python side reports, so the page's validator is tested against
-  :func:`rtt.studio.engineer.engineer.judge_args` message for message.
+  :func:`rtt.studio.engineer.engineer.judge_args` message for message. The edits written for the
+  v1 plans keep the v1 plans as their bases (``v1:<case>``); the job templates' edits use the
+  Studio v2 heroes.
 
 A test regenerates all three and compares them with the committed copies.
 """
@@ -19,13 +24,14 @@ import copy
 import json
 from collections.abc import Callable
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Final
 
 from rtt.effectors.types import PRODUCT_MODE_LABEL
 from rtt.studio.engineer.catalog import web_catalog
 from rtt.studio.engineer.engineer import ENGINEER_MODEL, judge_args, normalise_nulls
-from rtt.studio.engineer.examples import GATE_CASES, HERO_CASES, UPLOAD_CASE
-from rtt.studio.engineer.gate import RECORDED_GATE
+from rtt.studio.engineer.examples import HERO_CASES, UPLOAD_CASE, V1_HERO_CASES
+from rtt.studio.engineer.gate import RECORDED_GATE, RECORDED_GATE_V1
 from rtt.studio.types import CONTRACT_VERSION
 
 __all__ = ["RECORDED_UPLOAD", "parity_cases", "recorded_plans", "write_web_data"]
@@ -40,7 +46,27 @@ def _dump(data: Any, *, compact: bool = False) -> str:
     return json.dumps(data, indent=1, ensure_ascii=False) + "\n"
 
 
-def _example(row: dict[str, Any], *, hero: bool) -> dict[str, Any]:
+def _now(plan: dict[str, Any]) -> str:
+    """The status today's rules (v2, what the page validates with) give a recorded plan."""
+    doc = plan.get("plan")
+    if not doc:
+        return str(plan["status"])
+    keys = (
+        "title",
+        "description",
+        "objects",
+        "steps",
+        "assumptions",
+        "clarifications",
+        "unsupported",
+        "refusal",
+    )
+    uploads = [SimpleNamespace(upload_id=u["upload_id"]) for u in plan.get("uploads") or []]  # ids only
+    spec, problems, _ = judge_args({k: doc[k] for k in keys}, uploads=uploads, source="recorded")  # type: ignore[arg-type]
+    return "invalid" if problems or spec is None else ("refused" if spec.refusal else "valid")
+
+
+def _example(row: dict[str, Any], *, hero: bool, recorded_at: str, rules: str = "v2") -> dict[str, Any]:
     plan = row["plan"]
     return {
         "case_id": row["case_id"],
@@ -49,6 +75,9 @@ def _example(row: dict[str, Any], *, hero: bool) -> dict[str, Any]:
         "text": row["text"],
         "hero": hero,
         "expect": row["expect"],
+        "recorded_at": recorded_at,
+        "rules": rules,
+        "status_now": _now(plan),
         "status": plan["status"],
         "first_try": plan["first_try"],
         "repaired": plan["repaired"],
@@ -79,13 +108,34 @@ def _example(row: dict[str, Any], *, hero: bool) -> dict[str, Any]:
     }
 
 
+def _manifest(root: Path) -> dict[str, Any]:
+    return json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+
+
 def recorded_plans(recorded: Path | None = None) -> dict[str, Any]:
-    """``recorded.json``: the recorded gate run's plans (heroes first) and the upload example."""
+    """``recorded.json`` (module docstring). With ``recorded``, that one run's plans in the order it
+    ran (its heroes marked: the v1 heroes for the v1 run) and the upload example."""
     root = recorded or RECORDED_GATE
-    manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
-    heroes = {c.case_id for c in HERO_CASES}
-    rows = {r["case_id"]: r for r in manifest["cases"]}
-    examples = [_example(rows[c.case_id], hero=c.case_id in heroes) for c in GATE_CASES if c.case_id in rows]
+    manifest = _manifest(root)
+    v1 = root.resolve() == RECORDED_GATE_V1.resolve()
+    heroes = {c.case_id for c in (V1_HERO_CASES if v1 else HERO_CASES)}
+    at, rules = manifest["written_at"], str(manifest.get("rules_version", "v1"))
+    examples = [  # a hero with no valid recorded plan (h4_cnc) is not offered as a hero example
+        _example(
+            r, hero=r["case_id"] in heroes and r["plan"]["status"] == "valid", recorded_at=at, rules=rules
+        )
+        for r in manifest["cases"]
+    ]
+    if recorded is None:  # the v2 heroes first, then the rest of the v1 test set
+        order = {c.case_id: i for i, c in enumerate(HERO_CASES)}
+        examples.sort(key=lambda e: order.get(e["case_id"], len(order)))
+        old = _manifest(RECORDED_GATE_V1)
+        taken = {e["case_id"] for e in examples}
+        examples += [
+            _example(r, hero=False, recorded_at=old["written_at"], rules="v1")
+            for r in old["cases"]
+            if r["case_id"] not in taken
+        ]
     upload_path = RECORDED_UPLOAD / "plan.json"
     if upload_path.is_file():
         plan = json.loads(upload_path.read_text(encoding="utf-8"))
@@ -97,7 +147,7 @@ def recorded_plans(recorded: Path | None = None) -> dict[str, Any]:
             "expect": "plan",
             "plan": plan,
         }
-        examples.append(_example(row, hero=False))
+        examples.append(_example(row, hero=False, recorded_at=_upload_recorded_at(), rules="v1"))
     return {
         "format": "rtt-studio-recorded-plans",
         "version": 1,
@@ -108,6 +158,14 @@ def recorded_plans(recorded: Path | None = None) -> dict[str, Any]:
         "gate": {"passed": manifest["gate"]["passed"], "summary": manifest["summary"]},
         "examples": examples,
     }
+
+
+def _upload_recorded_at() -> str:
+    """When the upload example was recorded: its ledger's first entry (it has no manifest)."""
+    from rtt.llm.ledger import read_ledger
+
+    entries = read_ledger(RECORDED_UPLOAD / "ledger.jsonl")
+    return str(entries[0].ts) if entries else ""
 
 
 # --------------------------------------------------------------------------- parity cases
@@ -311,7 +369,7 @@ def _edits() -> list[tuple[str, str, Callable[[dict[str, Any]], None]]]:
             },
         )
 
-    return [
+    v1 = [
         ("valid_h1", "h1_tote", lambda a: None),
         ("valid_h2", "h2_coupling", lambda a: None),
         ("valid_h3", "h3_cabinet", lambda a: None),
@@ -546,10 +604,151 @@ def _edits() -> list[tuple[str, str, Callable[[dict[str, Any]], None]]]:
         ),
     ]
 
+    # Studio v2's job templates, on the v2 heroes (found by kind and primitive, whatever the names)
+    def q(quantity: str, lo: float | None = None, hi: float | None = None) -> dict[str, Any]:
+        return {"quantity": quantity, "at_least": lo, "at_most": hi}
+
+    def add_crate(a: dict[str, Any]) -> None:
+        a["objects"].append(
+            {
+                "name": "crate",
+                "kind": "bin",
+                "label": "Crate",
+                "params": {"length_mm": 100, "width_mm": 60, "height_mm": 120, "wall_mm": 4, "fixed": True},
+                "pose": {"x_mm": 0.0, "y_mm": -270.0, "yaw_deg": 0.0},
+                "ref": None,
+            }
+        )
+
+    def place(kind: str, x: float, y: float) -> Callable[[dict[str, Any]], None]:
+        return lambda a: _object(a, kind)["pose"].update({"x_mm": x, "y_mm": y})
+
+    def pick_field(key: str, value: Any) -> Callable[[dict[str, Any]], None]:
+        """``key`` of the plan's first pick, whichever pick primitive the model chose."""
+        return lambda a: next(
+            x for x in a["steps"] if x["primitive"] in ("grasp", "suction", "wrap")
+        ).__setitem__(key, value)
+
+    def say(line: str) -> Callable[[dict[str, Any]], None]:
+        return lambda a: a["assumptions"].append(line)
+
+    def fixture_inside(a: dict[str, Any]) -> None:
+        """The fixture tray moved under the machine's opening, onto the finished part there (what stands
+        inside a machine keeps its 20 mm from the rest)."""
+        machine = _object(a, "sliding_door")
+        load = [x for x in a["steps"] if x["primitive"] == "grasp"][-1]
+        fixture = next(o for o in a["objects"] if o["name"] == load["target"])
+        fixture["pose"].update({"x_mm": machine["pose"]["x_mm"] + 40.0, "y_mm": machine["pose"]["y_mm"]})
+
+    v2 = [
+        *[(f"valid_v2_{c.case_id}", c.case_id, lambda a: None) for c in HERO_CASES],
+        ("push_from_the_top_is_dropped", "h1_tote", sparam("push", "approach", "top")),
+        # a panel on its rails and its clamp
+        ("panel_out_of_reach", "h5_solar", pose("panel_rail", "x_mm", 200)),
+        (
+            "panel_turned_out_of_reach",
+            "h5_solar",
+            chain(pose("panel_rail", "y_mm", -180), pose("panel_rail", "yaw_deg", 90)),
+        ),
+        ("panel_pick_on_its_clamp", "h5_solar", pick_field("handle", "member")),
+        ("panel_pick_into_a_bin", "h5_solar", chain(add_crate, pick_field("target", "crate"))),
+        (
+            "panel_pick_without_a_lift",
+            "h5_solar",
+            pick_field("success", [q("gap_mm", hi=5), q("lift_mm", 0)]),
+        ),
+        ("panel_insert_short_of_its_thread", "h5_solar", crit("insert", [q("depth_mm", 0, 5)])),
+        # a pick's lift leaves the tool's give under the part's weight (rule set v2-r2)
+        (
+            "panel_lift_inside_the_give",
+            "h5_solar",
+            chain(
+                pick_field("params", {"lift_mm": 20, "hold_s": 1}),
+                pick_field("success", [q("gap_mm", hi=5), q("lift_mm", 10)]),
+            ),
+        ),
+        (
+            "panel_lift_past_the_give",
+            "h5_solar",
+            chain(
+                pick_field("params", {"lift_mm": 60, "hold_s": 1}),
+                pick_field("success", [q("gap_mm", hi=5), q("lift_mm", 10)]),
+            ),
+        ),
+        (
+            "panel_hold_under_the_threshold",
+            "h5_solar",
+            chain(
+                pick_field("params", {"lift_mm": 40, "hold_s": 2}),
+                pick_field("success", [q("gap_mm", hi=5), q("hold_s", 1)]),
+            ),
+        ),
+        (
+            "tile_lift_inside_the_give",
+            "h6_tile",
+            pick_field("params", {"lift_mm": 10, "hold_s": 1}),
+        ),
+        ("panel_clamp_ccw", "h5_solar", sparam("twist", "direction", "ccw")),
+        ("panel_twist_without_insert", "h5_solar", drop_step("insert")),
+        ("panel_insert_holds", "h5_solar", sfield("insert", "hold_after", True)),
+        ("panel_wrist_torque_goal", "h5_solar", crit("twist", [q("torque_nm", 6)])),
+        ("panel_clamp_over_its_torque", "h5_solar", crit("twist", [q("clamp_torque_nm", 8)])),
+        ("panel_clamp_torque_capped", "h5_solar", cons("twist", "max_torque_nm", 5)),
+        ("panel_insert_too_deep", "h5_solar", crit("insert", [q("depth_mm", 6)])),
+        # a tile on its bed
+        (
+            "tile_press_without_force",
+            "h6_tile",
+            crit("push", [q("height_err_mm", hi=1), q("tilt_deg", hi=0.5)]),
+        ),
+        ("tile_press_too_light", "h6_tile", crit("push", [q("force_n", 15), q("height_err_mm", hi=1)])),
+        (
+            "tile_press_too_hard",
+            "h6_tile",
+            chain(
+                crit("push", [q("force_n", 58), q("height_err_mm", hi=1)]), cons("push", "max_force_n", 100)
+            ),
+        ),
+        ("tile_press_capped", "h6_tile", cons("push", "max_force_n", 30)),
+        # a call button on the wall
+        ("button_from_the_top", "h7_hotel", sparam("push", "approach", "top")),
+        ("button_judged_by_travel", "h7_hotel", crit("push", [q("travel_mm", 2)])),
+        (
+            "button_stiff",
+            "h7_hotel",
+            chain(setp("spring_button", "actuation_force_n", 25), cons("push", "max_force_n", 30)),
+        ),
+        ("button_out_of_reach", "h7_hotel", place("spring_button", 0.0, -250.0)),
+        ("button_turned_away", "h7_hotel", pose("spring_button", "yaw_deg", 180)),
+        ("button_on_a_desk_from_the_front", "h7_hotel", setp("spring_button", "mount", "desk")),
+        # a machine's sliding door and what stands inside it
+        ("door_slip_bound", "h4_cnc", crit("hook_pull", [q("travel_mm", 230), q("slip_mm", hi=15)])),
+        ("door_opened_too_little", "h4_cnc", crit("hook_pull", [q("travel_mm", 100)])),
+        ("door_never_opened", "h4_cnc", drop_step("hook_pull")),
+        ("door_shut_before_the_picks", "h4_cnc", move(3, 1)),
+        ("door_short_travel", "h4_cnc", setp("sliding_door", "travel_mm", 120)),
+        ("door_out_of_reach", "h4_cnc", pose("sliding_door", "y_mm", -250)),
+        ("door_heavy", "h4_cnc", setp("sliding_door", "pull_force_n", 30)),
+        ("inside_part_pokes_out", "h4_cnc", pose("part", "x_mm", -130)),
+        ("inside_contents_kept_apart", "h4_cnc", fixture_inside),
+        # a hook pull's force limit over the door's pull, and the finger room inside (rule set v2-r3)
+        ("door_pull_capped", "h4_cnc", cons("hook_pull", "max_force_n", 20)),
+        ("door_pull_force_bound", "h4_cnc", crit("hook_pull", [q("travel_mm", 230), q("force_n", hi=20)])),
+        ("picked_part_at_the_wall", "h4_cnc", pose("part", "x_mm", 100)),
+        # the repairs name the field to change, and a claim binds what a clause names with the machine (v2-r4)
+        ("door_shut_fast", "h4_cnc", sparam("push", "speed_mm_s", 60)),
+        ("panel_start_gap_over_its_bound", "h5_solar", setp("panel_rail", "start_gap_mm", 10)),
+        ("claim_inside_another_bin", "h4_cnc", say("The finished part is inside the out bin.")),
+        ("claim_inside_the_machine", "h4_cnc", say("The out bin stands inside the machine.")),
+    ]
+    return [(name, f"v1:{base}", edit) for name, base, edit in v1] + v2
+
 
 def parity_cases(recorded: Path | None = None) -> dict[str, Any]:
-    """``parity.json``: each edit's arguments and the problems and warnings Python reports."""
-    examples = {e["case_id"]: e for e in recorded_plans(recorded)["examples"]}
+    """``parity.json``: each edit's arguments and the problems and warnings Python reports (the v1
+    plans' edits on the v1 recording, the others on ``recorded``, by default the v2 one)."""
+    examples = {e["case_id"]: e for e in recorded_plans(recorded or RECORDED_GATE)["examples"]}
+    examples |= {f"v1:{e['case_id']}": e for e in recorded_plans(RECORDED_GATE_V1)["examples"]}
     cases = []
     for name, base, edit in _edits():
         args = _args(examples[base])

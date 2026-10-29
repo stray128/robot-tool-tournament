@@ -20,6 +20,7 @@ from rtt.sim import objects as objs
 from rtt.sim import replay as rp
 from rtt.sim.episode import run_episode
 from rtt.sim.scene import build_model
+from rtt.studio import replay as sr
 from schema_lite import Validator
 
 REPO = Path(__file__).resolve().parents[1]
@@ -451,3 +452,270 @@ def test_scan_part_assets_carry_the_scan_credit(tmp_path: Path) -> None:
 def test_provenance_keys_match_the_schema() -> None:
     assert set(rp.PROVENANCE_KEYS) == set(SCHEMA["$defs"]["provenance"]["properties"])
     assert SCHEMA["$defs"]["provenance"]["additionalProperties"] is False
+
+
+# ------------------------------------------------- keyframed and quantised lanes (t, cuts, int16, qi)
+
+
+def _keyed(replay: rp.Replay, n: int, **extra: Any) -> sr.LaneReplay:
+    """``replay`` cut down to its first ``n`` frames on a non-uniform timeline."""
+    header = copy.deepcopy(replay.header)
+    header.update(n_frames=n, t=[round(0.01 * i * i, 6) for i in range(n)], cuts=[], **extra)
+    return sr.LaneReplay(frames=replay.frames[:n].copy(), header=header)
+
+
+def _quantised(replay: rp.Replay, n: int) -> sr.LaneReplay:
+    """A quantised keyframed lane of the first ``n`` frames: the header says so, the frames are
+    what the int16 poses decode to, and the poses are the writer's input."""
+    keyed = _keyed(replay, n, quantised=True, dtype="int16")
+    keyed.header["pose_fields"] = list(sr.QUANT_POSE_FIELDS)
+    keyed.words = sr.quantise_poses(keyed.frames)
+    keyed.frames = sr.dequantise_poses(keyed.words)
+    return keyed
+
+
+def _unit_quats(rng: np.random.Generator, n: int) -> np.ndarray:
+    q = rng.normal(size=(n, 4))
+    return q / np.linalg.norm(q, axis=1, keepdims=True)
+
+
+def _rotation_error(a: np.ndarray, b: np.ndarray, radius: float) -> tuple[float, float]:
+    """Worst displacement (m), from rotation alone, of the 6 axis points at ``radius``, and worst
+    angle (rad), between the rotations of pose arrays (n, 7)."""
+    from rtt.studio.replay import _rot
+
+    qa, qb = np.asarray(a[:, 3:], dtype=np.float64), np.asarray(b[:, 3:], dtype=np.float64)
+    pts = radius * np.vstack([np.eye(3), -np.eye(3)])
+    diff = _rot(qa) - _rot(qb)
+    moved = float(np.max(np.linalg.norm(np.einsum("nij,vj->nvi", diff, pts), axis=-1)))
+    angle = 2.0 * np.arccos(np.clip(np.abs(np.sum(qa * qb, axis=1)), 0.0, 1.0))
+    return moved, float(np.max(angle))
+
+
+def _quat_about(axis: tuple[float, float, float], degrees: float) -> list[float]:
+    half = np.radians(degrees) / 2.0
+    return [*(np.sin(half) * np.asarray(axis)), float(np.cos(half))]
+
+
+def test_quantised_poses_round_trip_within_a_tenth_of_a_millimetre_and_two_milliradians() -> None:
+    rng = np.random.default_rng(7)
+    n = 4000
+    poses = np.zeros((n, 7))
+    poses[:, :3] = rng.uniform(-1.5, 1.5, size=(n, 3))
+    poses[:, 3:] = _unit_quats(rng, n)
+    # tools pointing straight down: a half turn about x, exactly and 1 degree either side of it, and
+    # jittered half turns about each axis (w near 0 is where a rebuilt w is coarsest)
+    special = []
+    for deg in (180.0, 179.0, 181.0, -179.0):
+        for axis in ((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)):
+            special.append([0.1, -0.2, 0.3, *_quat_about(axis, deg)])
+    jitter = np.zeros((300, 7))
+    for i in range(300):
+        ang = 180.0 + rng.normal(scale=0.1)
+        jitter[i, 3:] = _quat_about(tuple(np.eye(3)[i % 3]), ang)
+    poses = np.vstack([poses, np.asarray(special), jitter])
+    words = sr.quantise_poses(poses)
+    assert words.dtype == np.int16 and words.shape == (len(poses), 7)  # px py pz qa qb qc qi
+    assert set(np.unique(words[:, 6])) <= {0, 1, 2, 3}
+    back = sr.dequantise_poses(words)
+    assert back.dtype == np.float32 and back.shape == poses.shape
+    assert np.max(np.abs(back[:, :3] - poses[:, :3])) <= 0.5e-4 + 1e-7  # 0.1 mm units: 0.05 mm per axis
+    moved, angle = _rotation_error(back, poses, 0.3)  # a vertex 30 cm from the body frame
+    assert moved < 1e-4 and angle < 2e-3
+    assert np.allclose(np.linalg.norm(back[:, 3:], axis=1), 1.0, atol=1e-6)
+    for deg in (180.0, 179.0):  # the cases that sank "x, y, z and a rebuilt w": a tool pointing down
+        down = np.array([[0.0, 0.0, 0.0, *_quat_about((1.0, 0.0, 0.0), deg)]])
+        moved, angle = _rotation_error(sr.dequantise_poses(sr.quantise_poses(down)), down, 0.3)
+        assert moved < 1e-4 and angle < 2e-3, (deg, moved, angle)
+
+
+def test_a_quantised_pose_is_seven_int16_words_position_three_components_and_the_dropped_index() -> None:
+    root_half = 0.70710678
+    q = np.array([0.1, -0.2, 0.6, -0.7])  # w is the largest: flipped to +, qi = 3
+    q = q / np.linalg.norm(q)
+    pose = np.concatenate([[0.0123, -0.0456, 1.0], q])[None]
+    words = sr.quantise_poses(pose)
+    assert words.shape == (1, 7)
+    assert words[0, :3].tolist() == [123, -456, 10000]  # 0.1 mm units
+    assert words[0, 3:6].tolist() == [round(-c / root_half * 32767) for c in q[:3]]
+    assert words[0, 6] == 3
+    # the components in x y z w order without the dropped one, whichever it is
+    for i in range(4):
+        v = np.full(4, 0.3)
+        v[i] = 0.9
+        v = v / np.linalg.norm(v)
+        w = sr.quantise_poses(np.concatenate([np.zeros(3), v])[None])
+        assert w[0, 6] == i
+        assert w[0, 3:6].tolist() == [round(c / root_half * 32767) for j, c in enumerate(v) if j != i]
+    # a half turn about x: x is dropped (qi 0), the rest are zero, and it decodes exactly
+    half = np.array([[0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0]])
+    w = sr.quantise_poses(half)
+    assert w[0, 3:].tolist() == [0, 0, 0, 0] and np.allclose(sr.dequantise_poses(w), half, atol=1e-7)
+    # the sign is free (q and -q are one rotation): the largest component comes back positive
+    neg = np.array([[0.0, 0.0, 0.0, -1.0, 0.0, 0.0, 0.0]])
+    assert np.allclose(sr.dequantise_poses(sr.quantise_poses(neg)), half, atol=1e-7)
+    # an index outside 0..3 is not a pose
+    bad = w.copy()
+    bad[0, 6] = 4
+    with pytest.raises(ValueError, match="0 to 3"):
+        sr.dequantise_poses(bad)
+    # the quantiser refuses a pose it cannot hold (+-3.2767 m) instead of wrapping
+    far = np.concatenate([np.array([[3.3, 0.0, 0.0]]), [[0.0, 0.0, 0.0, 1.0]]], axis=1)
+    with pytest.raises(ValueError, match="3.27"):
+        sr.quantise_poses(far)
+
+
+def test_a_keyframed_lane_writes_t_and_cuts_and_reads_back(lifted: Any, tmp_path: Path) -> None:
+    replay, _ = lifted
+    n = min(replay.n_frames, 9)
+    keyed = _keyed(replay, n)
+    keyed.header["cuts"] = [4]
+    bin_path, json_path = sr.write_lane(keyed, tmp_path / "keyed")
+    header = json.loads(json_path.read_text(encoding="utf-8"))
+    assert VALIDATOR.errors(header) == [] and sr.check_lane_header(header) == []
+    assert header["t"] == keyed.header["t"] and header["cuts"] == [4]
+    assert "qi" not in header and "quantised" not in header
+    assert bin_path.stat().st_size == n * header["n_bodies"] * 28  # still float32
+    back = sr.read_lane(tmp_path / "keyed")
+    assert back.header["t"] == header["t"] and np.array_equal(back.frames, keyed.frames)
+
+
+def test_a_quantised_lane_is_seven_int16_words_a_pose_on_disk_and_reads_back_the_same(
+    lifted: Any, tmp_path: Path
+) -> None:
+    replay, _ = lifted
+    n = min(replay.n_frames, 9)
+    keyed = _keyed(replay, n, quantised=True, dtype="int16")  # no words given: the writer quantises
+    keyed.header["pose_fields"] = list(sr.QUANT_POSE_FIELDS)
+    bin_path, json_path = sr.write_lane(keyed, tmp_path / "q")
+    header = json.loads(json_path.read_text(encoding="utf-8"))
+    assert VALIDATOR.errors(header) == [] and sr.check_lane_header(header) == []
+    assert header["quantised"] is True and header["dtype"] == "int16"
+    assert header["pose_fields"] == ["px", "py", "pz", "qa", "qb", "qc", "qi"]
+    assert "qi" not in header and "quat_encoding" not in header
+    assert bin_path.stat().st_size == n * header["n_bodies"] * 7 * 2  # 14 bytes a pose
+    words = sr.quantise_poses(keyed.frames)
+    assert np.array_equal(
+        np.frombuffer(bin_path.read_bytes(), dtype="<i2").reshape(n, header["n_bodies"], 7), words
+    )
+    back = sr.read_lane(tmp_path / "q")
+    assert back.frames.dtype == np.float32
+    assert np.array_equal(back.frames, sr.dequantise_poses(words))
+    moved, angle = _rotation_error(back.frames.reshape(-1, 7), keyed.frames.reshape(-1, 7), 0.3)
+    assert moved < 1e-4 and angle < 2e-3
+    assert np.max(np.abs(back.frames[..., :3] - keyed.frames[..., :3])) <= 0.5e-4 + 1e-7
+
+
+def _lane_mutations() -> list[tuple[str, Any]]:
+    def short_t(h: dict) -> None:
+        h["t"] = h["t"][:-1]
+
+    def flat_t(h: dict) -> None:
+        h["t"][2] = h["t"][1]
+
+    def negative_t(h: dict) -> None:
+        h["t"][0] = -0.1
+
+    def cut_outside(h: dict) -> None:
+        h["cuts"] = [h["n_frames"]]
+
+    def cuts_not_increasing(h: dict) -> None:
+        h["cuts"] = [4, 2]
+
+    def float_cut(h: dict) -> None:
+        h["cuts"] = [2.5]
+
+    def quantised_float_dtype(h: dict) -> None:
+        h["quantised"] = True
+
+    return [
+        ("one time per frame", short_t),
+        ("strictly increase", flat_t),
+        ("t must start at 0 or later", negative_t),
+        ("cuts must be", cut_outside),
+        ("cuts must be", cuts_not_increasing),
+        ("cuts must be", float_cut),
+        ("dtype must be", quantised_float_dtype),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("message", "mutate"), _lane_mutations(), ids=[f"{m}-{i}" for i, (m, _) in enumerate(_lane_mutations())]
+)
+def test_writer_refuses_a_broken_timeline_or_quantisation(
+    lifted: Any, tmp_path: Path, message: str, mutate: Any
+) -> None:
+    replay, _ = lifted
+    n = min(replay.n_frames, 9)
+    keyed = _keyed(replay, n)
+    keyed.header["cuts"] = [4]
+    mutate(keyed.header)
+    with pytest.raises(ValueError, match=re.escape(message)):
+        sr.write_lane(keyed, tmp_path / "bad")
+    assert not list(tmp_path.iterdir()), "nothing is written for an invalid header"
+
+
+def test_check_header_holds_a_quantised_lane_to_int16_and_its_pose_fields(
+    lifted: Any, tmp_path: Path
+) -> None:
+    replay, _ = lifted
+    keyed = _keyed(replay, min(replay.n_frames, 9), quantised=True, dtype="int16")
+    keyed.header["pose_fields"] = list(sr.QUANT_POSE_FIELDS)
+    _, json_path = sr.write_lane(keyed, tmp_path / "q")
+    header = json.loads(json_path.read_text(encoding="utf-8"))
+    assert sr.check_lane_header(header) == []
+    for key, bad in (("dtype", "float32"), ("pose_fields", list(rp.POSE_FIELDS))):
+        broken = dict(header, **{key: bad})
+        assert any(f"{key} must be" in e for e in sr.check_lane_header(broken))
+        assert VALIDATOR.errors(broken), "the schema has the rule too"
+    unquantised = dict(header, quantised=False)  # int16 and its fields, but not quantised
+    assert sr.check_lane_header(unquantised) and VALIDATOR.errors(unquantised)
+    for extra in ("qi", "quat_encoding"):  # neither is a header key any more
+        assert sr.check_lane_header(dict(header, **{extra: [0]})) and VALIDATOR.errors(
+            dict(header, **{extra: [0]})
+        )
+
+
+def test_the_schema_has_the_timeline_and_quantisation_keys(lifted: Any, tmp_path: Path) -> None:
+    props = SCHEMA["properties"]
+    assert {"t", "cuts", "quantised"} <= set(props) and not {"qi", "quat_encoding"} & set(props)
+    replay, _ = lifted
+    keyed = _keyed(replay, min(replay.n_frames, 9))
+    keyed.header["cuts"] = [4]
+    header = copy.deepcopy(keyed.header)
+    assert VALIDATOR.errors(header) == []
+    header["quantised"] = True  # but dtype and pose_fields still say float32
+    assert VALIDATOR.errors(header), "a quantised header needs int16 and the quantised pose fields"
+    header = copy.deepcopy(keyed.header)
+    header["t"] = ["x"]
+    assert VALIDATOR.errors(header)
+    header = copy.deepcopy(keyed.header)
+    header["cuts"] = [-1]
+    assert VALIDATOR.errors(header)
+
+
+def test_lanes_without_t_or_cuts_still_pass(lifted: Any) -> None:
+    replay, _ = lifted
+    assert "t" not in replay.header and "cuts" not in replay.header
+    assert sr.check_lane_header(replay.header, replay.frames) == []
+
+
+def test_the_writer_writes_given_words_and_refuses_words_that_are_not_the_frames(
+    lifted: Any, tmp_path: Path
+) -> None:
+    replay, _ = lifted
+    n = min(replay.n_frames, 9)
+    keyed = _quantised(replay, n)
+    assert keyed.words is not None
+    bin_path, _ = sr.write_lane(keyed, tmp_path / "w")
+    assert np.array_equal(
+        np.frombuffer(bin_path.read_bytes(), dtype="<i2").reshape(keyed.words.shape), keyed.words
+    )
+    other = keyed.words.copy()
+    other[0, 0, 0] += 1  # a position unit off
+    with pytest.raises(ValueError, match="not what the frames decode to"):
+        sr.write_lane(sr.LaneReplay(frames=keyed.frames, header=keyed.header, words=other), tmp_path / "bad")
+    with pytest.raises(ValueError, match="quantised true"):
+        sr.write_lane(
+            sr.LaneReplay(frames=replay.frames, header=replay.header, words=keyed.words), tmp_path / "bad2"
+        )

@@ -1,0 +1,178 @@
+{
+ "recommended": {
+  "id": "recommended",
+  "title": "Recommended",
+  "setup_id": "26d4ccb1a09d5f83a2039c4ef45cbd6b74e4a5856df9418909d6abc48a3ccc32",
+  "kind": "tool_change",
+  "label": "Tool change: Suction cup > Two-finger adaptive gripper",
+  "replay": "studio/replays/fixture/recommended",
+  "condition_id": "nominal",
+  "seed": 0,
+  "condition_text": "nominal placement, seed 0",
+  "traj_sha": "e5084d660086047f80612ec059ae5c661c9c661d400ca2d40a4b1952d733b4f2",
+  "completed": true,
+  "cycle_time_s": 18.778,
+  "fps": 100,
+  "n_frames": 56,
+  "duration_s": 18.77,
+  "quantised": false,
+  "max_error_vs_recording_mm": 0.999,
+  "bytes": 20211,
+  "asset_bytes": 0,
+  "segments": [
+   {
+    "index": 0,
+    "tool": 0,
+    "tool_label": "Suction cup, 16 mm bellows",
+    "start_s": 0.0,
+    "end_s": 5.588,
+    "change": "none",
+    "change_s": 0.0,
+    "change_start_s": 0.0,
+    "steps": [
+     "press_carton"
+    ]
+   },
+   {
+    "index": 1,
+    "tool": 1,
+    "tool_label": "Two-finger adaptive gripper, pinch",
+    "start_s": 13.088,
+    "end_s": 18.778,
+    "change": "tool_change",
+    "change_s": 7.5,
+    "change_start_s": 5.588,
+    "steps": [
+     "press_flat"
+    ]
+   }
+  ],
+  "steps": [
+   {
+    "step_id": "press_carton",
+    "primitive": "push",
+    "tool": 0,
+    "start_s": 0.0,
+    "duration_s": 5.588,
+    "success": true,
+    "failure_mode": null,
+    "fidelity": "approximation",
+    "quantities": {
+     "force_n": 2.394,
+     "lift_mm": -0.002,
+     "penetration_mm": 0.115,
+     "penetration_ms": 0.0,
+     "penetration_transient": 0.0,
+     "tilt_deg": 0.0
+    }
+   },
+   {
+    "step_id": "press_flat",
+    "primitive": "push",
+    "tool": 1,
+    "start_s": 13.088,
+    "duration_s": 5.69,
+    "success": true,
+    "failure_mode": null,
+    "fidelity": "rigid",
+    "quantities": {
+     "force_n": 0.0,
+     "lift_mm": -0.002,
+     "penetration_mm": 0.002,
+     "penetration_ms": 0.0,
+     "penetration_transient": 0.0,
+     "tilt_deg": 0.0
+    }
+   }
+  ],
+  "credits": []
+ },
+ "recommended_int16": {
+  "id": "recommended",
+  "title": "Recommended",
+  "setup_id": "26d4ccb1a09d5f83a2039c4ef45cbd6b74e4a5856df9418909d6abc48a3ccc32",
+  "kind": "tool_change",
+  "label": "Tool change: Suction cup > Two-finger adaptive gripper",
+  "replay": "studio/replays/fixture/recommended_int16",
+  "condition_id": "nominal",
+  "seed": 0,
+  "condition_text": "nominal placement, seed 0",
+  "traj_sha": "e5084d660086047f80612ec059ae5c661c9c661d400ca2d40a4b1952d733b4f2",
+  "completed": true,
+  "cycle_time_s": 18.778,
+  "fps": 100,
+  "n_frames": 57,
+  "duration_s": 18.77,
+  "quantised": true,
+  "max_error_vs_recording_mm": 0.97,
+  "bytes": 14829,
+  "asset_bytes": 0,
+  "segments": [
+   {
+    "index": 0,
+    "tool": 0,
+    "tool_label": "Suction cup, 16 mm bellows",
+    "start_s": 0.0,
+    "end_s": 5.588,
+    "change": "none",
+    "change_s": 0.0,
+    "change_start_s": 0.0,
+    "steps": [
+     "press_carton"
+    ]
+   },
+   {
+    "index": 1,
+    "tool": 1,
+    "tool_label": "Two-finger adaptive gripper, pinch",
+    "start_s": 13.088,
+    "end_s": 18.778,
+    "change": "tool_change",
+    "change_s": 7.5,
+    "change_start_s": 5.588,
+    "steps": [
+     "press_flat"
+    ]
+   }
+  ],
+  "steps": [
+   {
+    "step_id": "press_carton",
+    "primitive": "push",
+    "tool": 0,
+    "start_s": 0.0,
+    "duration_s": 5.588,
+    "success": true,
+    "failure_mode": null,
+    "fidelity": "approximation",
+    "quantities": {
+     "force_n": 2.394,
+     "lift_mm": -0.002,
+     "penetration_mm": 0.115,
+     "penetration_ms": 0.0,
+     "penetration_transient": 0.0,
+     "tilt_deg": 0.0
+    }
+   },
+   {
+    "step_id": "press_flat",
+    "primitive": "push",
+    "tool": 1,
+    "start_s": 13.088,
+    "duration_s": 5.69,
+    "success": true,
+    "failure_mode": null,
+    "fidelity": "rigid",
+    "quantities": {
+     "force_n": 0.0,
+     "lift_mm": -0.002,
+     "penetration_mm": 0.002,
+     "penetration_ms": 0.0,
+     "penetration_transient": 0.0,
+     "tilt_deg": 0.0
+    }
+   }
+  ],
+  "credits": []
+ }
+}

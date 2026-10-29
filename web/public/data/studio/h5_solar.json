@@ -1,0 +1,3712 @@
+{
+ "schema": "rtt-web-studio-hero",
+ "version": 1,
+ "label": "Product mode: not part of the pre-registered experiment",
+ "contract": "rtt-effectors/2",
+ "hero": "h5_solar",
+ "case_id": "h5_solar",
+ "title": "Solar panel install",
+ "setting": "construction",
+ "use_case": "Solar panel installation: a solar module (1000 x 600 mm, 35 mm thick, 8 kg) waits on its stand beside the two mounting rails. Lift it onto the rails and set it down against the rail end stops (within 5 mm), then start the clamp nut (13 mm hex) at the middle of its long edge on its thread and tighten it to 6 N m.",
+ "outcome": "recommended",
+ "headline": "A tool-change sequence completes the task in 7 of 8 runs.",
+ "plan": {
+  "task_id": "cfd24f6d1ed0eb6b47202ff99d6aacb9cbc029e0960a0e30d16370f63c5adbcd",
+  "title": "Solar panel installation",
+  "description": "Lift the solar panel onto its mounting rails and seat it against the end stops, then insert the clamp nut to the thread start and tighten it to 6 N m.",
+  "source": "nemotron",
+  "result": "valid_after_repair",
+  "calls": 2,
+  "model": "nvidia/nemotron-3-super-120b-a12b",
+  "layout_moves": [],
+  "assumptions": [
+   "Panel mass 8 kg, dimensions 1000x600x35 mm.",
+   "Clamp requires 6 N m torque.",
+   "Start gap between panel and rail stops is 0 mm."
+  ],
+  "clarifications": [],
+  "unsupported": [],
+  "objects": [
+   {
+    "name": "solar_panel",
+    "kind": "panel_rail",
+    "kind_title": "Panel on mounting rails",
+    "label": "Solar panel on rails",
+    "params": {
+     "clamp_torque_nm": 6,
+     "length_mm": 1000,
+     "mass_g": 8000,
+     "start_gap_mm": 0,
+     "thickness_mm": 35,
+     "width_mm": 600
+    },
+    "pose": {
+     "x_mm": 0.0,
+     "y_mm": 0.0,
+     "yaw_deg": 0.0
+    },
+    "ref": null
+   }
+  ],
+  "steps": [
+   {
+    "id": "place_panel",
+    "primitive": "suction",
+    "primitive_title": "Suction",
+    "object": "solar_panel",
+    "handle": "panel",
+    "target": null,
+    "params": {
+     "hold_s": 2,
+     "lift_mm": 100
+    },
+    "constraints": {
+     "max_force_n": null,
+     "max_torque_nm": null,
+     "precision_mm": null,
+     "precision_deg": null
+    },
+    "success": [
+     {
+      "quantity": "gap_mm",
+      "unit": "mm",
+      "at_least": null,
+      "at_most": 5.0,
+      "text": "gap mm at most 5 mm"
+     },
+     {
+      "quantity": "lift_mm",
+      "unit": "mm",
+      "at_least": 10.0,
+      "at_most": null,
+      "text": "lift at least 10 mm"
+     }
+    ],
+    "after": [],
+    "hold_after": false,
+    "description": "Lift the solar panel onto the mounting rails and set it down against the end stops.",
+    "fidelity": "approximation",
+    "caveats": [
+     "Suction is an approximation: the seal is a geometric test gating a capped adhesion force; no air flow, leak rate or porosity.",
+     "The clamp is an approximation: a 13 mm hex modelled 15 mm tall so the simulated socket can seat (a standard M8 nut is 6.8 mm tall), on a helical joint with a torque ramp; it does not press the panel. The panel is a rigid slab."
+    ]
+   },
+   {
+    "id": "insert_clamp",
+    "primitive": "insert",
+    "primitive_title": "Insert",
+    "object": "solar_panel",
+    "handle": "member",
+    "target": null,
+    "params": {
+     "speed_mm_s": 10,
+     "standoff_mm": 5
+    },
+    "constraints": {
+     "max_force_n": null,
+     "max_torque_nm": null,
+     "precision_mm": null,
+     "precision_deg": null
+    },
+    "success": [
+     {
+      "quantity": "depth_mm",
+      "unit": "mm",
+      "at_least": 3.5,
+      "at_most": 4.5,
+      "text": "depth 3.5 to 4.5 mm"
+     }
+    ],
+    "after": [
+     "place_panel"
+    ],
+    "hold_after": false,
+    "description": "Insert the clamp nut onto its thread start.",
+    "fidelity": "approximation",
+    "caveats": [
+     "The clamp is an approximation: a 13 mm hex modelled 15 mm tall so the simulated socket can seat (a standard M8 nut is 6.8 mm tall), on a helical joint with a torque ramp; it does not press the panel. The panel is a rigid slab."
+    ]
+   },
+   {
+    "id": "tighten_clamp",
+    "primitive": "twist",
+    "primitive_title": "Twist",
+    "object": "solar_panel",
+    "handle": "member",
+    "target": null,
+    "params": {
+     "direction": "cw",
+     "speed_deg_s": 60
+    },
+    "constraints": {
+     "max_force_n": null,
+     "max_torque_nm": null,
+     "precision_mm": null,
+     "precision_deg": null
+    },
+    "success": [
+     {
+      "quantity": "clamp_torque_nm",
+      "unit": "N m",
+      "at_least": 5.8,
+      "at_most": 6.2,
+      "text": "clamp torque nm 5.8 to 6.2 N m"
+     }
+    ],
+    "after": [
+     "insert_clamp"
+    ],
+    "hold_after": false,
+    "description": "Tighten the clamp nut to 6 N m.",
+    "fidelity": "approximation",
+    "caveats": [
+     "The clamp is an approximation: a 13 mm hex modelled 15 mm tall so the simulated socket can seat (a standard M8 nut is 6.8 mm tall), on a helical joint with a torque ramp; it does not press the panel. The panel is a rigid slab."
+    ]
+   }
+  ]
+ },
+ "screen": {
+  "n_candidates": 50,
+  "n_screened": 44,
+  "n_conditions": 3,
+  "runs": 255,
+  "wall_s": 373.6,
+  "candidates": [
+   {
+    "effector_id": "e0152a5f29e1756ccd2ed7b3602b13ce3a4d3a80d1fe1709d383db30284f82b7",
+    "display_name": "Four-finger 16-joint hand, power grasp",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "f4363e74967e4429fc2203073f9a2f6e8eed447a156149eaf424544d589cef8d",
+    "display_name": "Four-finger 16-joint hand, pinch",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "bc347dd620c711c06e02bbf5b6c610413ae5b0ac8b182fdbb98f5ae997e177af",
+    "display_name": "Five-finger 18-actuator hand, power grasp",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "300d169b6786c96007dbe4ce8c0fea66549c0e081cfcfe3f3fe07d6e46ec6a3f",
+    "display_name": "Five-finger 18-actuator hand, pinch",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "a0fc12482a70670906acabab94f5bc4b91ebbbff57fe669e9725afd57c80c75e",
+    "display_name": "Five-finger 22-joint hand, power grasp",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "594c4f4d5088689c599fdd9884d2675a7a3d69f8f7df8489ef57b6484db711f0",
+    "display_name": "Five-finger 22-joint hand, pinch",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "79372f1ed2ab4e3a5467c38ed239aa0795a8df3e5ce6af900af10a5a3e252050",
+    "display_name": "Two-finger parallel gripper, fin-ray pads",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "a03002d6c5e1107f0bef73bc8cf24cd90b390550654aaa5d9e8899933971f6d7",
+    "display_name": "Two-finger parallel gripper, rigid pads A",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "bbb8214caaf4a70aac3e2c08331f0166c12470bf97db57db00dc834a77ff4dd1",
+    "display_name": "Two-finger adaptive gripper, power grasp",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "52613f2b72143b61b490ddfc05c4e3ed38c49de7005b77f07a5ccbfada0ab476",
+    "display_name": "Two-finger adaptive gripper, pinch",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "730fd283dd6b7dd046711dfef0b73a64f6a577e2cc7a643ee6affb86f74ed0aa",
+    "display_name": "Three-finger adaptive gripper, power grasp",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "9dbe8879e66bd4a935e6db502db88cdb0ce74390f469ada567cc93eb165b5b58",
+    "display_name": "Three-finger adaptive gripper, pinch",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "e754a0d67325f2100c98c2f9af46bb60c49421f256a2026895fb59bcf82e547d",
+    "display_name": "Soft arm, 12 segments, 140 mm",
+    "family": "soft_arm",
+    "family_title": "Soft arm",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "soft_arm",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "insert_clamp",
+      "reason": "integrator rule R09: a soft arm is not used to insert (it cannot hold a member stiffly along the seat axis)"
+     },
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "743fc0bc1efc93c288065cff91b147fd993ad974831e50b7617f7f15a0ab66fc",
+    "display_name": "Soft arm, 16 segments, 160 mm",
+    "family": "soft_arm",
+    "family_title": "Soft arm",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "soft_arm",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "insert_clamp",
+      "reason": "integrator rule R09: a soft arm is not used to insert (it cannot hold a member stiffly along the seat axis)"
+     },
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "2f5e4f974b13a6445127a6afead695a9e58a54cdeb12a3101724db21f6b368e9",
+    "display_name": "Soft arm, 20 soft segments, 180 mm",
+    "family": "soft_arm",
+    "family_title": "Soft arm",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "soft_arm",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "insert_clamp",
+      "reason": "integrator rule R09: a soft arm is not used to insert (it cannot hold a member stiffly along the seat axis)"
+     },
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "f0b6543ba012ad8f54c8860c61407708f1bdfaf1d1b395d00a64ada8e883d6de",
+    "display_name": "Suction cup, 10 mm bellows",
+    "family": "suction",
+    "family_title": "Suction cup",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "suction",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "3907bc284d9e2c3399ddb8b45b1bf94dbb3b0ef0672705c6d90724839ecf7186",
+    "display_name": "Suction cup, 16 mm bellows",
+    "family": "suction",
+    "family_title": "Suction cup",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "suction",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "e72e88518c0ebe7a74ec5db104b671180e9dbb5b51d0b11045814506657f31bf",
+    "display_name": "Suction cup, 25 mm bellows",
+    "family": "suction",
+    "family_title": "Suction cup",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "suction",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "1a3dddd3d68cc0b6df6d003946cc16fb895f371d0001906c7ba2e72d729721ac",
+    "display_name": "Vacuum area frame, 2 x 2 cups, 300 mm",
+    "family": "suction",
+    "family_title": "Vacuum area frame",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "suction",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ],
+    "studio_only": true,
+    "rating": "rated 4.15 kg on a smooth face (holding force over a 1.5 safety factor)",
+    "caveat": "Vacuum area frame (approximation): the cups of the suction cup model on a rigid frame, each with its own seal test and its own vacuum valve (a cup that does not seal stays off). The holding force is the sum of the sealed cups' caps; the payload is that force over a safety factor (1.5 smooth, 2.0 porous, 2.5 swivelling, all [assumed]) at 1 g. Only the smooth rating is a simulated claim: the porous and swivelling ratings are arithmetic on the same force, because no leak, porosity or swivel is simulated. Not modelled: a shared vacuum source and its flow, the leak of an unsealed cup into the others, the frame's flex, peel across a long face, foam or needle area grippers. Treat frame results as a screen, then verify on hardware."
+   },
+   {
+    "effector_id": "530514a2ba01210b994060206aa74f49d498731eb80579282867d25195f8257a",
+    "display_name": "Vacuum area frame, 2 x 3 cups, 600 mm",
+    "family": "suction",
+    "family_title": "Vacuum area frame",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "suction",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ],
+    "studio_only": true,
+    "rating": "rated 8.47 kg on a smooth face (holding force over a 1.5 safety factor)",
+    "caveat": "Vacuum area frame (approximation): the cups of the suction cup model on a rigid frame, each with its own seal test and its own vacuum valve (a cup that does not seal stays off). The holding force is the sum of the sealed cups' caps; the payload is that force over a safety factor (1.5 smooth, 2.0 porous, 2.5 swivelling, all [assumed]) at 1 g. Only the smooth rating is a simulated claim: the porous and swivelling ratings are arithmetic on the same force, because no leak, porosity or swivel is simulated. Not modelled: a shared vacuum source and its flow, the leak of an unsealed cup into the others, the frame's flex, peel across a long face, foam or needle area grippers. Treat frame results as a screen, then verify on hardware."
+   },
+   {
+    "effector_id": "722d18369aa469f5d390011a204ced8a74f3d3c3b4596e2fb4822b13597fb1d4",
+    "display_name": "Nut runner, 13 mm hex socket",
+    "family": "process_tool",
+    "family_title": "Process tool",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "process",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "place_panel",
+      "reason": "a nut runner turns a fastener; it cannot pick or hold a part"
+     }
+    ],
+    "studio_only": true,
+    "rating": "rated 6.7 N m (clutch cap 10 N m); members at least 12 mm tall",
+    "caveat": "Nut runner (approximation): a rigid hex socket with a guide funnel on a lateral float; it engages a hex member by shape. The Studio wrist's roll is its spindle [assumed], at the wrist's speed: a clutch limits the torque to its cap (10 N m, under the wrist's 15 N m) and lets go at the release. The socket's walls are stacked slices so the simulator's contacts are as stiff as steel (a solver artifact). Supported in the Studio: members at least 12 mm tall. Not modelled: a motor, a torque transducer, cross-threading, socket wear, a reaction arm. Simulated, verify on hardware."
+   },
+   {
+    "effector_id": "e678af7b9e64e5522adab03ac14717d9103435946e5778f8e578c1bc2c7bf710",
+    "display_name": "Tamper pad, 200 mm",
+    "family": "process_tool",
+    "family_title": "Process tool",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "process",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "place_panel",
+      "reason": "a tamper pad presses a face; it cannot pick or hold a part"
+     },
+     {
+      "step_id": "insert_clamp",
+      "reason": "a tamper pad presses a face; it cannot insert a part"
+     },
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; a tamper pad is a different process tool"
+     }
+    ],
+    "studio_only": true,
+    "rating": "rated 40 N (the stage slips at 60 N)",
+    "caveat": "Tamper pad (approximation): a rigid, level 200 mm square pad on a spring stage that slips at 60 N, so the pad never presses harder than that within the stage's 60 mm of travel. Not modelled: pad deformation, vibration or impact compaction, mortar flow, the pad's edge catching a joint. Simulated, verify on hardware."
+   },
+   {
+    "effector_id": "f7faa3ddd45fee96149330bbf1bc6cd179305044806e9f178ed0735f6f184b80",
+    "display_name": "Two-finger adaptive linkage gripper, 85 mm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "762b2cf206e7b33c97e3e70157492630c91ae3d28b3dae35580e25bfbbee9319",
+    "display_name": "Air-actuated mini parallel gripper",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "9aff5d8ef53e119ab1943eef6d8ba55af4795f806c1a2e111b89c7c0444c770b",
+    "display_name": "Two-finger parallel cobot hand, 80 mm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "6d286bacbd7431187a1a4bd5a48d194ea5e59399afb0a9e2227332f4fe006cf7",
+    "display_name": "Force-controlled parallel gripper, 48 mm stroke",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "5f28e092f268ff12c38c8c8a9da33cf6520bc235ddf0f15eef85705bf5abaa0d",
+    "display_name": "Rack-and-pinion parallel gripper for an open hobby arm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "02405ccb8d6393b7ca149262b1d03aad7a153238ce0bc32ea1d3eacad7657d39",
+    "display_name": "Two-finger linkage gripper of a cobot arm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "f2ea72dff094ac3680a7b59e05a96a2e9bc4d8191c7bfee56d30f1755987dff2",
+    "display_name": "Industrial servo parallel gripper, 110 mm stroke",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "19349473603b229ce8676b46cd97598dc1cd5b463f8f801d4455e1a7b01ba3e2",
+    "display_name": "Two-finger parallel gripper, teleop-arm fingers",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "7d8ca167a7b3a93e3461ebca357e274ec9c9ca4fa9c2f4e50daa4c0a5e027724",
+    "display_name": "Angular-jaw gripper of an open hobby arm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "5c8f1c25a0a4eb30f7b91746a547c19ff95ec2889aad7a739126582805adb41b",
+    "display_name": "Three-finger 12-joint industrial hand",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": "it weighs 4.14 kg; the arm carries at most 3 kg [assumed]",
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "2f59fe9db92cd4baa4bcc418531f685100bc2ce00459fe887fe591b7f4d5fd65",
+    "display_name": "Servo-driven four-finger hand, 13 actuators, power grasp",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "7f12d546e0d7714e3d2aae831d9ea52eb2494283c1ccd5487920ac69fa27a720",
+    "display_name": "Servo-driven four-finger hand, 13 actuators, pinch",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "d702e265cd1c213b47f352e50c6c3d54ec8b736f9da8714cfdf936bece063264",
+    "display_name": "Tendon-driven five-finger hand, 16 joints, power grasp",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "ba4075426cf13421509805b4367919c507f396904da831894f373d928292dd01",
+    "display_name": "Tendon-driven five-finger hand, 16 joints, pinch",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "a5d7b1667b4f0d6582a36df49b9e600eeedc31f54dc883ddf7803fe113091f1d",
+    "display_name": "Suction cup, 40 mm bellows",
+    "family": "suction",
+    "family_title": "Suction cup",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "suction",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "ec23d0f17374171b7fa9c62da8dd8d680df2e2c98a747068750a83777cfa38a3",
+    "display_name": "Button-pusher tool",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "place_panel",
+      "reason": "it cannot pick or hold a part (suction step)"
+     },
+     {
+      "step_id": "insert_clamp",
+      "reason": "its capability tags do not include insert"
+     },
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "38850807f92bc307da9f0519004f6c9a30606ed04934014a6791ad01acf0c88b",
+    "display_name": "Drawer-pull hook tool",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "place_panel",
+      "reason": "it cannot pick or hold a part (suction step)"
+     },
+     {
+      "step_id": "insert_clamp",
+      "reason": "its capability tags do not include insert"
+     },
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "51bbed694beba24d5ba4332ad204033431cb1611ea4a4d092cc511f2bb3b9750",
+    "display_name": "Spring-loaded marker holder tool",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "place_panel",
+      "reason": "it cannot pick or hold a part (suction step)"
+     },
+     {
+      "step_id": "insert_clamp",
+      "reason": "its capability tags do not include insert"
+     },
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "1c0215479859373feed025f8c8e3697830191fbbcded36d2720c98cf3f59c352",
+    "display_name": "Servo screwdriver attachment for a hobby arm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "place_panel",
+      "reason": "it cannot pick or hold a part (suction step)"
+     },
+     {
+      "step_id": "insert_clamp",
+      "reason": "its capability tags do not include insert"
+     },
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "d4997bd4b38665bca7af77aeef09cc396279ecd231787f9df5fa34aa37fb5996",
+    "display_name": "Designed three-finger hand, 2 joints per finger d55e",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "ba0cc54331ca68ed6118c26302dc007b446c213c1d258f36631047ac5a2f05c8",
+    "display_name": "Designed four-finger hand, 3 joints per finger b56a",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "6148cfd23eae2b2e8959cc78a8c2b6ef324c0878a66bd0eee45e4a4105e20cb7",
+    "display_name": "Designed three-finger sliding hook gripper da49",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "d3b2b71d424b8c16205262a466257f916bc6e5e18f6b5873b0045f5632db2fe1",
+    "display_name": "Designed three-digit segmented tentacle f293",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "a4b30af09ff1818c87fcc9683805da8354923ecb0f35a77b14165fa5851bc3fa",
+    "display_name": "Designed three-finger hand, 2 joints per finger 3e58",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "25bb68ef395b04b7dddcb8a3adcae328743627edf36160b0ac26e75050f0dc27",
+    "display_name": "Designed four-finger hand, 1 joint per finger e352",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "890c6cb500dacbda950e3a31a2b543d39b89da3c2dfa1a61e7ae5c17cb25f65e",
+    "display_name": "Designed three-finger hand, 1 joint per finger ca8b",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "d6e87ec5705a8c93944dfc2db4945e98e2499a9aa761b0cc801420e51d5ec0ad",
+    "display_name": "Designed four-finger swinging hook gripper 052c",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   },
+   {
+    "effector_id": "251cbe9cc23c1ea18d77c6143d68090fce2a1837927f826a7bcc9bd430de8a81",
+    "display_name": "Designed three-digit segmented tentacle 90e8",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tighten_clamp",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    ]
+   }
+  ],
+  "pruned_reasons": [
+   {
+    "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]",
+    "count": 47
+   },
+   {
+    "reason": "It cannot pick or hold a part",
+    "count": 6
+   },
+   {
+    "reason": "Its capability tags do not include the step's primitive",
+    "count": 4
+   },
+   {
+    "reason": "A soft arm cannot hold a member stiffly along the seat axis",
+    "count": 3
+   },
+   {
+    "reason": "Heavier than the arm payload limit [assumed]",
+    "count": 1
+   },
+   {
+    "reason": "a tamper pad presses a face; it cannot insert a part",
+    "count": 1
+   },
+   {
+    "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; a tamper pad is a different process tool",
+    "count": 1
+   }
+  ]
+ },
+ "matrix": {
+  "steps": [
+   "place_panel",
+   "insert_clamp",
+   "tighten_clamp"
+  ],
+  "rows": [
+   {
+    "effector_id": "722d18369aa469f5d390011a204ced8a74f3d3c3b4596e2fb4822b13597fb1d4",
+    "display_name": "Nut runner, 13 mm hex socket",
+    "family_title": "Process tool",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "pruned",
+      "reason": "a nut runner turns a fastener; it cannot pick or hold a part"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "twist",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "762b2cf206e7b33c97e3e70157492630c91ae3d28b3dae35580e25bfbbee9319",
+    "display_name": "Air-actuated mini parallel gripper",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "7d8ca167a7b3a93e3461ebca357e274ec9c9ca4fa9c2f4e50daa4c0a5e027724",
+    "display_name": "Angular-jaw gripper of an open hobby arm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "25bb68ef395b04b7dddcb8a3adcae328743627edf36160b0ac26e75050f0dc27",
+    "display_name": "Designed four-finger hand, 1 joint per finger e352",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "d6e87ec5705a8c93944dfc2db4945e98e2499a9aa761b0cc801420e51d5ec0ad",
+    "display_name": "Designed four-finger swinging hook gripper 052c",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "251cbe9cc23c1ea18d77c6143d68090fce2a1837927f826a7bcc9bd430de8a81",
+    "display_name": "Designed three-digit segmented tentacle 90e8",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "d3b2b71d424b8c16205262a466257f916bc6e5e18f6b5873b0045f5632db2fe1",
+    "display_name": "Designed three-digit segmented tentacle f293",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "890c6cb500dacbda950e3a31a2b543d39b89da3c2dfa1a61e7ae5c17cb25f65e",
+    "display_name": "Designed three-finger hand, 1 joint per finger ca8b",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "d4997bd4b38665bca7af77aeef09cc396279ecd231787f9df5fa34aa37fb5996",
+    "display_name": "Designed three-finger hand, 2 joints per finger d55e",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "6148cfd23eae2b2e8959cc78a8c2b6ef324c0878a66bd0eee45e4a4105e20cb7",
+    "display_name": "Designed three-finger sliding hook gripper da49",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "bc347dd620c711c06e02bbf5b6c610413ae5b0ac8b182fdbb98f5ae997e177af",
+    "display_name": "Five-finger 18-actuator hand, power grasp",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "594c4f4d5088689c599fdd9884d2675a7a3d69f8f7df8489ef57b6484db711f0",
+    "display_name": "Five-finger 22-joint hand, pinch",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "a0fc12482a70670906acabab94f5bc4b91ebbbff57fe669e9725afd57c80c75e",
+    "display_name": "Five-finger 22-joint hand, power grasp",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "6d286bacbd7431187a1a4bd5a48d194ea5e59399afb0a9e2227332f4fe006cf7",
+    "display_name": "Force-controlled parallel gripper, 48 mm stroke",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "e0152a5f29e1756ccd2ed7b3602b13ce3a4d3a80d1fe1709d383db30284f82b7",
+    "display_name": "Four-finger 16-joint hand, power grasp",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "f2ea72dff094ac3680a7b59e05a96a2e9bc4d8191c7bfee56d30f1755987dff2",
+    "display_name": "Industrial servo parallel gripper, 110 mm stroke",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "f0b6543ba012ad8f54c8860c61407708f1bdfaf1d1b395d00a64ada8e883d6de",
+    "display_name": "Suction cup, 10 mm bellows",
+    "family_title": "Suction cup",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "suction",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "3907bc284d9e2c3399ddb8b45b1bf94dbb3b0ef0672705c6d90724839ecf7186",
+    "display_name": "Suction cup, 16 mm bellows",
+    "family_title": "Suction cup",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "suction",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "e72e88518c0ebe7a74ec5db104b671180e9dbb5b51d0b11045814506657f31bf",
+    "display_name": "Suction cup, 25 mm bellows",
+    "family_title": "Suction cup",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "suction",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "a5d7b1667b4f0d6582a36df49b9e600eeedc31f54dc883ddf7803fe113091f1d",
+    "display_name": "Suction cup, 40 mm bellows",
+    "family_title": "Suction cup",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "suction",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "9dbe8879e66bd4a935e6db502db88cdb0ce74390f469ada567cc93eb165b5b58",
+    "display_name": "Three-finger adaptive gripper, pinch",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "730fd283dd6b7dd046711dfef0b73a64f6a577e2cc7a643ee6affb86f74ed0aa",
+    "display_name": "Three-finger adaptive gripper, power grasp",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "52613f2b72143b61b490ddfc05c4e3ed38c49de7005b77f07a5ccbfada0ab476",
+    "display_name": "Two-finger adaptive gripper, pinch",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "bbb8214caaf4a70aac3e2c08331f0166c12470bf97db57db00dc834a77ff4dd1",
+    "display_name": "Two-finger adaptive gripper, power grasp",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "79372f1ed2ab4e3a5467c38ed239aa0795a8df3e5ce6af900af10a5a3e252050",
+    "display_name": "Two-finger parallel gripper, fin-ray pads",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "insert",
+      "failure_modes": {},
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "530514a2ba01210b994060206aa74f49d498731eb80579282867d25195f8257a",
+    "display_name": "Vacuum area frame, 2 x 3 cups, 600 mm",
+    "family_title": "Vacuum area frame",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.6667,
+      "n": 3,
+      "successes": 2,
+      "primitive_used": "suction",
+      "failure_modes": {
+       "criterion_not_met": 1
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "300d169b6786c96007dbe4ce8c0fea66549c0e081cfcfe3f3fe07d6e46ec6a3f",
+    "display_name": "Five-finger 18-actuator hand, pinch",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 0.3333,
+      "n": 3,
+      "successes": 1,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "criterion_not_met": 2
+      },
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "2f59fe9db92cd4baa4bcc418531f685100bc2ce00459fe887fe591b7f4d5fd65",
+    "display_name": "Servo-driven four-finger hand, 13 actuators, power grasp",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 0.3333,
+      "n": 3,
+      "successes": 1,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 2
+      },
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "9aff5d8ef53e119ab1943eef6d8ba55af4795f806c1a2e111b89c7c0444c770b",
+    "display_name": "Two-finger parallel cobot hand, 80 mm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 0.3333,
+      "n": 3,
+      "successes": 1,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 2
+      },
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "ba0cc54331ca68ed6118c26302dc007b446c213c1d258f36631047ac5a2f05c8",
+    "display_name": "Designed four-finger hand, 3 joints per finger b56a",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "a4b30af09ff1818c87fcc9683805da8354923ecb0f35a77b14165fa5851bc3fa",
+    "display_name": "Designed three-finger hand, 2 joints per finger 3e58",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "f4363e74967e4429fc2203073f9a2f6e8eed447a156149eaf424544d589cef8d",
+    "display_name": "Four-finger 16-joint hand, pinch",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "physics_unreliable": 3
+      },
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "5f28e092f268ff12c38c8c8a9da33cf6520bc235ddf0f15eef85705bf5abaa0d",
+    "display_name": "Rack-and-pinion parallel gripper for an open hobby arm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "7f12d546e0d7714e3d2aae831d9ea52eb2494283c1ccd5487920ac69fa27a720",
+    "display_name": "Servo-driven four-finger hand, 13 actuators, pinch",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "e754a0d67325f2100c98c2f9af46bb60c49421f256a2026895fb59bcf82e547d",
+    "display_name": "Soft arm, 12 segments, 140 mm",
+    "family_title": "Soft arm",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "wrap",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R09: a soft arm is not used to insert (it cannot hold a member stiffly along the seat axis)"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "743fc0bc1efc93c288065cff91b147fd993ad974831e50b7617f7f15a0ab66fc",
+    "display_name": "Soft arm, 16 segments, 160 mm",
+    "family_title": "Soft arm",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "wrap",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R09: a soft arm is not used to insert (it cannot hold a member stiffly along the seat axis)"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "2f5e4f974b13a6445127a6afead695a9e58a54cdeb12a3101724db21f6b368e9",
+    "display_name": "Soft arm, 20 soft segments, 180 mm",
+    "family_title": "Soft arm",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "wrap",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R09: a soft arm is not used to insert (it cannot hold a member stiffly along the seat axis)"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "ba4075426cf13421509805b4367919c507f396904da831894f373d928292dd01",
+    "display_name": "Tendon-driven five-finger hand, 16 joints, pinch",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "d702e265cd1c213b47f352e50c6c3d54ec8b736f9da8714cfdf936bece063264",
+    "display_name": "Tendon-driven five-finger hand, 16 joints, power grasp",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "f7faa3ddd45fee96149330bbf1bc6cd179305044806e9f178ed0735f6f184b80",
+    "display_name": "Two-finger adaptive linkage gripper, 85 mm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "02405ccb8d6393b7ca149262b1d03aad7a153238ce0bc32ea1d3eacad7657d39",
+    "display_name": "Two-finger linkage gripper of a cobot arm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "a03002d6c5e1107f0bef73bc8cf24cd90b390550654aaa5d9e8899933971f6d7",
+    "display_name": "Two-finger parallel gripper, rigid pads A",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "19349473603b229ce8676b46cd97598dc1cd5b463f8f801d4455e1a7b01ba3e2",
+    "display_name": "Two-finger parallel gripper, teleop-arm fingers",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   },
+   {
+    "effector_id": "1a3dddd3d68cc0b6df6d003946cc16fb895f371d0001906c7ba2e72d729721ac",
+    "display_name": "Vacuum area frame, 2 x 2 cups, 300 mm",
+    "family_title": "Vacuum area frame",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "place_panel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "suction",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "insert_clamp": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "insert",
+      "failure_modes": {
+       "jam": 3
+      },
+      "context": "carried"
+     },
+     "tighten_clamp": {
+      "state": "pruned",
+      "reason": "integrator rule R05: tightening \"Solar panel on rails\" to 5.8 N m is a process step for a nut runner; other tools turn a member only up to hand-tight, under 4 N m [assumed]"
+     }
+    }
+   }
+  ]
+ },
+ "combinations": {
+  "counts": {
+   "single": 0,
+   "tool_change": 9,
+   "multi_head": 4,
+   "multi_head_geometry_searched": 4
+  },
+  "rejected": []
+ },
+ "finalists": [
+  {
+   "setup_id": "808f2a6999b71ad1fc884d2910cf48611ee70f759622afc2f5f0e8515912f7fd",
+   "kind": "tool_change",
+   "kind_title": "Tool change",
+   "label": "Tool change: Vacuum area frame > Suction cup > Nut runner",
+   "tools": [
+    "Vacuum area frame, 2 x 3 cups, 600 mm",
+    "Suction cup, 10 mm bellows",
+    "Nut runner, 13 mm hex socket"
+   ],
+   "completion_rate": 0.875,
+   "completed_runs": 7,
+   "n_runs": 8,
+   "fidelity": "approximation",
+   "stops_at": "place_panel",
+   "cycle_time_s": 62.44,
+   "roles": [
+    "recommended"
+   ],
+   "eligible": true,
+   "reason": null,
+   "tool_details": [
+    {
+     "index": 0,
+     "effector_id": "530514a2ba01210b994060206aa74f49d498731eb80579282867d25195f8257a",
+     "display_name": "Vacuum area frame, 2 x 3 cups, 600 mm",
+     "family": "suction",
+     "family_title": "Vacuum area frame",
+     "fidelity": "approximation",
+     "off_the_shelf": true,
+     "studio_only": true,
+     "rating": "rated 8.47 kg on a smooth face (holding force over a 1.5 safety factor)",
+     "caveat": "Vacuum area frame (approximation): the cups of the suction cup model on a rigid frame, each with its own seal test and its own vacuum valve (a cup that does not seal stays off). The holding force is the sum of the sealed cups' caps; the payload is that force over a safety factor (1.5 smooth, 2.0 porous, 2.5 swivelling, all [assumed]) at 1 g. Only the smooth rating is a simulated claim: the porous and swivelling ratings are arithmetic on the same force, because no leak, porosity or swivel is simulated. Not modelled: a shared vacuum source and its flow, the leak of an unsealed cup into the others, the frame's flex, peel across a long face, foam or needle area grippers. Treat frame results as a screen, then verify on hardware."
+    },
+    {
+     "index": 1,
+     "effector_id": "f0b6543ba012ad8f54c8860c61407708f1bdfaf1d1b395d00a64ada8e883d6de",
+     "display_name": "Suction cup, 10 mm bellows",
+     "family": "suction",
+     "family_title": "Suction cup",
+     "fidelity": "approximation",
+     "off_the_shelf": true,
+     "caveat": "Suction cup (approximation): a compliant lip of rigid segments on a bellows spring with a limited tilt; the seal is a geometric test (every lip segment touching the face, part material under 13 rays inside the lip) gating a MuJoCo adhesion actuator capped at vacuum x lip area (at most 60 kPa). The lip must touch the face: no pull across a gap. Not modelled: air flow, leak rate, porosity, vacuum build-up time (the vacuum follows the shared close ramp and is cut the control tick the seal is lost), lip material hysteresis, peel dynamics beyond the contact distribution. The lip's friction is the part's. Treat suction results as a screen, then verify on hardware."
+    },
+    {
+     "index": 2,
+     "effector_id": "722d18369aa469f5d390011a204ced8a74f3d3c3b4596e2fb4822b13597fb1d4",
+     "display_name": "Nut runner, 13 mm hex socket",
+     "family": "process_tool",
+     "family_title": "Process tool",
+     "fidelity": "approximation",
+     "off_the_shelf": true,
+     "studio_only": true,
+     "rating": "rated 6.7 N m (clutch cap 10 N m); members at least 12 mm tall",
+     "caveat": "Nut runner (approximation): a rigid hex socket with a guide funnel on a lateral float; it engages a hex member by shape. The Studio wrist's roll is its spindle [assumed], at the wrist's speed: a clutch limits the torque to its cap (10 N m, under the wrist's 15 N m) and lets go at the release. The socket's walls are stacked slices so the simulator's contacts are as stiff as steel (a solver artifact). Supported in the Studio: members at least 12 mm tall. Not modelled: a motor, a torque transducer, cross-threading, socket wear, a reaction arm. Simulated, verify on hardware."
+    }
+   ],
+   "step_success": {
+    "place_panel": 0.875,
+    "insert_clamp": 0.875,
+    "tighten_clamp": 0.875
+   },
+   "weakest_step": {
+    "step_id": "insert_clamp",
+    "success_rate": 0.875
+   },
+   "complexity": {
+    "n_tools": 3,
+    "n_actuators": 8,
+    "total_mass_kg": 1.768,
+    "n_changes": 2,
+    "bracket": false
+   },
+   "payload_kg": 1.22,
+   "failure_modes": {
+    "not_reached": 2,
+    "criterion_not_met": 1
+   },
+   "stops_at_detail": {
+    "place_panel": {
+     "runs": 1,
+     "failure_modes": {
+      "criterion_not_met": 1
+     }
+    }
+   }
+  },
+  {
+   "setup_id": "90565a682716f14c573ccb4562fbe35c1de49d0ee8c75b265679077754c2bc9c",
+   "kind": "tool_change",
+   "kind_title": "Tool change",
+   "label": "Tool change: Vacuum area frame > Suction cup > Nut runner",
+   "tools": [
+    "Vacuum area frame, 2 x 3 cups, 600 mm",
+    "Suction cup, 25 mm bellows",
+    "Nut runner, 13 mm hex socket"
+   ],
+   "completion_rate": 0.875,
+   "completed_runs": 7,
+   "n_runs": 8,
+   "fidelity": "approximation",
+   "stops_at": "place_panel",
+   "cycle_time_s": 62.44,
+   "roles": [
+    "finalist"
+   ],
+   "eligible": true,
+   "reason": null,
+   "tool_details": [
+    {
+     "index": 0,
+     "effector_id": "530514a2ba01210b994060206aa74f49d498731eb80579282867d25195f8257a",
+     "display_name": "Vacuum area frame, 2 x 3 cups, 600 mm",
+     "family": "suction",
+     "family_title": "Vacuum area frame",
+     "fidelity": "approximation",
+     "off_the_shelf": true,
+     "studio_only": true,
+     "rating": "rated 8.47 kg on a smooth face (holding force over a 1.5 safety factor)",
+     "caveat": "Vacuum area frame (approximation): the cups of the suction cup model on a rigid frame, each with its own seal test and its own vacuum valve (a cup that does not seal stays off). The holding force is the sum of the sealed cups' caps; the payload is that force over a safety factor (1.5 smooth, 2.0 porous, 2.5 swivelling, all [assumed]) at 1 g. Only the smooth rating is a simulated claim: the porous and swivelling ratings are arithmetic on the same force, because no leak, porosity or swivel is simulated. Not modelled: a shared vacuum source and its flow, the leak of an unsealed cup into the others, the frame's flex, peel across a long face, foam or needle area grippers. Treat frame results as a screen, then verify on hardware."
+    },
+    {
+     "index": 1,
+     "effector_id": "e72e88518c0ebe7a74ec5db104b671180e9dbb5b51d0b11045814506657f31bf",
+     "display_name": "Suction cup, 25 mm bellows",
+     "family": "suction",
+     "family_title": "Suction cup",
+     "fidelity": "approximation",
+     "off_the_shelf": true,
+     "caveat": "Suction cup (approximation): a compliant lip of rigid segments on a bellows spring with a limited tilt; the seal is a geometric test (every lip segment touching the face, part material under 13 rays inside the lip) gating a MuJoCo adhesion actuator capped at vacuum x lip area (at most 60 kPa). The lip must touch the face: no pull across a gap. Not modelled: air flow, leak rate, porosity, vacuum build-up time (the vacuum follows the shared close ramp and is cut the control tick the seal is lost), lip material hysteresis, peel dynamics beyond the contact distribution. The lip's friction is the part's. Treat suction results as a screen, then verify on hardware."
+    },
+    {
+     "index": 2,
+     "effector_id": "722d18369aa469f5d390011a204ced8a74f3d3c3b4596e2fb4822b13597fb1d4",
+     "display_name": "Nut runner, 13 mm hex socket",
+     "family": "process_tool",
+     "family_title": "Process tool",
+     "fidelity": "approximation",
+     "off_the_shelf": true,
+     "studio_only": true,
+     "rating": "rated 6.7 N m (clutch cap 10 N m); members at least 12 mm tall",
+     "caveat": "Nut runner (approximation): a rigid hex socket with a guide funnel on a lateral float; it engages a hex member by shape. The Studio wrist's roll is its spindle [assumed], at the wrist's speed: a clutch limits the torque to its cap (10 N m, under the wrist's 15 N m) and lets go at the release. The socket's walls are stacked slices so the simulator's contacts are as stiff as steel (a solver artifact). Supported in the Studio: members at least 12 mm tall. Not modelled: a motor, a torque transducer, cross-threading, socket wear, a reaction arm. Simulated, verify on hardware."
+    }
+   ],
+   "step_success": {
+    "place_panel": 0.875,
+    "insert_clamp": 0.875,
+    "tighten_clamp": 0.875
+   },
+   "weakest_step": {
+    "step_id": "insert_clamp",
+    "success_rate": 0.875
+   },
+   "complexity": {
+    "n_tools": 3,
+    "n_actuators": 8,
+    "total_mass_kg": 1.791,
+    "n_changes": 2,
+    "bracket": false
+   },
+   "payload_kg": 1.22,
+   "failure_modes": {
+    "not_reached": 2,
+    "criterion_not_met": 1
+   },
+   "stops_at_detail": {
+    "place_panel": {
+     "runs": 1,
+     "failure_modes": {
+      "criterion_not_met": 1
+     }
+    }
+   }
+  },
+  {
+   "setup_id": "8e58e0b1db214e954874399666a8d4de8f3cabfac2b33497d0ea3a886863587b",
+   "kind": "tool_change",
+   "kind_title": "Tool change",
+   "label": "Tool change: Vacuum area frame > Suction cup > Nut runner",
+   "tools": [
+    "Vacuum area frame, 2 x 3 cups, 600 mm",
+    "Suction cup, 16 mm bellows",
+    "Nut runner, 13 mm hex socket"
+   ],
+   "completion_rate": 0.5,
+   "completed_runs": 4,
+   "n_runs": 8,
+   "fidelity": "approximation",
+   "stops_at": "insert_clamp",
+   "cycle_time_s": 62.44,
+   "roles": [
+    "finalist"
+   ],
+   "eligible": true,
+   "reason": null,
+   "tool_details": [
+    {
+     "index": 0,
+     "effector_id": "530514a2ba01210b994060206aa74f49d498731eb80579282867d25195f8257a",
+     "display_name": "Vacuum area frame, 2 x 3 cups, 600 mm",
+     "family": "suction",
+     "family_title": "Vacuum area frame",
+     "fidelity": "approximation",
+     "off_the_shelf": true,
+     "studio_only": true,
+     "rating": "rated 8.47 kg on a smooth face (holding force over a 1.5 safety factor)",
+     "caveat": "Vacuum area frame (approximation): the cups of the suction cup model on a rigid frame, each with its own seal test and its own vacuum valve (a cup that does not seal stays off). The holding force is the sum of the sealed cups' caps; the payload is that force over a safety factor (1.5 smooth, 2.0 porous, 2.5 swivelling, all [assumed]) at 1 g. Only the smooth rating is a simulated claim: the porous and swivelling ratings are arithmetic on the same force, because no leak, porosity or swivel is simulated. Not modelled: a shared vacuum source and its flow, the leak of an unsealed cup into the others, the frame's flex, peel across a long face, foam or needle area grippers. Treat frame results as a screen, then verify on hardware."
+    },
+    {
+     "index": 1,
+     "effector_id": "3907bc284d9e2c3399ddb8b45b1bf94dbb3b0ef0672705c6d90724839ecf7186",
+     "display_name": "Suction cup, 16 mm bellows",
+     "family": "suction",
+     "family_title": "Suction cup",
+     "fidelity": "approximation",
+     "off_the_shelf": true,
+     "caveat": "Suction cup (approximation): a compliant lip of rigid segments on a bellows spring with a limited tilt; the seal is a geometric test (every lip segment touching the face, part material under 13 rays inside the lip) gating a MuJoCo adhesion actuator capped at vacuum x lip area (at most 60 kPa). The lip must touch the face: no pull across a gap. Not modelled: air flow, leak rate, porosity, vacuum build-up time (the vacuum follows the shared close ramp and is cut the control tick the seal is lost), lip material hysteresis, peel dynamics beyond the contact distribution. The lip's friction is the part's. Treat suction results as a screen, then verify on hardware."
+    },
+    {
+     "index": 2,
+     "effector_id": "722d18369aa469f5d390011a204ced8a74f3d3c3b4596e2fb4822b13597fb1d4",
+     "display_name": "Nut runner, 13 mm hex socket",
+     "family": "process_tool",
+     "family_title": "Process tool",
+     "fidelity": "approximation",
+     "off_the_shelf": true,
+     "studio_only": true,
+     "rating": "rated 6.7 N m (clutch cap 10 N m); members at least 12 mm tall",
+     "caveat": "Nut runner (approximation): a rigid hex socket with a guide funnel on a lateral float; it engages a hex member by shape. The Studio wrist's roll is its spindle [assumed], at the wrist's speed: a clutch limits the torque to its cap (10 N m, under the wrist's 15 N m) and lets go at the release. The socket's walls are stacked slices so the simulator's contacts are as stiff as steel (a solver artifact). Supported in the Studio: members at least 12 mm tall. Not modelled: a motor, a torque transducer, cross-threading, socket wear, a reaction arm. Simulated, verify on hardware."
+    }
+   ],
+   "step_success": {
+    "place_panel": 0.875,
+    "insert_clamp": 0.5,
+    "tighten_clamp": 0.5
+   },
+   "weakest_step": {
+    "step_id": "insert_clamp",
+    "success_rate": 0.5
+   },
+   "complexity": {
+    "n_tools": 3,
+    "n_actuators": 8,
+    "total_mass_kg": 1.775,
+    "n_changes": 2,
+    "bracket": false
+   },
+   "payload_kg": 1.22,
+   "failure_modes": {
+    "not_reached": 5,
+    "jam": 3,
+    "criterion_not_met": 1
+   },
+   "stops_at_detail": {
+    "insert_clamp": {
+     "runs": 3,
+     "failure_modes": {
+      "jam": 3
+     }
+    },
+    "place_panel": {
+     "runs": 1,
+     "failure_modes": {
+      "criterion_not_met": 1
+     }
+    }
+   }
+  },
+  {
+   "setup_id": "faa2b219b6e0f792e46a81e379b4eede5bc0e2a03bae6dc52e6f201e75ac22a5",
+   "kind": "multi_head",
+   "kind_title": "Two-tool head",
+   "label": "Two-tool head: Vacuum area frame + Nut runner",
+   "tools": [
+    "Vacuum area frame, 2 x 3 cups, 600 mm",
+    "Nut runner, 13 mm hex socket"
+   ],
+   "completion_rate": 0.0,
+   "completed_runs": 0,
+   "n_runs": 8,
+   "fidelity": "approximation",
+   "stops_at": "insert_clamp",
+   "cycle_time_s": null,
+   "roles": [
+    "finalist"
+   ],
+   "eligible": false,
+   "reason": "never completed the task (stops at insert_clamp in 7/8 runs: jam 7x)",
+   "tool_details": [
+    {
+     "index": 0,
+     "effector_id": "530514a2ba01210b994060206aa74f49d498731eb80579282867d25195f8257a",
+     "display_name": "Vacuum area frame, 2 x 3 cups, 600 mm",
+     "family": "suction",
+     "family_title": "Vacuum area frame",
+     "fidelity": "approximation",
+     "off_the_shelf": true,
+     "studio_only": true,
+     "rating": "rated 8.47 kg on a smooth face (holding force over a 1.5 safety factor)",
+     "caveat": "Vacuum area frame (approximation): the cups of the suction cup model on a rigid frame, each with its own seal test and its own vacuum valve (a cup that does not seal stays off). The holding force is the sum of the sealed cups' caps; the payload is that force over a safety factor (1.5 smooth, 2.0 porous, 2.5 swivelling, all [assumed]) at 1 g. Only the smooth rating is a simulated claim: the porous and swivelling ratings are arithmetic on the same force, because no leak, porosity or swivel is simulated. Not modelled: a shared vacuum source and its flow, the leak of an unsealed cup into the others, the frame's flex, peel across a long face, foam or needle area grippers. Treat frame results as a screen, then verify on hardware."
+    },
+    {
+     "index": 1,
+     "effector_id": "722d18369aa469f5d390011a204ced8a74f3d3c3b4596e2fb4822b13597fb1d4",
+     "display_name": "Nut runner, 13 mm hex socket",
+     "family": "process_tool",
+     "family_title": "Process tool",
+     "fidelity": "approximation",
+     "off_the_shelf": true,
+     "studio_only": true,
+     "rating": "rated 6.7 N m (clutch cap 10 N m); members at least 12 mm tall",
+     "caveat": "Nut runner (approximation): a rigid hex socket with a guide funnel on a lateral float; it engages a hex member by shape. The Studio wrist's roll is its spindle [assumed], at the wrist's speed: a clutch limits the torque to its cap (10 N m, under the wrist's 15 N m) and lets go at the release. The socket's walls are stacked slices so the simulator's contacts are as stiff as steel (a solver artifact). Supported in the Studio: members at least 12 mm tall. Not modelled: a motor, a torque transducer, cross-threading, socket wear, a reaction arm. Simulated, verify on hardware."
+    }
+   ],
+   "step_success": {
+    "place_panel": 0.875,
+    "insert_clamp": 0.0,
+    "tighten_clamp": 0.0
+   },
+   "weakest_step": {
+    "step_id": "insert_clamp",
+    "success_rate": 0.0
+   },
+   "complexity": {
+    "n_tools": 2,
+    "n_actuators": 7,
+    "total_mass_kg": 1.361,
+    "n_changes": 1,
+    "bracket": true
+   },
+   "payload_kg": 1.361,
+   "failure_modes": {
+    "not_reached": 9,
+    "jam": 7,
+    "criterion_not_met": 1
+   },
+   "stops_at_detail": {
+    "insert_clamp": {
+     "runs": 7,
+     "failure_modes": {
+      "jam": 7
+     }
+    },
+    "place_panel": {
+     "runs": 1,
+     "failure_modes": {
+      "criterion_not_met": 1
+     }
+    }
+   }
+  }
+ ],
+ "recommendation": {
+  "setup_id": "808f2a6999b71ad1fc884d2910cf48611ee70f759622afc2f5f0e8515912f7fd",
+  "kind": "tool_change",
+  "kind_title": "Tool change",
+  "label": "Tool change: Vacuum area frame > Suction cup > Nut runner",
+  "tools": [
+   {
+    "index": 0,
+    "effector_id": "530514a2ba01210b994060206aa74f49d498731eb80579282867d25195f8257a",
+    "display_name": "Vacuum area frame, 2 x 3 cups, 600 mm",
+    "family": "suction",
+    "family_title": "Vacuum area frame",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "studio_only": true,
+    "rating": "rated 8.47 kg on a smooth face (holding force over a 1.5 safety factor)",
+    "caveat": "Vacuum area frame (approximation): the cups of the suction cup model on a rigid frame, each with its own seal test and its own vacuum valve (a cup that does not seal stays off). The holding force is the sum of the sealed cups' caps; the payload is that force over a safety factor (1.5 smooth, 2.0 porous, 2.5 swivelling, all [assumed]) at 1 g. Only the smooth rating is a simulated claim: the porous and swivelling ratings are arithmetic on the same force, because no leak, porosity or swivel is simulated. Not modelled: a shared vacuum source and its flow, the leak of an unsealed cup into the others, the frame's flex, peel across a long face, foam or needle area grippers. Treat frame results as a screen, then verify on hardware."
+   },
+   {
+    "index": 1,
+    "effector_id": "f0b6543ba012ad8f54c8860c61407708f1bdfaf1d1b395d00a64ada8e883d6de",
+    "display_name": "Suction cup, 10 mm bellows",
+    "family": "suction",
+    "family_title": "Suction cup",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "caveat": "Suction cup (approximation): a compliant lip of rigid segments on a bellows spring with a limited tilt; the seal is a geometric test (every lip segment touching the face, part material under 13 rays inside the lip) gating a MuJoCo adhesion actuator capped at vacuum x lip area (at most 60 kPa). The lip must touch the face: no pull across a gap. Not modelled: air flow, leak rate, porosity, vacuum build-up time (the vacuum follows the shared close ramp and is cut the control tick the seal is lost), lip material hysteresis, peel dynamics beyond the contact distribution. The lip's friction is the part's. Treat suction results as a screen, then verify on hardware."
+   },
+   {
+    "index": 2,
+    "effector_id": "722d18369aa469f5d390011a204ced8a74f3d3c3b4596e2fb4822b13597fb1d4",
+    "display_name": "Nut runner, 13 mm hex socket",
+    "family": "process_tool",
+    "family_title": "Process tool",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "studio_only": true,
+    "rating": "rated 6.7 N m (clutch cap 10 N m); members at least 12 mm tall",
+    "caveat": "Nut runner (approximation): a rigid hex socket with a guide funnel on a lateral float; it engages a hex member by shape. The Studio wrist's roll is its spindle [assumed], at the wrist's speed: a clutch limits the torque to its cap (10 N m, under the wrist's 15 N m) and lets go at the release. The socket's walls are stacked slices so the simulator's contacts are as stiff as steel (a solver artifact). Supported in the Studio: members at least 12 mm tall. Not modelled: a motor, a torque transducer, cross-threading, socket wear, a reaction arm. Simulated, verify on hardware."
+   }
+  ],
+  "completion_rate": 0.875,
+  "completed_runs": 7,
+  "n_runs": 8,
+  "fidelity": "approximation",
+  "stops_at": null,
+  "cycle_time_s": 62.44,
+  "why": "Ties on completion (88%), the weakest step and cycle time, and is simpler: 1768 g against 1791 g.",
+  "caveat": "approximation: verify on hardware",
+  "verify_on_hardware": true,
+  "geometry": {
+   "changer": {
+    "changeover_s": 7.5,
+    "master_mass_kg": 0.25,
+    "stack_mm": 52.0,
+    "tool_plate_mass_kg": 0.1
+   }
+  },
+  "steps": [
+   {
+    "step_id": "place_panel",
+    "primitive": "suction",
+    "primitive_used": "suction",
+    "tool": 0,
+    "tool_label": "Vacuum area frame, 2 x 3 cups, 600 mm",
+    "success_rate": 0.875,
+    "fidelity": "approximation",
+    "caveats": [
+     "Suction is an approximation: the seal is a geometric test gating a capped adhesion force; no air flow, leak rate or porosity.",
+     "The clamp is an approximation: a 13 mm hex modelled 15 mm tall so the simulated socket can seat (a standard M8 nut is 6.8 mm tall), on a helical joint with a torque ramp; it does not press the panel. The panel is a rigid slab.",
+     "Suction cup (approximation): a compliant lip of rigid segments on a bellows spring with a limited tilt; the seal is a geometric test (every lip segment touching the face, part material under 13 rays inside the lip) gating a MuJoCo adhesion actuator capped at vacuum x lip area (at most 60 kPa). The lip must touch the face: no pull across a gap. Not modelled: air flow, leak rate, porosity, vacuum build-up time (the vacuum follows the shared close ramp and is cut the control tick the seal is lost), lip material hysteresis, peel dynamics beyond the contact distribution. The lip's friction is the part's. Treat suction results as a screen, then verify on hardware."
+    ],
+    "verify_on_hardware": true
+   },
+   {
+    "step_id": "insert_clamp",
+    "primitive": "insert",
+    "primitive_used": "insert",
+    "tool": 1,
+    "tool_label": "Suction cup, 10 mm bellows",
+    "success_rate": 0.875,
+    "fidelity": "approximation",
+    "caveats": [
+     "The clamp is an approximation: a 13 mm hex modelled 15 mm tall so the simulated socket can seat (a standard M8 nut is 6.8 mm tall), on a helical joint with a torque ramp; it does not press the panel. The panel is a rigid slab.",
+     "Suction cup (approximation): a compliant lip of rigid segments on a bellows spring with a limited tilt; the seal is a geometric test (every lip segment touching the face, part material under 13 rays inside the lip) gating a MuJoCo adhesion actuator capped at vacuum x lip area (at most 60 kPa). The lip must touch the face: no pull across a gap. Not modelled: air flow, leak rate, porosity, vacuum build-up time (the vacuum follows the shared close ramp and is cut the control tick the seal is lost), lip material hysteresis, peel dynamics beyond the contact distribution. The lip's friction is the part's. Treat suction results as a screen, then verify on hardware."
+    ],
+    "verify_on_hardware": true
+   },
+   {
+    "step_id": "tighten_clamp",
+    "primitive": "twist",
+    "primitive_used": "twist",
+    "tool": 2,
+    "tool_label": "Nut runner, 13 mm hex socket",
+    "success_rate": 0.875,
+    "fidelity": "approximation",
+    "caveats": [
+     "The clamp is an approximation: a 13 mm hex modelled 15 mm tall so the simulated socket can seat (a standard M8 nut is 6.8 mm tall), on a helical joint with a torque ramp; it does not press the panel. The panel is a rigid slab.",
+     "Process tool (approximation): a rigid tool used by the Studio's own twist or push primitive. The nut runner's spindle is the wrist's roll through a torque-limiting clutch [assumed]; the tamper's stage is a spring that slips at its overload force. The torque, the force and the contact are simulated; the process (thread cross-threading, bed compaction) is not modelled beyond them. Verify on hardware."
+    ],
+    "verify_on_hardware": true
+   }
+  ],
+  "runner_up_rigid": {
+   "label": null,
+   "basis": "no rigid-tier setup is eligible"
+  },
+  "versus_best_single": null,
+  "versus_baseline": null
+ },
+ "best_single": null,
+ "baseline": {
+  "setup_id": null,
+  "basis": "no single tool is eligible: no single tool was among the finalists"
+ },
+ "no_winner": null,
+ "sensitivity": {
+  "recommendation_changes": false,
+  "order_changes": 0,
+  "n_pairs": 15,
+  "tool_change_s": [
+   3.0,
+   6.0,
+   7.5,
+   10.0,
+   12.0
+  ],
+  "present_s": [
+   0.75,
+   1.5,
+   3.0
+  ],
+  "note": "change times are a fixed clock advance, so cycle times are recomputed exactly from the same runs"
+ },
+ "constants": [
+  {
+   "key": "roll_torque_nm",
+   "value": 15.0,
+   "unit": "N m",
+   "note": "wrist roll torque limit",
+   "tag": "assumed"
+  },
+  {
+   "key": "roll_speed_max_deg_s",
+   "value": 180.0,
+   "unit": "deg/s",
+   "note": "wrist roll speed cap",
+   "tag": "assumed"
+  },
+  {
+   "key": "pitch_range_deg",
+   "value": 90.0,
+   "unit": "deg",
+   "note": "wrist pitch limit, +- from straight down",
+   "tag": "assumed"
+  },
+  {
+   "key": "pitch_speed_dps",
+   "value": 180.0,
+   "unit": "deg/s",
+   "note": "wrist pitch speed cap",
+   "tag": "assumed"
+  },
+  {
+   "key": "pitch_torque_nm",
+   "value": 15.0,
+   "unit": "N m",
+   "note": "wrist pitch torque limit",
+   "tag": "assumed"
+  },
+  {
+   "key": "tool_change_s",
+   "value": 7.5,
+   "unit": "s",
+   "note": "automatic tool change time (a fixed clock advance)",
+   "tag": "assumed"
+  },
+  {
+   "key": "present_s",
+   "value": 1.5,
+   "unit": "s",
+   "note": "multi-tool head switch time (a fixed tilt, not simulated)",
+   "tag": "assumed"
+  },
+  {
+   "key": "changer_master_kg",
+   "value": 0.25,
+   "unit": "kg",
+   "note": "tool changer master plate (stays on the wrist)",
+   "tag": "assumed"
+  },
+  {
+   "key": "changer_tool_plate_kg",
+   "value": 0.1,
+   "unit": "kg",
+   "note": "tool changer plate on every tool",
+   "tag": "assumed"
+  },
+  {
+   "key": "changer_stack_mm",
+   "value": 52.0,
+   "unit": "mm",
+   "note": "tool changer stack height",
+   "tag": "assumed"
+  },
+  {
+   "key": "arm_payload_kg",
+   "value": 3.0,
+   "unit": "kg",
+   "note": "largest tool stack the arm may carry; heavier setups are refused",
+   "tag": "assumed"
+  },
+  {
+   "key": "bracket_density_kg_m3",
+   "value": 1300.0,
+   "unit": "kg/m^3",
+   "note": "printed carbon-filled polymer bracket",
+   "tag": "assumed"
+  },
+  {
+   "key": "placement_error_mm",
+   "value": 2.0,
+   "unit": "mm",
+   "note": "per-object placement error of the condition grid (uniform)",
+   "tag": "assumed"
+  },
+  {
+   "key": "simplicity_per_extra_effector",
+   "value": 0.05,
+   "unit": "rate",
+   "note": "integrator rule R01: completion a setup must add per added effector or changer",
+   "tag": "assumed"
+  },
+  {
+   "key": "simplicity_step_floor",
+   "value": 0.5,
+   "unit": "rate",
+   "note": "integrator rule R01: a weakest step under this fails outright",
+   "tag": "assumed"
+  },
+  {
+   "key": "tie_margin",
+   "value": 0.05,
+   "unit": "rate",
+   "note": "completion-rate tie among setups of the same complexity",
+   "tag": "assumed"
+  },
+  {
+   "key": "cycle_margin",
+   "value": 0.1,
+   "unit": "fraction",
+   "note": "among setups of the same complexity, a simpler one may be this much slower",
+   "tag": "assumed"
+  },
+  {
+   "key": "soft_arm_max_part_kg",
+   "value": 2.5,
+   "unit": "kg",
+   "note": "integrator rule R09: the heaviest part a soft arm may carry",
+   "tag": "assumed"
+  },
+  {
+   "key": "hook_min_mm",
+   "value": 5.0,
+   "unit": "mm",
+   "note": "a rigid tool hooks if its tip reaches this far sideways past the tool and flange",
+   "tag": "assumed"
+  },
+  {
+   "key": "hook_throat_mm",
+   "value": 6.0,
+   "unit": "mm",
+   "note": "room a lip needs between a hook and the flange, else the flange blocks it",
+   "tag": "assumed"
+  },
+  {
+   "key": "process_torque_nm",
+   "value": 4.0,
+   "unit": "N m",
+   "note": "integrator rule R05: tightening a threaded member to this torque or more needs a nut runner (1 N m above hand-tight)",
+   "tag": "assumed"
+  },
+  {
+   "key": "socket_fit_mm",
+   "value": 0.5,
+   "unit": "mm",
+   "note": "a nut runner's socket drives a hex at most this much under its own size",
+   "tag": "assumed"
+  },
+  {
+   "key": "sweep_clearance_mm",
+   "value": 5.0,
+   "unit": "mm",
+   "note": "multi-tool head swept-volume clearance",
+   "tag": "assumed"
+  }
+ ],
+ "fixed_caveats": [
+  "The floating wrist abstracts the arm: there is no arm reach or arm collision model.",
+  "Presenting a multi-tool head is a fixed tilt per segment plus a fixed time, not a simulated motion.",
+  "A tool change is a fixed time, not a simulated docking.",
+  "Controllers are scripted and open-loop on the placement error.",
+  "A recommendation is a simulation ranking under the stated conditions, not a hardware guarantee."
+ ],
+ "lanes": [
+  {
+   "id": "recommended",
+   "title": "Recommended",
+   "setup_id": "808f2a6999b71ad1fc884d2910cf48611ee70f759622afc2f5f0e8515912f7fd",
+   "kind": "tool_change",
+   "label": "Tool change: Vacuum area frame > Suction cup > Nut runner",
+   "replay": "studio/replays/h5_solar/recommended",
+   "condition_id": "nominal",
+   "seed": 0,
+   "condition_text": "nominal placement, seed 0",
+   "traj_sha": "2c3a3be7768f78fa2190b0d8ee00aba825afcb340a6f474ff5bb4f1fb4e3dc47",
+   "completed": true,
+   "cycle_time_s": 62.442,
+   "fps": 100,
+   "n_frames": 150,
+   "duration_s": 62.44,
+   "quantised": false,
+   "max_error_vs_recording_mm": 0.989,
+   "bytes": 68840,
+   "asset_bytes": 106500,
+   "segments": [
+    {
+     "index": 0,
+     "tool": 0,
+     "tool_label": "Vacuum area frame, 2 x 3 cups, 600 mm",
+     "start_s": 0.0,
+     "end_s": 10.558,
+     "change": "none",
+     "change_s": 0.0,
+     "change_start_s": 0.0,
+     "steps": [
+      "place_panel"
+     ]
+    },
+    {
+     "index": 1,
+     "tool": 1,
+     "tool_label": "Suction cup, 10 mm bellows",
+     "start_s": 18.058,
+     "end_s": 24.942,
+     "change": "tool_change",
+     "change_s": 7.5,
+     "change_start_s": 10.558,
+     "steps": [
+      "insert_clamp"
+     ]
+    },
+    {
+     "index": 2,
+     "tool": 2,
+     "tool_label": "Nut runner, 13 mm hex socket",
+     "start_s": 32.442,
+     "end_s": 62.442,
+     "change": "tool_change",
+     "change_s": 7.5,
+     "change_start_s": 24.942,
+     "steps": [
+      "tighten_clamp"
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "step_id": "place_panel",
+     "primitive": "suction",
+     "tool": 0,
+     "start_s": 0.0,
+     "duration_s": 10.558,
+     "success": true,
+     "failure_mode": null,
+     "fidelity": "approximation",
+     "quantities": {
+      "angle_deg": 0.0,
+      "clamp_torque_nm": 0.0,
+      "depth_mm": 0.062,
+      "engaged": 1.0,
+      "force_n": 131.865,
+      "gap_mm": 0.005,
+      "hold_s": 2.93,
+      "in_target": 0.0,
+      "lift_mm": 77.162,
+      "penetration_mm": 0.125,
+      "penetration_ms": 0.0,
+      "penetration_transient": 0.0,
+      "tilt_deg": 0.0,
+      "turns": 0.0
+     }
+    },
+    {
+     "step_id": "insert_clamp",
+     "primitive": "insert",
+     "tool": 1,
+     "start_s": 18.058,
+     "duration_s": 6.884,
+     "success": true,
+     "failure_mode": null,
+     "fidelity": "approximation",
+     "quantities": {
+      "angle_deg": -0.0,
+      "clamp_torque_nm": 0.364,
+      "depth_mm": 4.0,
+      "force_n": 1.139,
+      "gap_mm": 0.005,
+      "jam": 0.0,
+      "lateral_force_n": 0.397,
+      "penetration_mm": 0.148,
+      "penetration_ms": 0.0,
+      "penetration_transient": 0.0,
+      "turns": -0.0
+     }
+    },
+    {
+     "step_id": "tighten_clamp",
+     "primitive": "twist",
+     "tool": 2,
+     "start_s": 32.442,
+     "duration_s": 30.0,
+     "success": true,
+     "failure_mode": null,
+     "fidelity": "approximation",
+     "quantities": {
+      "angle_deg": 1227.184,
+      "clamp_torque_nm": 6.0,
+      "depth_mm": 7.75,
+      "force_n": 17.176,
+      "gap_mm": 0.005,
+      "penetration_mm": 0.634,
+      "penetration_ms": 0.0,
+      "penetration_transient": 0.0,
+      "slip_deg": 15.02,
+      "torque_nm": 5.985,
+      "turns": 3.409
+     }
+    }
+   ],
+   "credits": []
+  }
+ ],
+ "build_pack": {
+  "zip": "studio/h5_solar/build_pack.zip",
+  "bytes": 500576,
+  "sha256": "ed630a682e4028b8fdffc4063f622b4e8c879522e7aaef7ca44df27235adfe2b",
+  "setup_id": "808f2a6999b71ad1fc884d2910cf48611ee70f759622afc2f5f0e8515912f7fd",
+  "label": "Tool change: Vacuum area frame > Suction cup > Nut runner",
+  "for": "recommended",
+  "files": [
+   {
+    "path": "ASSEMBLY.md",
+    "kind": "notes",
+    "format": "md",
+    "license": "CC0-1.0",
+    "bytes": 1925
+   },
+   {
+    "path": "CREDITS.txt",
+    "kind": "licence",
+    "format": "txt",
+    "license": "CC0-1.0",
+    "bytes": 223
+   },
+   {
+    "path": "README.txt",
+    "kind": "notes",
+    "format": "txt",
+    "license": "CC0-1.0",
+    "bytes": 1227
+   },
+   {
+    "path": "bom.csv",
+    "kind": "bom",
+    "format": "csv",
+    "license": "CC0-1.0",
+    "bytes": 1232
+   },
+   {
+    "path": "cad/tool0_reference.stl",
+    "kind": "effector_cad",
+    "format": "stl",
+    "license": "CC0-1.0",
+    "bytes": 1960884
+   },
+   {
+    "path": "cad/tool1_reference.stl",
+    "kind": "effector_cad",
+    "format": "stl",
+    "license": "CC0-1.0",
+    "bytes": 172884
+   },
+   {
+    "path": "cad/tool2_reference.stl",
+    "kind": "effector_cad",
+    "format": "stl",
+    "license": "CC0-1.0",
+    "bytes": 106884
+   },
+   {
+    "path": "certificate.html",
+    "kind": "certificate",
+    "format": "html",
+    "license": "CC0-1.0",
+    "bytes": 14941
+   },
+   {
+    "path": "changer_plate_tool0.stl",
+    "kind": "changer_plate",
+    "format": "stl",
+    "license": "CC0-1.0",
+    "bytes": 75284
+   },
+   {
+    "path": "changer_plate_tool1.stl",
+    "kind": "changer_plate",
+    "format": "stl",
+    "license": "CC0-1.0",
+    "bytes": 75284
+   },
+   {
+    "path": "changer_plate_tool2.stl",
+    "kind": "changer_plate",
+    "format": "stl",
+    "license": "CC0-1.0",
+    "bytes": 75284
+   },
+   {
+    "path": "mjcf/setup_tool0.xml",
+    "kind": "mjcf",
+    "format": "xml",
+    "license": "CC0-1.0",
+    "bytes": 34963
+   },
+   {
+    "path": "mjcf/setup_tool1.xml",
+    "kind": "mjcf",
+    "format": "xml",
+    "license": "CC0-1.0",
+    "bytes": 14983
+   },
+   {
+    "path": "mjcf/setup_tool2.xml",
+    "kind": "mjcf",
+    "format": "xml",
+    "license": "CC0-1.0",
+    "bytes": 73598
+   }
+  ],
+  "links": [],
+  "caveats": [
+   "Suction is an approximation: the seal is a geometric test gating a capped adhesion force; no air flow, leak rate or porosity.",
+   "The clamp is an approximation: a 13 mm hex modelled 15 mm tall so the simulated socket can seat (a standard M8 nut is 6.8 mm tall), on a helical joint with a torque ramp; it does not press the panel. The panel is a rigid slab.",
+   "Suction cup (approximation): a compliant lip of rigid segments on a bellows spring with a limited tilt; the seal is a geometric test (every lip segment touching the face, part material under 13 rays inside the lip) gating a MuJoCo adhesion actuator capped at vacuum x lip area (at most 60 kPa). The l",
+   "Process tool (approximation): a rigid tool used by the Studio's own twist or push primitive. The nut runner's spindle is the wrist's roll through a torque-limiting clutch [assumed]; the tamper's stage is a spring that slips at its overload force. The torque, the force and the contact are simulated; ",
+   "The floating wrist abstracts the arm: there is no arm reach or arm collision model.",
+   "Presenting a multi-tool head is a fixed tilt per segment plus a fixed time, not a simulated motion.",
+   "A tool change is a fixed time, not a simulated docking.",
+   "Controllers are scripted and open-loop on the placement error.",
+   "A recommendation is a simulation ranking under the stated conditions, not a hardware guarantee."
+  ]
+ },
+ "build_pack_note": null,
+ "session": null,
+ "provenance": {
+  "code_version": "d4755dfc699a",
+  "report_sha256": "6d65a6cd062f69200584d3a683274dda731803a33ef7a6d2d46ab18568b9195c",
+  "task_id": "cfd24f6d1ed0eb6b47202ff99d6aacb9cbc029e0960a0e30d16370f63c5adbcd",
+  "controllers": "default",
+  "evidence": "accepted",
+  "conditions": [
+   {
+    "condition_id": "nominal",
+    "seed": 0,
+    "aim_offsets_mm": {}
+   },
+   {
+    "condition_id": "place01",
+    "seed": 1,
+    "aim_offsets_mm": {
+     "solar_panel": [
+      0.306,
+      -0.193
+     ]
+    }
+   },
+   {
+    "condition_id": "place02",
+    "seed": 2,
+    "aim_offsets_mm": {
+     "solar_panel": [
+      0.089,
+      0.245
+     ]
+    }
+   },
+   {
+    "condition_id": "place03",
+    "seed": 3,
+    "aim_offsets_mm": {
+     "solar_panel": [
+      -1.497,
+      -1.834
+     ]
+    }
+   },
+   {
+    "condition_id": "place04",
+    "seed": 4,
+    "aim_offsets_mm": {
+     "solar_panel": [
+      -0.003,
+      1.467
+     ]
+    }
+   },
+   {
+    "condition_id": "place05",
+    "seed": 5,
+    "aim_offsets_mm": {
+     "solar_panel": [
+      -1.633,
+      -1.202
+     ]
+    }
+   },
+   {
+    "condition_id": "place06",
+    "seed": 6,
+    "aim_offsets_mm": {
+     "solar_panel": [
+      -0.225,
+      0.272
+     ]
+    }
+   },
+   {
+    "condition_id": "place07",
+    "seed": 7,
+    "aim_offsets_mm": {
+     "solar_panel": [
+      -1.498,
+      1.477
+     ]
+    }
+   }
+  ],
+  "fairness_sha": "82b5bcdac3b461e77bc17444036a535a9acb32f29bafd804947228e68090636d",
+  "workers": 4,
+  "timings": {
+   "screen_s": 373.6,
+   "combine_s": 8.3,
+   "finalists_s": 666.0,
+   "total_s": 1048.6
+  },
+  "determinism": []
+ }
+}

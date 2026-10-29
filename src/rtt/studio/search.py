@@ -17,7 +17,13 @@
    ``grasp``, ``suction`` and ``wrap`` are one **acquire** class (ruling 6): on a step with any of
    them, every acquire-capable tool competes with its own mechanism (the Studio's pick controllers
    drive the head's own v1 primitive), and the screen records the primitive it actually used
-   (:func:`acquire_primitive`).
+   (:func:`acquire_primitive`). A process tool (the ``process`` mechanism) serves only its own
+   process: a nut runner drives and starts a fastener, a tamper pad presses (it never picks, holds
+   or hooks a part). Integrator rules prune too (:func:`rule_ineligible`, R03, R05 and R09: no soft
+   arm, tentacle or dexterous hand on a lid, door, drawer or button unless no rigid candidate is
+   left; a process step only for the process tool of its kind; no soft arm on an insert or a part
+   over 2.5 kg), and a rigid tool's hook is its measured geometry (:func:`measured_hook_mm`), not its
+   tags. A vacuum frame fits a part only when the part's top face covers enough of its cups.
 3. **Per-step screening** (:func:`screen`): the steps are grouped into **hold chains**
    (consecutive steps joined by ``hold_after``, which one tool must do). Each surviving candidate
    runs each chain as a single-tool setup on the chain's sub-task, on the first
@@ -31,12 +37,18 @@
    :class:`~rtt.studio.types.HeadMount` bounds and a **swept-volume check** (ruling 2): the idle
    head and the bracket must clear every other object and the table at each step's engagement
    pose, over the headings a controller may use (a twist turns the whole bracket), and both heads
-   must clear everything while the head switch swings them at the home pose. A rejected geometry
-   is reported with its reason. Setups over the payload limit are refused (ruling 5).
+   must clear everything while the head switch swings them at the home pose. A step whose tool
+   tilts the wrist (a lid's lip pinched from the front, a push from the front) is checked at its
+   pitched engagement poses (the lip along the lid's arc, the pitch following it), and while the
+   wrist tilts no head, adapter or bracket arm may swing into the arm's link before the pitch joint
+   (:data:`ARM_ABOVE_PITCH_M`), which does not tilt. A rejected geometry is reported with its
+   reason. Setups over the payload limit are refused (ruling 5).
 5. **Finalists**: the best predicted setups (3 to 5), always including the best single
    off-the-shelf effector, run the full task on the whole condition grid
    (:func:`rtt.studio.runner.run_full_tasks`); :mod:`rtt.studio.recommend` ranks them after
-   :func:`~rtt.studio.fairness.assert_fair`.
+   :func:`~rtt.studio.fairness.assert_fair`. They are chosen rigid first (:func:`choose_finalists`:
+   a soft-arm or hand setup takes a slot only once the rigid setups predicted to complete have
+   one), and the best rigid single tool (the R01 baseline candidate) always runs.
 
 :func:`run_task_tournament` runs all of it and returns a :class:`TournamentReport` (the plain
 function behind the agent tool of the same name).
@@ -59,6 +71,7 @@ import numpy as np
 
 from rtt.effectors import part_jaw
 from rtt.effectors.registry import available_families, get_family
+from rtt.effectors.suction import FrameGeometry, is_frame
 from rtt.effectors.types import (
     PRODUCT_MODE_LABEL,
     EffectorFamily,
@@ -69,6 +82,25 @@ from rtt.effectors.types import (
 from rtt.sim.task import TaskV2, default_task_v2
 from rtt.studio.episode import StudioCondition, WorldState, home_pose
 from rtt.studio.plan import ControllerSet
+from rtt.studio.rules import (
+    HOOK_MIN_MM,
+    HOOK_THROAT_MM,
+    PROCESS_TOOLS,
+    PROCESS_TORQUE_NM,
+    RULE_CLASSES,
+    SOCKET_FIT_MM,
+    SOFT_ARM_MAX_PART_KG,
+    THREADED_TEMPLATES,
+    articulated,
+    is_dexterous_hand,
+    is_soft_arm,
+    is_tentacle,
+    part_mass_kg,
+    process_kind,
+    process_need,
+    required_torque_nm,
+    setup_rule_class,
+)
 from rtt.studio.runner import (
     MAX_WORKERS,
     SegmentJob,
@@ -78,6 +110,7 @@ from rtt.studio.runner import (
     run_full_tasks,
     run_segment_job,
 )
+from rtt.studio.scene import rot_x, wrist_rotation
 from rtt.studio.templates import TemplateUnavailable
 from rtt.studio.types import (
     CONTRACT_VERSION,
@@ -104,6 +137,7 @@ __all__ = [
     "ACQUIRE",
     "ARM_PAYLOAD_KG",
     "MECHANISM_CAPABILITIES",
+    "PROCESS_CAPABILITIES",
     "BracketGeometry",
     "Candidate",
     "Cell",
@@ -125,10 +159,12 @@ __all__ = [
     "part_jaw_problem",
     "probe_tool",
     "prune",
+    "rule_ineligible",
     "run_task_tournament",
     "screen",
     "sub_task",
     "swept_volume_problems",
+    "tilted_poses",
 ]
 
 #: The acquire class (ruling 6): a step with any of these is open to every acquire-capable tool.
@@ -147,6 +183,12 @@ SWEEP_CLEARANCE_M: Final = 0.005
 FLANGE_FACE_M: Final = -0.012
 #: Radius of the arm's last link above the flange: the flange's plus 10 mm [assumed].
 LAST_LINK_RADIUS_M: Final = 0.0315 + 0.010
+#: The arm's link before the wrist pitch starts this far above the pitch axis, in the frame of that
+#: link (the flange's frame at pitch 0): room for the flange stage (31.5 mm radius) to turn through
+#: +-90 deg [assumed keep-out]. It does not tilt with the pitch.
+ARM_ABOVE_PITCH_M: Final = 0.050
+#: The swept-volume check samples a tilting wrist this often (deg of pitch or of the lid's arc).
+TILT_STEP_DEG: Final = 5.0
 #: Default screening and search sizes.
 N_SCREEN: Final = 3
 TOP_K: Final = 3
@@ -154,9 +196,10 @@ N_FINALISTS: Final = 4
 MULTI_HEAD_PAIRS: Final = 6
 _MAX_ASSIGNMENTS: Final = 4000
 
-Mechanism = Literal["fingers", "suction", "soft_arm"]
+Mechanism = Literal["fingers", "suction", "soft_arm", "process"]
 
-#: What each mechanism can serve [assumed, documented in docs/STUDIO_SEARCH.md section 2].
+#: What each mechanism can serve [assumed, documented in docs/STUDIO_SEARCH.md section 2]. A process
+#: tool serves what its own primitive does (:data:`PROCESS_CAPABILITIES`), nothing by its mechanism.
 MECHANISM_CAPABILITIES: Final[Mapping[str, frozenset[PrimitiveKind]]] = {
     "fingers": frozenset(
         {
@@ -171,19 +214,37 @@ MECHANISM_CAPABILITIES: Final[Mapping[str, frozenset[PrimitiveKind]]] = {
         {PrimitiveKind.SUCTION, PrimitiveKind.TWIST, PrimitiveKind.INSERT, PrimitiveKind.PUSH}
     ),
     "soft_arm": frozenset({PrimitiveKind.WRAP, PrimitiveKind.HOOK_PULL, PrimitiveKind.TWIST}),
+    "process": frozenset(),
+}
+#: What a process tool serves, by its spec's primitive: a nut runner (``drive``) turns and starts a
+#: fastener; a tamper pad (``press``) presses. Neither picks, holds or hooks a part.
+PROCESS_CAPABILITIES: Final[Mapping[str, frozenset[PrimitiveKind]]] = {
+    "drive": frozenset({PrimitiveKind.TWIST, PrimitiveKind.INSERT}),
+    "press": frozenset({PrimitiveKind.PUSH}),
+}
+#: What each process tool does, in words (its refusals), by its spec's primitive.
+_PROCESS_DOES: Final[Mapping[str, str]] = {
+    "drive": "a nut runner turns a fastener",
+    "press": "a tamper pad presses a face",
+}
+#: A refused primitive, as the verb of a process tool's refusal.
+_VERB: Final[Mapping[PrimitiveKind, str]] = {
+    PrimitiveKind.PUSH: "push",
+    PrimitiveKind.TWIST: "turn a part",
+    PrimitiveKind.INSERT: "insert a part",
 }
 _NO_CAPABILITY: Final[Mapping[tuple[str, PrimitiveKind], str]] = {
     ("suction", PrimitiveKind.HOOK_PULL): "a suction cup has no hook or fingers to engage a handle or lip",
     ("soft_arm", PrimitiveKind.INSERT): "a soft arm cannot hold a member stiffly along the seat axis",
     ("soft_arm", PrimitiveKind.PUSH): "a slack soft arm has no stiff face to push with",
 }
-#: Library capability tags (``rtt.library.taxonomy``) -> the primitives they serve.
+#: Library capability tags (``rtt.library.taxonomy``) -> the primitives they serve. ``hook`` is not
+#: one: whether a rigid tool hooks is measured from its geometry (:func:`capability_problem`).
 _LIBRARY_TAGS: Final[Mapping[str, PrimitiveKind]] = {
     "pinch": PrimitiveKind.GRASP,
     "power": PrimitiveKind.GRASP,
     "suction": PrimitiveKind.SUCTION,
     "wrap": PrimitiveKind.WRAP,
-    "hook": PrimitiveKind.HOOK_PULL,
     "push": PrimitiveKind.PUSH,
     "twist": PrimitiveKind.TWIST,
     "insert": PrimitiveKind.INSERT,
@@ -194,20 +255,25 @@ _LIBRARY_TAGS: Final[Mapping[str, PrimitiveKind]] = {
 
 
 def mechanism_of(spec: EffectorSpec) -> Mechanism:
-    """``suction`` (cups), ``soft_arm`` (tentacles) or ``fingers`` (everything else)."""
+    """``suction`` (cups and frames), ``soft_arm`` (tentacles), ``process`` (the process tools: a
+    nut runner, a tamper pad) or ``fingers`` (everything else)."""
     if spec.family is EffectorFamily.SUCTION:
         return "suction"
     if spec.family is EffectorFamily.SOFT_ARM:
         return "soft_arm"
+    if spec.family is EffectorFamily.PROCESS_TOOL:
+        return "process"
     return "fingers"
 
 
-def acquire_primitive(spec: EffectorSpec) -> PrimitiveKind:
-    """The acquire primitive a tool actually performs (ruling 6): its own mechanism's."""
+def acquire_primitive(spec: EffectorSpec) -> PrimitiveKind | None:
+    """The acquire primitive a tool actually performs (ruling 6): its own mechanism's. ``None`` for
+    a process tool, which picks nothing."""
     return {
         "suction": PrimitiveKind.SUCTION,
         "soft_arm": PrimitiveKind.WRAP,
         "fingers": PrimitiveKind.GRASP,
+        "process": None,
     }[mechanism_of(spec)]
 
 
@@ -250,7 +316,7 @@ class Candidate:
             "item": self.item,
             "mechanism": self.mechanism,
             "capabilities": sorted(k.value for k in self.capabilities),
-            "acquire_primitive": acquire_primitive(self.spec).value,
+            "acquire_primitive": _value(acquire_primitive(self.spec)),
             "fidelity": _shown_fidelity(self.spec),
             **(
                 {"built_for": part_jaw.jaw_target(self.spec)["object"]}
@@ -258,6 +324,10 @@ class Candidate:
                 else {}
             ),
         }
+
+
+def _value(kind: PrimitiveKind | None) -> str | None:
+    return None if kind is None else kind.value
 
 
 def _shown_fidelity(spec: EffectorSpec) -> str:
@@ -277,8 +347,13 @@ def candidate_of(
 
     A library item tagged with a grip (pinch, power, suction, wrap) is a gripper, hand or cup: its
     tags add to its mechanism's capabilities. An item without one is a tool (a hook, a pusher, a
-    driver): its tags are all it serves."""
-    mech = set(MECHANISM_CAPABILITIES[mechanism_of(spec)])
+    driver): its tags are all it serves, except ``hook_pull``, which a rigid tool's measured
+    geometry decides whatever its tags say (:func:`capability_problem`). A process tool serves its
+    primitive's process (:data:`PROCESS_CAPABILITIES`)."""
+    mechanism = mechanism_of(spec)
+    mech = set(MECHANISM_CAPABILITIES[mechanism])
+    if mechanism == "process":
+        mech |= PROCESS_CAPABILITIES.get(spec.primitive, frozenset())
     if tags is not None:
         tags = tuple(tags)
         caps = {_LIBRARY_TAGS[t] for t in tags if t in _LIBRARY_TAGS}
@@ -403,7 +478,11 @@ def default_candidates(
 
 @dataclass(frozen=True)
 class ToolInfo:
-    """A tool as built in the Studio scene (measured on a probe task), or why it cannot be."""
+    """A tool as built in the Studio scene (measured on a probe task), or why it cannot be.
+
+    ``hook_mm``: how far the tool's tip reaches sideways past the rest of the tool and the flange
+    (:func:`measured_hook_mm`), the geometry that decides whether a rigid tool can hook.
+    """
 
     effector_id: str
     buildable: bool
@@ -416,6 +495,7 @@ class ToolInfo:
     actuation: Mapping[str, float] = field(default_factory=dict)
     licences: tuple[str, ...] = ()
     amber: bool = False
+    hook_mm: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -426,6 +506,7 @@ class ToolInfo:
             "n_actuators": self.n_actuators,
             "max_opening_mm": None if self.max_opening_mm is None else round(self.max_opening_mm, 2),
             "reach_mm": None if math.isnan(self.reach_mm) else round(self.reach_mm, 2),
+            "hook_mm": round(self.hook_mm, 2),
             "actuation": dict(self.actuation),
             "licences": list(self.licences),
             "amber": self.amber,
@@ -501,9 +582,24 @@ def probe_tool(spec: EffectorSpec, task: TaskV2 | None = None) -> ToolInfo:
             actuation=dict(b.actuation),
             licences=tuple(sorted({s.license for s in b.sources})),
             amber=any(s.status == "amber" for s in b.sources),
+            hook_mm=measured_hook_mm(scene),
         )
     _TOOLS[key] = info
     return info
+
+
+def measured_hook_mm(scene: Any) -> float:
+    """How far the tool's tip reaches sideways past the rest of the tool and the flange (mm, 0 for
+    none): the hook pull's own ``Footprint.hook`` of the open head (the geoms wholly within 15 mm
+    of the tip, over 72 headings), with the flange counted as part of the tool when its face is
+    less than :data:`~rtt.studio.rules.HOOK_THROAT_MM` above the hook, so a plate flush under the
+    flange or a cup's lip is no hook and an L-shaped finger on a shank is one."""
+    from rtt.effectors.scene import FLANGE_RADIUS
+    from rtt.studio.primitives._common import footprint
+
+    fp = footprint(scene, 0.0)
+    _, depth, _, _ = fp.hook(flange=(FLANGE_FACE_M, FLANGE_RADIUS, HOOK_THROAT_MM / 1000.0))
+    return 1000.0 * max(0.0, depth)
 
 
 def _task_key(task: TaskV2) -> str:
@@ -601,17 +697,124 @@ def hold_chains(task_spec: TaskSpec) -> tuple[tuple[str, ...], ...]:
     return tuple(tuple(c) for c in out)
 
 
-def capability_problem(cand: Candidate, step: Step) -> str | None:
-    """Why ``cand`` cannot serve ``step``'s primitive (``None``: it can)."""
+def capability_problem(cand: Candidate, step: Step, info: ToolInfo | None = None) -> str | None:
+    """Why ``cand`` cannot serve ``step``'s primitive (``None``: it can).
+
+    A rigid tool without a grip (a library hook, pusher or driver) hooks when its measured tip
+    reaches far enough sideways past the rest of the tool and the flange (``info.hook_mm``,
+    :func:`measured_hook_mm`), whatever its tags say; ``info`` is probed when not given. Fingers
+    hook by gripping and soft arms by curling (their mechanism); a cup never hooks. A process tool
+    serves only its own process (:data:`PROCESS_CAPABILITIES`) and never hooks: the nut runner
+    measures no hook, and the tamper's pad, which overhangs its post like a T, is its press face,
+    rated to press, not to pull a lip."""
+    if cand.mechanism == "process":
+        return _process_problem(cand, step)
     if step.primitive in ACQUIRE:
         if cand.capabilities & ACQUIRE:
             return None
         return f"it cannot pick or hold a part ({step.primitive.value} step)"
     if step.primitive in cand.capabilities:
         return None
+    if step.primitive is PrimitiveKind.HOOK_PULL and cand.mechanism == "fingers":
+        info = info or probe_tool(cand.spec)
+        if not info.buildable:
+            return info.reason or "cannot be built"
+        if info.hook_mm >= HOOK_MIN_MM:
+            return None
+        return (
+            f"measured: its tip reaches {info.hook_mm:.0f} mm sideways past the rest of the tool and "
+            f"the flange; hooking a lip or handle needs {HOOK_MIN_MM:g} mm [assumed]"
+        )
     return _NO_CAPABILITY.get(
         (cand.mechanism, step.primitive), f"its capability tags do not include {step.primitive.value}"
     )
+
+
+def _process_problem(cand: Candidate, step: Step) -> str | None:
+    """Why a process tool cannot serve ``step``'s primitive (``None``: it is its process)."""
+    if step.primitive in cand.capabilities:
+        return None
+    does = _PROCESS_DOES.get(cand.spec.primitive, "a process tool does one process")
+    if step.primitive in ACQUIRE:
+        return f"{does}; it cannot pick or hold a part"
+    if step.primitive is PrimitiveKind.HOOK_PULL:
+        return f"{does}; it is not a hook, so it cannot pull a lip or handle"
+    return f"{does}; it cannot {_VERB.get(step.primitive, step.primitive.value)}"
+
+
+def _rule_refusal(cand: Candidate, step: Step, task_spec: TaskSpec) -> tuple[str, str] | None:
+    """The integrator rule (id, reason) that keeps ``cand`` off ``step`` (:func:`rule_ineligible`).
+    Reasons quote the object's label as the user wrote it."""
+    spec = cand.spec
+    obj = task_spec.object(step.object)
+    need = process_need(step, obj)
+    if need is not None and process_kind(spec) != need:
+        return "R05", _r05_reason(spec, step, obj, need)
+    if articulated(obj) and (is_tentacle(spec) or is_dexterous_hand(spec)):
+        what = "a dexterous hand" if is_dexterous_hand(spec) else "a soft arm or tentacle"
+        return (
+            "R03",
+            (
+                f'integrator rule R03: "{obj.label}" is a mechanism to open or press, which the rigid '
+                f"gripper or tool does by moving along it; {what} is used only if every rigid option fails"
+            ),
+        )
+    if is_soft_arm(spec):
+        if step.primitive is PrimitiveKind.INSERT:
+            return (
+                "R09",
+                (
+                    "integrator rule R09: a soft arm is not used to insert (it cannot hold a member "
+                    "stiffly along the seat axis)"
+                ),
+            )
+        mass = part_mass_kg(obj)
+        if mass is not None and mass > SOFT_ARM_MAX_PART_KG:
+            return (
+                "R09",
+                (
+                    f'integrator rule R09: "{obj.label}" weighs {mass:g} kg; a soft arm carries at most '
+                    f"{SOFT_ARM_MAX_PART_KG:g} kg [assumed]"
+                ),
+            )
+    return None
+
+
+def _r05_reason(spec: EffectorSpec, step: Step, obj: Any, need: str) -> str:
+    """R05's refusal of ``spec`` on a process step that needs the ``need`` process tool."""
+    if process_kind(spec) is not None:
+        why = f"{PROCESS_TOOLS[spec.primitive][1]} is a different process tool"
+    elif need == "nut_runner":
+        why = f"other tools turn a member only up to hand-tight, under {PROCESS_TORQUE_NM:g} N m [assumed]"
+    else:
+        why = "other tools do not press a tile level into its bed"
+    if need == "nut_runner":
+        torque = required_torque_nm(step) or PROCESS_TORQUE_NM
+        return (
+            f'integrator rule R05: tightening "{obj.label}" to {torque:g} N m is a process step for a '
+            f"nut runner; {why}"
+        )
+    return (
+        f'integrator rule R05: pressing "{obj.label}" into its bed is a process step for a tamper pad; {why}'
+    )
+
+
+def rule_ineligible(cand: Candidate, step: Step, task_spec: TaskSpec) -> str | None:
+    """Why an integrator rule keeps ``cand`` off ``step`` (``None``: no rule does).
+
+    * R05: a process step (:func:`rtt.studio.rules.process_need`: a twist or insert on a threaded
+      member that must reach :data:`~rtt.studio.rules.PROCESS_TORQUE_NM` [assumed] or more, a push
+      that presses a tile into its bed) is only for the process tool of its kind (a nut runner, a
+      tamper pad). The rule's one exception, a hand tool held in a gripper for light work at low
+      torque, is not modelled: under the threshold the gripper turns the member directly, unmarked.
+    * R03: soft arms, tentacles and dexterous hands do not do steps on articulated objects (lids,
+      doors, drawers, buttons: :data:`rtt.studio.rules.ARTICULATED_TEMPLATES`); :func:`prune`
+      readmits them for a hold chain no rigid candidate is left for.
+    * R09: soft arms do not insert and do not carry parts over 2.5 kg [assumed].
+
+    ``task_spec`` gives the step's object (the step names it only)."""
+    rule = _rule_refusal(cand, step, task_spec)
+    return None if rule is None else rule[1]
 
 
 def part_jaw_problem(cand: Candidate, step: Step) -> str | None:
@@ -626,19 +829,108 @@ def part_jaw_problem(cand: Candidate, step: Step) -> str | None:
 
 
 def _cup_mm(spec: EffectorSpec) -> float | None:
-    if mechanism_of(spec) != "suction":
+    """A single suction cup's diameter (mm); ``None`` for any other tool, a vacuum frame included
+    (a frame fits by the layout of its cups, :func:`_frame_problem`)."""
+    if mechanism_of(spec) != "suction" or is_frame(spec.params):
         return None
     d = spec.params.get("diameter_mm")
     return float(d) if isinstance(d, int | float) else None
 
 
+def _frame_of(spec: EffectorSpec) -> FrameGeometry | None:
+    """A vacuum frame's geometry, or ``None`` for any other tool."""
+    if mechanism_of(spec) != "suction" or not is_frame(spec.params):
+        return None
+    return FrameGeometry.from_params(spec.params)
+
+
+Face = tuple[Literal["box", "disc"], float, float]
+
+
+def _frame_problem(frame: FrameGeometry, face: Face, what: str) -> str | None:
+    """Whether a frame can hold on a top ``face`` (``("box", x, y)`` or ``("disc", d, d)``, mm,
+    centred under the wrist, the frame's x along the face's x as the pick aims it): a frame counts
+    as holding only with :attr:`~rtt.effectors.suction.FrameGeometry.min_sealed` cups sealed (half
+    of them rounded up, at least three), and a cup seals only where its lip lies on the face."""
+    shape, a, b = face
+    r = 500.0 * frame.cup.diameter  # mm: the lip circle's radius
+    covered = 0
+    for x_m, y_m in frame.positions:
+        x, y = 1000.0 * x_m, 1000.0 * y_m
+        if shape == "box":
+            covered += abs(x) + r <= 0.5 * a + 1e-6 and abs(y) + r <= 0.5 * b + 1e-6
+        else:
+            covered += math.hypot(x, y) + r <= 0.5 * a + 1e-6
+    need = frame.min_sealed
+    if covered >= need:
+        return None
+    return (
+        f"the {what} covers {covered} of the frame's {frame.n_cups} cups; the frame holds a part only "
+        f"with at least {need} of them sealed [assumed]"
+    )
+
+
+#: What an object without a threaded member is, in a nut runner's refusal (by template value).
+_NOT_THREADED: Final[Mapping[str, str]] = {
+    "port_plug": "a plug pushed into its port",
+    "quarter_turn_latch": "a quarter-turn latch",
+    "handwheel_valve": "a handwheel valve",
+}
+
+
+def _socket_problem(spec: EffectorSpec, obj: Any) -> str | None:
+    """Whether a nut runner's socket fits the object (``None``: it does, or the tool is not a nut
+    runner). It drives only a threaded member (:data:`~rtt.studio.rules.THREADED_TEMPLATES`: a
+    threaded joint, a panel's clamp; by value), not a plug, a latch or a valve. On a threaded
+    joint the socket engages by shape: a hex nut of its own size (a cap or coupling is round) that
+    stands at least :data:`~rtt.effectors.process_tool.MIN_MEMBER_MM` tall (measured: a shorter one
+    jams or slips)."""
+    from rtt.effectors.process_tool import MIN_MEMBER_MM, NutRunnerGeometry
+
+    if process_kind(spec) != "nut_runner":
+        return None
+    kind = obj.kind.value
+    if kind not in THREADED_TEMPLATES:
+        what = _NOT_THREADED.get(kind)
+        return "a nut runner drives only a threaded nut or clamp; " + (
+            f"{obj.name} is {what}" if what is not None else f"{obj.name} has no threaded member"
+        )
+    if kind != TemplateKind.THREADED_JOINT.value:
+        return None
+    p = obj.params
+    if p["member"] != "nut":
+        return f"the {p['member']} {obj.name} is round; a hex socket drives only a hex nut"
+    g = NutRunnerGeometry.from_params(spec.params)
+    size, cavity = 1000.0 * g.across_flats, 2000.0 * g.apothem
+    flats = float(p["diameter_mm"]) * math.cos(math.pi / 6.0)  # the template's nut: corner to corner
+    if not size - SOCKET_FIT_MM <= flats <= cavity:
+        return (
+            f"its {size:g} mm hex socket drives a {size:g} mm hex; the nut {obj.name} is "
+            f"{round(flats, 1):g} mm across flats"
+        )
+    height = float(p["length_mm"])
+    if height < MIN_MEMBER_MM - 1e-9:
+        return (
+            f"the nut {obj.name} is {height:g} mm tall; the nut runner's socket seats on members at least "
+            f"{MIN_MEMBER_MM:g} mm tall (measured)"
+        )
+    return None
+
+
 def fit_problem(cand: Candidate, info: ToolInfo, step: Step, task_spec: TaskSpec, task: TaskV2) -> str | None:
-    """Whether the tool fits the object the step touches (ruling 4), ``None`` when it does."""
+    """Whether the tool fits the object the step touches (ruling 4), ``None`` when it does. A cup
+    must be no wider than the face it seals on; a vacuum frame must have enough of its cups on it
+    (:func:`_frame_problem`); a nut runner's socket must fit the member (:func:`_socket_problem`)."""
     obj = task_spec.object(step.object)
     p = obj.params
     cup = _cup_mm(cand.spec)
+    frame = _frame_of(cand.spec)
+    seals = cup is not None or frame is not None
     opening = info.max_opening_mm
     kind = obj.kind
+    socket = _socket_problem(cand.spec, obj)
+    if socket is not None:
+        return socket
     picks_plug = step.primitive is PrimitiveKind.INSERT and kind is TemplateKind.PORT_PLUG
     if step.primitive is PrimitiveKind.INSERT and kind is TemplateKind.THREADED_JOINT:
         d = float(p["diameter_mm"])  # fingers grip a member in place across its flats; cups press its top
@@ -647,26 +939,42 @@ def fit_problem(cand: Candidate, info: ToolInfo, step: Step, task_spec: TaskSpec
         return None
     if step.primitive in ACQUIRE or picks_plug:  # an insert picks its plug off the table
         if kind is TemplateKind.PART:
-            if cup is not None and p["shape"] in ("box", "cylinder"):
-                face = (
-                    min(float(p["size_x_mm"]), float(p["size_y_mm"]))
-                    if p["shape"] == "box"
-                    else float(p["size_x_mm"])
-                )
-                if cup > face:
+            if seals and p["shape"] in ("box", "cylinder"):
+                sx = float(p["size_x_mm"])
+                sy = float(p["size_y_mm"]) if p["shape"] == "box" else sx
+                face = min(sx, sy)
+                if cup is not None and cup > face:
                     return f"its {cup:g} mm cup is wider than the {face:g} mm top face of {obj.name}"
+                if frame is not None:
+                    reason = _frame_problem(
+                        frame,
+                        ("box", sx, sy) if p["shape"] == "box" else ("disc", sx, sx),
+                        f"{sx:g} x {sy:g} mm top face of {obj.name}"
+                        if p["shape"] == "box"
+                        else f"{sx:g} mm round top face of {obj.name}",
+                    )
+                    if reason is not None:
+                        return reason
             reason = _fits_part(cand.spec, obj, task)
             return None if reason is None else f"{obj.name}: {reason}"
         if kind is TemplateKind.PORT_PLUG:
             d, length = float(p["plug_diameter_mm"]), float(p["plug_length_mm"])
             if cup is not None and cup > d:
                 return f"its {cup:g} mm cup is wider than the {d:g} mm top of the plug {obj.name}"
+            if frame is not None:
+                reason = _frame_problem(frame, ("disc", d, d), f"{d:g} mm round top of the plug {obj.name}")
+                if reason is not None:
+                    return reason
         elif kind is TemplateKind.THREADED_JOINT:
             d, length = float(p["diameter_mm"]), float(p["length_mm"])
-            if cup is not None and p["member"] != "cap":
+            if seals and p["member"] != "cap":
                 return f"{obj.name} (a {p['member']}) has an open top; a cup cannot seal on it"
             if cup is not None and cup > d:
                 return f"its {cup:g} mm cup is wider than the {d:g} mm cap {obj.name}"
+            if frame is not None:
+                reason = _frame_problem(frame, ("disc", d, d), f"{d:g} mm round top of the cap {obj.name}")
+                if reason is not None:
+                    return reason
         else:
             return None
         reason = _fits_part(cand.spec, _slug_instance(d, length), task)
@@ -676,14 +984,19 @@ def fit_problem(cand: Candidate, info: ToolInfo, step: Step, task_spec: TaskSpec
             d = float(p["diameter_mm"])
             if opening is not None and opening - OPENING_MARGIN_MM < d:
                 return f"it opens {opening:.0f} mm; the {p['member']} {obj.name} is {d:g} mm across"
-            if cup is not None and p["member"] != "cap":
+            if seals and p["member"] != "cap":
                 return f"{obj.name} (a {p['member']}) has an open top; a cup cannot seal on it"
-        if kind is TemplateKind.QUARTER_TURN_LATCH and cup is not None:
+            if frame is not None:
+                return _frame_problem(frame, ("disc", d, d), f"{d:g} mm round top of the cap {obj.name}")
+        if kind is TemplateKind.QUARTER_TURN_LATCH and seals:
             if p["head"] == "slot":
                 return f"the slot across the head of {obj.name} breaks a cup's seal"
-            fin = max(4.0, 0.2 * float(p["head_diameter_mm"]))
-            if cup > fin:
+            head = float(p["head_diameter_mm"])
+            fin = max(4.0, 0.2 * head)
+            if cup is not None and cup > fin:
                 return f"its {cup:g} mm cup is wider than the {fin:g} mm wing of {obj.name}"
+            if frame is not None:
+                return _frame_problem(frame, ("box", fin, head), f"{fin:g} x {head:g} mm wing of {obj.name}")
         return None
     if step.primitive is PrimitiveKind.HOOK_PULL and opening is not None:
         if kind is TemplateKind.HINGED_LID:
@@ -706,12 +1019,18 @@ def prune(
     *,
     task: TaskV2 | None = None,
     payload_kg: float = ARM_PAYLOAD_KG,
+    notes: list[dict[str, Any]] | None = None,
 ) -> tuple[dict[int, list[Candidate]], list[Pruned], dict[str, ToolInfo]]:
     """Capability pruning (module docstring): chain index -> the candidates that may run it,
-    every pruned (candidate, step) with its reason, and the tools' probe measurements."""
+    every pruned (candidate, step) with its reason, and the tools' probe measurements.
+
+    Integrator rules (:func:`rule_ineligible`) prune too. A candidate kept off a chain only by
+    rule R03 comes back when no other candidate is left for that chain ("unless every rigid
+    option fails"); each such readmission is appended to ``notes``."""
     task = task or default_task_v2()
     chains = hold_chains(task_spec)
     eligible: dict[int, list[Candidate]] = {j: [] for j in range(len(chains))}
+    held: dict[int, list[tuple[Candidate, str, str]]] = {j: [] for j in range(len(chains))}
     pruned: list[Pruned] = []
     infos: dict[str, ToolInfo] = {}
     for cand in candidates:
@@ -742,19 +1061,45 @@ def prune(
                 if reason is not None:  # the scene's own part for a tool that picks nothing refuses it
                     pruned.append(Pruned(cand.effector_id, cand.name, chain[0], reason))
                     continue
+            r03: tuple[str, str] | None = None
             for sid in chain:
                 step = task_spec.step(sid)
+                rule = _rule_refusal(cand, step, task_spec)
                 reason = (
-                    part_jaw_problem(cand, step)
-                    or capability_problem(cand, step)
+                    (rule[1] if rule is not None and rule[0] != "R03" else None)
+                    or part_jaw_problem(cand, step)
+                    or capability_problem(cand, step, info)
                     or fit_problem(cand, info, step, task_spec, task)
                 )
                 if reason is not None:
                     pruned.append(Pruned(cand.effector_id, cand.name, sid, reason))
                     ok = False
                     break
-            if ok:
+                if rule is not None and r03 is None:
+                    r03 = (sid, rule[1])
+            if ok and r03 is not None:
+                held[j].append((cand, *r03))
+            elif ok:
                 eligible[j].append(cand)
+    for j, chain in enumerate(chains):
+        if held[j] and not eligible[j]:  # R03: every rigid option fails, so they come back
+            eligible[j] = [c for c, _, _ in held[j]]
+            if notes is not None:
+                notes.append(
+                    {
+                        "rule": "R03",
+                        "chain": j,
+                        "steps": list(chain),
+                        "readmitted": [c.effector_id for c, _, _ in held[j]],
+                        "note": (
+                            "integrator rule R03 keeps soft arms, tentacles and dexterous hands off "
+                            "articulated steps unless every rigid option fails; no rigid candidate is "
+                            "left for these steps, so they compete"
+                        ),
+                    }
+                )
+        else:
+            pruned += [Pruned(c.effector_id, c.name, sid, reason) for c, sid, reason in held[j]]
     return eligible, pruned, infos
 
 
@@ -829,7 +1174,10 @@ class Cell:
 
 @dataclass
 class Screen:
-    """The per-step screen: the success matrix and what the combination search reads."""
+    """The per-step screen: the success matrix and what the combination search reads.
+
+    ``rule_notes``: what the integrator rules changed in pruning (an R03 readmission, :func:`prune`).
+    """
 
     task_spec: TaskSpec
     chains: tuple[tuple[str, ...], ...]
@@ -845,6 +1193,7 @@ class Screen:
     controllers: ControllerSet = "default"
     runs: int = 0
     wall_s: float = 0.0
+    rule_notes: list[dict[str, Any]] = field(default_factory=list)
 
     def rate(self, effector_id: str, chain: int) -> float:
         return self.chain_rate.get((effector_id, chain), 0.0)
@@ -915,6 +1264,7 @@ class Screen:
                 for (e, j), r in sorted(self.chain_rate.items(), key=lambda kv: (kv[0][1], kv[0][0]))
             ],
             "context_tools": list(self.context_tools),
+            "rule_notes": [dict(n) for n in self.rule_notes],
             "matrix": self.matrix(),
             "runs": self.runs,
             "wall_s": round(self.wall_s, 2),
@@ -935,7 +1285,8 @@ def screen(
     t0 = time.perf_counter()
     task = task or default_task_v2()
     conditions = tuple(conditions)
-    eligible, pruned, infos = prune(task_spec, candidates, task=task, payload_kg=payload_kg)
+    notes: list[dict[str, Any]] = []
+    eligible, pruned, infos = prune(task_spec, candidates, task=task, payload_kg=payload_kg, notes=notes)
     chains = hold_chains(task_spec)
     out = Screen(
         task_spec=task_spec,
@@ -946,6 +1297,7 @@ def screen(
         eligible=eligible,
         pruned=pruned,
         controllers=controllers,
+        rule_notes=notes,
     )
     context: dict[str, WorldState | None] = {c.condition_id: None for c in conditions}
     context_ok: dict[str, bool] = {c.condition_id: True for c in conditions}
@@ -1000,7 +1352,7 @@ def _cells(
     for sid in chain:
         outs = [next(o for o in r.steps if o.step_id == sid) for _, r, _ in rows]
         step = out.task_spec.step(sid)
-        used = acquire_primitive(cand.spec) if step.primitive in ACQUIRE else step.primitive
+        used = (acquire_primitive(cand.spec) if step.primitive in ACQUIRE else None) or step.primitive
         ok = [o for o in outs if o.success]
         dur = [o.duration_s for o in ok] or [o.duration_s for o in outs if o.duration_s > 0] or [0.0]
         out.cells[(cand.effector_id, sid)] = Cell(
@@ -1046,15 +1398,7 @@ class BracketGeometry:
 
 
 def _rot_x(deg: float) -> np.ndarray:
-    a = math.radians(deg)
-    c, s = math.cos(a), math.sin(a)
-    return np.array([[1.0, 0.0, 0.0], [0.0, c, -s], [0.0, s, c]])
-
-
-def _rot_z(deg: float) -> np.ndarray:
-    a = math.radians(deg)
-    c, s = math.cos(a), math.sin(a)
-    return np.array([[c, -s, 0.0], [s, c, 0.0], [0.0, 0.0, 1.0]])
+    return rot_x(math.radians(deg))
 
 
 def _geom_spheres(model: mujoco.MjModel, data: mujoco.MjData, geoms: Iterable[int]) -> np.ndarray:
@@ -1143,19 +1487,263 @@ def _flange_frame(scene: Any, data: mujoco.MjData, geoms: Iterable[int], angle_a
     return np.column_stack([flange, sp[:, 3]])
 
 
-def last_link_intrusion(spheres: np.ndarray) -> float:
+def last_link_intrusion(spheres: np.ndarray, face: float = FLANGE_FACE_M) -> float:
     """How far (m) any sphere (flange frame: centre, radius) enters the arm's last link: a cylinder
     of :data:`LAST_LINK_RADIUS_M` upward from the flange's mounting face (the floating wrist does
-    not model the arm, so this is its keep-out) [assumed]; 0 when none does."""
+    not model the arm, so this is its keep-out) [assumed]; 0 when none does. ``face``: where the
+    cylinder starts (:data:`ARM_ABOVE_PITCH_M` for the arm's link before the pitch joint)."""
     if not len(spheres):
         return 0.0
     c, r = spheres[:, :3], spheres[:, 3]
     d_rad = np.maximum(0.0, np.linalg.norm(c[:, :2], axis=1) - LAST_LINK_RADIUS_M)
-    d_z = np.maximum(0.0, FLANGE_FACE_M - c[:, 2])
+    d_z = np.maximum(0.0, face - c[:, 2])
     inside = np.hypot(d_rad, d_z) < r - 0.002
     if not np.any(inside):
         return 0.0
-    return float(np.max((c[:, 2] + r - FLANGE_FACE_M)[inside]))
+    return float(np.max((c[:, 2] + r - face)[inside]))
+
+
+_LIP_APERTURES: dict[tuple[str, str], tuple[float | None, float | None]] = {}
+_PROBES: dict[tuple[str, str], Any] = {}
+
+
+def _probe(spec: EffectorSpec, task: TaskV2) -> Any:
+    """The tool's probe scene (:func:`probe_scene`), cached as :func:`_apertures` caches its
+    apertures (a few at a time: a scene is large)."""
+    key = (spec.effector_id, _task_key(task))
+    if key not in _PROBES:
+        _PROBES[key] = probe_scene(spec, task)[0]
+        while len(_PROBES) > 16:
+            _PROBES.pop(next(iter(_PROBES)))
+    return _PROBES[key]
+
+
+def _apertures(spec: EffectorSpec, task: TaskV2) -> tuple[float | None, float | None]:
+    """The tool's open and shut apertures along its closing axis (m), calibrated on its probe scene
+    as a controller calibrates it (cached)."""
+    from rtt.studio.primitives._common import footprint
+
+    key = (spec.effector_id, _task_key(task))
+    if key not in _LIP_APERTURES:
+        scene, _ = probe_scene(spec, task)
+        _LIP_APERTURES[key] = (
+            (None, None)
+            if scene is None
+            else (footprint(scene, 0.0).aperture(), footprint(scene, 1.0).aperture())
+        )
+    return _LIP_APERTURES[key]
+
+
+def _angle_bounds(step: Step) -> tuple[float | None, float | None]:
+    lo = [c.at_least for c in step.success if c.quantity == "angle_deg" and c.at_least is not None]
+    hi = [c.at_most for c in step.success if c.quantity == "angle_deg" and c.at_most is not None]
+    return (max(lo) if lo else None), (min(hi) if hi else None)
+
+
+def tilted_poses(
+    setup: Setup,
+    step: Step,
+    tool: int,
+    scene: Any,
+    data: mujoco.MjData,
+    task: TaskV2,
+    tcp_palm: np.ndarray,
+    *,
+    rolled: bool = False,
+) -> list[tuple[np.ndarray, float, float, float]]:
+    """The pitched engagement poses of ``step`` run by head ``tool`` as (TCP in the world, yaw, roll,
+    pitch), or none when its controller keeps the tool straight down: a lid's lip pinched from the
+    front (:mod:`rtt.studio.primitives.hook_pull`) along the lid's arc from closed to the pull's
+    goal; a lid pushed shut by carrying it (:mod:`rtt.studio.primitives.push`), pinched at its free
+    edge along its arc from the furthest open angle the controller can take it from (past
+    vertical, up to its stop) to closed; a push from the front at its handle on an upright face.
+    ``tcp_palm``: the head's TCP in the palm frame with it presented. As the controllers do, a
+    tilted approach the palm cannot reach (it sits the tool's length out) is not taken. A segment
+    starts at roll 0 and only a twist turns it, so the roll is 0 unless ``rolled`` (an earlier step
+    of the segment turned it): then a pinch's roll is either half turn, a push's every quarter
+    turn."""
+    from types import SimpleNamespace
+
+    from rtt.effectors.scene import MOUNT_Z
+    from rtt.studio.primitives._common import (
+        PRESHAPE_CLEARANCE,
+        box_corners,
+        footprint,
+        in_reach,
+        preshape_closure,
+        rotate,
+    )
+    from rtt.studio.primitives.hook_pull import (
+        lip_pinch_fits,
+        panel_goal,
+        pinch_depth,
+        pinch_pitches,
+        pinch_reach,
+        pinch_yaw,
+        pull_on_extent,
+        two_finger,
+    )
+    from rtt.studio.primitives.push import (
+        APPROACH,
+        FRONT_PITCH,
+        PAST_VERTICAL,
+        STANDOFF,
+        closed_inward,
+        front_yaw,
+        lid_hold,
+        lid_obstacles,
+        pinch_closes,
+        upright,
+    )
+
+    obj = scene.objects[step.object]
+    info = obj.handles.info
+    lim = math.radians(scene.wrist.pitch_range_deg)
+    build = next(h for h in scene.heads if h.tool == tool).build
+    tip_drop = max(0.0, float(build.tcp[2]) - (MOUNT_Z - float(build.reach)))
+    tcp_palm = np.asarray(tcp_palm, dtype=np.float64)
+    tip = tcp_palm - np.array([0.0, 0.0, tip_drop])
+
+    def palm(point: np.ndarray, r: np.ndarray, tool_point: np.ndarray) -> np.ndarray:
+        return point - r @ tool_point
+
+    out: list[tuple[np.ndarray, float, float, float]] = []
+    if (
+        step.primitive is PrimitiveKind.HOOK_PULL
+        and obj.kind is TemplateKind.HINGED_LID
+        and info["orientation"] == 0.0
+        and info["feature"] == 0.0
+        and two_finger(setup.tools[tool])
+        and lip_pinch_fits(*_apertures(setup.tools[tool], task), float(info["thickness_m"]))
+    ):
+        axis = np.array([info["axis_x"], info["axis_y"], info["axis_z"]])
+        hinge, handle = obj.site_pos(data, "hinge"), obj.site_pos(data, "handle")
+        radial = handle - hinge
+        radial = radial - axis * float(axis @ radial)
+        radial[2] = 0.0
+        u_in = -radial / max(1e-9, float(np.linalg.norm(radial)))
+        yaw, sense = pinch_yaw(u_in, axis, 0.0)
+        goal = panel_goal(info, *_angle_bounds(step))
+        pitch0, pitch_end = pinch_pitches(sense, 0.0, goal, lim)
+        if abs(pitch0) > lim or abs(pitch_end) > lim:
+            return out  # the controller hooks the lip instead, straight down
+        n = max(2, math.ceil(math.degrees(abs(goal)) / TILT_STEP_DEG) + 1)
+        radius = float(np.linalg.norm(np.cross(axis, handle - hinge)))
+        # a pull on to a force goal goes on along the arc (the pitch held at the goal's)
+        ext = pull_on_extent(SimpleNamespace(step=step, task=task), info, True, goal, goal, radius)
+        bounds = (min(pitch0, pitch_end), max(pitch0, pitch_end))
+        depth = pinch_depth(info["feature_m"])
+        for roll in (0.0, math.pi) if rolled else (0.0,):
+            r0 = wrist_rotation(yaw, roll, pitch0)
+            t_dir = r0 @ np.array([0.0, 0.0, -1.0])
+            tcp0 = handle + (depth - tip_drop) * t_dir
+            if pinch_reach(
+                handle,
+                t_dir,
+                depth,
+                tip_drop,
+                tcp_palm,
+                hinge,
+                axis,
+                yaw,
+                roll,
+                sense,
+                pitch0,
+                bounds,
+                goal + ext,
+            ):
+                return []  # the controller hooks the lip instead, straight down
+            for theta in np.linspace(0.0, goal, n):
+                out.append(
+                    (hinge + rotate(tcp0 - hinge, axis, float(theta)), yaw, roll, pitch0 + sense * theta)
+                )
+        return out
+    if (
+        step.primitive is PrimitiveKind.PUSH
+        and obj.kind is TemplateKind.HINGED_LID
+        and pinch_closes(step, info)
+        and two_finger(setup.tools[tool])
+        and lip_pinch_fits(*_apertures(setup.tools[tool], task), float(info["thickness_m"]))
+    ):
+        # the lid may start anywhere past vertical up to its stop: the carry is checked from the
+        # furthest open angle the controller would carry it from (the same hold, the whole carry in
+        # the palm's reach, push.lid_hold and hook_pull.pinch_reach), down to where it lets go
+        axis = np.array([info["axis_x"], info["axis_y"], info["axis_z"]])
+        hinge, handle = obj.site_pos(data, "hinge"), obj.site_pos(data, "handle")
+        yaw, sense = pinch_yaw(closed_inward(info), axis, 0.0)
+        probe = _probe(setup.tools[tool], task)
+        tcp_probe = np.asarray(probe.active.tcp_wrist, dtype=np.float64)
+
+        def corners_at(grip: float) -> np.ndarray:
+            # the head straight down about its TCP, as presented on the palm (tcp_palm)
+            fp_at = lambda c: footprint(probe, c)
+            closure = preshape_closure(fp_at, grip, PRESHAPE_CLEARANCE)
+            return box_corners(fp_at(closure).solids) - tcp_probe + tcp_palm
+
+        obstacles = lid_obstacles(scene, step.object, scene.model, data)
+        top = float(info["max_angle_rad"])
+        starts = np.linspace(top, PAST_VERTICAL, max(2, math.ceil(math.degrees(top - PAST_VERTICAL)) + 1))
+        for roll in (0.0, math.pi) if rolled else (0.0,):
+            for start in starts:
+                a = float(start)
+                hold = lid_hold(
+                    info,
+                    hinge,
+                    rotate(handle - hinge, axis, a) + hinge,
+                    a,
+                    yaw,
+                    roll,
+                    sense,
+                    tip_drop,
+                    tcp_palm,
+                    corners_at,
+                    obstacles,
+                )
+                if hold is None:
+                    continue
+                pitch0, pitch_end = pinch_pitches(sense, a, hold.release, lim)
+                if abs(pitch0) > lim or abs(pitch_end) > lim:
+                    continue
+                t_dir = wrist_rotation(yaw, roll, pitch0) @ np.array([0.0, 0.0, -1.0])
+                bounds = (min(pitch0, pitch_end), max(pitch0, pitch_end))
+                if pinch_reach(
+                    hold.point, t_dir, hold.depth, tip_drop, tcp_palm, hinge, axis, yaw, roll, sense, pitch0,
+                    bounds, hold.release - a,
+                ):  # fmt: skip
+                    continue
+                tcp0 = hold.point + (hold.depth - tip_drop) * t_dir
+                n = max(2, math.ceil(math.degrees(a - hold.release) / TILT_STEP_DEG) + 1)
+                for theta in np.linspace(a, hold.release, n):
+                    out.append(
+                        (
+                            hinge + rotate(tcp0 - hinge, axis, float(theta) - a),
+                            yaw,
+                            roll,
+                            pitch0 + sense * (float(theta) - a),
+                        )
+                    )
+                break  # the furthest open start the controller carries from covers every later one
+        return out
+    if step.primitive is PrimitiveKind.PUSH and step.params.get("approach", "top") == "front":
+        if obj.kind is TemplateKind.DRAWER:
+            normals = [np.array([info["pull_x"], info["pull_y"], 0.0])]
+        elif obj.kind is TemplateKind.HINGED_LID:
+            normals = [np.array([info["out0_x"], info["out0_y"], info["out0_z"]])]
+        else:  # any upright face: every heading
+            normals = [
+                np.array([math.cos(a), math.sin(a), 0.0]) for a in np.radians(np.arange(0.0, 360.0, 15.0))
+            ]
+        site = obj.site_pos(data, step.handle)
+        for nrm in normals:
+            if not upright(nrm):
+                continue
+            yaw = front_yaw(nrm, 0.0)
+            for roll in np.radians([0.0, 90.0, 180.0, 270.0]) if rolled else (0.0,):
+                r = wrist_rotation(yaw, float(roll), FRONT_PITCH)
+                stand = site + STANDOFF * nrm
+                if in_reach(palm(stand, r, tip), palm(stand + APPROACH * nrm, r, tip)):
+                    out.append((site, yaw, float(roll), FRONT_PITCH))
+    return out
 
 
 def swept_volume_problems(
@@ -1227,41 +1815,70 @@ def swept_volume_problems(
                     f"switching to head {seg.tool} at the home pose swings the heads through {what}"
                 )
                 break
-    # 2. at every step's engagement pose the idle head and the bracket clear everything else
+    # 2. at every step's engagement pose the idle head and the bracket clear everything else; a
+    # step that tilts the wrist at its pitched poses, and no head or bracket arm swings into the
+    # arm's link before the pitch joint while it tilts
+    tool_side = np.vstack([heads[0], heads[1], stack])
     for seg in segs:
         k, idle = seg.tool, 1 - seg.tool
         r_present = _rot_x(-a[k])
         tcp_palm = r_present @ tcp[k]
         body = np.vstack([heads[idle], stack])
-        for sid in seg.step_ids:
+        for j, sid in enumerate(seg.step_ids):
             step = task_spec.step(sid)
             obj = scene.objects[step.object]
             site = obj.site_pos(data, step.handle)
             skip = {step.object} | ({step.target} if step.target else set())
             keep = np.array([nm not in skip for nm in names], dtype=bool)
-            yaw0 = task_spec.object(step.object).pose.yaw_deg
-            yaws = (
-                [yaw0 + 15.0 * i for i in range(24)]
-                if step.info.uses_roll
-                else [yaw0 + 90.0 * i for i in range(4)]
-            )
+            rolled = any(task_spec.step(e).info.uses_roll for e in seg.step_ids[:j])
+            tilted = tilted_poses(setup, step, k, scene, data, task, tcp_palm, rolled=rolled)
+            if tilted:
+                poses = tilted
+            else:
+                yaw0 = task_spec.object(step.object).pose.yaw_deg
+                yaws = (
+                    [yaw0 + 15.0 * i for i in range(24)]
+                    if step.info.uses_roll
+                    else [yaw0 + 90.0 * i for i in range(4)]
+                )
+                poses = [(site, math.radians(y), 0.0, 0.0) for y in yaws]
             hit = None
-            for yaw in yaws:
-                rz = _rot_z(yaw)
-                wrist = site - rz @ tcp_palm
-                pts = (rz @ r_present @ body[:, :3].T).T + wrist
+            for point, yaw, roll, pitch in poses:
+                r = wrist_rotation(yaw, roll, pitch)
+                wrist = point - r @ tcp_palm
+                pts = (r @ r_present @ body[:, :3].T).T + wrist
                 g, kk = _gap(np.column_stack([pts, body[:, 3]]), lo[keep], hi[keep], table_z)
                 worst = min(worst, g)
                 if g < clearance_m:
                     hit = (
                         "the table" if kk < 0 else [nm for nm, kp in zip(names, keep, strict=True) if kp][kk]
                     )
+                    tilt = f" (the wrist tilted {math.degrees(pitch):.0f} deg)" if pitch else ""
                     break
             if hit is not None:
                 problems.append(
-                    f"during {sid} the idle head {idle} or the bracket comes within "
+                    f"during {sid}{tilt} the idle head {idle} or the bracket comes within "
                     f"{1000 * clearance_m:g} mm of {hit}"
                 )
+            # the arm's link before the pitch joint does not tilt: in its frame (the flange's at
+            # pitch 0) the tool side turns by Rx(a_k) Rx(pitch) Rz(roll) Rx(-a_k) as the wrist
+            # tilts from straight down through every pitch the step uses
+            if tilted:
+                rolls = sorted({round(float(rl), 9) for _, _, rl, _ in tilted})
+                ends = [float(pt) for _, _, _, pt in tilted] + [0.0]
+                span = np.arange(min(ends), max(ends) + 1e-9, math.radians(TILT_STEP_DEG))
+                deepest, at = 0.0, 0.0
+                for roll, pitch in itertools.product(rolls, [*span, *ends]):
+                    rel = _rot_x(a[k]) @ wrist_rotation(0.0, roll, pitch) @ r_present
+                    sp = np.column_stack([(rel @ tool_side[:, :3].T).T, tool_side[:, 3]])
+                    depth = last_link_intrusion(sp, ARM_ABOVE_PITCH_M)
+                    if depth > deepest:
+                        deepest, at = depth, pitch
+                if deepest > 0.0:
+                    problems.append(
+                        f"during {sid} the wrist tilted {math.degrees(at):.0f} deg swings a head or the "
+                        f"bracket {1000 * deepest:.0f} mm into the arm's link above the pitch joint"
+                    )
     return problems, worst, scene
 
 
@@ -1602,18 +2219,32 @@ def combine(
     return Combinations(plans, rejected, counts)
 
 
+def _finalist_key(p: SetupPlan) -> tuple[Any, ...]:
+    """Finalist order (integrator rules R09, R10): setups predicted to complete at least once go
+    rigid first, then those with a soft arm, then those with a dexterous hand; setups predicted
+    never to complete come last whatever their tools; then the predicted key."""
+    group = RULE_CLASSES.index(setup_rule_class(p.setup)) if p.predicted > 0.0 else len(RULE_CLASSES)
+    return (group, *p.key())
+
+
 def choose_finalists(
     combos: Combinations, sc: Screen, n_finalists: int = N_FINALISTS
 ) -> tuple[list[SetupPlan], SetupPlan | None]:
-    """The finalists (3 to 5): the best predicted setup, the best single off-the-shelf effector,
-    the best tool change and the best multi-tool head, then the next best; and that best single."""
+    """The finalists (3 to 5) and the best single off-the-shelf effector, in the rigid-first order
+    of :func:`_finalist_key` (a soft-arm or hand setup takes a slot only once the rigid setups
+    predicted to complete have one): the best predicted setup, the best rigid single tool from any
+    source (the R01 baseline candidate: designed and part-shaped jaws count), the best single
+    off-the-shelf effector, the best tool change and the best multi-tool head, then the next best."""
     if not 1 <= n_finalists <= 5:
         raise ValueError("between 1 and 5 finalists")
-    order = sorted(combos.plans, key=lambda p: p.key())
+    order = sorted(combos.plans, key=_finalist_key)
     singles = [
         p for p in order if p.setup.kind is SetupKind.SINGLE and sc.candidates[p.chain_tools[0]].off_the_shelf
     ]
     best_single = singles[0] if singles else None
+    rigid_single = next(
+        (p for p in order if p.setup.kind is SetupKind.SINGLE and setup_rule_class(p.setup) == "rigid"), None
+    )
     picks: list[SetupPlan] = []
 
     def add(p: SetupPlan | None) -> None:
@@ -1625,6 +2256,7 @@ def choose_finalists(
             picks.append(p)
 
     add(order[0] if order else None)
+    add(rigid_single)
     add(best_single)
     for kind in (SetupKind.TOOL_CHANGE, SetupKind.MULTI_HEAD):
         add(next((p for p in order if p.setup.kind is kind), None))

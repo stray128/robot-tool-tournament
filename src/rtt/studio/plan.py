@@ -2,16 +2,25 @@
 
 A step runs as: :meth:`PrimitiveController.plan` once at the step's start (it locates objects
 through :meth:`StepContext.observe_site`, so the condition's placement error stays hidden), then
-:meth:`PrimitiveController.command` every control tick, which returns targets for the five wrist
-servos (x, y, z, yaw, roll) and controls for the active head's actuators
-(:class:`PrimitiveCommand`). The :class:`SuccessPredicate` observes the true state at every check
+:meth:`PrimitiveController.command` every control tick, which returns targets for the six wrist
+servos (x, y, z, yaw, roll, pitch) and controls for the active head's actuators
+(:class:`PrimitiveCommand`). A controller may return the first five targets only: the runner then
+holds the pitch where it was when the step began (:attr:`StepContext.wrist_pitch_start`). The
+:class:`SuccessPredicate` observes the true state at every check
 tick and at the step's end (:meth:`SuccessPredicate.observe`, accumulating peaks and last values)
-and gives the :class:`StepVerdict` when the step ends. The runner (:mod:`rtt.studio.episode`) owns
+and gives the :class:`StepVerdict` when the step ends. A predicate that also defines
+``observe_tick(t, ctx, model, data, acc)`` is called after every control tick, which is every
+physics step at the task's 2 ms timestep: for what moves too fast for the check ticks, such as a
+lid meeting its stop. A verdict may carry plain caveats for the step
+(:attr:`StepVerdict.caveats`), which the step's outcome shows with its own. The runner
+(:mod:`rtt.studio.episode`) owns
 the physics, the clock, the trajectory hash and the contract checks:
 
 * a controller acts only through its returned targets and controls (never ``qfrc_applied`` or
   ``xfrc_applied``), every value finite, one effector control per active actuator;
 * the roll target may not move faster than ``STUDIO_WRIST.roll_speed_max_deg_s``;
+* the pitch target may not move faster than ``STUDIO_WRIST.pitch_speed_dps`` nor leave
+  +-``STUDIO_WRIST.pitch_range_deg``;
 * the idle head's actuators are held at their open controls, and the objects' passive actuators
   are driven by their template builders.
 
@@ -35,6 +44,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, runtime_checkab
 import numpy as np
 
 from rtt.effectors.types import FrozenDict
+from rtt.studio.scene import wrist_rotation
 from rtt.studio.types import MAX_STEP_S, STEP_FAILURE_MODES, PrimitiveKind, Step
 
 if TYPE_CHECKING:
@@ -47,6 +57,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "HELD_PENETRATION_MAX_MM",
+    "PENETRATION_TRANSIENT_MS",
     "ControllerSet",
     "PrimitiveCommand",
     "PrimitiveController",
@@ -60,12 +71,19 @@ __all__ = [
     "criteria_verdict",
     "get_primitive",
     "override_primitive",
+    "penetration_unreliable",
     "register_primitive",
 ]
 
 ControllerSet = Literal["default", "reference"]
-#: The v1 rule: tool-object penetration above this while scoring makes a result unreliable.
+#: Penetration above this (mm) in any contact pair but a designed one (the runner measures them:
+#: :class:`rtt.studio.episode.PenetrationMonitor`) is a physics-validity concern (the v1 limit).
 HELD_PENETRATION_MAX_MM: Final = 1.0
+#: ms: penetration above :data:`HELD_PENETRATION_MAX_MM` for no longer than this is an impact
+#: transient (a part landing on a floor): flagged in the step's quantities, not failed. Longer, the
+#: result is ``physics_unreliable``. The time is the longest unbroken run of control ticks one
+#: contact pair stayed above the limit, times the control period.
+PENETRATION_TRANSIENT_MS: Final = 10.0
 
 
 class PrimitiveNotSimulated(LookupError):
@@ -78,8 +96,9 @@ class StepContext:
 
     * ``obj``/``target``: the step's object (and destination) resolved in the compiled scene.
     * ``head``: the active head (its family build, prefix ``""``, TCP and axis in the wrist frame).
-    * ``wrist_start``: the five wrist servo targets when the step starts (x, y, z in m, yaw and
-      roll in rad); ``t0``: the task clock then (s).
+    * ``wrist_start``: the first five wrist servo targets when the step starts (x, y, z in m, yaw
+      and roll in rad); ``wrist_pitch_start``: the sixth, the pitch (rad, 0 = tool straight down);
+      ``t0``: the task clock then (s).
     * ``aim_offsets``: per object, the condition's placement error (world m). Controllers locate
       objects only through :meth:`observe_site`, which includes it, so the error stays unknown to
       them (the v1 rule); predicates read the true state.
@@ -96,6 +115,7 @@ class StepContext:
     seed: int
     t0: float = 0.0
     aim_offsets: Mapping[str, tuple[float, float, float]] = field(default_factory=dict)
+    wrist_pitch_start: float = 0.0
 
     def observe_site(self, data: mujoco.MjData, handle: str, obj: str | None = None) -> np.ndarray:
         """Where the controller believes a handle is: the true site plus the object's aim offset."""
@@ -110,11 +130,10 @@ class StepContext:
     def object_state(self, model: mujoco.MjModel, data: mujoco.MjData) -> dict[str, float]:
         return self.builder.state(self.obj, model, data)
 
-    def tcp_offset(self, yaw: float) -> np.ndarray:
-        """The active TCP relative to the wrist origin, world frame, for wrist ``yaw`` (roll 0)."""
-        c, s = math.cos(yaw), math.sin(yaw)
-        x, y, z = self.head.tcp_wrist
-        return np.array([c * x - s * y, s * x + c * y, z])
+    def tcp_offset(self, yaw: float, pitch: float = 0.0) -> np.ndarray:
+        """The active TCP relative to the wrist origin, world frame, for wrist ``yaw`` and
+        ``pitch`` (roll 0)."""
+        return wrist_rotation(yaw, 0.0, pitch) @ np.asarray(self.head.tcp_wrist, dtype=np.float64)
 
 
 @dataclass(frozen=True)
@@ -133,9 +152,13 @@ class StepPlan:
 
 @dataclass(frozen=True)
 class PrimitiveCommand:
-    """Targets of the five wrist servos and controls of the active head's actuators."""
+    """Targets of the six wrist servos and controls of the active head's actuators.
 
-    wrist: np.ndarray  # (5,): x, y, z (m, wrist origin), yaw (rad), roll (rad, continuous)
+    ``wrist`` may hold the first five targets only; the runner then holds the pitch where it was
+    when the step began.
+    """
+
+    wrist: np.ndarray  # (6,): x, y, z (m, wrist origin), yaw, roll (rad, continuous), pitch (rad); or (5,)
     effector: np.ndarray  # (n_active,)
 
 
@@ -157,11 +180,13 @@ class PrimitiveController(Protocol):
 
 @dataclass(frozen=True)
 class StepVerdict:
-    """A predicate's verdict: success, the failure mode (``None`` on success), what it measured."""
+    """A predicate's verdict: success, the failure mode (``None`` on success), what it measured,
+    and plain caveats on what happened (shown on the step's outcome; never a failure by itself)."""
 
     success: bool
     failure_mode: str | None
     quantities: Mapping[str, float]
+    caveats: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if self.failure_mode is not None and self.failure_mode not in STEP_FAILURE_MODES:
@@ -169,6 +194,7 @@ class StepVerdict:
         if self.success == (self.failure_mode is not None):
             raise ValueError("a verdict succeeds exactly when it has no failure mode")
         object.__setattr__(self, "quantities", FrozenDict({k: float(v) for k, v in self.quantities.items()}))
+        object.__setattr__(self, "caveats", tuple(str(c) for c in self.caveats))
 
 
 @runtime_checkable
@@ -188,12 +214,14 @@ class SuccessPredicate(Protocol):
 def criteria_verdict(step: Step, measured: Mapping[str, float]) -> StepVerdict:
     """The shared rule every predicate ends with.
 
-    In order: penetration above :data:`HELD_PENETRATION_MAX_MM` is ``physics_unreliable``; a
-    peak ``force_n`` or ``torque_nm`` above the step's limit is ``constraint_exceeded``; a
-    success criterion that fails, or whose quantity was not measured, is ``criterion_not_met``.
+    In order: a penetration above :data:`HELD_PENETRATION_MAX_MM` that lasted more than
+    :data:`PENETRATION_TRANSIENT_MS` is ``physics_unreliable`` (:func:`penetration_unreliable`); a
+    peak ``force_n`` or ``torque_nm`` above the step's limit is ``constraint_exceeded``; a success
+    criterion that fails, or whose quantity was not measured, is ``criterion_not_met``. A bound is
+    met within its quantity's tolerance (:data:`~rtt.studio.types.CRITERION_TOLERANCE`).
     """
     q = {k: float(v) for k, v in measured.items()}
-    if q.get("penetration_mm", 0.0) > HELD_PENETRATION_MAX_MM:
+    if penetration_unreliable(q):
         return StepVerdict(False, "physics_unreliable", q)
     c = step.constraints
     if c.max_force_n is not None and q.get("force_n", 0.0) > c.max_force_n:
@@ -203,6 +231,26 @@ def criteria_verdict(step: Step, measured: Mapping[str, float]) -> StepVerdict:
     if not all(crit.passes(q.get(crit.quantity)) for crit in step.success):
         return StepVerdict(False, "criterion_not_met", q)
     return StepVerdict(True, None, q)
+
+
+def penetration_unreliable(q: Mapping[str, float]) -> bool:
+    """Whether the measured penetration makes a step ``physics_unreliable``.
+
+    The runner measures ``penetration_mm`` (the peak over every contact pair but the designed
+    ones) and ``penetration_ms`` (how long one pair stayed above the limit). A peak at or under
+    :data:`HELD_PENETRATION_MAX_MM` is fine. Above it, an excursion of
+    :data:`PENETRATION_TRANSIENT_MS` or less is an impact transient (the runner flags it as
+    ``penetration_transient`` and the step is not failed); a longer one is unreliable. Without a
+    ``penetration_ms`` (no runner measured it) the peak alone decides, the v1 rule. A NaN peak is
+    unreliable.
+    """
+    peak = float(q.get("penetration_mm", 0.0))
+    if math.isnan(peak):
+        return True
+    if peak <= HELD_PENETRATION_MAX_MM:
+        return False
+    ms = q.get("penetration_ms")
+    return ms is None or not float(ms) <= PENETRATION_TRANSIENT_MS
 
 
 def contact_summary(

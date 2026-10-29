@@ -17,15 +17,16 @@ import path from "node:path";
 
 import {
   brandPattern,
+  type HeroEntry,
   type HeroPage,
+  laneHeaderProblems,
   PACK_CAP_BYTES,
   parseStudioHero,
   parseStudioIndex,
   type StudioIndex,
 } from "@/components/studio/schema";
-import { isV2, parseAnyReplayHeader, referencedAssetFiles } from "@/lib/replay";
+import { isV2, parseAnyReplayHeader, poseBytes, referencedAssetFiles } from "@/lib/replay";
 import { parseRecordedSession, type RecordedSession } from "@/lib/session";
-import { POSE_STRIDE } from "@/lib/track.mjs";
 import { DataError } from "@/lib/validate";
 
 /** Where the site's data and assets live (public/data and public/assets of web/). */
@@ -99,12 +100,12 @@ export function checkLaneFiles(page: HeroPage, file: string, dirs: StudioDirs = 
     if (header.meta.part_id !== page.hero) fail(`the replay belongs to ${header.meta.part_id}, not ${page.hero}`);
     const metaSha = (header.meta as Record<string, unknown>).traj_sha;
     if (typeof metaSha === "string" && metaSha !== lane.traj_sha) fail("the replay's traj_sha differs from the lane's");
-    if (header.n_frames !== lane.n_frames || header.fps !== lane.fps) {
-      fail(`the header has ${header.n_frames} frames at ${header.fps} fps; the page says ${lane.n_frames} at ${lane.fps}`);
-    }
+    // Frames, fps, encoding, keyframing error, clock and cuts (a keyframed lane's clock is its `t`).
+    const problems = laneHeaderProblems(lane, header);
+    if (problems.length) fail(problems.join("; "));
     const dir = path.dirname(headerFile);
     const bin = path.join(dir, header.bin);
-    const poses = header.n_frames * header.n_bodies * POSE_STRIDE * 4;
+    const poses = poseBytes(header);
     if (!existsSync(bin) || statSync(bin).size !== poses) fail(`${header.bin} is missing or is not ${poses} bytes`);
     let served = statSync(headerFile).size + poses;
     if (header.overlays) {
@@ -207,4 +208,31 @@ export function getStudioHeroIds(dirs: StudioDirs = DEFAULT_DIRS): string[] {
     }
   }
   return ids;
+}
+
+/**
+ * The published v1 hero routes (/studio/<hero>/) and the case each showed. When an export renames
+ * a hero (v2 heroes are named by their case id) or leaves one out, its old route stays as a
+ * redirect: to the hero with the same case, else to the worked examples.
+ */
+export const V1_HERO_ROUTES: Readonly<Record<string, string>> = { h1: "h1_tote", h2: "h2_coupling", h3: "h3_cabinet" };
+
+/** Old routes the index no longer lists, and where each now leads (relative to /studio/<old>/). */
+export function legacyHeroRoutes(dirs: StudioDirs = DEFAULT_DIRS): { hero: string; to: string; title: string | null }[] {
+  const heroes = getStudioIndex(dirs)?.heroes ?? [];
+  return Object.entries(V1_HERO_ROUTES)
+    .filter(([old]) => !heroes.some((h) => h.hero === old))
+    .map(([old, caseId]) => {
+      const now = heroes.find((h) => h.case_id === caseId);
+      return { hero: old, to: now ? `../${now.hero}/` : "../#examples", title: now?.title ?? null };
+    });
+}
+
+/** The case the home page and the footer feature: the returns tote when it is listed, else the first hero with a recommendation. */
+export const FEATURED_CASE = "h1_tote";
+
+/** The featured hero's index entry, or null when no use case is exported. */
+export function featuredHero(dirs: StudioDirs = DEFAULT_DIRS): HeroEntry | null {
+  const heroes = getStudioIndex(dirs)?.heroes ?? [];
+  return heroes.find((h) => h.case_id === FEATURED_CASE && h.recommended) ?? heroes.find((h) => h.recommended) ?? heroes[0] ?? null;
 }

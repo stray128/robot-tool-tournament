@@ -1,10 +1,13 @@
-"""Use-case descriptions: the three hero examples, the gate set and the prompt's worked example.
+"""Use-case descriptions: the hero examples, the gate sets and the prompt's worked example.
 
-* :data:`HERO_CASES`: the intake page's three example prompts (warehouse tote, pipe coupling,
-  field-maintenance cabinet), written the way a user would type them.
-* :data:`GATE_CASES`: the heroes plus five more realistic descriptions (warehouse,
-  construction, maintenance, lab, retail) and two the simulator cannot do (cloth, liquid),
-  which must be refused with a reason and a nearest primitive (track S4's gate).
+* :data:`HERO_CASES`: Studio v2's six hero jobs, written the way a user would type them, with the
+  sizes and limits they would know: a warehouse returns tote, CNC machine tending, a solar panel
+  install, floor tile setting, a pipe coupling and a hotel delivery. They are the v2 gate set
+  (:data:`GATE_CASES`), recorded live in ``recorded/gate-2026-10-27-v2c`` (prompt and rules v2).
+* :data:`V1_HERO_CASES` and :data:`V1_GATE_CASES`: the v1 descriptions exactly as recorded in
+  ``recorded/gate-2026-10-18-s4e`` (the three v1 heroes, five more realistic ones and two the
+  simulator cannot do). The pre-registered use-case benchmark v1 froze those plans; they stay
+  replayable from their recorded responses (:func:`rtt.studio.engineer.gate.replay_recorded`).
 * :func:`worked_example`: the format example in the prompt, a different use case (a drawer and
   a small box), built from the contract so it is always valid.
 """
@@ -16,7 +19,16 @@ from typing import Final, Literal
 
 from rtt.studio.types import ObjectInstance, ObjectPose, Step, StepConstraints, SuccessCriterion, TaskSpec
 
-__all__ = ["GATE_CASES", "HERO_CASES", "UPLOAD_CASE", "UPLOAD_EXAMPLE_STL", "UseCase", "worked_example"]
+__all__ = [
+    "GATE_CASES",
+    "HERO_CASES",
+    "UPLOAD_CASE",
+    "UPLOAD_EXAMPLE_STL",
+    "V1_GATE_CASES",
+    "V1_HERO_CASES",
+    "UseCase",
+    "worked_example",
+]
 
 
 @dataclass(frozen=True)
@@ -30,7 +42,8 @@ class UseCase:
     expect: Literal["plan", "refusal"] = "plan"
 
 
-HERO_CASES: Final[tuple[UseCase, ...]] = (
+#: The v1 heroes exactly as recorded (their plans are frozen by ``configs/usecase_v1.yaml``).
+V1_HERO_CASES: Final[tuple[UseCase, ...]] = (
     UseCase(
         "h1_tote",
         "warehouse",
@@ -57,8 +70,72 @@ HERO_CASES: Final[tuple[UseCase, ...]] = (
     ),
 )
 
-GATE_CASES: Final[tuple[UseCase, ...]] = (
-    *HERO_CASES,
+#: Studio v2's hero jobs (module docstring), in the order the product shows them.
+HERO_CASES: Final[tuple[UseCase, ...]] = (
+    UseCase(
+        "h1_tote",
+        "warehouse",
+        "Returns tote",
+        "Warehouse returns: a plastic tote (300 x 200 mm, 120 mm tall) stands on the packing bench with its "
+        "hinged lid shut; the lid overhangs the tote by a 15 mm lip all round. Open the lid, put a small rigid "
+        "carton (about 120 x 80 x 60 mm, 300 g) and a flat shrink-wrapped pack (about 150 x 100 x 20 mm, 150 g) "
+        "from the bench into the tote, then close the lid.",
+    ),
+    UseCase(
+        "h4_cnc",
+        "manufacturing",
+        "CNC machine tending",
+        "CNC machine tending: the machine on the bench has a guard door that slides sideways over its loading "
+        "opening (the opening is 250 mm wide; the machine is 300 mm deep and 250 mm tall; the door slides 300 mm, "
+        "takes about 10 N to move and has a fin handle on top). Slide the door open, take the finished part (a "
+        "50 x 50 x 30 mm aluminium block, 200 g) off the machine bed beside the fixture and drop it in the out "
+        "bin next to the machine, put the next blank (the same size and weight), which waits on the bench in "
+        "front of the machine, into the fixture tray inside the machine (120 x 100 mm, 40 mm tall), then slide "
+        "the door fully shut.",
+    ),
+    UseCase(
+        "h5_solar",
+        "construction",
+        "Solar panel install",
+        "Solar panel installation: a solar module (1000 x 600 mm, 35 mm thick, 8 kg) waits on its stand beside "
+        "the two mounting rails. Lift it onto the rails and set it down against the rail end stops (within "
+        "5 mm), then start the clamp nut (13 mm hex) at the middle of its long edge on its thread and tighten "
+        "it to 6 N m.",
+    ),
+    UseCase(
+        "h6_tile",
+        "construction",
+        "Floor tile setting",
+        "Floor tiling: a 300 x 300 mm porcelain floor tile (10 mm thick, 2.2 kg) goes on the fresh adhesive "
+        "bed, where it sits about 2 mm proud of its finished height until it is pressed. Lay it on the bed, "
+        "then tamp it down level: within 1 mm of its finished height and no more than 0.5 degrees out of "
+        "level, pressing no harder than 60 N.",
+    ),
+    UseCase(
+        "h2_coupling",
+        "construction",
+        "Pipe coupling",
+        "Pipe prefabrication: a threaded steel coupling (1 inch pipe size, about 40 mm across and 45 mm "
+        "long) sits loosely on the threaded stub of a pipe spool that stands upright. Push it onto the "
+        "thread start and turn it on until it is hand-tight (about 3 N m), never over 8 N m.",
+    ),
+    UseCase(
+        "h7_hotel",
+        "hospitality",
+        "Hotel delivery",
+        "Hotel delivery, on a bench mock-up: press the elevator call button on the wall (a 40 mm round button, "
+        "about 5 N to press, its centre 150 mm up the wall, nothing standing in front of it), then open the room "
+        "door beside it (a hinged door 300 mm wide and 400 mm tall with a pull handle, hinged on its left) and put "
+        "the parcel (a 160 x 120 x 80 mm box, 500 g) from the bench into the delivery tray behind the door.",
+    ),
+)
+
+#: The v2 gate set: the six heroes (each recorded live once; a failed one stays recorded as failed).
+GATE_CASES: Final[tuple[UseCase, ...]] = HERO_CASES
+
+#: The v1 gate set exactly as recorded (``recorded/gate-2026-10-18-s4e``).
+V1_GATE_CASES: Final[tuple[UseCase, ...]] = (
+    *V1_HERO_CASES,
     UseCase(
         "e1_drawer_kitting",
         "warehouse",

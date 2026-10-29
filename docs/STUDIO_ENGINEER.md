@@ -117,6 +117,10 @@ The prompt, the checks and the intake page follow S2's models ([STUDIO_PRIMITIVE
 | `handwheel_valve` | starts closed at its stop; opens counter-clockwise; `angle_deg` ccw from closed | twist `ccw`; closing a valve that starts closed is not modelled |
 | `threaded_joint` | the member rests loose on its stub, captive on the stub's axis; a lead-in of `chamfer_mm` + 3 mm to the thread start; tightens clockwise, `engage_turns` to seated, torque ramp `start_torque_nm` to `final_torque_nm`; `depth_mm` down from the stub top | no pick; insert (`hold_after` false) to the thread start, then twist `cw` |
 | `port_plug` | one object: the socket and the plug standing 40 mm beside it; `depth_mm` the tip below the mouth | `insert` (it picks the plug itself; a grasp with `hold_after` before it is optional) |
+| `panel_rail` (v2) | a panel resting on two rails, `start_gap_mm` short of their stops; a clamp (13 mm hex, modelled 15 mm tall) on a post at the middle of its -y edge, a threaded member: 4 mm lead-in, 3 turns of 1.25 mm to seated, torque 0.3 N m rising to `clamp_torque_nm`; the panel's centre and the clamp lie `(width_mm / 2 + 25) / 2` either side of the pose | a pick (handle `panel`, target null) lifts and sets it back (`gap_mm` at_most); no pick on the clamp; insert then twist `cw`, judged by `clamp_torque_nm` at_least (at most the param; a `torque_nm` at_least over 95 % of it is never reached); pose within +-(338 - that reach) mm (175.5 for 600 mm) |
+| `tile_bed` (v2) | a tile laid `proud_mm` above its level on a bed that yields at `bed_yield_n`, hardens `bed_hardening_n_mm`, keeps its set and springs back up to 0.3 mm | a pick (target null) lays it back; a press is a push with `force_n` at_least between yield + hardening x (proud - h + 0.3) - weight and yield + hardening x (proud + h) - weight for `height_err_mm` at_most h, pressed to +3 % within 80 % of `max_force_n` |
+| `spring_button` (v2) | a wall plate (face through the pose, facing local -y) or a desk console; latches `pressed` past 70 % of its travel; springs back | push with `approach` front (wall) or top (desk), judged by `pressed` at_least 1, never `travel_mm` at_least; `max_force_n` at least 1.875 x `actuation_force_n` (the press is 1.5 x, within 80 % of the limit) |
+| `sliding_door` (v2) | a machine loaded from above; the pose is the opening's centre; the door slides toward local -y; a fin handle on top | `hook_pull` (approach top) open, `push` shut; forces as a drawer's; `slip_mm` not bounded under 40 mm (the fin pinch gives about 33 mm at 10 N); a pick out of or into the machine comes after a hook pull that uncovers that object (`width_mm / 2 + 10 + d + 20` mm, `d` its reach toward -y) with no push between |
 
 **Not modelled (S2 limitation):** picking a loose coupling, cap or nut and starting it on a
 stub (the member starts on its stub), closing a valve or locking a latch that starts closed. The
@@ -142,6 +146,25 @@ lies inside them, within 5 mm for a door's arc drawn as chords):
 | `drawer` | `width_mm` x `depth_mm`, plus the front and handle toward -y | the drawer slid out by `travel_mm` |
 | `hinged_lid` (lid) | `width_mm` x `depth_mm`, plus the back wall on +y | past vertical: `depth_mm x -cos(max_angle_deg)` beyond the hinge |
 | `hinged_lid` (door) | the panel along x hinged at `x = -depth_mm/2`, with its jamb, stop post and handle | the sector of radius `depth_mm` (plus the handle) about the hinge to `max_angle_deg` toward -y |
+| `panel_rail` | `length_mm` along x; along y the clamp's post (reach + 20 mm on -y) to the stops (reach + width / 2 + gap + 20 mm on +y) | |
+| `tile_bed` | `tile_mm` + 40 mm square | |
+| `spring_button` | wall: its plate, `max(160, diameter + 80)` along x, from the proud button to 20 mm behind the face; desk: the console, `max(120, diameter + 40)` square | |
+| `sliding_door` | `depth_mm` + 8 mm along x; `width_mm` + 40 + `travel_mm` along y (the open door parks toward -y) | |
+
+Studio v2 adds two layout rules. A bin or a part that stands inside a machine's interior (within
+`depth_mm - 40` x `width_mm - 20` mm about its pose, at most `height_mm - 20` mm tall) may overlap
+the machine, as a lid may its bin; things inside keep 20 mm from each other. In the layout fixer
+they move with the machine, and inside it they are kept apart: one moves to the nearest clear spot
+of the interior on a 5 mm grid (all of them are placed again when no single move does it). Under
+rule set v2 the fixer also places what the plan's words put inside the machine ("the fixture tray
+sits inside the machine") in its interior, so the words and the poses agree; each such move is an
+assumption line ("Moved fixture from (0, -150) to (0, 35) mm, inside machine under its loading
+opening, as the plan says"). And an object a tool cannot work on from inside the wrist's reach is a
+layout problem on its pose (`objects[2].pose (call_button): ...`): the palm travels +-350 mm and
+every work point stays within +-338 mm; a panel's centre and clamp; a wall button's face and the
+point 400 mm in front of it (the tilted wrist of the longest Studio tool, 355 mm, plus the push's
+standoff and approach); a sliding door's handle at both ends of its travel. The layout fixer moves
+such an object to the nearest spot within reach ("to bring it within the wrist's reach").
 
 Two objects whose footprints or swings come within 20 mm [assumed] are a problem on the later
 object's path ("its footprint overlaps the swing of objects[1] (door)"), one per pair. The
@@ -188,15 +211,19 @@ weigh at most 2 kg.
 ```
 python -m rtt.studio.engineer plan --case h1_tote                 # replay a recorded case
 python -m rtt.studio.engineer plan --text "..." [--stl PART.stl] --live --env-file PATH/.env --budget 0.05
-python -m rtt.studio.engineer gate --out DIR                       # replay the recorded gate run
+python -m rtt.studio.engineer gate --out DIR                       # replay the recorded v2 gate run (each case on its prompt)
+python -m rtt.studio.engineer gate --out DIR --recorded src/rtt/studio/engineer/recorded/gate-2026-10-18-s4e
 python -m rtt.studio.engineer gate --out DIR --live --env-file PATH/.env --budget 0.50
 python -m rtt.studio.engineer export-web                           # regenerate the intake page's data
 ```
 
-Without `--live` every call is replayed from a cache (by default the recorded gate run); a
-description that is not in it stops with exit code 2. `--live` reads `NEBIUS_API_KEY` from
-`--env-file` on the first call (never printed) and caps everything recorded in the run's ledger
-at `--budget`.
+Without `--live` every call is replayed from a cache (by default the recorded Studio v2 gate run);
+a description that is not in it stops with exit code 2. `--recorded DIR` replays a recorded run
+from its recorded responses instead (section 6b: the v1 run, whose prompt is no longer rendered).
+`--live` reads `NEBIUS_API_KEY` from `--env-file` on the first call (never printed) and caps
+everything recorded in the run's ledger at `--budget`. `--prompt-version` picks the prompt (v1, v2,
+v2.1, v2.2, v2.3; a live run defaults to the current v2.3, a replay of the packaged run to the prompt
+each case was recorded on).
 
 ## 4. HTTP routes
 
@@ -287,9 +314,9 @@ that the can goes into (the basket is a target, so it kept its place).
 
 ### 6a. The hero plans, frozen for S7
 
-The three hero plans below are frozen for the recorded Studio sessions (S7). A test pins their
-`task_id`s (`FROZEN_HERO_TASK_IDS` in `tests/test_studio_engineer.py`), so any later change to
-them is deliberate. Positions are in mm; the brackets give each footprint's and swing's plan-view
+The three v1 hero plans below are frozen for the recorded Studio sessions (S7) and the use-case
+benchmark v1. A test pins their `task_id`s (`FROZEN_V1_HERO_TASK_IDS` in
+`tests/test_studio_engineer.py`), so any later change to them is deliberate. Positions are in mm; the brackets give each footprint's and swing's plan-view
 extent in x and y.
 
 * **h1_tote** (task `e4586f36...`):
@@ -347,6 +374,125 @@ Token Factory spend: S4 $0.149 (cap $0.50); S4b $0.175 (cap $0.20); S4c $0.196 (
 S4d $0.224 (cap $0.25); S4e $0.148 (cap $0.30): $0.133 for the one gate run and $0.016 for the
 upload plan.
 
+### 6b. Studio v2: the job templates and six hero jobs (2026-10-27)
+
+Studio v2 taught the Task Engineer the four job templates (`panel_rail`, `tile_bed`,
+`spring_button`, `sliding_door`), their quantities (`gap_mm`, `clamp_torque_nm`, `height_err_mm`,
+`pressed`), push's optional `approach` (the schema lists it; a step at `top` drops it, so old task
+ids hold), the wrist's pitch, the v2 rules and the kinds of tool the search tries (a prompt section
+that says what exists and that the plan names none of them; never which one wins).
+
+**Versions.** A prompt goes with a rule set (`prompts.RULES_OF`): prompt v1 with rule set v1, and
+prompts v2, v2.1, v2.2 and v2.3 with rule set v2. Rule set v2 was revised in place as the heroes were
+recorded (`checks.RULES_REVISION`, now `v2-r4`); a recorded manifest names the revision it was
+verified with (`rules_revision`), and the test suite re-judges every current recorded row, so an edit
+that changes a recorded verdict or problem fails.
+
+* `prompts/v1/` holds the v1 templates and, in `frozen.json`, the catalog sections and the forced
+  tool exactly as the v1 code rendered them. `plan_task(..., version="v1")` rebuilds the v1
+  recording's requests byte for byte, and the v1 rule set (`check_plan(..., rules="v1")`) gives its
+  verdicts. Both replays of `recorded/gate-2026-10-18-s4e/` reproduce it exactly, the e2 nut
+  included: from its cache (`gate --prompt-version v1 --cache <its cache>`) and from its recorded
+  responses (`gate --recorded <its folder>`).
+* `prompts/v2/` (revision v2-r1) is frozen the same way (its `frozen.json`: the sections and the tool
+  as the requests of `recorded/gate-2026-10-27-v2c` sent them): four of the v2 heroes answered it, and
+  their requests rebuild byte for byte.
+* `prompts/v2.1/` (v2-r2: v2 plus the lift and hold rules) is frozen the same way; a re-run of h4 and
+  h5 answered it.
+* `prompts/v2.2/` (v2-r3: v2.1 plus a hook pull's force limit over a sliding door's pull, the finger
+  room inside a machine, and the lift rule naming `params.lift_mm`) is frozen the same way; the
+  current h4 and h5 answered it.
+* `prompts/v2.3/` is the default, rendered live: v2.2 whose repair message says that each problem
+  names the field to change. Its repairs (v2-r4) name the field in every rule set v2 message
+  (`steps[3].params.speed_mm_s`, `objects[0].params.start_gap_mm`, `steps[1].success[0].at_least`,
+  ...); a recorded prompt keeps the words its recorded repairs answered (`prompts.FIELD_PATHS`), so
+  the rows recorded on v2, v2.1 and v2.2 replay request for request.
+* The measured figures in the prompt (the frames' give, the door pull, the finger room) were measured
+  on the default templates with the hero jobs' parts: a 2.2 to 10 kg panel or tile, a 10 N sliding
+  door, a 50 mm part.
+* A manifest names `prompt_version` and `rules_version` (v1 recordings predate the fields); a
+  re-run on a later prompt adds `prompts` (every prompt used) and each case row's `prompt_version`.
+* A call cut off at `max_tokens` (finish_reason `length`) is marked: `truncated` on its case row
+  and in the manifest (calls and cases). Under rule set v2 a cut-off call is never judged, even when
+  what came back parses (`truncated`); one that does not parse is a parse error, as before.
+
+**Rule set v2** adds to v1:
+* Criteria reachable from the start: limits never asked at_least; a set-back panel's `gap_mm` and a
+  set-back tile's `height_err_mm` stay at their start; windows for `clamp_torque_nm`, `gap_mm` and
+  `height_err_mm`.
+* Inserts on threaded members (the clamp and threaded joints) ask for the thread start.
+* A set-back pick says it lifted; a pick's `max_force_n` is null or at least 100 N (tools grip or
+  seal with 30 to 92 N of their own); a pick's lift criterion leaves the tool's give under the
+  part's weight: 3 mm plus 2.5 mm per kg, measured on both vacuum frames from 2.2 to 10 kg, with
+  1.5 mm spare and at least 10 mm (an 8 kg panel: 24.5 mm); a `hold_s` criterion counts only above the
+  pick's lift threshold (10 mm or half its `lift_mm`), so its lift leaves that plus the give (the
+  repair names `steps[i].params.lift_mm` apart from the criterion); a held object goes on by the same
+  handle.
+* Wall buttons keep a clear approach (the plate's width, 400 mm out).
+* Every handle, lip or free edge a step must reach stays within ±338 mm along its motion (lids, doors,
+  drawers, ports, sliding doors, panels, buttons).
+* Layout claims in assumptions or labels ("inside the machine") match the poses. A claim binds only
+  what a clause names together with the machine (its name, "machine", "enclosure", "inside the
+  door"): "the finished part is inside the out bin" is not a claim about the machine.
+* A push shutting a sliding door runs at 40 mm/s or less.
+* A hook pull on a sliding door limits its force (`max_force_n`, a `force_n` at_most) to no less than
+  3 x the door's `pull_force_n` (measured: a two-finger gripper drags a 10 N door at 23 to 26 N).
+* A part a step picks inside a machine keeps 40 mm of finger room [measured 30 mm cleared by the
+  85 mm gripper, 10 mm assumed spare]: from every other bin or part inside, from the walls and the
+  opening's +y edge, and from the open door's edge (the hook pull's travel). The layout fixer keeps
+  that room and never moves what a pick works on past the plan's door opening.
+* Plus the job templates' rules (§1a) and the machine door opened before picks inside.
+
+**Recordings.** `recorded/gate-2026-10-27-v2c/` is the v2 run (`RECORDED_GATE`, the default replay
+of the command line, the API and the agent's tools), with rule set v2: one live run of the six heroes
+on prompt v2 (12 calls, $0.1259) and five re-runs: h4 on v2 (its description made clearer: 2 calls,
+$0.0213); h4 and h5 on v2.1 (rule set v2-r2: 4 calls, $0.0414); h4 and h5 on v2.2, then h4 twice more
+(v2-r3: 7 calls sent, one refused by the run's spend cap, $0.0760). Every superseded row stays under
+`reruns` with its reason; an answer to a request a re-run sent again is kept under
+`superseded/rerun-<n>/cache/`. Two draft recordings (`gate-2026-10-27-v2` and `-v2b`) were made on
+earlier v2 prompts and are not kept; their 36 ledger lines ($0.2960) are in
+`superseded/drafts-ledger.jsonl`, and the manifest's `llm_total_usd` ($0.5606) counts every call.
+
+| case | prompt | result | steps | $ |
+|---|---|---|---|---|
+| h1_tote | v2 | valid after layout fix | hook_pull tote_lid, grasp carton -> tote_bin, grasp pack -> tote_bin, push tote_lid | 0.0210 |
+| h4_cnc | v2.2 | **failed** | hook_pull sliding_door, grasp finished_part -> out_bin, grasp blank_part -> fixture_bin, push sliding_door | 0.0221 |
+| h5_solar | v2.2 | valid after repair | suction solar_panel, insert (clamp), twist (cw) | 0.0200 |
+| h6_tile | v2 | valid after repair | grasp floor_tile, push floor_tile | 0.0200 |
+| h2_coupling | v2 | valid after repair | insert pipe_coupling, twist pipe_coupling (cw) | 0.0193 |
+| h7_hotel | v2 | valid after layout fix (its repair cut off at max_tokens) | push call_button (front), hook_pull room_door, grasp parcel -> tray | 0.0235 |
+
+**Gate.** 5 of 6 plans are valid, under the 90 % the gate needs, so the gate failed, recorded as it
+came.
+* h4 failed on v2 (twice: the fixer could not separate what stood inside the machine), was valid on
+  v2.1 (the fixer placed the tray inside, as its words said), and failed on v2.2:
+  * the first v2.2 run failed because the fixer moved the tray past the plan's door opening (fixed);
+  * the second's repair call was refused by the run's own spend cap (set too tight);
+  * the third's repair left the door opened 200 of the 205 mm the tray needs, a step criterion the
+    fixer does not change.
+* h5 failed on v2.1 (its repair raised the lift criterion with the lift) and is valid on v2.2, whose
+  repair message names `steps[0].params.lift_mm` apart from the criterion.
+* h7's repair was cut off at 5,000 tokens and did not parse; its first plan's problems were layout
+  problems only, and the fixer made that plan valid.
+
+**Physics smoke runs** (each plan once, nominal condition, an integrator's tools):
+* h1 completes with the 110 mm servo gripper.
+* h5 (v2.2) completes with the 2 x 3 frame and the nut runner: the panel rises 77 mm (100 commanded),
+  the clamp seats at 6.0 N m.
+* h6 completes with the 2 x 2 frame plus the tamper: height error 0.48 mm at 29 N.
+* h7 completes with a two-finger gripper (servo-110 or adaptive-85) for the button and the door
+  (pulled to 88 deg) plus a 25 mm cup for the parcel: 120 mm across, wider than any two-finger
+  gripper's opening (58.4 and 58.6 s). The door's handle stops 330 mm out. A hook pull's retreat now
+  stops at the palm's travel (`STUDIO_PRIMITIVES.md` section 14.2); before that, the retreat would
+  have put the palm at x -355 mm, and every tool was refused at the door.
+* h2 completes with the linkage gripper for the twist (about 533 N of grip), after a 40 mm cup or the
+  fin-ray gripper for the insert: 2.99 N m. The frozen v1 H2 plan completes the same way (3.11 N m),
+  as v1 did. Every other two-finger gripper and part-shaped jaw slips at 0.3 to 1.5 N m, in v1 too,
+  and the linkage gripper alone jams the insert.
+* h4 (v2.2, invalid): the adaptive-85 gripper opens the door (209.8 mm at 22 N) and does both picks;
+  the shut stops 10.7 mm open (it asks at most 10: a push after picks stalls short of the stop). The
+  servo-110 slips on the fin and leaves the door 10 mm short of its travel.
+
 ## 7. Open issues
 
 * **First calls rarely lay a scene out right.** 1 of 8 plans passed on the first call in S4c,
@@ -372,10 +518,19 @@ upload plan.
   page.
 * **Recorded replays are tied to the prompt.** Any change to the prompt templates, the catalog
   rendering (including `layout.py`'s numbers and the S2 conventions), the worked example, the
-  tool schema or the sampling is a different request: the replay tests then fail with a cache
-  miss, and the gate must be re-recorded (`gate --out ... --live`, about $0.15), then `export-web`.
-  The re-record is one run, judged as it comes; the hero plans' pinned `task_id`s then need a
-  deliberate update.
+  tool schema or the sampling is a different request: the cache replay then misses, and the gate
+  must be re-recorded (`gate --out ... --live`, about $0.12 for the six heroes), then
+  `export-web`. The re-record is one run, judged as it comes; the hero plans' pinned `task_id`s
+  then need a deliberate update. An earlier run stays replayable from its responses
+  (`gate --recorded DIR`); a change to the checks shows up there as a changed verdict.
+* **The finger room is one number** (40 mm), measured with the 85 mm gripper on a 50 mm part; a
+  small part under a wide gripper may need more. The 110 mm servo gripper slips on a sliding door's
+  fin and stops about 10 mm short of its travel; no rule bounds that yet.
+* **The pick give is measured on the vacuum frames only;** for the other tools it is assumed.
+* **The light-part lift message** keeps its old words ("raise lift_mm") on prompts v2 to v2.2, whose
+  recorded repairs (h6's) answered them; v2.3's names `steps[i].params.lift_mm`.
+* **h5's set-down reads as dropped** after a 107 mm rise of the 8 kg panel when the pick also asks
+  gap_mm at_most 5 (the v2.1 plan of h5): a primitive issue, open.
 * The upload path inherits the part intake's gripper-sized limits (79 mm, 2 kg); larger parts in
   a Studio use case need a Studio intake.
 * S2's limits stay limits of the plans: a loose member cannot be started on a stub, a valve or

@@ -12,12 +12,33 @@
  * bodies from content-addressed GLB assets (lib/assets.ts); its v1-style geoms are an
  * optional collision overlay, and an optional `<stem>.ovl.bin` sidecar carries
  * per-frame readouts as float16.
+ *
+ * Version 2 lanes may also carry (all optional, so uniform float32 lanes read as before):
+ *
+ * - `t`: the time in seconds of each stored frame, strictly increasing and non-uniform (a
+ *   keyframed lane); without it frame i is at i / fps. A keyframed lane's `fps` is nominal: the
+ *   rate its run was recorded at (`meta.keyframes.recorded_fps`), not the rate of its frames, so
+ *   every time comes from `t`. `meta.keyframes` (recorded_fps, samples, tolerance_mm of 1, 1.5 or
+ *   2, max_error_vs_recording_mm) is present exactly when `t` is.
+ * - `cuts`: frame indices where a new segment starts (after a tool change or a head switch).
+ *   There is a frame exactly at each segment's start. Poses are never interpolated from frame
+ *   cuts[i] - 1 to cuts[i]: between those two frames' times the replay holds the earlier pose,
+ *   and the player covers the gap with a "Changing tool" card.
+ * - `quantised: true`: each pose is seven little-endian int16 words, 14 bytes: position as
+ *   round(mm x 10), then the quaternion as "smallest three" (the three components other than the
+ *   largest, scaled by 32767 / 0.70710678, and the largest one's index). lib/poses.ts has the exact
+ *   layout. Decoding yields the same float32 [frames x bodies x 7] layout as an unquantised lane.
+ *   Without the flag the payload is float32 as before.
+ *
+ * Lanes without `t` or `cuts` behave as before: uniform at the stated fps, no cuts.
  */
 
 import { matching, onlyKeys, readAssetId, readAssetMap, referencedAssets } from "./assets";
+import { decodeQuantised, poseBytes, type PoseLayout, QUANTISED_STRIDE } from "./poses";
 import { holdTrack, liftTrack, POSE_STRIDE, referenceFrame } from "./track.mjs";
 import type {
   AnyReplayHeader,
+  LaneKeyframes,
   OverlayChannel,
   PhaseSpan,
   ReplayBodyV2,
@@ -31,6 +52,7 @@ import type {
   Vec3,
   Quat,
 } from "./types";
+import { KEY_TOLERANCES_MM } from "./types";
 import { DataError, Node, parseReplayHeader, readGeom } from "./validate";
 
 /** Geoms smaller than this in every half extent are "parked" generator slots (not drawn). */
@@ -45,14 +67,21 @@ export class ReplayFormatError extends Error {
   }
 }
 
-/** Decode the `.bin` payload into a flat Float32Array, checking its size against the header. */
-export function decodeFrames(buffer: ArrayBuffer, header: Pick<AnyReplayHeader, "n_frames" | "n_bodies">): Float32Array {
-  const expected = header.n_frames * header.n_bodies * POSE_STRIDE * 4;
+export { decodeQuantised, encodeQuantised, poseBytes, type PoseLayout, QUANT_POS_M, QUANTISED_STRIDE } from "./poses";
+
+/**
+ * Decode the `.bin` payload into a flat Float32Array [frames x bodies x 7] (px, py, pz, qx, qy,
+ * qz, qw), checking its size against the header. Quantised payloads are expanded to the same layout.
+ */
+export function decodeFrames(buffer: ArrayBuffer, header: PoseLayout): Float32Array {
+  const expected = poseBytes(header);
   if (buffer.byteLength !== expected) {
+    const what = header.quantised ? `${QUANTISED_STRIDE} int16` : `${POSE_STRIDE} float32`;
     throw new ReplayFormatError(
-      `replay payload is ${buffer.byteLength} bytes; header says ${header.n_frames} frames x ${header.n_bodies} bodies = ${expected} bytes`,
+      `replay payload is ${buffer.byteLength} bytes; header says ${header.n_frames} frames x ${header.n_bodies} bodies x ${what} = ${expected} bytes`,
     );
   }
+  if (header.quantised) return decodeQuantised(buffer, header.n_frames * header.n_bodies);
   if (LITTLE_ENDIAN_HOST) return new Float32Array(buffer);
   const view = new DataView(buffer);
   const out = new Float32Array(buffer.byteLength / 4);
@@ -85,7 +114,12 @@ const V2_KEYS = [
   "meta",
   "provenance",
   "overlays",
+  "t",
+  "cuts",
+  "quantised",
 ] as const;
+/** Pose fields a header may name for a quantised payload (its seven int16 words per body and frame). */
+export const QUANTISED_POSE_FIELDS = ["px", "py", "pz", "qa", "qb", "qc", "qi"] as const;
 const PROVENANCE_KEYS = [
   "source",
   "engine",
@@ -153,13 +187,34 @@ function readBody(n: Node): ReplayBodyV2 {
 function readMeta(n: Node): ReplayMetaV2 {
   const raw = n.object();
   const geometry = n.get("geometry_id");
-  return {
+  const meta: ReplayMetaV2 = {
     ...raw,
     design_space: slugOf(n.get("design_space")),
     design_id: n.get("design_id").nonEmpty(),
     geometry_id: geometry.value === null ? null : matching(geometry, SHA256, "a sha256 or null"),
     part_id: slugOf(n.get("part_id")),
   };
+  if (n.has("keyframes")) meta.keyframes = readKeyframes(n.get("keyframes"));
+  else delete meta.keyframes;
+  return meta;
+}
+
+/** A keyframed lane's `meta.keyframes` (rtt.studio.replay._lane_replay), exactly its four fields. */
+function readKeyframes(n: Node): LaneKeyframes {
+  // The old name hid what the error is measured against; the exporter renamed it.
+  if (n.has("max_error_mm")) n.get("max_error_mm").fail("renamed max_error_vs_recording_mm (the error against the recording, not the simulation)");
+  onlyKeys(n, ["recorded_fps", "samples", "tolerance_mm", "max_error_vs_recording_mm"]);
+  const kf: LaneKeyframes = {
+    recorded_fps: n.get("recorded_fps").int(),
+    samples: n.get("samples").int(),
+    tolerance_mm: n.get("tolerance_mm").num(),
+    max_error_vs_recording_mm: n.get("max_error_vs_recording_mm").num(),
+  };
+  if (!KEY_TOLERANCES_MM.some((t) => Math.abs(t - kf.tolerance_mm) < 1e-9)) n.get("tolerance_mm").fail(`a lane is keyframed within ${KEY_TOLERANCES_MM.join(", ")} mm, got ${kf.tolerance_mm}`);
+  if (!(kf.max_error_vs_recording_mm >= 0) || kf.max_error_vs_recording_mm > kf.tolerance_mm + 1e-9) {
+    n.get("max_error_vs_recording_mm").fail(`expected 0 to the ${kf.tolerance_mm} mm tolerance, got ${kf.max_error_vs_recording_mm}`);
+  }
+  return kf;
 }
 
 function readProvenance(n: Node): ReplayProvenance {
@@ -223,12 +278,15 @@ export function parseReplayHeaderV2(raw: unknown, file = "replay.json"): ReplayH
   onlyKeys(root, V2_KEYS);
   root.get("format").literal("rtt-replay");
   root.get("version").literal(2);
-  root.get("dtype").literal("float32");
+  const quantised = root.has("quantised") ? root.get("quantised").bool() : false;
+  // A quantised payload is int16 and says so; an unquantised one is float32.
+  const dtype = root.get("dtype").literal(quantised ? "int16" : "float32");
   root.get("byte_order").literal("little");
   root.get("up_axis").literal("z");
   root.get("units").literal("m");
   constList(root.get("layout"), ["frames", "bodies", "pose"]);
-  constList(root.get("pose_fields"), ["px", "py", "pz", "qx", "qy", "qz", "qw"]);
+  // A quantised header names its seven int16 words exactly; a float32 one its seven floats.
+  constList(root.get("pose_fields"), quantised ? QUANTISED_POSE_FIELDS : ["px", "py", "pz", "qx", "qy", "qz", "qw"]);
   const fps = root.get("fps").int();
   if (fps < 1 || fps > 1000) root.get("fps").fail(`fps must be in 1..1000, got ${fps}`);
   const n_frames = root.get("n_frames").int();
@@ -241,6 +299,19 @@ export function parseReplayHeaderV2(raw: unknown, file = "replay.json"): ReplayH
   if (bodies.length === 0) root.get("bodies").fail("expected at least one body");
   if (n_bodies !== bodies.length) root.get("n_bodies").fail(`header lists ${bodies.length} bodies, n_bodies is ${n_bodies}`);
   const static_visuals = root.has("static_visuals") ? root.get("static_visuals").items().map(readVisual) : [];
+  const t = root.has("t") ? readTimeline(root.get("t"), n_frames) : null;
+  const cuts = root.has("cuts") ? readCuts(root.get("cuts"), n_frames) : [];
+  const meta = readMeta(root.get("meta"));
+  // A keyframed lane says how it was keyframed, and its fps is the recording's (nominal: its
+  // frames are at t, not at i / fps); a uniform lane has neither.
+  const kf = meta.keyframes;
+  if (t && !kf) root.get("meta").fail("a keyframed lane (with t) says how it was keyframed in meta.keyframes");
+  if (!t && kf) root.get("meta").get("keyframes").fail("keyframes describe a lane with frame times t, and this one has none");
+  if (kf) {
+    const where = root.get("meta").get("keyframes");
+    if (kf.recorded_fps !== fps) where.get("recorded_fps").fail(`the header's fps is the recording's rate, ${fps}, not ${kf.recorded_fps}`);
+    if (kf.samples < n_frames) where.get("samples").fail(`${n_frames} keys cannot come from ${kf.samples} samples`);
+  }
   const unknown = (where: Node, v: ReplayVisual) => {
     if (!Object.hasOwn(assets, v.asset)) where.fail(`visual draws asset ${v.asset}, which the header's assets map does not list`);
   };
@@ -259,7 +330,7 @@ export function parseReplayHeaderV2(raw: unknown, file = "replay.json"): ReplayH
     format: "rtt-replay",
     version: 2,
     fps,
-    dtype: "float32",
+    dtype,
     byte_order: "little",
     up_axis: "z",
     units: "m",
@@ -270,10 +341,34 @@ export function parseReplayHeaderV2(raw: unknown, file = "replay.json"): ReplayH
     n_frames,
     n_bodies,
     bin,
-    meta: readMeta(root.get("meta")),
+    meta,
     provenance: readProvenance(root.get("provenance")),
     overlays: root.has("overlays") ? readOverlays(root.get("overlays")) : null,
+    t,
+    cuts,
+    quantised,
   };
+}
+
+/** A lane's frame times: one finite, non-negative time per frame, strictly increasing. */
+function readTimeline(n: Node, nFrames: number): number[] {
+  const t = n.items().map((x) => x.num());
+  if (t.length !== nFrames) n.fail(`expected one time per frame (${nFrames}), got ${t.length}`);
+  t.forEach((v, i) => {
+    if (!Number.isFinite(v) || v < 0) n.items()[i]!.fail(`a frame time must be a finite number >= 0, got ${v}`);
+    if (i > 0 && v <= t[i - 1]!) n.items()[i]!.fail(`frame times must increase (${t[i - 1]} then ${v})`);
+  });
+  return t;
+}
+
+/** Segment starts: increasing frame indices inside the recording. */
+function readCuts(n: Node, nFrames: number): number[] {
+  const cuts = n.items().map((x) => x.int());
+  cuts.forEach((c, i) => {
+    if (c < 0 || c >= nFrames) n.items()[i]!.fail(`a cut is a frame index in 0..${nFrames - 1}, got ${c}`);
+    if (i > 0 && c <= cuts[i - 1]!) n.items()[i]!.fail("cuts must increase");
+  });
+  return cuts;
 }
 
 /** Header versions this viewer reads. */
@@ -448,7 +543,13 @@ export interface ReplayBytes {
 export class Replay {
   readonly frames: Float32Array;
   readonly duration: number;
+  /** Seconds of every frame for a keyframed lane (header `t`); null when frames sit at 1 / fps. */
+  readonly times: Float64Array | null;
+  /** Frame indices where a segment starts (header `cuts`), in order. */
+  readonly cuts: readonly number[];
   private readonly stride: number;
+  /** 1 at a frame that starts a segment: never interpolated into from the frame before. */
+  private readonly cutAt: Uint8Array;
 
   constructor(
     readonly header: AnyReplayHeader,
@@ -459,7 +560,38 @@ export class Replay {
   ) {
     this.frames = frames;
     this.stride = header.n_bodies * POSE_STRIDE;
-    this.duration = Math.max(0, (header.n_frames - 1) / header.fps);
+    const v2 = header.version === 2 ? header : null;
+    this.times = v2?.t ? Float64Array.from(v2.t) : null;
+    this.cuts = v2?.cuts ?? [];
+    this.cutAt = new Uint8Array(header.n_frames);
+    for (const c of this.cuts) if (c > 0 && c < header.n_frames) this.cutAt[c] = 1;
+    this.duration = this.times ? Math.max(0, this.times[this.times.length - 1] ?? 0) : Math.max(0, (header.n_frames - 1) / header.fps);
+  }
+
+  /** Seconds of frame `i` (clamped to the recording). */
+  timeOf(i: number): number {
+    const k = Math.min(Math.max(Math.round(i), 0), this.header.n_frames - 1);
+    return this.times ? this.times[k]! : k / this.header.fps;
+  }
+
+  /** True when frame `i` starts a segment (a cut). */
+  isCut(i: number): boolean {
+    return this.cutAt[i] === 1;
+  }
+
+  /**
+   * The jump at time `t`, when `t` lies between the last frame of a segment and the first frame
+   * of the next (the time the replay holds a pose instead of animating a tool change), or null.
+   */
+  cutGapAt(t: number): { cut: number; start_s: number; end_s: number } | null {
+    for (const c of this.cuts) {
+      if (c <= 0) continue;
+      const start = this.timeOf(c - 1);
+      const end = this.timeOf(c);
+      if (t >= start && t < end) return { cut: c, start_s: start, end_s: end };
+      if (start > t) break;
+    }
+    return null;
   }
 
   get version(): 1 | 2 {
@@ -512,20 +644,37 @@ export class Replay {
     return this.header.bodies.findIndex((b) => b.name === name);
   }
 
-  /** Fractional frame index for time `t` (seconds), clamped to the recording. */
+  /**
+   * Fractional frame index for time `t` (seconds), clamped to the recording. A keyframed lane
+   * finds the frames around `t` in its timeline; frame i + a means a of the way to frame i + 1.
+   */
   frameAt(t: number): number {
-    return Math.min(Math.max(t * this.header.fps, 0), this.header.n_frames - 1);
+    const last = this.header.n_frames - 1;
+    const times = this.times;
+    if (!times) return Math.min(Math.max(t * this.header.fps, 0), last);
+    if (!(t > times[0]!)) return 0;
+    if (t >= times[last]!) return last;
+    let lo = 0;
+    let hi = last;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      if (times[mid]! <= t) lo = mid;
+      else hi = mid;
+    }
+    const span = times[hi]! - times[lo]!;
+    return span > 0 ? lo + (t - times[lo]!) / span : lo;
   }
 
   /**
    * Interpolated pose of body `body` at fractional frame `f`: linear position,
    * shortest-path spherical quaternion. Writes into `pos` (3) and `quat` (4, xyzw).
+   * Never interpolates into a cut: up to the cut frame itself the earlier frame's pose holds.
    */
   sample(body: number, f: number, pos: Float64Array | number[], quat: Float64Array | number[]): void {
     const last = this.header.n_frames - 1;
-    const i0 = Math.min(Math.floor(f), last);
+    const i0 = Math.min(Math.max(Math.floor(f), 0), last);
     const i1 = Math.min(i0 + 1, last);
-    const a = Math.min(Math.max(f - i0, 0), 1);
+    const a = this.cutAt[i1] === 1 && i1 !== i0 ? 0 : Math.min(Math.max(f - i0, 0), 1);
     const p = this.frames;
     const o0 = i0 * this.stride + body * POSE_STRIDE;
     const o1 = i1 * this.stride + body * POSE_STRIDE;
@@ -541,13 +690,18 @@ export class Replay {
     const obj = this.bodyIndex(objectName);
     if (obj < 0) return null;
     const descend = task.phases.find((ph) => ph.name === "descend")?.start_s ?? 0;
-    const f = referenceFrame(this.header.fps, descend, this.header.n_frames);
+    // A keyframed lane's fps is nominal: its frame at a time comes from its timeline.
+    const f = this.times ? Math.round(this.frameAt(descend)) : referenceFrame(this.header.fps, descend, this.header.n_frames);
     const o = f * this.stride + obj * POSE_STRIDE;
     return [this.frames[o]!, this.frames[o + 1]!, this.frames[o + 2]!];
   }
 
-  /** Lift and hold tracks for the object body, using the task's reference and thresholds. */
+  /**
+   * Lift and hold tracks for the object body, using the task's reference and thresholds. The hold
+   * counts frames at `fps`, so a keyframed lane (frames at `t`, fps nominal) is refused.
+   */
   tracks(task: Pick<TaskSummary, "phases" | "success_lift_m" | "record_tail_s">, objectName = "object"): LaneTracks {
+    if (this.times) throw new ReplayFormatError("hold tracks need frames at a fixed rate; this lane is keyframed (its frames are at t)");
     const obj = this.bodyIndex(objectName);
     const n = this.header.n_frames;
     if (obj < 0) {

@@ -41,10 +41,13 @@ import mujoco
 
 from rtt.sim.scene import OBJECT_RGBA
 from rtt.studio.templates import (
+    FRAME_RGBA,
+    FRICTION_SOLIMP,
     ResolvedHandles,
     TemplateBuilder,
     TemplateContext,
     TemplateHandles,
+    quat_z,
     register_template_builder,
 )
 from rtt.studio.types import TemplateKind
@@ -62,13 +65,7 @@ BAR_LENGTH: Final = 0.120
 KNOB_NECK: Final = 0.012
 KNOB_HEAD: Final = 0.026
 LIP_T: Final = 0.004
-FRICTION_SOLIMP: Final = (0.999, 0.9999, 0.0001, 0.5, 2.0)  # a near-hard dry friction (no creep)
 HANDLE_CODES: Final = {"bar": 0.0, "knob": 1.0, "lip": 2.0}
-FRAME_RGBA: Final = (0.55, 0.58, 0.62, 1.0)
-
-
-def _quat_z(angle: float) -> list[float]:
-    return [math.cos(0.5 * angle), 0.0, 0.0, math.sin(0.5 * angle)]
 
 
 class DrawerBuilder(TemplateBuilder):
@@ -82,7 +79,7 @@ class DrawerBuilder(TemplateBuilder):
         kind = str(prm["handle"])
         yaw = math.radians(pose.yaw_deg)
         origin = [pose.x_mm / 1000.0, pose.y_mm / 1000.0, ctx.table_top_z]
-        carcass = ctx.spec.worldbody.add_body(name=f"{p}carcass", pos=origin, quat=_quat_z(yaw))
+        carcass = ctx.spec.worldbody.add_body(name=f"{p}carcass", pos=origin, quat=quat_z(yaw))
         geoms: list[str] = []
 
         def box(body: mujoco.MjsBody, name: str, lo: list[float], hi: list[float], moving: bool) -> None:

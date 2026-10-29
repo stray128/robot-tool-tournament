@@ -60,11 +60,11 @@ Modules of the contract (track S1):
 | Module | What it holds |
 |---|---|
 | `rtt.studio.types` | `TaskSpec`, `Step`, `ObjectTemplate` and registry, `Setup`, results, `BuildPackManifest`, the Task Engineer's JSON schema and parser. numpy only. |
-| `rtt.studio.scene` | `build_studio_scene(setup, task_spec, tool)`: the wrist with its continuous roll, the tool stack of the setup kind, the template objects, the compiled-model contract checks, measured head masses. |
+| `rtt.studio.scene` | `build_studio_scene(setup, task_spec, tool)`: the wrist with its pitch and continuous roll, the tool stack of the setup kind, the template objects, the compiled-model contract checks, measured head masses; `world_tcp`. |
 | `rtt.studio.templates` | the `TemplateBuilder` protocol and registry (auto-import of `rtt.studio.templates.<kind>`); S1 ships `part` and `bin`. |
 | `rtt.studio.plan` | the `PrimitiveController` and `SuccessPredicate` protocols, `StepContext`, `criteria_verdict`, `V1SceneView`, the controller registry. |
 | `rtt.studio.episode` | segments, carried `WorldState`, the tool-change hook, `run_task` and worker fan-out. |
-| `rtt.studio.fairness` | `wrist_signature`, `fairness_sha`, `fairness_problems`, `assert_fair`. |
+| `rtt.studio.fairness` | `wrist_signature`, `scoring_signature`, `fairness_sha`, `fairness_problems`, `assert_fair`. |
 | `rtt.studio.reference` | trivial reference controllers for hook pull, twist, insert and push (tests and smoke runs only). |
 
 ## 3. Data contracts
@@ -115,26 +115,94 @@ templates (the runner adds the effector's).
 | `port_plug` | rigid socket with chamfer and clearance, free plug, optional latch click; vertical | `plug`, `socket` | `depth_mm` | rigid | S2 |
 | `bin` | static or free open box | `bin` | none | rigid | S1 |
 | `part` | free rigid part: a library or uploaded mesh, or a box or cylinder | `part` | `lift_mm`, `tilt_deg` | rigid | S1 |
+| `panel_rail` | free panel (1000 x 600 x 35 mm, 8 kg by default) on two rails with end stops; a threaded clamp on a post | `panel`, `member` | `gap_mm`, `clamp_torque_nm`, the clamp's `depth_mm`, `turns`, `angle_deg` | approximation | v2 |
+| `tile_bed` | free tile (300 x 300 x 10 mm, 2.16 kg) on a plastic mortar bed that keeps its set | `part` | `height_err_mm`, `tilt_deg` | approximation | v2 |
+| `spring_button` | push button on a preloaded spring with a latched call; wall or desk | `button` | `travel_mm`, `pressed` | rigid | v2 |
+| `sliding_door` | machine enclosure whose door (front and roof leaves) slides sideways; a drawer's slide | `door`, `handle` | `travel_mm` | rigid | v2 |
 
 Every param of every template is a bounded `ParamSpec` row with a default
 (`rtt.studio.types.get_template(kind).params`). `register_template` changes a descriptor (a
-contract change).
+contract change). The four Studio v2 kinds (`docs/STUDIO_PRIMITIVES.md` section 13) run in the
+Studio but are not offered to the Task Engineer yet (`ObjectTemplate.planner = False`): its
+prompt, tool and web catalog render `planner_templates()`, so the recorded ones are unchanged
+until it is taught them.
 
 ### 3.3 Primitives
 
 | Primitive | Acts on | Handles | Target | "How" params | Observed | Roll | May hold | Status, tier |
 |---|---|---|---|---|---|---|---|---|
-| `grasp` | part, port_plug, threaded_joint | part, plug, member | bin | `lift_mm`, `hold_s` | lift, hold, in_target, tilt, force, penetration | | yes | existing (v1 synergies), rigid |
-| `suction` | part | part | bin | `lift_mm`, `hold_s` | same | | yes | existing, approximation |
+| `grasp` | part, port_plug, threaded_joint; v2: panel_rail, tile_bed | part, plug, member; v2: panel | bin | `lift_mm`, `hold_s` | lift, hold, in_target, tilt, force, penetration | | yes | existing (v1 synergies), rigid |
+| `suction` | part; v2: panel_rail, tile_bed | part; v2: panel | bin | `lift_mm`, `hold_s` | same | | yes | existing, approximation |
 | `wrap` | part | part | bin | `lift_mm`, `hold_s` | same | | yes | existing, approximation |
-| `hook_pull` | hinged_lid, drawer | handle | | `speed_mm_s`, `approach` | `slip_mm`, force, penetration | | | new, rigid |
-| `twist` | latch, threaded_joint, valve | head, member, wheel | | `direction`, `speed_deg_s` | `slip_deg`, `torque_nm`, force, penetration | yes | yes | new, rigid |
-| `insert` | port_plug, threaded_joint | plug, member | | `speed_mm_s`, `standoff_mm` | `lateral_force_n`, force, `jam`, penetration | | yes | new, rigid |
-| `push` | hinged_lid, drawer, part, port_plug | lid, drawer, part, plug | | `speed_mm_s` | force, penetration | | | new, rigid |
+| `hook_pull` | hinged_lid, drawer; v2: sliding_door | handle | | `speed_mm_s`, `approach` | `slip_mm`, force, penetration | | | new, rigid |
+| `twist` | latch, threaded_joint, valve; v2: panel_rail | head, member, wheel | | `direction`, `speed_deg_s` | `slip_deg`, `torque_nm`, force, penetration | yes | yes | new, rigid |
+| `insert` | port_plug, threaded_joint; v2: panel_rail | plug, member | | `speed_mm_s`, `standoff_mm` | `lateral_force_n`, force, `jam`, penetration | | yes | new, rigid |
+| `push` | hinged_lid, drawer, part, port_plug; v2: sliding_door, tile_bed, spring_button | lid, drawer, part, plug; v2: door, button | | `speed_mm_s`; optional `approach` (`top`, omitted, or `front`) | force, penetration | | | new, rigid |
 
 Quantities (`rtt.studio.types.QUANTITIES`, each with a unit and bounds): `angle_deg`,
 `travel_mm`, `depth_mm`, `turns`, `lift_mm`, `hold_s`, `in_target`, `tilt_deg`, `slip_deg`,
-`slip_mm`, `force_n`, `lateral_force_n`, `torque_nm`, `jam`, `penetration_mm`.
+`slip_mm`, `force_n`, `lateral_force_n`, `torque_nm`, `jam`, `penetration_mm`; Studio v2 (not
+offered to the Task Engineer yet): `gap_mm`, `clamp_torque_nm`, `height_err_mm`, `pressed`.
+
+**Success tolerances.** A criterion bound is met within its quantity's tolerance
+(`rtt.studio.types.CRITERION_TOLERANCE`, applied by `SuccessCriterion.passes`): a value meets an
+`at_least` when it is at least `at_least - tolerance`, and an `at_most` when it is at most
+`at_most + tolerance`.
+
+| Quantity | `depth_mm` | `travel_mm` | `lift_mm` | `angle_deg` | `turns` | `torque_nm` | `force_n` |
+|---|---|---|---|---|---|---|---|
+| Tolerance | 0.1 mm | 0.5 mm | 0.5 mm | 0.5 deg | 0.01 turn | 0.02 N m | 0.2 N |
+
+Every other quantity (`hold_s`, `in_target`, `tilt_deg`, `slip_deg`, `slip_mm`,
+`lateral_force_n`, `jam`, `penetration_mm`) is compared exactly, and the step's `max_force_n` and
+`max_torque_nm` limits are not widened. A bound that the physics itself sets is never hit to the
+last digit: the published H2 coupling pass sat at 3.9999936 mm against an "at most 4.0 mm" (the
+thread starts at 4.0 mm), and after an unrelated physics change the same run reads 4.0000012 mm,
+which an exact comparison would call a failure. The tolerance does not hide a real miss: a part
+3 mm short of its depth still fails.
+
+**Penetration.** The runner measures physics validity itself
+(`rtt.studio.episode.PenetrationMonitor`), at every control tick (2 ms) of every step, over every
+active contact pair except the designed ones. `penetration_mm` is the deepest of them: tool and
+object, object and object, object and the table, a wall or a fixture, a lid and its box. Not
+counted (`rtt.studio.episode.designed_pairs`), exactly these two groups:
+
+* **Tool side**: any pair in which both geoms belong to the wrist's own kinematic tree, that is
+  every geom of every wrist link, the pitch and roll chain, every head, the bracket, the
+  adapters and the changer. It is broader than the adjacent links of one linkage: a tool pressed
+  into another part of itself (one head into the bracket or into the other head, a finger into
+  the changer plate) is not seen either. Narrowing it to the genuinely adjacent links is future
+  work.
+* **A port pad**: a `port_plug`'s spring-loaded pad (geoms named `pad<k>`) against any geom of
+  its own instance, the plug it grips and the socket. The pad's contact is the insertion
+  friction, and its stop sits inside the socket wall by construction (that pair is excluded from
+  collision).
+
+Everything else in a template counts, including the plug against the socket wall and a lid
+against its box.
+
+The exact rule. For each pair of bodies in contact, count the control ticks in a row in which its
+deepest contact is more than 1 mm deep (a tick back at 1 mm or less ends the run, and two
+different pairs do not add). `penetration_ms` is the longest such run times the 2 ms control
+period (5 ticks = 10 ms). Then:
+
+* `penetration_mm <= 1`: nothing to report; `penetration_ms = 0`, `penetration_transient = 0`.
+* more than 1 mm for **more than 10 ms** (`penetration_ms > 10`): the step fails as
+  `physics_unreliable`, whatever its criteria say.
+* more than 1 mm for **10 ms or less**: an impact transient. The step's quantities carry
+  `penetration_transient = 1` (with the peak and the duration), and the step is not failed for it.
+
+A caller that did not run through the runner (no `penetration_ms`) is judged on the peak alone, as
+in v1. The three penetration quantities are in every step's measured quantities. Measured on the
+published hero lanes before this rule (500 Hz contact scan): H1 carton into the tote floor 3.84 mm
+for 12 ms and pack into carton 2.94 mm for 12 ms (both `physics_unreliable` now), the lid into the
+tote wall 2.27 mm for 10 ms (a flagged transient); the H3 test port's pads sit 1.5 to 2.5 mm inside
+the socket walls by construction (designed). Those were drops: parts let go above their support
+and a lid pushed over to fall onto its stop. Since S2f (studio v2) parts are set down and a lid a
+two-finger gripper can hold is carried shut (`docs/STUDIO_PRIMITIVES.md` sections 3.1 and 3.5): on
+the H1 single servo-gripper lane, over the 8 conditions of the hero grid, every step stays at or
+under 0.2 mm, none flagged (before S2f on that lane: the lid falling onto the tote 1.4 to 2.2 mm for
+6 to 10 ms, flagged; the picks up to 0.93 mm).
 
 ### 3.4 `Setup`
 
@@ -153,7 +221,7 @@ while an object is held, a twist with a multi-tool head whose head is off the ro
 
 * `StepOutcome`: step, primitive, object, tool, effector id, `success`, `failure_mode`
   (`criterion_not_met`, `constraint_exceeded`, `slip`, `jam`, `dropped`, `physics_invalid`,
-  `physics_unreliable`, `invalid_build`, `not_simulated`, `not_reached`), measured quantities,
+  `physics_unreliable`, `invalid_build`, `not_simulated`, `not_reached`, `out_of_reach`), measured quantities,
   `fidelity`, `caveats` (required for an approximation; a `not_simulated` step never succeeds),
   start time, duration, `traj_sha`, controller name.
 * `TaskResult`: one full-task run of one setup under one condition and seed: per-step outcomes,
@@ -164,7 +232,8 @@ while an object is held, a twist with a multi-tool head whose head is off the ro
   and total mass, changes, bracket) and `CertificateRef`s (v1 grasp certificates or step
   certificates). Aggregates: completion rate, per-step success, weakest step, median cycle time
   of completed runs. `rank_key()` orders by completion rate, weakest step, cycle time, then
-  complexity (design section 5.3); the simplicity margin rule is the recommender's (S5).
+  complexity (design section 5.3); the integrator rules on top of it (a single tool by default,
+  soft arms and hands last) are the recommender's (S5, `docs/STUDIO_SEARCH.md` section 5).
 
 ### 3.6 Build pack manifest
 
@@ -188,22 +257,34 @@ problem with its path (`objects[2]: ...`, `steps[1]: ...`) for a repair prompt.
 
 ## 4. Scene and runner
 
-### 4.1 The wrist and its continuous roll
+### 4.1 The wrist: pitch and continuous roll
 
 ```
-world -> palm        slides x, y, z and the yaw hinge: the frozen core wrist servos (task_v2 gains:
-                     x/y 100 N, z 150 N, yaw 15 N m), 0.4 kg, no geometry
-      -> wrist_roll  continuous hinge about the tool axis through the wrist centre
+world -> palm          slides x, y, z and the yaw hinge: the frozen core wrist servos (task_v2 gains:
+                       x/y 100 N, z 150 N, yaw 15 N m), 0.4 kg, no geometry
+      -> wrist_pitch   limited hinge about the palm's x axis through the wrist centre
+      -> wrist_roll    continuous hinge about the tool axis through the wrist centre
       -> wrist_flange  the 63 mm x 24 mm flange geom; tools hang below it
 ```
+
+The pitch (`STUDIO_WRIST`, the same for every candidate, [assumed] values): a hinge about the
+palm's x axis, after the yaw and before the roll, so the roll stays about the tool axis. Its range
+is +-90 deg (`pitch_range_deg`: straight down at 0, horizontal at either end); position servo kp
+500 N m/rad (stiff, so a held pitch barely deflects under contact), kv 5 N m s/rad, armature
+0.005 kg m^2, torque limit 15 N m (the core yaw servo's), control limited to the range, pitch
+speed cap 180 deg/s (`pitch_speed_dps`) enforced by the runner. Pitch stage 0.05 kg.
 
 The roll (`STUDIO_WRIST`, the same for every candidate, [assumed] values): unlimited joint,
 position servo kp 20 N m/rad, kv 1 N m s/rad (the core yaw gains), armature 0.001 kg m^2, torque
 limit 15 N m (the core yaw servo's), unlimited control so a target can wind several turns,
 roll speed cap 180 deg/s enforced by the runner. Rotor 0.05 kg, flange 0.1 kg. Every wrist
-body and every tool body is gravity compensated (the arm carries the tool's weight). The control
-vector starts with the five wrist servos (x, y, z, yaw, roll), then the heads' actuators, then
-the objects' passive actuators.
+body and every tool body is gravity compensated (the arm carries the tool's weight).
+
+The control vector starts with the six wrist servos (x, y, z, yaw, roll, pitch: the roll keeps
+index 4, the pitch is index 5), then the heads' actuators, then the objects' passive actuators.
+A tool point `p` given in the wrist frame at pitch and roll 0 (a head's `tcp_wrist`) is in the
+world at `palm + Rz(yaw) Rx(pitch) Rz(roll) p` (`rtt.studio.scene.world_tcp`; at pitch 0 this is
+the pitch-free wrist's `Rz(yaw + roll) p`). Every segment starts at pitch 0.
 
 ### 4.2 Tool stacks
 
@@ -268,8 +349,8 @@ A **tool change or head switch** is modelled as the end of one episode and the s
 with the **world state carried** (`WorldState`: every object joint's position by name, at rest) and
 the **task clock advanced** by the change time. The new segment's scene contains the new tool (for
 a tool change only it, so the carried mass swaps) and the wrist starts at home (`home_pose`): over
-the table centre, roll 0, 0.30 m above the table, or higher so the whole tool stack clears the
-tallest object in the carried world state by 30 mm [assumed] (CR-S2b-2: at a fixed 0.30 m a tall
+the table centre, roll and pitch 0, 0.30 m above the table, or higher so the whole tool stack
+clears the tallest object in the carried world state by 30 mm [assumed] (CR-S2b-2: at a fixed 0.30 m a tall
 door at the table centre started inside the tool). Nothing is held across a change (`Setup.problems`). This is the simplest correct
 model: swapping a MuJoCo subtree mid-episode would recompile the model and reset contact and
 actuator state anyway, while carrying named joint positions is exact for objects at rest.
@@ -282,13 +363,25 @@ The task stops at the first failed step (the rest are `not_reached`).
 
 Per step: `PrimitiveController.plan(ctx, model, data) -> StepPlan` (duration up to 30 s and the
 controller's own values), then `command(t, ctx, plan, model, data) -> PrimitiveCommand` every
-2 ms control tick: targets for the five wrist servos and controls for the active head's
-actuators. `SuccessPredicate.observe(...)` accumulates peaks and last values at every check tick
-and at the step's end; `verdict(ctx, acc) -> StepVerdict`. `criteria_verdict(step, measured)` is the
-shared final rule: penetration above 1 mm is `physics_unreliable`, a force or torque above the
-step's limit is `constraint_exceeded`, an unmet or unmeasured criterion is `criterion_not_met`.
+2 ms control tick: targets for the six wrist servos (x, y, z, yaw, roll, pitch) and controls for
+the active head's actuators. A controller may return the first five wrist targets only; the runner
+then holds the pitch where it was when the step began (`StepContext.wrist_pitch_start`). The S2
+primitives return all six: the tool stays straight down (pitch 0) except where the tilt matters
+(a lid's lip pinched from the front, a push from the front; [STUDIO_PRIMITIVES.md](STUDIO_PRIMITIVES.md)
+section 12), and a step that starts tilted turns back to straight down in its first move.
+`StepContext.wrist_start` stays the first five targets beside `wrist_pitch_start`.
+`SuccessPredicate.observe(...)` accumulates peaks and last values at every check tick and at the
+step's end; a predicate that also defines `observe_tick(...)` is called after every control tick,
+which is every physics step at the 2 ms timestep (for what is too fast for the check ticks, such
+as a lid meeting its stop); `verdict(ctx, acc) -> StepVerdict`, which may carry plain caveats
+(`StepVerdict.caveats`) that the step's outcome shows with its own. `criteria_verdict(step, measured)` is the
+shared final rule: penetration above 1 mm for more than 10 ms is `physics_unreliable` (section
+3.3; the runner writes `penetration_mm`, `penetration_ms` and `penetration_transient` into `acc`
+before the verdict), a force or torque above the step's limit is `constraint_exceeded`, an unmet
+or unmeasured criterion is `criterion_not_met` (each bound within its tolerance, section 3.3).
 
-The runner enforces: finite commands of the right shapes, the roll speed cap, no forces applied
+The runner enforces: finite commands of the right shapes, the roll speed cap, the pitch speed cap
+and the pitch range (a target past +-90 deg is a `ContractError`, not a clamp), no forces applied
 directly (`qfrc_applied`, `xfrc_applied`), MuJoCo state resets (`physics_invalid`).
 
 Registry: S2's modules `rtt.studio.primitives.<primitive>` call `register_primitive(controller,
@@ -309,12 +402,13 @@ also for objects an earlier step moved. Predicates read the true state.
 
 Every candidate setup in one comparison runs with (documented here, asserted in code):
 
-1. **The same wrist**: the four frozen core servos and the continuous roll (range, limit flags,
-   armature, damping, gains, force and control limits), the wrist bodies' masses and gravity
-   compensation, and the solver options (`rtt.studio.fairness.wrist_signature`). The roll speed
-   cap is enforced by the runner for every controller.
+1. **The same wrist**: the four frozen core servos, the pitch and the continuous roll (range,
+   limit flags, armature, damping, gains, force and control limits), the wrist bodies' masses and
+   gravity compensation, and the solver options (`rtt.studio.fairness.wrist_signature`). The roll
+   and pitch speed caps and the pitch range are enforced by the runner for every controller.
 2. **The same Studio constants**: `STUDIO_WRIST`; one `ToolChanger` for every tool-change setup;
-   one presentation time for every multi-tool head.
+   one presentation time for every multi-tool head; the same scoring rules (success tolerances,
+   penetration limit and transient allowance).
 3. **The same task, conditions and seeds**: one `task_id`; the same `(condition_id, seed)` list, in
    the same order, for every setup (common random numbers); one controller set.
 4. **The same physics for objects**: object geoms carry priority 1, so no tool buys grip with its
@@ -322,7 +416,12 @@ Every candidate setup in one comparison runs with (documented here, asserted in 
 5. **Effectors at their own documented limits** (v1 rule, [EFFECTORS.md](EFFECTORS.md) section 2.4),
    printed on every card; the task's own limits (`StepConstraints`) apply to every candidate alike.
 
-Every `TaskResult` carries `fairness_sha` (wrist signature, wrist constants and task digest).
+Every `TaskResult` carries `fairness_sha` (wrist signature, wrist constants, the scoring rules
+and task digest). The pitch is in both the signature and the constants, so results from before the
+pitch (a five-servo wrist) have a different `fairness_sha` and never mix with results after it. The
+scoring rules (`rtt.studio.fairness.scoring_signature`: the `CRITERION_TOLERANCE` table, the 1 mm
+penetration limit and the 10 ms transient allowance, section 3.3) are in it too, so results scored
+under other tolerances or another penetration rule have a different `fairness_sha` and never mix.
 `fairness_problems(results, setups)` lists every violation; `assert_fair` raises
 `ContractError`. The recommender (S5) calls `assert_fair` before ranking; the contract tests
 check that the three setup kinds share one `fairness_sha` and that a mismatched seed grid, a
@@ -338,9 +437,12 @@ different changer or mixed controller sets are caught.
 
 A step's tier is the worst of its primitive's, its templates' and its effector's (v1 `core` and
 `rigid` map to `rigid`). The v1 caveats ([EFFECTORS.md](EFFECTORS.md) section 10) still apply, plus:
-the floating wrist abstracts the arm (no arm reach or collision model); presenting a multi-tool
-head is a fixed tilt per segment, not a simulated motion; a tool change is a fixed time, not a
-simulated docking; controllers are scripted and open-loop on the aim offset. A recommendation is a
+the floating wrist abstracts the arm (no arm reach or collision model; the wrist pitch is a
+simulated joint, but whether an arm can hold a tilted pose at that place is not checked: a tilted
+approach only keeps the palm within its travel, and a multi-tool head's swept-volume check keeps
+the heads out of an assumed keep-out for the arm's link before the pitch joint);
+presenting a multi-tool head is a fixed tilt per segment, not a simulated motion; a tool change is
+a fixed time, not a simulated docking; controllers are scripted and open-loop on the aim offset. A recommendation is a
 simulation ranking under the stated conditions, not a hardware guarantee.
 
 ## 7. Build plan: tracks S2 to S7
@@ -348,8 +450,8 @@ simulation ranking under the stated conditions, not a hardware guarantee.
 ### 7.1 Rules for every track
 
 * Work in your own worktree from the integration branch that holds this contract:
-  `git worktree add -b studio-<track> /home/ashwith/rtt-worktrees/studio-<track> <base>`;
-  `PYTHONPATH=<worktree>/src`; the shared venv at `/home/ashwith/robot-tool-tournament/.venv`.
+  `git worktree add -b studio-<track> <worktrees>/studio-<track> <base>`;
+  `PYTHONPATH=<worktree>/src`; the shared venv at `<repo>/.venv`.
 * Edit only the files you own (below). Never edit the frozen contract files (section 1), the v1
   effector contract, the PREREG-frozen code or configs, `pyproject.toml` or `uv.lock`. Never push,
   never spend (Nebius and Token Factory runs are S6's and need the founder's go). Plain
@@ -491,9 +593,11 @@ descriptively instead); H3; the multi-tool head (keep single plus tool change).
 2. **Presentation as motion.** Presenting a multi-tool head is a fixed tilt per segment plus
    `present_s`. If the swing of the idle head through the work matters (H3's cabinet), S5 could
    add a swept-volume check before accepting a multi-head setup.
-3. **Wrist numbers.** Roll torque 15 N m, 180 deg/s, a 6 s tool change and a 1.5 s presentation
-   are [assumed]. They are equal for every candidate, but the cycle-time ranking depends on the
-   change times; the founder may want them sourced from a target arm and changer.
+3. **Wrist numbers.** Roll torque 15 N m and 180 deg/s; pitch +-90 deg, kp 500 N m/rad, kv
+   5 N m s/rad, 15 N m and 180 deg/s; a 7.5 s tool change (sources 5–10 s; one changer measured
+   7.33 s) on a 52 mm changer stack; a 1.5 s presentation: all [assumed]. They are equal for every
+   candidate, but the cycle-time ranking depends on the change times; the founder may want them
+   sourced from a target arm and changer.
 4. **Which part a family sees.** A tool is built against the first part it picks; a tool used only
    on articulated objects is built against a 10 mm probe cube (CR-S5-1; it was the library
    `block`, which refused a 60 mm hook gripper as too short). S5 checks fit against every object

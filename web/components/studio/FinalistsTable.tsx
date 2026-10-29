@@ -1,4 +1,4 @@
-import { failureText, type FinalistRow, massText, pct, type Plan, roleText, runsText, seconds, stepTitle } from "./schema";
+import { failureText, type FinalistRow, massText, pct, type Plan, plainReason, roleText, runsText, seconds, stepTitle } from "./schema";
 import { TierBadge } from "./ui";
 
 /** Where a finalist's runs stop: "2. Tighten coupling: 5 runs (slip 5)". */
@@ -98,7 +98,7 @@ export function FinalistsTable({ rows, plan, baselineId }: { rows: FinalistRow[]
                   ) : (
                     <span className="text-pass">completes every run</span>
                   )}
-                  {!r.eligible && r.reason && !r.reason.startsWith("never completed") ? <span className="mt-1 block text-ink-3">Not eligible: {r.reason}</span> : null}
+                  {!r.eligible && r.reason && !r.reason.startsWith("never completed") ? <span className="mt-1 block text-ink-3">Not eligible: {plainReason(r.reason)}</span> : null}
                 </td>
               </tr>
             );

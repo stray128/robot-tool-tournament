@@ -102,12 +102,33 @@ export interface ReplayBodyV2 extends ReplayBody {
   visuals: ReplayVisual[];
 }
 
+/**
+ * How a keyframed lane was made from its recording (`meta.keyframes`, written by
+ * rtt.studio.replay with the lane's `t`): the header's `fps` is the recording's rate, and the
+ * stored frames are keys chosen from its samples, so frame i is at t[i], not at i / fps.
+ */
+export interface LaneKeyframes {
+  /** The rate the run was recorded at: the header's `fps`. */
+  recorded_fps: number;
+  /** Recorded samples the keys were chosen from (at least one per key). */
+  samples: number;
+  /** The keyframing tolerance in mm: 1, then 1.5 or 2 only when a lane would not fit its budget. */
+  tolerance_mm: number;
+  /** The farthest any vertex of the lane is from the recording (not from the simulation), mm. */
+  max_error_vs_recording_mm: number;
+}
+
+/** The keyframing tolerances a lane may have (rtt.studio.replay.KEY_TOLERANCES_M, in mm). */
+export const KEY_TOLERANCES_MM = [1, 1.5, 2] as const;
+
 export interface ReplayMetaV2 extends Record<string, unknown> {
   design_space: string;
   design_id: string;
   /** sha256 over the training-part geometry hashes; null for designs without one (v1). */
   geometry_id: string | null;
   part_id: string;
+  /** A keyframed lane's keyframing (present exactly when the header has `t`). */
+  keyframes?: LaneKeyframes;
 }
 
 export interface ReplayProvenance {
@@ -141,8 +162,10 @@ export interface ReplayOverlays {
 export interface ReplayHeaderV2 {
   format: "rtt-replay";
   version: 2;
+  /** The recording rate. With a `t` timeline it is nominal: the rate the keys were chosen from, not the rate of the stored frames. */
   fps: number;
-  dtype: "float32";
+  /** "int16" for a `quantised` payload, "float32" otherwise. */
+  dtype: "float32" | "int16";
   byte_order: "little";
   up_axis: "z";
   units: "m";
@@ -158,6 +181,12 @@ export interface ReplayHeaderV2 {
   meta: ReplayMetaV2;
   provenance: ReplayProvenance;
   overlays: ReplayOverlays | null;
+  /** Seconds of every stored frame (strictly increasing, non-uniform), or null for frames at a fixed `fps`. */
+  t: number[] | null;
+  /** Frame indices where a segment starts (after a tool change or head switch); never interpolated across. */
+  cuts: number[];
+  /** Poses stored as seven int16: position in 0.1 mm units, the quaternion as smallest three (lib/poses.ts). */
+  quantised: boolean;
 }
 
 /** A replay header of either supported version. */
@@ -174,6 +203,7 @@ export type FailureMode =
   // task v2 (registered grasp, src/rtt/sim/score.py FAILURE_MODES_V2)
   | "not_registered"
   | "physics_invalid"
+  | "physics_unreliable"
   | "invalid_build";
 
 /** Where the physics ran. Only `nebius` runs are scored results. */

@@ -48,7 +48,7 @@ const CONSTRAINT_TEXT: Record<(typeof CONSTRAINT_KEYS)[number], string> = {
 };
 
 const INPUT =
-  "w-full min-w-0 border border-rule-strong bg-paper px-2 py-1 text-sm text-ink aria-[invalid=true]:border-fail aria-[invalid=true]:text-fail";
+  "w-full min-w-0 rounded-md border border-rule-strong bg-surface px-2 py-1 text-sm text-ink aria-[invalid=true]:border-fail aria-[invalid=true]:text-fail";
 
 /** "open_torque_nm" -> "open torque": the unit suffix goes, the unit is printed beside it. */
 export function humanName(name: string): string {
@@ -204,7 +204,7 @@ function ObjectCard({
     if (flagged) setOpen(true);
   }, [flagged]);
   return (
-    <article aria-label={`Object ${index + 1}: ${object.label}`} className={`border bg-paper/80 p-3 ${problems.length ? "border-fail" : "border-rule"}`}>
+    <article aria-label={`Object ${index + 1}: ${object.label}`} className={`rounded-lg border bg-surface p-3 ${problems.length ? "border-fail" : "border-rule"}`}>
       <header className="flex flex-wrap items-baseline justify-between gap-2">
         <h4 className="heading min-w-0 text-base">
           <span className="num mr-2 text-xs text-accent">O{index + 1}</span>
@@ -343,7 +343,7 @@ function StepCard({
   const prefix = `Step ${index + 1}`;
   const [limitsOpen, setLimitsOpen] = useState(() => CONSTRAINT_KEYS.some((k) => step.constraints[k] !== null));
   return (
-    <article aria-label={`Step ${index + 1}: ${step.description}`} className={`border bg-paper/80 p-3 ${problems.length ? "border-fail" : "border-rule"}`}>
+    <article aria-label={`Step ${index + 1}: ${step.description}`} className={`rounded-lg border bg-surface p-3 ${problems.length ? "border-fail" : "border-rule"}`}>
       <header className="flex flex-wrap items-baseline justify-between gap-2">
         <h4 className="heading flex min-w-0 flex-wrap items-baseline gap-2 text-base">
           <span className="num text-xs text-accent">S{index + 1}</span>
@@ -413,7 +413,7 @@ function StepCard({
           </label>
         ) : null}
         {(info?.params ?? []).map((p) => (
-          <ParamField key={p.name} spec={p} prefix={prefix} value={step.params[p.name] as ParamValue} onChange={(v) => onChange({ ...step, params: { ...step.params, [p.name]: v } })} />
+          <ParamField key={p.name} spec={p} prefix={prefix} value={(step.params[p.name] ?? p.default) as ParamValue} onChange={(v) => onChange({ ...step, params: { ...step.params, [p.name]: v } })} />
         ))}
         <CriteriaEditor catalog={catalog} step={step} kind={kind} prefix={prefix} onChange={(rows) => onChange({ ...step, success: rows })} />
         <details className="col-span-full" open={limitsOpen} onToggle={(e) => setLimitsOpen(e.currentTarget.open)}>
@@ -535,7 +535,7 @@ export default function StepEditor({
               onDelete={() => onChange(deleteObject(plan, i))}
             />
           ))}
-          {!plan.objects.length ? <p className="border border-dashed border-rule-strong p-4 text-sm text-ink-3">No objects yet.</p> : null}
+          {!plan.objects.length ? <p className="rounded-lg border border-dashed border-rule-strong p-4 text-sm text-ink-3">No objects yet.</p> : null}
         </div>
       </section>
 
@@ -565,7 +565,7 @@ export default function StepEditor({
               />
             </li>
           ))}
-          {!plan.steps.length ? <li className="border border-dashed border-rule-strong p-4 text-sm text-ink-3">No steps yet.</li> : null}
+          {!plan.steps.length ? <li className="rounded-lg border border-dashed border-rule-strong p-4 text-sm text-ink-3">No steps yet.</li> : null}
         </ol>
       </section>
     </div>
@@ -586,14 +586,14 @@ function Adder({ label, options, onAdd }: { label: string; options: { value: str
       <label htmlFor={id} className="sr-only">
         {label}
       </label>
-      <select id={id} name="kind" className="border border-rule-strong bg-paper px-2 py-1 text-sm text-ink">
+      <select id={id} name="kind" className="rounded-md border border-rule-strong bg-surface px-2 py-1 text-sm text-ink">
         {options.map((o) => (
           <option key={o.value} value={o.value}>
             {o.text}
           </option>
         ))}
       </select>
-      <button type="submit" className="border border-rule-strong px-3 py-1 text-sm text-ink hover:bg-paper-2">
+      <button type="submit" className="rounded-md border border-rule-strong px-3 py-1 text-sm text-ink hover:bg-paper-2">
         {label}
       </button>
     </form>

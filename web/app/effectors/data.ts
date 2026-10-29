@@ -17,8 +17,7 @@ import {
   parseEffectorIndex,
   parseEffectorPage,
 } from "@/lib/effectors";
-import { isV2, parseAnyReplayHeader } from "@/lib/replay";
-import { POSE_STRIDE } from "@/lib/track.mjs";
+import { isV2, parseAnyReplayHeader, poseBytes } from "@/lib/replay";
 import { DataError } from "@/lib/validate";
 
 const DATA_DIR = path.join(process.cwd(), "public", "data");
@@ -49,7 +48,7 @@ export function checkLaneFiles(page: EffectorPage, file: string, dataDir: string
     }
     const dir = path.dirname(headerFile);
     const bin = path.join(dir, header.bin);
-    if (!existsSync(bin) || statSync(bin).size !== header.n_frames * header.n_bodies * POSE_STRIDE * 4) {
+    if (!existsSync(bin) || statSync(bin).size !== poseBytes(header)) {
       throw new DataError(file, where, `${header.bin} is missing or does not match its header`);
     }
     let served = statSync(headerFile).size + statSync(bin).size;

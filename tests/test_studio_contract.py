@@ -61,6 +61,7 @@ from rtt.studio.types import (
     UnsupportedItem,
     buildpack_manifest_json_schema,
     get_template,
+    planner_templates,
     submit_task_plan_tool,
     task_plan_json_schema,
     task_spec_from_tool_args,
@@ -382,6 +383,8 @@ def test_templates_cover_every_kind_with_bounded_defaults() -> None:
         TemplateKind.QUARTER_TURN_LATCH,
         TemplateKind.THREADED_JOINT,
         TemplateKind.HANDWHEEL_VALVE,
+        TemplateKind.PANEL_RAIL,  # Studio v2: the clamp's thread
+        TemplateKind.TILE_BED,  # Studio v2: the mortar bed
     }
 
 
@@ -455,8 +458,19 @@ def test_task_plan_schema_is_strict_bounded_and_in_the_supported_subset() -> Non
     assert tool["type"] == "function" and tool["function"]["name"] == TASK_PLAN_TOOL
     assert tool["function"]["parameters"] == schema
     json.dumps(tool, allow_nan=False)
-    assert len(schema["properties"]["objects"]["items"]["anyOf"]) == len(TemplateKind)
+    # the kinds the Task Engineer is offered: every template since it was taught the Studio v2 jobs
+    assert (
+        len(schema["properties"]["objects"]["items"]["anyOf"])
+        == len(planner_templates())
+        == len(TemplateKind)
+    )
     assert len(schema["properties"]["steps"]["items"]["anyOf"]) == len(PrimitiveKind)
+    push = next(
+        b
+        for b in schema["properties"]["steps"]["items"]["anyOf"]
+        if b["properties"]["primitive"]["const"] == "push"
+    )
+    assert push["properties"]["params"]["required"] == ["speed_mm_s", "approach"]  # push's taught optional
 
 
 def test_tool_args_round_trip_and_validate() -> None:
@@ -467,7 +481,7 @@ def test_tool_args_round_trip_and_validate() -> None:
     again = task_spec_from_tool_args(args, source="recorded")
     assert again.task_id == spec.task_id and again.source == "recorded"
     assert again.to_tool_args() == args
-    for t in templates():  # every default instance fits the schema
+    for t in planner_templates():  # every default instance the Task Engineer is offered fits the schema
         inst = ObjectInstance.of(
             "thing",
             t.kind,
@@ -605,8 +619,12 @@ def test_segments_are_the_tool_change_hook() -> None:
 def test_wrist_limits_are_one_shared_constant() -> None:
     d = STUDIO_WRIST.to_dict()
     assert d["roll_torque_nm"] == 15.0 and d["roll_speed_max_deg_s"] == 180.0
+    assert (d["pitch_range_deg"], d["pitch_kp"], d["pitch_kv"]) == (90.0, 500.0, 5.0)
+    assert d["pitch_torque_nm"] == 15.0 and d["pitch_speed_dps"] == 180.0
     with pytest.raises(ValueError):
         type(STUDIO_WRIST)(roll_torque_nm=0.0)
+    with pytest.raises(ValueError):
+        type(STUDIO_WRIST)(pitch_range_deg=0.0)
 
 
 # --------------------------------------------------------------------------- results

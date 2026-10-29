@@ -3,15 +3,16 @@
 
 ::
 
-    python scripts/export_studio_web.py --reports DIR [--sessions DIR] [--heroes h1,h2,h3]
+    python scripts/export_studio_web.py --reports DIR [--sessions DIR] [--heroes h1_tote,h6_tile]
         [--data-dir web/public/data] [--assets-dir web/public/assets] [--workers 4]
-        [--no-replays] [--no-packs] [--no-blocker] [--check]
+        [--no-replays] [--no-packs] [--no-blocker] [--qa-dir DIR] [--vision-review] [--check]
 
-``DIR`` holds one folder per hero case (``h1_tote``, ``h2_coupling``, ``h3_cabinet``) with the
+``DIR`` holds one folder per hero case (:data:`HEROES`: ``h1_tote``, ``h6_tile``, ...) with the
 ``report.json`` that :func:`rtt.studio.search.run_task_tournament` wrote (``report.to_dict()``)
 and, optionally, the ``determinism.json`` of the run. Everything the Studio pages show is
-derived from these files, the recorded Task Engineer plans and (with ``--sessions``) the recorded
-Grasp Engineer sessions, so the orchestrator reruns this script after any refresh of a report:
+derived from these files, the recorded Task Engineer plans (the Studio v2 recording,
+:data:`rtt.studio.engineer.gate.RECORDED_GATE`) and (with ``--sessions``) the recorded Grasp
+Engineer sessions, so this script is run again after any refresh of a report:
 
 * ``web/public/data/studio/index.json`` (``rtt-web-studio``) and ``<hero>.json``
   (``rtt-web-studio-hero``): the use case, the frozen plan's steps, the candidates screened and
@@ -20,9 +21,21 @@ Grasp Engineer sessions, so the orchestrator reruns this script after any refres
   none, the closest setups and the physical blocker), the assumed constants and provenance;
 * ``studio/replays/<hero>/<lane>.{json,bin}``: replay v2 lanes of the recommended (or closest)
   setup and the best single baseline on one condition, re-simulated by
-  :func:`rtt.studio.replay.record_lane`, which must reproduce the report's ``traj_sha`` bit for bit;
-  their GLB assets go to ``web/public/assets`` (content addressed, merged into its manifest,
-  meshopt-compressed by the web build's compressor);
+  :func:`rtt.studio.replay.export_lanes`, which must reproduce the report's ``traj_sha`` bit for
+  bit. A lane is recorded at 100 Hz and keeps only the frames its bodies need (``t``: the time of
+  each; ``cuts``: where a tool change or head switch starts a segment), so that every vertex of
+  every body is within 1 mm of the recording; it is int16-quantised when float32 poses would
+  exceed :data:`rtt.studio.replay.LANE_BUDGET_BYTES` (and only then relaxed, to 2 mm at most). Their
+  GLB assets go to ``web/public/assets`` (content addressed, merged into its manifest,
+  meshopt-compressed by the web build's compressor). **Every lane then passes the replay gate**
+  (:mod:`rtt.studio.replay_qa`: the re-run reproduces ``traj_sha``, cuts where the run changes
+  segment, at most 2 mm from a 500 Hz re-run of the simulation, no jump over 50 mm between display
+  frames, drawn-world penetration within the simulation's, GLBs within 0.05 mm of their geoms)
+  or the export writes nothing and names the hero, lane and check that failed; the measurements
+  go to ``replay_qa.json`` in ``--qa-dir`` (default ``runs/studio_export``, git-ignored). With
+  ``--vision-review`` two independent vision models also look at frames around cuts and contacts
+  (``scripts/replay_vision_review.py``); that is advice for a person, written to
+  ``replay_review.json`` beside it, and never blocks the export;
 * ``studio/<hero>/build_pack.zip``: the build pack, re-exported from the report with
   :func:`rtt.studio.buildpack.part_jaw.export_part_jaw_pack` (deterministic zip), at most
   :data:`PACK_CAP_BYTES`;
@@ -61,6 +74,7 @@ from rtt.effectors.lanes import FAMILY_TITLES
 from rtt.effectors.types import PRODUCT_MODE_LABEL
 from rtt.library.brands import find_library_brands
 from rtt.studio.engineer.gate import RECORDED_GATE
+from rtt.studio.replay import ReplayMismatchError
 from rtt.studio.types import (
     CONTRACT_VERSION,
     QUANTITIES,
@@ -71,12 +85,34 @@ from rtt.studio.types import (
 INDEX_SCHEMA: Final = "rtt-web-studio"
 PAGE_SCHEMA: Final = "rtt-web-studio-hero"
 WEB_VERSION: Final = 1
-#: Hero route slug -> recorded case id (the frozen S4e plans).
-HEROES: Final[tuple[tuple[str, str], ...]] = (("h1", "h1_tote"), ("h2", "h2_coupling"), ("h3", "h3_cabinet"))
+#: Hero route slug -> recorded case id: the Studio v2 heroes whose recorded plans (RECORDED_GATE) are
+#: valid and complete in physics, each named by its case id, in the site's order. An export publishes a
+#: hero only when every one of its lanes passes the replay gate (``--heroes`` names a subset). h4_cnc
+#: has no valid plan and is not a hero. The published v1 routes (h1, h2, h3) redirect on the site.
+HEROES: Final[tuple[tuple[str, str], ...]] = (
+    ("h1_tote", "h1_tote"),
+    ("h5_solar", "h5_solar"),
+    ("h6_tile", "h6_tile"),
+    ("h2_coupling", "h2_coupling"),
+    ("h7_hotel", "h7_hotel"),
+)
 #: The largest build pack zip the static site serves.
 PACK_CAP_BYTES: Final = 2_000_000
 DEFAULT_DATA_DIR: Final = REPO / "web" / "public" / "data"
 DEFAULT_ASSETS_DIR: Final = REPO / "web" / "public" / "assets"
+#: Where the replay gate's measurements and the vision review list go (git-ignored, not served).
+DEFAULT_QA_DIR: Final = REPO / "runs" / "studio_export"
+#: The fields of a recorded plan that make its task id.
+PLAN_KEYS: Final = (
+    "title",
+    "description",
+    "objects",
+    "steps",
+    "assumptions",
+    "clarifications",
+    "unsupported",
+    "refusal",
+)
 KIND_TITLES: Final[Mapping[str, str]] = {
     "single": "Single tool",
     "multi_head": "Two-tool head",
@@ -90,18 +126,6 @@ PRIMITIVE_TITLES: Final[Mapping[str, str]] = {
     "twist": "Twist",
     "insert": "Insert",
     "push": "Push",
-}
-FAILURE_TEXT: Final[Mapping[str, str]] = {
-    "criterion_not_met": "criterion not met",
-    "constraint_exceeded": "force or torque limit exceeded",
-    "slip": "slip",
-    "jam": "jam",
-    "dropped": "dropped",
-    "physics_invalid": "simulator reset",
-    "physics_unreliable": "penetration over 1 mm",
-    "invalid_build": "cannot be built",
-    "not_simulated": "not simulated yet",
-    "not_reached": "not reached",
 }
 _URL = re.compile(r"https?://", re.IGNORECASE)
 _LOCAL = re.compile(r"(/home/|/Users/|/tmp/|/root/|[A-Za-z]:\\)")
@@ -139,6 +163,66 @@ def code_version() -> str:
 
 def family_title(family: str) -> str:
     return FAMILY_TITLES.get(family, family.replace("_", " ").capitalize())
+
+
+def studio_tool(family: str, model: str | None, params: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """What the site shows of a tool only the Studio uses (``rtt.effectors.tournament`` keeps them
+    out of the per-part tournament): a vacuum area frame, a nut runner or a tamper pad, with its
+    own kind title, its rating (computed by the family's own geometry from the spec's ``params``, or
+    the preset's when none are given) and its caveat. Empty for every other tool."""
+    from rtt.effectors import process_tool as pt
+    from rtt.effectors import suction as su
+    from rtt.effectors.registry import get_family
+    from rtt.effectors.types import EffectorFamily
+
+    if family not in (EffectorFamily.PROCESS_TOOL.value, EffectorFamily.SUCTION.value):
+        return {}
+    if params is None:
+        preset = next((sp for sp in get_family(EffectorFamily(family)).presets() if sp.model == model), None)
+        if preset is None:
+            return {}
+        params = preset.params
+    if family == EffectorFamily.SUCTION.value:
+        if not su.is_frame(params):
+            return {}
+        g = su.FrameGeometry.from_params(params)
+        rating = (
+            f"rated {g.payload_kg('smooth'):.2f} kg on a smooth face (holding force over a "
+            f"{su.SAFETY_FACTORS['smooth']:g} safety factor)"
+        )
+        return {
+            "studio_only": True,
+            "family_title": "Vacuum area frame",
+            "rating": rating,
+            "caveat": su.FRAME_CAVEAT,
+        }
+    if (model or "").startswith("nut-runner-"):
+        g = pt.NutRunnerGeometry.from_params(params)
+        rating = (
+            f"rated {g.rated_torque:.1f} N m (clutch cap {g.torque_cap:g} N m); members at least "
+            f"{pt.MIN_MEMBER_MM:g} mm tall"
+        )
+        return {
+            "studio_only": True,
+            "family_title": family_title(family),
+            "rating": rating,
+            "caveat": pt.NUT_RUNNER_CAVEAT,
+        }
+    if (model or "").startswith("tamper-pad-"):
+        g = pt.TamperGeometry.from_params(params)
+        rating = f"rated {g.rated_force:.0f} N (the stage slips at {g.force_cap:g} N)"
+        return {
+            "studio_only": True,
+            "family_title": family_title(family),
+            "rating": rating,
+            "caveat": pt.TAMPER_CAVEAT,
+        }
+    return {
+        "studio_only": True,
+        "family_title": family_title(family),
+        "rating": None,
+        "caveat": pt.FIDELITY_CAVEAT,
+    }
 
 
 def criterion_text(quantity: str, at_least: float | None, at_most: float | None, obj_label: str = "") -> str:
@@ -193,7 +277,10 @@ def condition_text(cond: Mapping[str, Any]) -> str:
 
 
 def load_case(case_id: str, recorded: Path = RECORDED_GATE) -> dict[str, Any]:
-    """The recorded Task Engineer case (use-case text, title, setting, how the plan was reached)."""
+    """The recorded Task Engineer case (use-case text, title, setting, how the plan was reached).
+
+    The default is the Studio v2 recording (``rtt.studio.engineer.gate.RECORDED_GATE``), whose hero
+    plans the exported reports ran; the v1 heroes' plans are in ``RECORDED_GATE_V1``."""
     manifest = json.loads((recorded / "manifest.json").read_text(encoding="utf-8"))
     for row in manifest["cases"]:
         if row["case_id"] == case_id:
@@ -238,17 +325,7 @@ def plan_doc(report: Mapping[str, Any], case: Mapping[str, Any]) -> dict[str, An
     fidelity = task.get("fidelity") or {}
     from rtt.studio.types import task_spec_from_tool_args
 
-    keys = (
-        "title",
-        "description",
-        "objects",
-        "steps",
-        "assumptions",
-        "clarifications",
-        "unsupported",
-        "refusal",
-    )
-    spec = task_spec_from_tool_args({k: task[k] for k in keys if k in task}, source="recorded")
+    spec = task_spec_from_tool_args({k: task[k] for k in PLAN_KEYS if k in task}, source="recorded")
     if spec.task_id != report["task_id"]:
         raise ExportError(f"the report's task does not hash to its task_id ({spec.task_id[:12]})")
     steps = []
@@ -311,25 +388,52 @@ def plan_doc(report: Mapping[str, Any], case: Mapping[str, Any]) -> dict[str, An
 # --------------------------------------------------------------------------- screen and matrix
 
 
+def candidate_params(report: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
+    """Every screened candidate's spec params, by effector id. The report lists its candidates without
+    their params, so they come from the candidate pool the search draws from
+    (:func:`rtt.studio.search.default_candidates` on the report's task: the same code builds the same
+    effector ids); the finalists' tools carry their own. A Studio-only tool that is not a preset (a
+    designed frame variant, say) then still gets its rating and caveat from its own geometry."""
+    from rtt.studio.search import default_candidates
+    from rtt.studio.types import task_spec_from_tool_args
+
+    task = report["task"]
+    spec = task_spec_from_tool_args({k: task[k] for k in PLAN_KEYS if k in task}, source="recorded")
+    out = {c.effector_id: dict(c.spec.params) for c in default_candidates(task_spec=spec)}
+    for f in report.get("finalists") or []:
+        for t in (f.get("setup") or {}).get("tools") or []:
+            if t.get("params") is not None:
+                out[t["effector_id"]] = dict(t["params"])
+    return out
+
+
 def screen_doc(report: Mapping[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
     sc = report["screen"]
     steps = [s["id"] for s in report["task"]["steps"]]
+    labels = {o["name"]: o.get("label") or o["name"] for o in report["task"]["objects"]}
     pruned_all: dict[str, str] = {}
     pruned_steps: dict[str, list[dict[str, str]]] = {}
     for p in sc["pruned"]:
         if p.get("step_id") is None:
-            pruned_all[p["effector_id"]] = p["reason"]
+            pruned_all[p["effector_id"]] = plain_reason(p["reason"], labels)
         else:
             pruned_steps.setdefault(p["effector_id"], []).append(
-                {"step_id": p["step_id"], "reason": p["reason"]}
+                {"step_id": p["step_id"], "reason": plain_reason(p["reason"], labels)}
             )
     cells: dict[tuple[str, str], Mapping[str, Any]] = {
         (c["effector_id"], c["step_id"]): c for c in sc["cells"]
     }
+    params = candidate_params(report)
     candidates = []
     for c in sc["candidates"]:
         eid = c["effector_id"]
         screened = any((eid, s) in cells for s in steps)
+        tool = studio_tool(c["family"], c.get("model"), params.get(eid))
+        if not tool and c["family"] == "process_tool":
+            raise ExportError(
+                f"{c['display_name']}: a process tool whose params are not in the candidate pool, so its "
+                "rating and caveat cannot be written"
+            )
         candidates.append(
             {
                 "effector_id": eid,
@@ -344,11 +448,12 @@ def screen_doc(report: Mapping[str, Any]) -> tuple[dict[str, Any], dict[str, Any
                 "status": "screened" if screened else "pruned",
                 "pruned_reason": pruned_all.get(eid),
                 "pruned_steps": pruned_steps.get(eid, []),
+                **tool,
             }
         )
     reasons = Counter()
     for p in sc["pruned"]:
-        reasons[_reason_group(p["reason"])] += 1
+        reasons[_reason_group(p["reason"], labels)] += 1
     pruned_reasons = [
         {"reason": r, "count": n} for r, n in sorted(reasons.items(), key=lambda kv: (-kv[1], kv[0]))
     ]
@@ -384,7 +489,7 @@ def screen_doc(report: Mapping[str, Any]) -> tuple[dict[str, Any], dict[str, Any
                     "context": cell.get("context") or "start",
                 }
             else:
-                reason = raw.get("pruned") or next(
+                reason = (plain_reason(raw["pruned"], labels) if raw.get("pruned") else None) or next(
                     (p["reason"] for p in pruned_steps.get(eid, []) if p["step_id"] == s), None
                 )
                 out_cells[s] = (
@@ -439,12 +544,65 @@ REASON_GROUPS: Final[tuple[tuple[str, str], ...]] = (
 )
 
 
-def _reason_group(reason: str) -> str:
-    """The summary group of a pruning reason (:data:`REASON_GROUPS`)."""
+def _reason_group(reason: str, labels: Mapping[str, str] | None = None) -> str:
+    """The summary group of a pruning reason (:data:`REASON_GROUPS`); a reason in no group is its own,
+    in plain words."""
     for phrase, title in REASON_GROUPS:
         if phrase in reason:
             return title
-    return reason[:200]
+    return plain_reason(reason, labels or {})[:200]
+
+
+#: The tool checks' codes (``rtt.effectors.morphology.validators.CHECK_CODES`` and the jaw
+#: configurator's), the design parameters and the primitives a reason may name, in plain words.
+_REASON_WORDS: Final[Mapping[str, str]] = {
+    "out_of_bounds": "out of bounds",
+    "unprintable": "cannot be printed",
+    "self_intersecting": "intersects itself",
+    "too_heavy": "too heavy",
+    "over_budget": "over budget",
+    "too_narrow": "too narrow",
+    "too_short": "too short",
+    "above_part": "grips above the part",
+    "digit_collision": "digits collide",
+    "cannot_reach": "cannot reach",
+    "no_opposition": "no opposing digits",
+    "not_buildable": "cannot be built",
+    "q_seat_range": "seat range",
+    "open_clearance": "open clearance",
+    "palm_radius_mm": "the palm radius",
+    "pad_depth_mm": "the pad depth",
+    "tip_size_mm": "the tip size",
+    "wall_draft_deg": "the wall draft",
+    "grip_height_frac": "the grip height",
+    "studio_probe": "the probe part",
+    **{k: v.lower() for k, v in PRIMITIVE_TITLES.items()},
+}
+_SNAKE = re.compile(r"\b[A-Za-z0-9]+(?:_[A-Za-z0-9]+)+\b")
+
+
+def plain_reason(reason: str, labels: Mapping[str, str]) -> str:
+    """A pruning reason as the site shows it: the checks' codes, parameter names and object names
+    (``labels``: name to label) in plain words, so no internal code reaches the screen. The words
+    of the reason are otherwise its own."""
+
+    def part(m: re.Match[str]) -> str:  # a scene body: 'studio_<object>[_<piece>]'
+        name = m.group(1)
+        for obj in sorted(labels, key=len, reverse=True):
+            if name == obj or name.startswith(f"{obj}_"):
+                rest = name[len(obj) :].strip("_").replace("_", " ")
+                return f"{labels[obj]}{f' {rest}' if rest else ''}"
+        return name.replace("_", " ")
+
+    text = re.sub(r"'studio_([a-z0-9_]+)'", part, reason)
+    for obj in sorted(labels, key=len, reverse=True):
+        if "_" in obj:
+            text = re.sub(rf"\b{re.escape(obj)}\b", labels[obj], text)
+        else:
+            text = re.sub(rf"^{re.escape(obj)}:", f"{labels[obj]}:", text)
+    for code in sorted(_REASON_WORDS, key=len, reverse=True):
+        text = re.sub(rf"\b{re.escape(code)}\b", _REASON_WORDS[code], text)
+    return _SNAKE.sub(lambda m: m.group(0).replace("_", " "), text)
 
 
 # --------------------------------------------------------------------------- finalists
@@ -460,9 +618,20 @@ def _setup_tools(setup: Mapping[str, Any], off_ids: set[str]) -> list[dict[str, 
             "family_title": family_title(t["family"]),
             "fidelity": _tier(t.get("fidelity")),
             "off_the_shelf": t["effector_id"] in off_ids,
+            **studio_tool(t["family"], t.get("model"), t.get("params")),
         }
         for i, t in enumerate(setup["tools"])
     ]
+
+
+def _with_caveats(tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Each tool with its caveat: a Studio-only tool's own (:func:`studio_tool`), else its family's
+    for an approximation (a closest setup's step cards show it as a recommendation's do)."""
+    for t in tools:
+        t["caveat"] = t.get("caveat") or (
+            _family_caveat(t["family"]) if t["fidelity"] == "approximation" else None
+        )
+    return tools
 
 
 def _tier(fidelity: str | None) -> str:
@@ -516,13 +685,15 @@ def finalist_rows(report: Mapping[str, Any]) -> list[dict[str, Any]]:
             roles.append("runner_up_rigid")
         if closest and sid == closest[0] and not rec_id:
             roles.append("closest")
+        if row.get("baseline"):  # the R01 baseline printed beside the pick (recommend.py)
+            roles.append("baseline")
         rows.append(
             {
                 **brief(row),
                 "roles": roles or ["finalist"],
                 "eligible": bool(row.get("eligible")),
                 "reason": row.get("reason"),
-                "tool_details": _setup_tools(setups[sid], off_ids),
+                "tool_details": _with_caveats(_setup_tools(setups[sid], off_ids)),
                 "step_success": _rd(row.get("step_success")),
                 "weakest_step": {
                     "step_id": (row.get("weakest_step") or {}).get("step_id"),
@@ -567,6 +738,17 @@ def _family_caveat(family: str) -> str | None:
     return text or None
 
 
+def runner_up_doc(rigid: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    """The recommender's ``runner_up_rigid`` as the page says it: an approximation pick names its best
+    all-rigid eligible runner-up, or why there is none; a rigid pick has none (null)."""
+    if rigid is None:
+        return None
+    return {
+        "label": (rigid.get("setup") or {}).get("label"),
+        "basis": rigid.get("basis") or "the best eligible setup with every step on the rigid tier",
+    }
+
+
 def recommendation_doc(report: Mapping[str, Any]) -> dict[str, Any] | None:
     rec = report["recommendation"]
     r = rec.get("recommendation")
@@ -577,9 +759,7 @@ def recommendation_doc(report: Mapping[str, Any]) -> dict[str, Any] | None:
     setup = finalist["setup"]
     runs = finalist["runs"]
     off_ids = {c["effector_id"] for c in report["screen"]["candidates"] if c.get("off_the_shelf")}
-    tools = _setup_tools(setup, off_ids)
-    for t in tools:
-        t["caveat"] = _family_caveat(t["family"]) if t["fidelity"] == "approximation" else None
+    tools = _with_caveats(_setup_tools(setup, off_ids))
     by_step: dict[str, Mapping[str, Any]] = {}
     for run in runs:
         for s in run["steps"]:
@@ -613,7 +793,6 @@ def recommendation_doc(report: Mapping[str, Any]) -> dict[str, Any] | None:
         }
     elif setup.get("changer"):
         geometry = {"changer": _rd(setup["changer"], 3)}
-    rigid = rec.get("runner_up_rigid") or {}
     return {
         **brief(r),
         "why": r.get("why"),
@@ -623,14 +802,28 @@ def recommendation_doc(report: Mapping[str, Any]) -> dict[str, Any] | None:
         "tools": tools,
         "geometry": geometry,
         "steps": steps,
-        "runner_up_rigid": {
-            "label": (rigid.get("setup") or {}).get("label"),
-            "basis": rigid.get("basis") or "",
-        },
+        "runner_up_rigid": runner_up_doc(rec.get("runner_up_rigid")),
         "versus_best_single": _rd(rec.get("versus_best_single"), 3)
         if rec.get("versus_best_single")
         else None,
+        # the pick against the R01 baseline, the best eligible single tool (recommend.py)
+        "versus_baseline": _rd(rec.get("versus_baseline"), 4) if rec.get("versus_baseline") else None,
     }
+
+
+def baseline_doc(report: Mapping[str, Any], rows: Mapping[str, Mapping[str, Any]]) -> dict[str, Any] | None:
+    """The R01 baseline the recommender prints beside its pick: the best eligible single tool
+    (its finalist row, by ``setup_id``), or, when no single tool is eligible, why (``basis``).
+    ``None`` for a report from before the recommender had one."""
+    base = report["recommendation"].get("baseline")
+    if base is None:
+        return None
+    sid = base.get("setup_id")
+    if sid is None:
+        return {"setup_id": None, "basis": base.get("basis") or "no single tool is eligible"}
+    if sid not in rows:
+        raise ExportError(f"the baseline {sid[:12]} is not among the finalists the page lists")
+    return {"setup_id": sid, "basis": None}
 
 
 # --------------------------------------------------------------------------- sensitivity, constants
@@ -795,6 +988,7 @@ def hero_page(
         "finalists": finalists,
         "recommendation": rec,
         "best_single": best,
+        "baseline": baseline_doc(report, rows),
         "no_winner": no_winner,
         "sensitivity": sensitivity_doc(report),
         "constants": constants_doc(report),
@@ -1017,6 +1211,136 @@ def session_block(doc: Mapping[str, Any], rel: str) -> dict[str, Any]:
 # --------------------------------------------------------------------------- driver
 
 
+def check_lane(doc: Mapping[str, Any], header: Mapping[str, Any], name: str) -> list[str]:
+    """What a lane's page entry must say about the replay it points at: its size within the
+    budget, its frames and duration, and a frame exactly at each segment's start."""
+    from rtt.studio.replay import LANE_BUDGET_BYTES
+
+    out = []
+    if doc["bytes"] > LANE_BUDGET_BYTES:
+        out.append(f"{name}: {doc['bytes']} bytes, over the {LANE_BUDGET_BYTES} a lane may serve")
+    if doc["n_frames"] != header["n_frames"] or doc["fps"] != header["fps"]:
+        out.append(f"{name}: the page entry and the replay disagree on frames or fps")
+    times = header.get("t")
+    if times is None:
+        return out
+    if abs(doc["duration_s"] - times[-1]) > 1e-3:
+        out.append(f"{name}: duration {doc['duration_s']} s, the last frame is at {times[-1]} s")
+    segments = doc["segments"]
+    cuts = header.get("cuts", [])
+    if len(cuts) != len(segments) - 1:
+        out.append(f"{name}: {len(cuts)} cuts for {len(segments)} segments")
+    for c, seg in zip(cuts, segments[1:], strict=False):
+        if abs(times[c] - seg["start_s"]) > 1e-3:
+            out.append(
+                f"{name}: the frame at the cut ({times[c]} s) is not at the segment start ({seg['start_s']} s)"
+            )
+    return out
+
+
+def _gate_line(res: Any) -> str:
+    """One log line for a lane's verdict: what was measured, or how many problems there are."""
+    if not res.passed:
+        return f"FAILED ({len(res.problems)} problem{'s' if len(res.problems) != 1 else ''})"
+    m = res.metrics
+    parts = [
+        ("interpolation", "max_error_vs_sim_mm", "interpolation {:.2f} mm"),
+        ("jumps", "max_drawn_minus_sim_mm", "jump {:.1f} mm over the simulation's"),
+        ("penetration", "max_excess_mm", "penetration {:.2f} mm over the simulation's"),
+        ("glb", "max_deviation_mm", "glb {:.3f} mm"),
+    ]
+    seen = [fmt.format(m[c][k]) for c, k, fmt in parts if c in m and k in m[c]]
+    return "passed" + (f" ({', '.join(seen)})" if seen else "")
+
+
+def run_gate(
+    work: Sequence[Mapping[str, Any]],
+    served: Mapping[str, tuple[bytes, Mapping[str, Any]]],
+    *,
+    check: Any = None,
+    log: Any = print,
+    stop_on_failure: bool = True,
+) -> tuple[list[str], dict[str, dict[str, Any]]]:
+    """The replay gate (:func:`rtt.studio.replay_qa.check_lane`) on every lane of every hero in
+    ``work`` (items with ``hero``, ``report`` and ``lanes``), judged as served (``served``: the GLBs).
+    Returns the problems, each ``"<hero>/<lane>: <check>: ..."``, and every lane's verdict by hero and
+    lane. The export is all or nothing, so the gate stops at the first lane that fails (a lane costs a
+    500 Hz re-run) unless ``stop_on_failure`` is false; the lanes after it are listed as skipped."""
+    if check is None:
+        from rtt.studio.replay_qa import check_lane as check
+    from rtt.studio.replay_qa import QAResult
+
+    assets = {aid: data for aid, (data, _) in served.items()}
+    problems: list[str] = []
+    results: dict[str, dict[str, Any]] = {}
+    for item in work:
+        for lane in item["lanes"]:
+            where = f"{item['hero']}/{lane.stem}"
+            if stop_on_failure and problems:
+                log(f"  gate {where}: not checked (an earlier lane failed)")
+                results.setdefault(item["hero"], {})[lane.stem] = QAResult(
+                    False, [], {"skipped": "an earlier lane failed"}
+                )
+                continue
+            log(f"  gate {where}")
+            res = check(item["report"], lane, assets=assets, log=log)
+            results.setdefault(item["hero"], {})[lane.stem] = res
+            log(f"  gate {where}: {_gate_line(res)}")
+            problems += [f"{where}: {p}" for p in res.problems]
+    return problems, results
+
+
+def _write_qa(
+    qa_dir: Path,
+    results: Mapping[str, Mapping[str, Any]],
+    review: Any = None,
+    failures: Sequence[str] = (),
+) -> None:
+    """``replay_qa.json`` (every lane's verdict and measurements, and the ``failures`` that kept a lane
+    from reaching the gate: a run that did not reproduce, a lane that could not be built) and, when
+    there is one, ``replay_review.json``."""
+    doc = {
+        "format": "rtt-replay-qa",
+        "version": 1,
+        "failures": list(failures),
+        "heroes": {
+            hero: {
+                lane: {"passed": r.passed, "problems": r.problems, "metrics": r.metrics}
+                for lane, r in sorted(lanes.items())
+            }
+            for hero, lanes in sorted(results.items())
+        },
+    }
+    _write_json(qa_dir / "replay_qa.json", doc)
+    if review is not None:
+        _write_json(qa_dir / "replay_review.json", review)
+
+
+def stale_heroes(data_dir: Path) -> list[str]:
+    """Heroes with a published page under ``data_dir/studio`` that :data:`HEROES` no longer lists."""
+    studio = data_dir / "studio"
+    known = {h for h, _ in HEROES}
+    if not studio.is_dir():
+        return []
+    return sorted(p.stem for p in studio.glob("*.json") if p.name != "index.json" and p.stem not in known)
+
+
+def kept_assets(data_dir: Path, heroes: Iterable[str]) -> set[str]:
+    """The GLB assets the published lanes of ``heroes`` draw (each lane header's ``assets``): a
+    partial export keeps those heroes' pages, so it keeps the assets their replays need."""
+    out: set[str] = set()
+    for hero in heroes:
+        page = data_dir / "studio" / f"{hero}.json"
+        if not page.is_file():
+            continue
+        for lane in json.loads(page.read_text(encoding="utf-8")).get("lanes") or []:
+            header = data_dir / f"{lane['replay']}.json"
+            if not header.is_file():
+                raise ExportError(f"{hero}: its published lane {lane['replay']} has no header")
+            out |= set(json.loads(header.read_text(encoding="utf-8")).get("assets") or {})
+    return out
+
+
 def _write_json(path: Path, doc: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(doc, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
@@ -1034,10 +1358,18 @@ def export(
     blocker: bool = True,
     workers: int = 4,
     compress: bool = True,
+    qa_dir: Path | None = None,
+    vision_review: Any = None,
     log: Any = print,
 ) -> dict[str, Any]:
-    """Build every hero's data in a scratch folder, check it, then publish (module docstring)."""
-    from rtt.sim.replay import write_replay
+    """Build every hero's data in a scratch folder, check it, then publish (module docstring).
+
+    The replay gate runs on every lane before anything is published: when any lane fails nothing is
+    written and the error names each hero, lane and check. ``qa_dir`` is where its measurements go
+    (always written, passing or not); ``vision_review`` is a function from the lanes
+    ``[(hero, LaneBuild), ...]`` to a review list, called after publishing; it is advice and an
+    error in it is only reported."""
+    from rtt.studio.replay import write_lane
 
     version = code_version()
     cases = dict(HEROES)
@@ -1047,6 +1379,8 @@ def export(
     staged: dict[str, Path] = {}  # data-relative path -> staged file
     problems: list[str] = []
     served: dict[str, tuple[bytes, Mapping[str, Any]]] = {}
+    lane_failures: list[str] = []
+    gate_results: dict[str, dict[str, Any]] = {}
     with tempfile.TemporaryDirectory(prefix="studio-web-") as tmp_name:
         tmp = Path(tmp_name)
         store = None
@@ -1079,7 +1413,9 @@ def export(
             if replays:
                 from rtt.studio.replay import export_lanes
 
-                item["lanes"] = export_lanes(hero, report, store, code_version=version, log=log)
+                item["lanes"] = export_lanes(
+                    hero, report, store, code_version=version, log=log, failures=lane_failures
+                )
             if packs:
                 zip_path, block, note = export_pack(report_path, report, tmp / "packs" / hero)
                 item["pack_note"] = note
@@ -1112,17 +1448,34 @@ def export(
 
             all_lanes = [lane for item in work for lane in item["lanes"]]
             served = serve_assets(store, all_lanes, compress=compress)
+            # the replay gate: every lane as served, or nothing is written. A lane that did not
+            # reproduce its run or could not be built has failed already: the export is lost, so the
+            # re-runs of the others are not spent on it
+            gate_problems: list[str] = []
+            if lane_failures:
+                log(f"  {len(lane_failures)} lane(s) failed before the gate: it does not run")
+            else:
+                gate_problems, gate_results = run_gate(work, served, log=log)
+            if qa_dir is not None:
+                _write_qa(qa_dir, gate_results, failures=lane_failures)
+            if lane_failures or gate_problems:
+                raise ExportError(
+                    "refused to publish (the replay gate failed):\n  "
+                    + "\n  ".join([*lane_failures, *gate_problems][:40])
+                )
             for item in work:
                 for lane in item["lanes"]:
                     stem = tmp / "replays" / item["hero"] / lane.stem
-                    bin_path, json_path = write_replay(lane.replay, stem)
+                    bin_path, json_path = write_lane(lane.replay, stem)
                     rel = f"studio/replays/{item['hero']}/{lane.stem}"
                     staged[f"{rel}.json"] = json_path
                     staged[f"{rel}.bin"] = bin_path
                     lane.doc["replay"] = rel
                     lane.doc["bytes"] = json_path.stat().st_size + bin_path.stat().st_size
                     lane.doc["asset_bytes"] = sum(len(served[a][0]) for a in lane.assets)
-                    problems += check_doc(json.loads(json_path.read_text(encoding="utf-8")), f"{rel}.json")
+                    header = json.loads(json_path.read_text(encoding="utf-8"))
+                    problems += check_doc(header, f"{rel}.json")
+                    problems += check_lane(lane.doc, header, rel)
         # 3. pages and the index
         pages = []
         for item in work:
@@ -1157,14 +1510,23 @@ def export(
         staged["studio/index.json"] = tmp / "pages" / "index.json"
         if problems:
             raise ExportError("refused to publish:\n  " + "\n  ".join(problems[:40]))
-        # 4. publish: the heroes' own files are replaced, everything else is kept
-        for hero in heroes:
+        keep = kept_assets(data_dir, [h for h, _ in HEROES if h not in heroes])  # a partial export's others
+        # 4. publish: the heroes' own files are replaced, and the files of a hero HEROES no longer
+        # lists (a renamed or left-out hero: the site redirects its old route) are removed; everything
+        # else is kept
+        stale = stale_heroes(data_dir)
+        if stale:
+            log(f"removing the published files of heroes no longer listed: {', '.join(stale)}")
+        for hero in [*heroes, *stale]:
             for sub in (data_dir / "studio" / "replays" / hero, data_dir / "studio" / hero):
                 if sub.is_dir():
                     shutil.rmtree(sub)
             sess = data_dir / "studio" / "sessions" / f"{hero}.json"
             if sess.is_file() and f"studio/sessions/{hero}.json" not in staged:
                 sess.unlink()
+            page_file = data_dir / "studio" / f"{hero}.json"
+            if hero in stale and page_file.is_file():
+                page_file.unlink()
         for rel, path in sorted(staged.items()):
             dst = data_dir / rel
             dst.parent.mkdir(parents=True, exist_ok=True)
@@ -1172,8 +1534,22 @@ def export(
         if served:
             from rtt.studio.replay import publish_assets
 
-            publish_assets(served, assets_dir)
+            publish_assets(served, assets_dir, keep=keep)
         sizes = {rel: (data_dir / rel).stat().st_size for rel in staged}
+        review = None
+        if vision_review is not None:
+            lanes_for_review = [(item["hero"], lane) for item in work for lane in item["lanes"]]
+            try:
+                review = vision_review(lanes_for_review)
+            except Exception as exc:  # noqa: BLE001 - advice only: it never blocks or undoes an export
+                log(f"vision review skipped: {type(exc).__name__}: {exc}")
+        if review is not None and qa_dir is not None:
+            _write_qa(qa_dir, gate_results, review)
+            s = review["summary"]
+            log(
+                f"vision review: {s['flagged']} of {s['frames']} frames flagged by both reviewers "
+                f"(advice only; list in {qa_dir.name}/replay_review.json)"
+            )
     total = sum(sizes.values())
     asset_total = sum(len(b) for b, _ in served.values())
     log(
@@ -1181,6 +1557,26 @@ def export(
         f"{len(served)} GLB assets ({asset_total / 1e6:.2f} MB)"
     )
     return {"files": sizes, "total_bytes": total, "assets": sorted(served), "asset_bytes": asset_total}
+
+
+def _vision_review(keys: Path | None, spend_file: Path | None) -> Any:
+    """The vision review as a function of the lanes, set up when it is called: the review is advice, so a
+    missing keys file, a service that cannot be reached or a spend file that cannot be read is reported
+    (here, as a warning, and by :func:`export` when the review runs) and never stops an export."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import replay_vision_review as rvr
+
+    try:
+        rvr.load_keys(keys, flag="--vision-keys")
+    except rvr.ReviewSetupError as exc:
+        print(f"export_studio_web: warning: the vision review will be skipped: {exc}", file=sys.stderr)
+
+    def review(lanes: Any) -> Any:
+        reviewers = rvr.make_reviewers(rvr.load_keys(keys, flag="--vision-keys"))
+        guard = rvr.SpendGuard(spend_file) if spend_file else rvr.default_spend_guard()
+        return rvr.review_lanes(lanes, reviewers, guards={r.name: guard for r in reviewers})
+
+    return review
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -1197,9 +1593,33 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--no-packs", action="store_true")
     parser.add_argument("--no-blocker", action="store_true")
     parser.add_argument("--no-compress", action="store_true", help="serve raw GLBs (tests)")
+    parser.add_argument(
+        "--qa-dir",
+        type=Path,
+        default=DEFAULT_QA_DIR,
+        help="where the replay gate's measurements and the vision review list are written",
+    )
+    parser.add_argument(
+        "--vision-review",
+        action="store_true",
+        help="after publishing, have two independent vision models look at frames (costs money, advisory)",
+    )
+    parser.add_argument(
+        "--vision-keys",
+        type=Path,
+        default=None,
+        help="the vision review's keys file (see replay_vision_review.py)",
+    )
+    parser.add_argument(
+        "--vision-spend-file",
+        type=Path,
+        default=None,
+        help="the vision review's running spend total (default: shared by every checkout of the repository)",
+    )
     args = parser.parse_args(argv)
     if not 1 <= args.workers <= 4:
         parser.error("--workers must be 1 to 4 (the host is shared)")
+    review_fn = _vision_review(args.vision_keys, args.vision_spend_file) if args.vision_review else None
     try:
         export(
             args.reports,
@@ -1212,8 +1632,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             blocker=not args.no_blocker,
             workers=args.workers,
             compress=not args.no_compress,
+            qa_dir=args.qa_dir,
+            vision_review=review_fn,
         )
-    except ExportError as exc:
+    except (ExportError, ReplayMismatchError) as exc:
         print(f"export_studio_web: {exc}", file=sys.stderr)
         return 1
     return 0

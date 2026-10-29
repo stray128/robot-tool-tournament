@@ -118,6 +118,12 @@ PART_LOOKS: Final = {
     "steel_ground": Look("steel_ground", (0.64, 0.65, 0.67), metallic=0.95, roughness=0.26),
     "plastic_blue": Look("plastic_blue", (0.18, 0.47, 0.86), roughness=0.45),  # the v1 object colour
     "clay": Look("clay", (0.78, 0.76, 0.73), roughness=0.8),  # untextured scans in the gallery
+    # Studio v2 job templates (rtt.studio.replay._LOOKS_BY_KIND): a solar module's glass, a floor
+    # tile's glaze and the mortar under it, a call button's housing
+    "glass_panel": Look("glass_panel", (0.10, 0.15, 0.27), metallic=0.1, roughness=0.12),
+    "ceramic_tile": Look("ceramic_tile", (0.85, 0.82, 0.76), roughness=0.3),
+    "mortar": Look("mortar", (0.55, 0.54, 0.51), roughness=0.92),
+    "plastic_grey": Look("plastic_grey", (0.38, 0.40, 0.43), roughness=0.5),
 }
 
 LOOKS: Final = {

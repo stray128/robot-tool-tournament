@@ -17,10 +17,36 @@ export const PAGE_SCHEMA = "rtt-web-effector-part";
 /** Per-lane download budget, the hero payload budget (lib/assets.ts). */
 export const LANE_BUDGET_BYTES = 300_000;
 
+/** Every effector family (rtt.effectors.types.EffectorFamily). */
+export const ALL_FAMILIES = ["parallel_jaw", "catalog_hand", "catalog_gripper", "soft_arm", "suction", "designed", "process_tool"] as const;
+export type AnyFamily = (typeof ALL_FAMILIES)[number];
+/**
+ * The families of the per-part tournament, its lanes and its pages (rtt.effectors.tournament
+ * PART_FAMILIES): every family but the process tools (nut runner, tamper), which only the Studio's
+ * process steps use. The per-part parsers accept these only.
+ */
 export const FAMILIES = ["parallel_jaw", "catalog_hand", "catalog_gripper", "soft_arm", "suction", "designed"] as const;
+export const PART_FAMILIES = FAMILIES;
 export type Family = (typeof FAMILIES)[number];
+/** Families that never enter a per-part pick: only Studio pages show them. */
+export const STUDIO_ONLY_FAMILIES: readonly AnyFamily[] = ["process_tool"];
+/** Per-part budget groups (rtt.effectors.tournament GROUP_ORDER: the process group is Studio-only). */
 export const GROUPS = ["reference", "catalog", "soft_arm", "suction", "designed", "random"] as const;
 export type Group = (typeof GROUPS)[number];
+
+/**
+ * Whether a suction preset is a vacuum area frame (its model, rtt.effectors.suction): an area tool
+ * for a large flat part, kept out of the per-part tournament (per_part_presets) and shown only on
+ * Studio pages.
+ */
+export function isVacuumFrame(model: string): boolean {
+  return /^vacuum-frame-/.test(model);
+}
+
+/** Whether a tool is Studio-only: a process tool, or a vacuum area frame. */
+export function isStudioOnlyTool(family: string, model: string): boolean {
+  return (STUDIO_ONLY_FAMILIES as readonly string[]).includes(family) || (family === "suction" && isVacuumFrame(model));
+}
 export const FIDELITIES = ["core", "rigid", "approximation"] as const;
 export type Fidelity = (typeof FIDELITIES)[number];
 export type Requirement = "held" | "registered";
@@ -33,6 +59,9 @@ export const FAMILY_TITLES: Record<Family, string> = {
   suction: "Suction cup",
   designed: "Designed morphology",
 };
+
+/** Every family's title, the Studio-only process tools included (rtt.effectors.lanes FAMILY_TITLES). */
+export const ALL_FAMILY_TITLES: Record<AnyFamily, string> = { ...FAMILY_TITLES, process_tool: "Process tool" };
 
 export const FIDELITY_LABELS: Record<Fidelity, string> = {
   core: "Core",
@@ -408,12 +437,26 @@ function optNote(n: Node): string | null {
   return n.has("note") ? optStr(n.get("note")) : null;
 }
 
+/** A family on a per-part page (PART_FAMILIES: never a process tool). */
+function partFamily(n: Node): Family {
+  if (n.value === "process_tool") n.fail("a process tool is Studio-only: it is never in a per-part tournament (rtt.effectors.tournament.PART_FAMILIES)");
+  return n.oneOf(FAMILIES);
+}
+
+/** No vacuum area frame on a per-part page (rtt.effectors.tournament.per_part_presets). */
+function notAFrame(n: Node, model: string, name: string): void {
+  if (isVacuumFrame(model) || /^Vacuum area frame\b/.test(name)) n.fail("a vacuum area frame is Studio-only: it is never in a per-part tournament (rtt.effectors.tournament.per_part_presets)");
+}
+
 function readBrief(n: Node): EffectorBrief {
+  const model = slug(n.get("model"));
+  const display_name = n.get("display_name").nonEmpty();
+  notAFrame(n.get("model"), model, display_name);
   return {
     effector_id: sha(n.get("effector_id")),
-    display_name: n.get("display_name").nonEmpty(),
-    family: n.get("family").oneOf(FAMILIES),
-    model: slug(n.get("model")),
+    display_name,
+    family: partFamily(n.get("family")),
+    model,
     primitive: slug(n.get("primitive")),
     origin: n.get("origin").nonEmpty(),
     group: n.get("group").oneOf(GROUPS),
@@ -478,10 +521,12 @@ function readRunnerUp(n: Node): RunnerUp | null {
 }
 
 function readRow(n: Node): RankingRow {
+  const display_name = n.get("display_name").nonEmpty();
+  notAFrame(n.get("display_name"), "", display_name);
   return {
     effector_id: sha(n.get("effector_id")),
-    display_name: n.get("display_name").nonEmpty(),
-    family: n.get("family").oneOf(FAMILIES),
+    display_name,
+    family: partFamily(n.get("family")),
     group: n.get("group").oneOf(GROUPS),
     fidelity: n.get("fidelity").oneOf(FIDELITIES),
     status: n.get("status").nonEmpty(),
@@ -511,7 +556,7 @@ function readBlock(n: Node): RequirementBlock {
         .map((c) => ({
           effector_id: sha(c.get("effector_id")),
           display_name: c.get("display_name").nonEmpty(),
-          family: c.get("family").oneOf(FAMILIES),
+          family: partFamily(c.get("family")),
           fidelity: c.get("fidelity").oneOf(FIDELITIES),
           score: optNum(c.get("score")),
           screen_rate: optNum(c.get("screen_rate")),
@@ -604,7 +649,7 @@ export function parseEffectorPage(raw: unknown, file = "effectors/part.json"): E
       .get("families")
       .items()
       .map((f) => ({
-        family: f.get("family").oneOf(FAMILIES),
+        family: partFamily(f.get("family")),
         title: f.get("title").nonEmpty(),
         blurb: f.get("blurb").nonEmpty(),
         fidelity: f.get("fidelity").oneOf(FIDELITIES),
@@ -656,11 +701,15 @@ export function parseEffectorPage(raw: unknown, file = "effectors/part.json"): E
     candidates: root
       .get("candidates")
       .items()
-      .map((c) => ({
+      .map((c) => {
+        const model = slug(c.get("model"));
+        const display_name = c.get("display_name").nonEmpty();
+        notAFrame(c.get("model"), model, display_name);
+        return {
         effector_id: sha(c.get("effector_id")),
-        display_name: c.get("display_name").nonEmpty(),
-        family: c.get("family").oneOf(FAMILIES),
-        model: slug(c.get("model")),
+        display_name,
+        family: partFamily(c.get("family")),
+        model,
         group: c.get("group").oneOf(GROUPS),
         fidelity: c.get("fidelity").oneOf(FIDELITIES),
         status: c.get("status").nonEmpty(),
@@ -673,7 +722,8 @@ export function parseEffectorPage(raw: unknown, file = "effectors/part.json"): E
           ? c.get("screen").nullable((s) => ({ ...readScreen(s), failure_modes: numMap(s.get("failure_modes")) }))
           : null,
         note: optNote(c),
-      })),
+        };
+      }),
     certificates: Object.fromEntries(
       root
         .get("certificates")
@@ -757,7 +807,7 @@ function readWinner(n: Node): IndexWinner | null {
   return n.nullable((w) => ({
     effector_id: sha(w.get("effector_id")),
     display_name: w.get("display_name").nonEmpty(),
-    family: w.get("family").oneOf(FAMILIES),
+    family: partFamily(w.get("family")),
     fidelity: w.get("fidelity").oneOf(FIDELITIES),
     score: optNum(w.get("score")),
     tolerance_mm: w.get("tolerance_mm").nullable(tolerance),
@@ -806,7 +856,7 @@ export function parseEffectorIndex(raw: unknown, file = "effectors/index.json"):
       .get("families")
       .items()
       .map((f) => ({
-        family: f.get("family").oneOf(FAMILIES),
+        family: partFamily(f.get("family")),
         title: f.get("title").nonEmpty(),
         fidelity: f.get("fidelity").oneOf(FIDELITIES),
         available: f.get("available").bool(),

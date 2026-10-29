@@ -6,7 +6,11 @@ A builder module ``rtt.studio.templates.<kind>`` subclasses :class:`TemplateBuil
 builder. A kind without a module is not simulated yet (:class:`TemplateUnavailable`).
 
 S1 ships the two non-articulated builders (:mod:`.part`, :mod:`.bin`); track S2 owns the
-articulated ones (hinged lid, drawer, latch, threaded joint, handwheel valve, port and plug).
+articulated ones (hinged lid, drawer, latch, threaded joint, handwheel valve, port and plug);
+Studio v2 adds the job templates (:mod:`.panel_rail`, :mod:`.tile_bed`, :mod:`.spring_button`,
+:mod:`.sliding_door`). A template that carries a threaded member among other things (the panel's
+clamp) stores the member's numbers as ``clamp_<key>``; :func:`thread_info` and
+:func:`member_body` give the primitives the same view of any threaded member.
 
 Rules every builder follows (the scene checks them, :mod:`rtt.studio.scene`):
 
@@ -25,6 +29,7 @@ from __future__ import annotations
 
 import contextlib
 import importlib
+import math
 import threading
 from abc import ABC, abstractmethod
 from collections.abc import Iterator, Mapping
@@ -44,16 +49,23 @@ if TYPE_CHECKING:
     from rtt.sim.task import TaskV2
 
 __all__ = [
+    "CLAMP",
+    "FRAME_RGBA",
+    "FRICTION_SOLIMP",
     "OBJ_PREFIX",
+    "PICK_STANDIN_M",
     "ResolvedHandles",
     "TemplateBuilder",
     "TemplateContext",
     "TemplateHandles",
     "TemplateUnavailable",
     "get_template_builder",
+    "member_body",
     "object_prefix",
     "override_template_builder",
+    "quat_z",
     "register_template_builder",
+    "thread_info",
 ]
 
 #: Every element a template adds starts with ``obj_<instance name>_``.
@@ -143,6 +155,40 @@ class ResolvedHandles:
     def site_pos(self, data: mujoco.MjData, handle: str) -> np.ndarray:
         """World position of a handle's site (m)."""
         return np.array(data.site_xpos[self.site_ids[handle]], dtype=np.float64)
+
+
+#: Info-key prefix of a threaded member carried by a template that is more than the member.
+CLAMP: Final = "clamp_"
+#: Colour of a template's static frame (carcass, seat, rails, bezel).
+FRAME_RGBA: Final = (0.55, 0.58, 0.62, 1.0)
+#: A near-hard dry friction on a template joint (no creep under a load below the friction).
+FRICTION_SOLIMP: Final = (0.999, 0.9999, 0.0001, 0.5, 2.0)
+#: A pick plans a template part too big for the frozen parts library (capped at 0.5 m: a panel, a
+#: tile) as a round slab at most this wide, as thick as the part: only its height places the tool.
+PICK_STANDIN_M: Final = 0.400
+
+
+def quat_z(angle: float) -> list[float]:
+    """The quaternion (w, x, y, z) of a turn by ``angle`` rad about the vertical."""
+    return [math.cos(0.5 * angle), 0.0, 0.0, math.sin(0.5 * angle)]
+
+
+def thread_info(obj: ResolvedHandles) -> Mapping[str, float]:
+    """A threaded member's numbers (``lead_m``, ``seat_m``, ``pitch_m``, ``length_m``, ``flat_m``...):
+    a ``threaded_joint``'s info, or a ``panel_rail``'s clamp (its ``clamp_`` keys)."""
+    info = obj.handles.info
+    if obj.kind is TemplateKind.PANEL_RAIL:
+        return {k[len(CLAMP) :]: v for k, v in info.items() if k.startswith(CLAMP)}
+    return info
+
+
+def member_body(obj: ResolvedHandles) -> int:
+    """The threaded member's body: a ``threaded_joint``'s last body, a ``panel_rail``'s clamp
+    member (its last body is the panel the picks lift)."""
+    if obj.kind is TemplateKind.PANEL_RAIL:
+        name = f"{object_prefix(obj.name)}{CLAMP}member"
+        return int(obj.body_ids[obj.handles.bodies.index(name)])
+    return int(obj.body_ids[-1])
 
 
 class TemplateBuilder(ABC):

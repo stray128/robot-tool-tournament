@@ -83,7 +83,8 @@ from rtt.studio.engineer.engineer import (
     make_engineer_client,
     plan_task,
 )
-from rtt.studio.engineer.gate import RECORDED_GATE
+from rtt.studio.engineer.examples import HERO_CASES
+from rtt.studio.engineer.gate import RECORDED_GATE, replay_plan
 from rtt.studio.recommend import APPROXIMATION_CAVEAT
 from rtt.studio.runner import WorkerPool
 
@@ -140,7 +141,9 @@ MAX_CONDITIONS: Final = 16
 DEFAULT_SESSION_USD: Final = 0.10
 #: Tool calls of a Studio session (plan, tournament, pack, plus room for one retry each).
 STUDIO_MAX_TOOL_CALLS: Final = 6
-HERO_CASE_IDS: Final[tuple[str, ...]] = ("h1_tote", "h2_coupling", "h3_cabinet")
+#: The hero use cases a session can be recorded for: Studio v2's six, answered from the recorded
+#: gate run (:data:`rtt.studio.engineer.gate.RECORDED_GATE`).
+HERO_CASE_IDS: Final[tuple[str, ...]] = tuple(c.case_id for c in HERO_CASES)
 STUDIO_TOOL_NAMES: Final[tuple[str, ...]] = ("plan_task", "run_task_tournament", "export_build_pack")
 #: What a Studio-only session accepts.
 STUDIO_SESSION_TOOLS: Final[tuple[str, ...]] = (*STUDIO_TOOL_NAMES, "cost_ledger")
@@ -935,7 +938,7 @@ class StudioTools:
     def _replay(self, text: str) -> PlanResult | None:
         assert self.recorded_cache is not None
         try:
-            return plan_task(text, client=make_engineer_client(self.recorded_cache, cache_mode="replay"))
+            return replay_plan(text, self.recorded_cache)
         except CacheMiss:
             return None
 

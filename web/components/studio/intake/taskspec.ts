@@ -22,6 +22,8 @@ export interface ParamDesc {
   high: number | null;
   choices: string[];
   default: number | string | boolean;
+  /** A step may leave it out: it is then its default, and a step at its default drops it. */
+  optional?: boolean;
 }
 
 export interface TemplateDesc {
@@ -73,6 +75,8 @@ export interface Catalog {
   sim: {
     twist_sense: Record<string, "cw" | "ccw">;
     no_pick: string[];
+    no_pick_handles: string[];
+    set_back: string[];
     picks: string[];
     thread_lead_extra_mm: number;
     force_share: number;
@@ -81,6 +85,25 @@ export interface Catalog {
     wrist_torque_share: number;
     lid_hinge_mm: number;
     lid_open_deg: number;
+    clamp: { turns: number; pitch_mm: number; chamfer_mm: number; start_nm: number; wrist_share: number };
+    button_press_factor: number;
+    press_n: number;
+    force_goal_margin: number;
+    insert_past_mm: number;
+    limit_only: string[];
+    set_back_slack_mm: number;
+    tile_rebound_mm: number;
+    tile_over_mm: number;
+    slide_slip_min_mm: number;
+    slide_pull_factor: number;
+    slide_push_max_mm_s: number;
+    pick_force_min_n: number;
+    pick_give_mm: number;
+    lift_give_mm: number;
+    lift_give_mm_per_kg: number;
+    lift_give_margin_mm: number;
+    hold_lift_min_mm: number;
+    hold_lift_share: number;
     depth_tolerance_mm: number;
     window_min: Record<string, number>;
     layout: {
@@ -96,8 +119,24 @@ export interface Catalog {
       plug_gap_mm: number;
       lid_back_wall_mm: number;
       arc_step_deg: number;
+      panel_rail_past_mm: number;
+      panel_stop_mm: number;
+      panel_post_mm: number;
+      panel_clamp_out_mm: number;
+      tile_border_mm: number;
+      button_plate_mm: [number, number, number];
+      button_console_mm: [number, number];
+      machine_wall_mm: number;
+      machine_leaf_mm: number;
+      machine_gap_mm: number;
+      machine_overlap_mm: number;
+      inside_margin_mm: number;
+      finger_room_mm: number;
+      work_limit_mm: number;
+      front_reach_mm: number;
     };
   };
+  tools: string[];
   limit_quantities: string[];
   goal_extra: string[];
   limits: {
@@ -327,7 +366,7 @@ function paramsProblems(space: ParamDesc[], params: Record<string, unknown>): st
   const byName = new Map(space.map((p) => [p.name, p]));
   const keys = Object.keys(params).sort();
   const out = keys.filter((k) => !byName.has(k)).map((k) => `unknown param ${pyRepr(k)}`);
-  for (const p of space) if (!(p.name in params)) out.push(`missing param ${pyRepr(p.name)}`);
+  for (const p of space) if (!p.optional && !(p.name in params)) out.push(`missing param ${pyRepr(p.name)}`);
   for (const k of keys) {
     const p = byName.get(k);
     if (p) out.push(...paramProblems(p, params[k]));
@@ -417,6 +456,10 @@ function parseStep(catalog: Catalog, s: unknown): PlanStep {
   for (const a of after) slug(`step ${id as string} after`, a);
   if (new Set(after).size !== after.length || after.includes(id)) throw new PyError(`step ${id as string}: after must list distinct other steps`);
   if (holdAfter && !info.may_hold) throw new PyError(`step ${id as string}: a ${info.kind} step cannot end holding its object`);
+  // an optional param at its default is dropped, so the step hashes as one written without it
+  const own = Object.fromEntries(
+    Object.entries(params).filter(([k, v]) => !info.params.some((p) => p.optional && p.name === k && p.default === v)),
+  ) as Record<string, ParamValue>;
   return {
     id: id as string,
     primitive: info.kind,
@@ -424,7 +467,7 @@ function parseStep(catalog: Catalog, s: unknown): PlanStep {
     handle: handle as string,
     target: target as string | null,
     description: description as string,
-    params: params as Record<string, ParamValue>,
+    params: own,
     constraints,
     success,
     after: after as string[],
@@ -611,10 +654,24 @@ function demand(c: Criterion): number | null {
   return out;
 }
 
-const TWIST_NAMES: Record<string, string> = { quarter_turn_latch: "latch", handwheel_valve: "valve", threaded_joint: "threaded member" };
+const TWIST_NAMES: Record<string, string> = {
+  quarter_turn_latch: "latch",
+  handwheel_valve: "valve",
+  threaded_joint: "threaded member",
+  panel_rail: "panel clamp",
+};
+/** Kinds with a threaded member (`THREAD_KINDS`): a threaded joint, a panel's clamp. */
+const THREAD_KINDS = ["threaded_joint", "panel_rail"];
 
 function lead(catalog: Catalog, p: Record<string, ParamValue>): number {
   return Number(p.chamfer_mm) + catalog.sim.thread_lead_extra_mm;
+}
+
+/** `_thread`: a threaded member's numbers (a panel clamp's fixed thread). */
+function thread(catalog: Catalog, kind: string, p: Record<string, ParamValue>): Record<string, ParamValue> {
+  if (kind !== "panel_rail") return p;
+  const c = catalog.sim.clamp;
+  return { chamfer_mm: c.chamfer_mm, engage_turns: c.turns, pitch_mm: c.pitch_mm, start_torque_nm: c.start_nm, final_torque_nm: Number(p.clamp_torque_nm) };
 }
 
 function ceiling(catalog: Catalog, kind: string, p: Record<string, ParamValue>, q: string, prim: string): [number, string] | null {
@@ -631,6 +688,25 @@ function ceiling(catalog: Catalog, kind: string, p: Record<string, ParamValue>, 
   }
   if (kind === "threaded_joint" && q === "angle_deg") return [360 * n("engage_turns"), "its engage_turns x 360 deg"];
   if (kind === "port_plug" && q === "depth_mm") return [n("depth_mm"), "the socket's depth_mm"];
+  if (kind === "panel_rail") {
+    const cl = catalog.sim.clamp;
+    const c = thread(catalog, kind, p);
+    if (q === "turns") return [cl.turns, `the clamp's ${num(cl.turns)} turns to seated`];
+    if (q === "depth_mm") {
+      if (prim === "insert") return [lead(catalog, c), `the clamp's thread start, ${num(lead(catalog, c))} mm; a twist runs it further`];
+      const seated = lead(catalog, c) + cl.turns * cl.pitch_mm;
+      return [seated + catalog.sim.depth_tolerance_mm, `the clamp seated, ${num(seated)} mm`];
+    }
+    if (q === "angle_deg") return [360 * cl.turns, `the clamp's ${num(cl.turns)} turns x 360 deg`];
+    if (q === "clamp_torque_nm") return [n("clamp_torque_nm"), "its clamp_torque_nm, the torque that seats it"];
+    if (q === "torque_nm" && prim === "twist") {
+      return [
+        cl.wrist_share * n("clamp_torque_nm"),
+        "a seated clamp keeps turning at its clamp_torque_nm, so the wrist's torque stays just under it; judge the tightening by clamp_torque_nm at_least",
+      ];
+    }
+  }
+  if ((kind === "sliding_door" || kind === "spring_button") && q === "travel_mm") return [n("travel_mm"), "its travel_mm"];
   return null;
 }
 
@@ -638,7 +714,8 @@ function torqueNeeded(catalog: Catalog, kind: string, p: Record<string, ParamVal
   if (s.primitive !== "twist") return null;
   if (kind === "quarter_turn_latch") return [Number(p.torque_nm), "the latch's torque_nm"];
   if (kind === "handwheel_valve") return [Number(p.torque_nm), "the valve's torque_nm"];
-  if (kind === "threaded_joint") {
+  if (THREAD_KINDS.includes(kind)) {
+    p = thread(catalog, kind, p);
     const engage = Number(p.engage_turns);
     const seat = engage * Number(p.pitch_mm);
     let share = 0;
@@ -652,7 +729,13 @@ function torqueNeeded(catalog: Catalog, kind: string, p: Record<string, ParamVal
     share = Math.min(1, Math.max(0, share));
     const start = Number(p.start_torque_nm);
     const final = Number(p.final_torque_nm);
-    return [start + (final - start) * share, "the thread's torque there, start_torque_nm rising to final_torque_nm"];
+    const torque = start + (final - start) * share;
+    if (kind === "panel_rail") {
+      const asked = s.success.filter((c) => c.quantity === "clamp_torque_nm" && c.at_least).map((c) => c.at_least as number);
+      if (asked.length && Math.max(...asked) > torque) return [Math.max(...asked), "its clamp_torque_nm at_least criterion"];
+      return [torque, `the clamp's torque there, ${num(catalog.sim.clamp.start_nm)} N m at its thread start rising to clamp_torque_nm`];
+    }
+    return [torque, "the thread's torque there, start_torque_nm rising to final_torque_nm"];
   }
   return null;
 }
@@ -661,7 +744,212 @@ function forceNeeded(kind: string, p: Record<string, ParamValue>, s: PlanStep): 
   if (kind === "drawer" && s.primitive === "hook_pull") return [Number(p.pull_force_n), "the drawer's pull_force_n", false];
   if (kind === "drawer" && s.primitive === "push") return [Number(p.pull_force_n), "the drawer's pull_force_n", true];
   if (kind === "port_plug" && s.primitive === "insert") return [Number(p.insert_force_n), "the plug's insert_force_n", true];
+  if (kind === "sliding_door" && s.primitive === "hook_pull") return [Number(p.pull_force_n), "the door's pull_force_n", false];
+  if (kind === "sliding_door" && s.primitive === "push") return [Number(p.pull_force_n), "the door's pull_force_n", true];
   return null;
+}
+
+/** `_cents_up`: rounded up to the next hundredth. */
+function centsUp(v: number): number {
+  return Math.ceil(Math.round(v * 100 * 1e6) / 1e6) / 100;
+}
+
+/** `_push_allowed`: the most a push presses with. */
+function pushAllowed(catalog: Catalog, s: PlanStep): number {
+  const cap = s.constraints.max_force_n;
+  let out = cap !== null ? catalog.sim.force_share * cap : catalog.sim.default_push_n;
+  for (const c of s.success) if (c.quantity === "force_n" && c.at_most !== null) out = Math.min(out, catalog.sim.force_share * c.at_most);
+  return out;
+}
+
+function allowedText(catalog: Catalog, s: PlanStep): string {
+  const cap = s.constraints.max_force_n;
+  const caps = s.success.filter((c) => c.quantity === "force_n" && c.at_most !== null).map((c) => c.at_most as number);
+  const share = num(100 * catalog.sim.force_share);
+  if (caps.length && (cap === null || Math.min(...caps) < cap)) return `${num(pushAllowed(catalog, s))} N (${share} % of its force_n at_most ${num(Math.min(...caps))})`;
+  if (cap !== null) return `${num(pushAllowed(catalog, s))} N (${share} % of max_force_n ${num(cap)})`;
+  return `${num(catalog.sim.default_push_n)} N (no max_force_n)`;
+}
+
+function bound(s: PlanStep, q: string, which: "at_least" | "at_most"): number | null {
+  const vals = s.success.filter((c) => c.quantity === q && c[which] !== null).map((c) => c[which] as number);
+  if (!vals.length) return null;
+  return which === "at_least" ? Math.max(...vals) : Math.min(...vals);
+}
+
+/** `lift_give_mm`: how much of a pick's lift_mm the tool's give takes under a part of `massG`, with the margin. */
+export function liftGiveMm(sim: Catalog["sim"], massG: number): number {
+  return Math.max(sim.pick_give_mm, sim.lift_give_mm + (sim.lift_give_mm_per_kg * massG) / 1000 + sim.lift_give_margin_mm);
+}
+
+/** `_v2_step_problems`: the Studio v2 job templates' rules on one step. */
+function v2StepProblems(catalog: Catalog, where: string, obj: PlanObject, s: PlanStep, at: string): string[] {
+  const out: string[] = [];
+  const sim = catalog.sim;
+  const kind = obj.kind;
+  const p = obj.params;
+  const pick = sim.picks.includes(s.primitive);
+  if (pick) {
+    const cap = s.constraints.max_force_n;
+    if (cap !== null && cap < sim.pick_force_min_n - 1e-9) {
+      out.push(
+        `${where}: max_force_n ${num(cap)} on a pick stops most tools: they grip or seal a part with 30 to 92 N of their own, whatever it weighs; leave it null unless the use case limits the squeeze, then at least ${num(sim.pick_force_min_n)}`,
+      );
+    }
+    const lift = bound(s, "lift_mm", "at_least");
+    const own = Number(s.params.lift_mm ?? 0);
+    const mass = Number(p.mass_g ?? 0) || 0;
+    const give = liftGiveMm(sim, mass);
+    const heavy = give > sim.pick_give_mm + 1e-9;
+    if (lift !== null && lift > own - give + 1e-9 && lift <= own + 1e-9) {
+      if (!heavy) {
+        out.push(
+          `${where}: its criterion lift_mm at_least ${num(lift)} leaves under ${num(sim.pick_give_mm)} mm of ${where.split(" ")[0]}.params.lift_mm (${num(own)}, how far the wrist rises) for the tool's give (a vacuum frame gives about 8.5 mm before the part rises); raise ${where.split(" ")[0]}.params.lift_mm to at least ${num(lift + sim.pick_give_mm)} and keep the criterion at ${num(lift)}, or lower the criterion`,
+        );
+      } else {
+        const path = where.split(" ")[0];
+        out.push(
+          `${where}: its criterion lift_mm at_least ${num(lift)} leaves under ${num(give)} mm of ${path}.params.lift_mm (${num(own)}, how far the wrist rises) for the tool's give under ${obj.name}'s ${num(mass / 1000)} kg (a vacuum frame gives 3 mm plus 2.5 mm per kg before the part rises, 23 mm under 8 kg, and 1.5 mm is kept spare); raise ${path}.params.lift_mm to at least ${num(lift + give)} and keep the criterion at ${num(lift)} (raising both leaves the same shortfall)`,
+        );
+      }
+    } else {
+      const hold = bound(s, "hold_s", "at_least");
+      const need = Math.max(sim.hold_lift_min_mm + give, give / (1 - sim.hold_lift_share));
+      if (hold !== null && hold > 0 && own < need - 1e-9) {
+        const up = Math.max(sim.hold_lift_min_mm, sim.hold_lift_share * own);
+        const path = where.split(" ")[0];
+        out.push(
+          `${where}: hold_s at_least ${num(hold)} counts only while the part is up at least ${num(up)} mm (${num(sim.hold_lift_min_mm)} mm or ${num(100 * sim.hold_lift_share)} % of ${path}.params.lift_mm, whichever is more), and the tool's give takes up to ${num(give)} mm of ${path}.params.lift_mm (${num(own)}) before ${obj.name} rises; raise ${path}.params.lift_mm to at least ${num(need)}`,
+        );
+      }
+    }
+  }
+  for (const c of s.success) {
+    if (sim.limit_only.includes(c.quantity) && c.at_least !== null && c.at_least > 0) {
+      out.push(
+        `${where}: ${c.quantity} at_least ${num(c.at_least)} asks the step to reach a limit; ${c.quantity} only bounds how a step went (physics validity, slip or jam), so give it at_most or leave it out`,
+      );
+    }
+  }
+  if (kind === "panel_rail") {
+    const start = Number(p.start_gap_mm);
+    s.success.forEach((c, j) => {
+      if (c.quantity !== "gap_mm") return;
+      const gap = `${at}.params.start_gap_mm`;
+      const bound = `${where.split(" ")[0]}.success[${j}]`;
+      if (c.at_most !== null && c.at_most < start - sim.set_back_slack_mm - 1e-9) {
+        out.push(
+          `${where}: gap_mm at_most ${num(c.at_most)} cannot be met: the panel starts start_gap_mm (${num(start)} mm) from the stops and a pick sets it back where it was; set ${gap} to the gap the use case allows, at most ${num(c.at_most)}, or raise the bound (${bound}.at_most)`,
+        );
+      }
+      if (c.at_least !== null && c.at_least > start + sim.set_back_slack_mm + 1e-9) {
+        out.push(`${where}: gap_mm at_least ${num(c.at_least)} cannot be met: the panel stays start_gap_mm (${num(start)} mm) from the stops; lower ${bound}.at_least to at most ${num(start)} or raise ${gap}`);
+      }
+    });
+  }
+  if (kind === "tile_bed" && pick) {
+    const proud = Number(p.proud_mm);
+    for (const c of s.success) {
+      if (c.quantity === "height_err_mm" && c.at_most !== null && c.at_most < proud - sim.set_back_slack_mm) {
+        out.push(
+          `${where}: height_err_mm at_most ${num(c.at_most)} cannot be met by a pick: it lays the tile back ${num(proud)} mm proud (proud_mm); a push presses it to its level`,
+        );
+      }
+    }
+  }
+  if (pick && sim.set_back.includes(kind) && s.target !== null) {
+    const what = kind === "panel_rail" ? "panel on its rails" : "tile on its bed";
+    out.push(`${where}: a pick on a ${what} lifts it and sets it back where it was; target null (bringing it from elsewhere is not modelled)`);
+  }
+  if (pick && sim.set_back.includes(kind)) {
+    const lifted = s.success.some((c) => (c.quantity === "lift_mm" || c.quantity === "hold_s") && (c.at_least ?? 0) > 0);
+    if (!lifted) {
+      const what = kind === "panel_rail" ? "panel" : "tile";
+      out.push(
+        `${where}: a pick that sets the ${what} back must say it lifted it: add lift_mm at_least (more than 0, within the step's lift_mm) or hold_s at_least; without one the step passes when nothing lifts it`,
+      );
+    }
+  }
+  if (pick && kind === "panel_rail" && sim.no_pick_handles.includes(s.handle)) {
+    out.push(`${where}: the panel's clamp lives on its post and cannot be picked up; a pick lifts the panel (handle panel), insert and twist work the clamp`);
+  }
+  if (kind === "spring_button" && s.primitive === "push") {
+    const approach = s.params.approach ?? "top";
+    if (p.mount === "wall" && approach !== "front") out.push(`${where}: a wall button faces sideways; push it with approach front (the tool tilted to point at its face)`);
+    if (p.mount === "desk" && approach === "front") out.push(`${where}: a desk button faces up; push it from the top (approach top)`);
+    const travel = bound(s, "travel_mm", "at_least");
+    if (travel !== null && travel > 0) {
+      out.push(`${where}: a button springs back when the tool lets go, so its travel_mm reads 0 when the step ends; judge the press by pressed at_least 1`);
+    }
+    const need = sim.button_press_factor * Number(p.actuation_force_n);
+    if (pushAllowed(catalog, s) < need - 1e-9) {
+      out.push(
+        `${where}: a press on a button pushes with at least ${num(sim.button_press_factor)} x its actuation_force_n (${num(need)} N, past its bottom-out), but this push keeps under ${allowedText(catalog, s)}; set ${where.split(" ")[0]}.constraints.max_force_n to at least ${num(centsUp(need / sim.force_share))} N`,
+      );
+    }
+  }
+  if (kind === "tile_bed" && s.primitive === "push") {
+    const weight = (Number(p.mass_g) / 1000) * 9.81;
+    const yieldN = Number(p.bed_yield_n);
+    const hard = Number(p.bed_hardening_n_mm);
+    const proud = Number(p.proud_mm);
+    const level = bound(s, "height_err_mm", "at_most");
+    const press = bound(s, "force_n", "at_least");
+    let least: number | null = null;
+    if (level !== null && proud - level + sim.tile_rebound_mm > 0) least = Math.max(0, yieldN + hard * (proud - level + sim.tile_rebound_mm) - weight);
+    if (press === null) {
+      if (least !== null) {
+        out.push(
+          `${where}: a push on a tile presses with ${num(sim.press_n)} N unless it asks for a force; add force_n at_least ${num(Math.ceil(least))} (the bed yields at bed_yield_n and hardens by bed_hardening_n_mm per mm it sinks; the tile's weight helps)`,
+        );
+      }
+    } else {
+      const goal = press * (1 + sim.force_goal_margin);
+      if (least !== null && press < least - 1e-9) {
+        out.push(
+          `${where}: force_n at_least ${num(press)} leaves the tile proud: sinking it to within ${num(level as number)} mm of its level (it stands ${num(proud)} mm proud and springs back up to ${num(sim.tile_rebound_mm)} mm) takes ${num(least)} N on this bed (bed_yield_n + bed_hardening_n_mm x the sink, less the tile's weight)`,
+        );
+      }
+      if (level !== null && level < sim.tile_over_mm) {
+        const most = yieldN + hard * (proud + level) - weight;
+        if (goal > most + 1e-9) {
+          out.push(`${where}: force_n at_least ${num(press)} (pressed to ${num(goal)} N) sinks the tile more than ${num(level)} mm below its level on this bed (at most ${num(most)} N keeps it within)`);
+        }
+      }
+      if (goal > pushAllowed(catalog, s) + 1e-9) {
+        out.push(
+          `${where}: the push presses to ${num(goal)} N (force_n at_least ${num(press)} and ${num(100 * sim.force_goal_margin)} %) but keeps under ${allowedText(catalog, s)}; raise max_force_n to at least ${num(centsUp(goal / sim.force_share))} N`,
+        );
+      }
+    }
+  }
+  if (kind === "sliding_door" && s.primitive === "push") {
+    const speed = Number(s.params.speed_mm_s);
+    if (speed > sim.slide_push_max_mm_s + 1e-9) {
+      out.push(
+        `${where}: a push shutting a sliding door reaches its closed stop in time only at speed_mm_s ${num(sim.slide_push_max_mm_s)} or less (faster, it runs out of time a few mm open); set ${where.split(" ")[0]}.params.speed_mm_s to at most ${num(sim.slide_push_max_mm_s)}`,
+      );
+    }
+  }
+  if (kind === "sliding_door" && s.primitive === "hook_pull") {
+    const path = where.split(" ")[0];
+    const need = sim.slide_pull_factor * Number(p.pull_force_n);
+    const drag = `a gripper drags a sliding door at up to ${num(sim.slide_pull_factor)} x its pull_force_n (${num(need)} N for this one; 23 to 26 N measured on a 10 N door)`;
+    const cap = s.constraints.max_force_n;
+    if (cap !== null && cap < need - 1e-9) {
+      out.push(`${where}: ${path}.constraints.max_force_n ${num(cap)} N stops the pull: ${drag}; set ${path}.constraints.max_force_n to at least ${num(need)}, or null`);
+    }
+    s.success.forEach((c, k) => {
+      if (c.quantity === "force_n" && c.at_most !== null && c.at_most < need - 1e-9) {
+        out.push(`${where}: ${path}.success[${k}] force_n at_most ${num(c.at_most)} stops the pull: ${drag}; set ${path}.success[${k}].at_most to at least ${num(need)}, or leave the bound out`);
+      }
+    });
+    const slip = bound(s, "slip_mm", "at_most");
+    if (slip !== null && slip < sim.slide_slip_min_mm - 1e-9) {
+      out.push(`${where}: a pinch on a sliding door's fin gives about 33 mm before a 10 N door moves; bound slip_mm at ${num(sim.slide_slip_min_mm)} mm or more, or leave it out`);
+    }
+  }
+  return out;
 }
 
 /** `check_parts`: refs and the per-step plan checks. */
@@ -731,14 +1019,31 @@ function checkParts(catalog: Catalog, objects: PlanObject[], steps: PlanStep[], 
         );
       }
     }
-    if (s.primitive === "insert" && kind === "threaded_joint" && s.hold_after) {
+    if (s.primitive === "insert" && THREAD_KINDS.includes(kind)) {
+      const start = lead(catalog, thread(catalog, kind, obj.params));
+      const low = bound(s, "depth_mm", "at_least");
+      const past = sim.insert_past_mm;
+      if (low !== null && low < start - past - 1e-9) {
+        out.push(
+          `${where}: an insert stops ${num(past)} mm past its depth_mm at_least, so at_least ${num(low)} leaves the member ${num(low + past)} mm down, short of the thread start (${num(start)} mm): the thread never catches; set ${where.split(" ")[0]}.success[${s.success.findIndex((c) => c.quantity === "depth_mm" && c.at_least === low)}].at_least to ${num(start - past)} or leave at_least out (the insert then goes to the thread start)`,
+        );
+      }
+    }
+    if (s.primitive === "insert" && THREAD_KINDS.includes(kind) && s.hold_after) {
       out.push(`${where}: end the insert of a threaded member with hold_after false; the twist grips it again in place`);
     }
     if (twist && (kind === "quarter_turn_latch" || kind === "handwheel_valve") && s.success.some((c) => c.quantity === "torque_nm" && c.at_least !== null)) {
       out.push(`${where}: a twist stops as soon as the roll torque reaches a torque_nm at_least, and a ${TWIST_NAMES[kind]} resists most before it turns; drop torque_nm at_least here (it tightens a thread until snug)`);
     }
-    if (twist && kind === "threaded_joint" && !steps.slice(0, i).some((p) => p.primitive === "insert" && p.object === s.object)) {
+    if (twist && THREAD_KINDS.includes(kind) && !steps.slice(0, i).some((p) => p.primitive === "insert" && p.object === s.object)) {
       out.push(`${where}: a threaded member starts on its lead-in, free of the thread; insert ${pyRepr(s.object)} to the thread start before this twist`);
+    }
+    out.push(...v2StepProblems(catalog, where, obj, s, `objects[${objects.indexOf(obj)}]`));
+    const following = steps[i + 1];
+    if (s.hold_after && following && following.object === s.object && following.handle !== s.handle) {
+      out.push(
+        `${where}: it ends holding ${pyRepr(s.object)} by its ${s.handle}, but the next step works its ${following.handle}; a held object goes on by the same handle, so let go (hold_after false)`,
+      );
     }
     for (const c of s.success) {
       const d = demand(c);
@@ -789,6 +1094,7 @@ function checkParts(catalog: Catalog, objects: PlanObject[], steps: PlanStep[], 
     }
   });
   out.push(...lidOpenProblems(catalog, objects, steps));
+  out.push(...machineOpenProblems(catalog, objects, steps));
   return out;
 }
 
@@ -888,9 +1194,181 @@ function localRegions(catalog: Catalog, o: PlanObject): Region[] {
         ["swing", [[hx, 0], ...arc]],
       ];
     }
+    case "panel_rail": {
+      const reach = panelReach(catalog, n("width_mm"));
+      const y0 = -reach - 0.5 * L.panel_post_mm - L.panel_rail_past_mm;
+      const y1 = reach + 0.5 * n("width_mm") + n("start_gap_mm") + L.panel_stop_mm + L.panel_rail_past_mm;
+      return [["footprint", rect(-0.5 * n("length_mm"), y0, 0.5 * n("length_mm"), y1)]];
+    }
+    case "tile_bed": {
+      const h = 0.5 * n("tile_mm") + L.tile_border_mm;
+      return [["footprint", rect(-h, -h, h, h)]];
+    }
+    case "spring_button": {
+      const d = n("diameter_mm");
+      if (p.mount === "wall") {
+        const [width, thick, past] = L.button_plate_mm;
+        const h = 0.5 * Math.max(width, d + past);
+        const proud = n("proud_mm");
+        // and the way a tool tilted to point at the face comes in: kept clear as far as the wrist
+        return [
+          ["footprint", rect(-h, -proud, h, thick)],
+          ["approach", rect(-h, -proud - L.front_reach_mm, h, -proud)],
+        ];
+      }
+      const [side, past] = L.button_console_mm;
+      const h = 0.5 * Math.max(side, d + past);
+      return [["footprint", rect(-h, -h, h, h)]];
+    }
+    case "sliding_door": {
+      const hx = 0.5 * n("depth_mm");
+      const hw = 0.5 * n("width_mm");
+      const y0 = -hw - L.machine_overlap_mm - n("travel_mm") - L.machine_wall_mm;
+      const y1 = hw + L.machine_overlap_mm + L.machine_wall_mm;
+      return [["footprint", rect(-hx - L.machine_gap_mm - L.machine_leaf_mm, y0, hx, y1)]];
+    }
     default:
       return [];
   }
+}
+
+/** `panel_reach_mm`: how far a panel's centre and its clamp each lie from the pose. */
+function panelReach(catalog: Catalog, width: number): number {
+  return 0.5 * (0.5 * width + catalog.sim.layout.panel_clamp_out_mm);
+}
+
+/** Table mm to `o`'s local frame (before its yaw). */
+function toLocal(o: PlanObject, x: number, y: number): [number, number] {
+  const a = o.pose.yaw_deg * (Math.PI / 180);
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  const dx = x - o.pose.x_mm;
+  const dy = y - o.pose.y_mm;
+  return [c * dx + s * dy, -s * dx + c * dy];
+}
+
+function toWorld(o: PlanObject, x: number, y: number): [number, number] {
+  const a = o.pose.yaw_deg * (Math.PI / 180);
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  return [o.pose.x_mm + c * x - s * y, o.pose.y_mm + s * x + c * y];
+}
+
+/** `inside_machine`: a bin or part inside a sliding door's interior under its opening. */
+export function insideMachine(catalog: Catalog, machine: PlanObject, other: PlanObject): boolean {
+  if (machine.kind !== "sliding_door" || (other.kind !== "bin" && other.kind !== "part")) return false;
+  const L = catalog.sim.layout;
+  const m = L.inside_margin_mm;
+  const tall = Number(other.params[other.kind === "bin" ? "height_mm" : "size_z_mm"]);
+  if (tall > Number(machine.params.height_mm) - L.machine_wall_mm - m + 1e-9) return false;
+  const hx = 0.5 * Number(machine.params.depth_mm);
+  const hw = 0.5 * Number(machine.params.width_mm);
+  const [x0, y0, x1, y1] = [-hx + L.machine_wall_mm + m, -hw + m, hx - L.machine_wall_mm - m, hw - m];
+  for (const [, poly] of regions(catalog, other)) {
+    for (const [x, y] of poly) {
+      const [lx, ly] = toLocal(machine, x, y);
+      if (!(x0 - 1e-9 <= lx && lx <= x1 + 1e-9 && y0 - 1e-9 <= ly && ly <= y1 + 1e-9)) return false;
+    }
+  }
+  return true;
+}
+
+/** Python's `f"{round(v, 1) + 0.0:g}"` (the layout's mm). */
+function mm(v: number): string {
+  return fmtG(Math.round(v * 10) / 10 + 0);
+}
+
+function mmPair(x: number, y: number): string {
+  return `(${mm(x)}, ${mm(y)})`;
+}
+
+/** `reach_problem`: why a tool cannot work on `o` from inside the wrist's reach, or null. */
+function reachProblem(catalog: Catalog, o: PlanObject): string | null {
+  const L = catalog.sim.layout;
+  const lim = mm(L.work_limit_mm);
+  const out = (x: number, y: number) => Math.max(Math.abs(x), Math.abs(y)) > L.work_limit_mm + 1e-9;
+  if (o.kind === "panel_rail") {
+    const reach = panelReach(catalog, Number(o.params.width_mm));
+    const b = L.work_limit_mm - reach;
+    if (Math.max(Math.abs(o.pose.x_mm), Math.abs(o.pose.y_mm)) > b + 1e-9) {
+      return `the panel's centre and its clamp lie ${mm(reach)} mm either side of the pose (on local y), so keep x_mm and y_mm within -${mm(b)} to ${mm(b)} for the wrist to reach both at any yaw (it reaches -${lim} to ${lim} mm); it is at ${mmPair(o.pose.x_mm, o.pose.y_mm)}`;
+    }
+    return null;
+  }
+  if (o.kind === "spring_button" && o.params.mount === "wall") {
+    const [ex, ey] = toWorld(o, 0, -1);
+    const nx = ex - o.pose.x_mm;
+    const ny = ey - o.pose.y_mm;
+    const proud = Number(o.params.proud_mm);
+    const face: [number, number] = [o.pose.x_mm + proud * nx, o.pose.y_mm + proud * ny];
+    const wrist: [number, number] = [face[0] + L.front_reach_mm * nx, face[1] + L.front_reach_mm * ny];
+    if (out(...face) || out(...wrist)) {
+      return `a wall button is pressed by a tool tilted to point at its face, which puts the wrist up to ${mm(L.front_reach_mm)} mm in front of it; facing ${mmPair(nx, ny)} from ${mmPair(...face)} the wrist would reach ${mmPair(...wrist)}, past -${lim} to ${lim} mm; stand it so its face looks toward the table's centre with that room in front of it`;
+    }
+    return null;
+  }
+  if (o.kind === "sliding_door") {
+    const travel = Number(o.params.travel_mm);
+    const end = toWorld(o, 0, -travel);
+    if (out(o.pose.x_mm, o.pose.y_mm) || out(...end)) {
+      return `its handle slides travel_mm (${mm(travel)} mm) toward local -y as the door opens, from ${mmPair(o.pose.x_mm, o.pose.y_mm)} to ${mmPair(...end)}, past -${lim} to ${lim} mm; move it or shorten the travel`;
+    }
+    return null;
+  }
+  const path = workPath(catalog, o);
+  if (path) {
+    const [what, motion, points] = path;
+    let worst = points[0] as [number, number];
+    for (const q of points) if (Math.max(Math.abs(q[0]), Math.abs(q[1])) > Math.max(Math.abs(worst[0]), Math.abs(worst[1]))) worst = q;
+    if (out(...worst)) return `its ${what} ${motion}, to ${mmPair(...worst)}, past -${lim} to ${lim} mm where the wrist works; move it toward the table's centre`;
+  }
+  return null;
+}
+
+/** `_work_path`: where a tool works on `o` as it moves (a lid's or door's free edge, a drawer's handle, a port's plug). */
+function workPath(catalog: Catalog, o: PlanObject): [string, string, [number, number][]] | null {
+  const L = catalog.sim.layout;
+  const p = o.params;
+  const n = (k: string) => Number(p[k]);
+  if (o.kind === "hinged_lid") {
+    const d = n("depth_mm");
+    const t = n("thickness_mm");
+    const stop = n("max_angle_deg") * (Math.PI / 180);
+    const steps = Math.max(1, Math.ceil((stop * (180 / Math.PI)) / L.arc_step_deg));
+    const angles: number[] = [];
+    for (let i = 0; i <= steps; i++) angles.push((stop * i) / steps);
+    if (p.orientation === "lid") {
+      const hinge = 0.5 * d;
+      return ["free edge (the lid's lip or handle)", "swings up and over toward its hinge", angles.map((a) => toWorld(o, 0, hinge - d * Math.cos(a)))];
+    }
+    const hx = -0.5 * d;
+    const handle = p.feature === "handle" ? n("feature_mm") + L.bar_diameter_mm : 0;
+    const front = 0.5 * t + handle;
+    return ["free edge and handle", "swing open toward local -y", angles.map((a) => toWorld(o, hx + d * Math.cos(a) - front * Math.sin(a), -d * Math.sin(a) - front * Math.cos(a)))];
+  }
+  if (o.kind === "drawer") {
+    const hd = 0.5 * n("depth_mm");
+    const ext = p.handle === "bar" ? n("handle_mm") + L.bar_diameter_mm : p.handle === "knob" ? n("handle_mm") + L.knob_head_mm : 0;
+    const front = hd + L.drawer_front_mm + ext;
+    return ["handle", "pulls out by travel_mm toward local -y", [toWorld(o, 0, -front), toWorld(o, 0, -front - n("travel_mm"))]];
+  }
+  if (o.kind === "port_plug") {
+    const dia = n("plug_diameter_mm");
+    const chamfer = Math.min(n("chamfer_mm"), 0.8 * n("depth_mm"));
+    const rOut = 0.5 * (dia + n("clearance_mm")) + Math.max(L.port_wall_mm, 0.5 * dia) + chamfer;
+    const offset = rOut / Math.cos(Math.PI / L.port_sides) + L.plug_gap_mm + 0.5 * dia;
+    return ["plug", "stands beside its socket along local +x", [toWorld(o, offset, 0)]];
+  }
+  return null;
+}
+
+function reachProblems(catalog: Catalog, objects: PlanObject[]): string[] {
+  const out: string[] = [];
+  objects.forEach((o, i) => {
+    const why = reachProblem(catalog, o);
+    if (why !== null) out.push(`objects[${i}].pose (${o.name}): ${why}`);
+  });
+  return out;
 }
 
 /** `regions`: the object's footprint and swing as convex polygons in table mm. */
@@ -950,16 +1428,16 @@ function lidOnBin(a: PlanObject, b: PlanObject): boolean {
   );
 }
 
-/** `layout_problems`: pairs whose footprints or swings come within the clearance. */
+/** `layout_problems`: objects out of reach, then pairs whose footprints or swings come within the clearance. */
 function layoutProblems(catalog: Catalog, objects: PlanObject[], steps: PlanStep[]): string[] {
-  const out: string[] = [];
+  const out: string[] = reachProblems(catalog, objects);
   const clear = catalog.sim.layout.clearance_mm;
   const placed = objects.map((o) => regions(catalog, o));
   const targets = new Set(steps.filter((s) => s.target !== null).map((s) => `${s.object}\u0000${s.target}`));
   objects.forEach((b, j) => {
     for (let i = 0; i < j; i++) {
       const a = objects[i] as PlanObject;
-      if (a.name === b.name || lidOnBin(a, b)) continue;
+      if (a.name === b.name || lidOnBin(a, b) || insideMachine(catalog, a, b) || insideMachine(catalog, b, a)) continue;
       let hit: [string, string, number] | null = null;
       for (const [ra, pa] of placed[i] as Region[]) {
         for (const [rb, pb] of placed[j] as Region[]) {
@@ -978,6 +1456,60 @@ function layoutProblems(catalog: Catalog, objects: PlanObject[], steps: PlanStep
       out.push(`objects[${j}] (${b.name}): its ${rb} ${verb} the ${ra} of objects[${i}] (${a.name}); keep them at least ${fmtG(clear)} mm apart${note}`);
     }
   });
+  return [...out, ...roomProblems(catalog, objects, steps)];
+}
+
+/** `picked_inside`: what a pick step picks from inside a machine (object index to machine and step index). */
+function pickedInside(catalog: Catalog, objects: PlanObject[], steps: PlanStep[]): Map<number, [number, number]> {
+  const index = new Map<string, number>(objects.map((o, k) => [o.name, k]));
+  const out = new Map<number, [number, number]>();
+  steps.forEach((s, i) => {
+    const k = index.get(s.object);
+    if (!["grasp", "suction", "wrap"].includes(s.primitive) || k === undefined || out.has(k)) return;
+    const m = objects.findIndex((machine) => insideMachine(catalog, machine, objects[k] as PlanObject));
+    if (m >= 0) out.set(k, [m, i]);
+  });
+  return out;
+}
+
+/** `room_problems`: the finger room around a part a step picks inside a machine. */
+function roomProblems(catalog: Catalog, objects: PlanObject[], steps: PlanStep[]): string[] {
+  const L = catalog.sim.layout;
+  const F = L.finger_room_mm;
+  const picked = [...pickedInside(catalog, objects, steps).entries()].sort((a, b) => a[0] - b[0]);
+  const placed = objects.map((o) => regions(catalog, o));
+  const out: string[] = [];
+  for (const [k, [m, i]] of picked) {
+    const o = objects[k] as PlanObject;
+    const machine = objects[m] as PlanObject;
+    const s = steps[i] as PlanStep;
+    const xLim = 0.5 * Number(machine.params.depth_mm) - L.machine_wall_mm - F;
+    const yLim = 0.5 * Number(machine.params.width_mm) - F;
+    let ok = true;
+    for (const [, poly] of placed[k] as Region[]) {
+      for (const [x, y] of poly) {
+        const [lx, ly] = toLocal(machine, x, y);
+        if (!(Math.abs(lx) <= xLim + 1e-9 && ly <= yLim + 1e-9)) ok = false;
+      }
+    }
+    if (!ok) {
+      out.push(
+        `objects[${k}].pose (${o.name}): steps[${i}] (${s.id}) picks it inside ${machine.name}, where a gripper's open fingers need ${fmtG(F)} mm around it; keep its footprint ${fmtG(F)} mm from the walls and the opening's +y edge: within ${mm(xLim)} mm of ${machine.name}'s pose along its local x and at most ${mm(yLim)} mm toward its local +y`,
+      );
+    }
+  }
+  for (const [k, [m, i]] of picked) {
+    objects.forEach((other, j) => {
+      if (j === k || (other.kind !== "bin" && other.kind !== "part") || !insideMachine(catalog, objects[m] as PlanObject, other)) return;
+      let d = Number.POSITIVE_INFINITY;
+      for (const [, pa] of placed[k] as Region[]) for (const [, pb] of placed[j] as Region[]) d = Math.min(d, distance(pa, pb));
+      if (d < F - 1e-9) {
+        out.push(
+          `objects[${j}] (${other.name}): it stands ${mm(d)} mm from objects[${k}] (${(objects[k] as PlanObject).name}), which steps[${i}] (${(steps[i] as PlanStep).id}) picks inside ${(objects[m] as PlanObject).name}; a gripper's open fingers need ${fmtG(F)} mm around it there: move objects[${j}].pose or objects[${k}].pose to keep them ${fmtG(F)} mm apart`,
+        );
+      }
+    });
+  }
   return out;
 }
 
@@ -1089,6 +1621,108 @@ function lidOpenProblems(catalog: Catalog, objects: PlanObject[], steps: PlanSte
   return out;
 }
 
+/** `_door_clears`: how far a machine's door opens to uncover `other` inside it, with `room` to spare. */
+function doorClears(catalog: Catalog, machine: PlanObject, other: PlanObject, room: number): number {
+  const L = catalog.sim.layout;
+  let low = Number.POSITIVE_INFINITY;
+  for (const [, poly] of regions(catalog, other)) for (const [x, y] of poly) low = Math.min(low, toLocal(machine, x, y)[1]);
+  return 0.5 * Number(machine.params.width_mm) + L.machine_overlap_mm - low + room;
+}
+
+/** `_machine_open_problems`: a pick of something inside a machine needs its door opened far enough first. */
+function machineOpenProblems(catalog: Catalog, objects: PlanObject[], steps: PlanStep[]): string[] {
+  const out: string[] = [];
+  const byName = new Map<string, PlanObject>(objects.map((o) => [o.name, o]));
+  const machines = objects.filter((o) => o.kind === "sliding_door");
+  const seen = new Set<string>();
+  steps.forEach((s, i) => {
+    if (!catalog.sim.picks.includes(s.primitive)) return;
+    for (const name of [s.object, s.target]) {
+      const thing = name !== null ? byName.get(name) : undefined;
+      if (!thing) continue;
+      for (const m of machines) {
+        if (!insideMachine(catalog, m, thing)) continue;
+        const picked = name === s.object;
+        const L = catalog.sim.layout;
+        const need = doorClears(catalog, m, thing, picked ? L.finger_room_mm : L.clearance_mm);
+        const travel = Number(m.params.travel_mm);
+        if (need > travel + 1e-9) {
+          out.push(
+            `steps[${i}] (${s.id}): ${pyRepr(thing.name)} stands inside ${pyRepr(m.name)}, whose door must open ${num(need)} mm to uncover it (its travel_mm is ${num(travel)}); give the door more travel or stand it nearer the opening's +y side`,
+          );
+          continue;
+        }
+        const pulls: number[] = [];
+        for (let j = 0; j < i; j++) if ((steps[j] as PlanStep).object === m.name && (steps[j] as PlanStep).primitive === "hook_pull") pulls.push(j);
+        if (!pulls.length) {
+          out.push(`steps[${i}] (${s.id}): ${pyRepr(thing.name)} stands inside ${pyRepr(m.name)} under its closed door; hook_pull ${pyRepr(m.name)} open first with travel_mm at_least ${num(Math.ceil(need))}`);
+          continue;
+        }
+        const k = pulls[pulls.length - 1] as number;
+        const pull = steps[k] as PlanStep;
+        const shut: number[] = [];
+        for (let j = k + 1; j < i; j++) if ((steps[j] as PlanStep).object === m.name && (steps[j] as PlanStep).primitive === "push") shut.push(j);
+        if (shut.length) {
+          out.push(
+            `steps[${i}] (${s.id}): ${pyRepr((steps[shut[0] as number] as PlanStep).id)} slides the door of ${pyRepr(m.name)} shut after ${pyRepr(pull.id)} opened it, so this pick meets a closed door; open it again after that push`,
+          );
+          continue;
+        }
+        const opened = bound(pull, "travel_mm", "at_least");
+        const key = `${k}\u0000${thing.name}`;
+        if ((opened === null || opened < need - 1e-9) && !seen.has(key)) {
+          seen.add(key);
+          const asks = opened !== null ? `it asks for ${num(opened)}` : "it asks for no travel_mm at_least";
+          const at = pull.success.findIndex((c) => c.quantity === "travel_mm" && c.at_least !== null);
+          const field = at >= 0 ? `steps[${k}].success[${at}].at_least` : `steps[${k}].success`;
+          const room = picked ? ` and ${num(L.finger_room_mm)} mm past it for a gripper's open fingers` : "";
+          out.push(
+            `steps[${k}] (${pull.id}): ${pyRepr(s.id)} picks ${name === s.target ? "into" : "out of"} ${pyRepr(m.name)} later, so open its door far enough to uncover ${pyRepr(thing.name)}${room}: travel_mm at_least ${num(Math.ceil(need))} (${asks}; set ${field})`,
+          );
+        }
+      }
+    }
+  });
+  return out;
+}
+
+const INSIDE = /\b(inside|in the machine|interior|under the (loading )?opening)\b/i;
+const OUTSIDE = /\b(outside|beside|next to|clear of|not inside|out of)\b/i;
+/** `_MACHINE`: words that name the machine itself; a claim binds only what a clause names with it. */
+const MACHINE = /\b(machine|enclosure)\b|\binside the door\b/i;
+/** `_CLAUSE`: claims are read clause by clause. */
+const CLAUSE = /;|\.\s/;
+
+/** `claim_problems`: words (an assumption, a label) that put a bin or a part inside a machine it does not stand inside. */
+function claimProblems(catalog: Catalog, args: PlanArgs, objects: PlanObject[]): string[] {
+  const out: string[] = [];
+  const machines = objects.filter((o) => o.kind === "sliding_door");
+  if (!machines.length) return out;
+  const things = objects.filter((o) => o.kind === "bin" || o.kind === "part");
+  const lines: [string, string, string | null][] = (args.assumptions ?? []).map((a, k) => [`assumptions[${k}]`, a, null]);
+  for (const o of things) lines.push([`objects[${objects.indexOf(o)}] (${o.name}).label`, o.label, o.name]);
+  const mentions = (text: string, o: PlanObject) => {
+    const low = text.toLowerCase();
+    return low.includes(o.name.toLowerCase()) || low.includes(o.name.replace(/_/g, " ").toLowerCase()) || low.includes(o.label.toLowerCase());
+  };
+  for (const [where, line, own] of lines) {
+    const bound: PlanObject[] = [];
+    for (const text of line.split(CLAUSE)) {
+      if (!INSIDE.test(text) || OUTSIDE.test(text)) continue;
+      if (!(MACHINE.test(text) || machines.some((m) => mentions(text, m)))) continue;
+      for (const o of things) if ((mentions(text, o) || own === o.name) && !bound.includes(o)) bound.push(o);
+    }
+    for (const o of bound) {
+      if (machines.some((m) => insideMachine(catalog, m, o))) continue;
+      const m = machines[0] as PlanObject;
+      out.push(
+        `${where}: it puts ${pyRepr(o.name)} inside ${pyRepr(m.name)}, but at (${num(o.pose.x_mm)}, ${num(o.pose.y_mm)}) its footprint is not inside the machine's interior (depth_mm - 40 x width_mm - 20 mm about ${pyRepr(m.name)}'s pose, at most height_mm - 20 mm tall); move it there or correct the words`,
+      );
+    }
+  }
+  return out;
+}
+
 /**
  * `judge_args` on a plan: every problem (paths name the entry) and every warning. `uploads` are
  * the upload ids that exist, which the plan must also use.
@@ -1119,6 +1753,7 @@ export function validatePlan(catalog: Catalog, raw: PlanArgs, uploads: string[] 
     }
   } else {
     problems.push(...checkParts(catalog, parsed.objects, parsed.steps, uploads));
+    problems.push(...claimProblems(catalog, args, parsed.objects));
     const touched = new Set<string>([...parsed.steps.map((s) => s.object), ...parsed.steps.flatMap((s) => (s.target ? [s.target] : []))]);
     parsed.objects.forEach((o, i) => {
       if (!touched.has(o.name)) warnings.push(`objects[${i}] (${o.name}): no step acts on it or places into it`);
@@ -1280,14 +1915,15 @@ export function addObject(catalog: Catalog, plan: PlanArgs, kind: string): PlanA
   if (kind === "part") params.shape = "box";
   const slot = plan.objects.length;
   const base: PlanObject = { name, kind, label: t.display_name.slice(0, 60), params, pose: { x_mm: -240 + 120 * (slot % 5), y_mm: slot < 5 ? -220 : 220, yaw_deg: 0 }, ref: null };
-  // the first spot on a 60 mm grid where its footprint and swing keep the clearance from every other object
+  // the first spot on a 60 mm grid within reach where its footprint and swing keep the clearance from every other object
   const clear = catalog.sim.layout.clearance_mm;
   const others = plan.objects.flatMap((o) => regions(catalog, o).map(([, poly]) => poly));
   let pose: Pose = base.pose;
   search: for (let y = -240; y <= 240; y += 60) {
     for (let x = -240; x <= 240; x += 60) {
-      const mine = regions(catalog, { ...base, pose: { x_mm: x, y_mm: y, yaw_deg: 0 } }).map(([, poly]) => poly);
-      if (mine.every((a) => others.every((b) => distance(a, b) >= clear))) {
+      const at = { ...base, pose: { x_mm: x, y_mm: y, yaw_deg: 0 } };
+      const mine = regions(catalog, at).map(([, poly]) => poly);
+      if (reachProblem(catalog, at) === null && mine.every((a) => others.every((b) => distance(a, b) >= clear))) {
         pose = { x_mm: x, y_mm: y, yaw_deg: 0 };
         break search;
       }
@@ -1308,7 +1944,9 @@ export function addStep(catalog: Catalog, plan: PlanArgs, prim: string): PlanArg
   const obj = plan.objects.find((o) => allowed.includes(o.kind));
   const kind = obj?.kind ?? allowed[0] ?? "part";
   const t = template(catalog, kind);
-  const goal = [...(t?.quantities ?? []), ...catalog.goal_extra].find((q) => measurable(catalog, prim, kind).includes(q)) ?? info.quantities[0] ?? "force_n";
+  // a button springs back (its travel reads 0 at the end): its goal is pressed
+  const goals = kind === "spring_button" ? ["pressed"] : [...(t?.quantities ?? []), ...catalog.goal_extra];
+  const goal = goals.find((q) => measurable(catalog, prim, kind).includes(q)) ?? info.quantities[0] ?? "force_n";
   const q = quantity(catalog, goal);
   const success: Criterion[] = [{ quantity: goal, at_least: q && q.low < 1 && q.high >= 1 ? 1 : null, at_most: q && !(q.low < 1 && q.high >= 1) ? q.high : null }];
   const id = uniqueName(`${prim}_${obj?.name ?? "step"}`, plan.steps.map((s) => s.id));
@@ -1319,7 +1957,11 @@ export function addStep(catalog: Catalog, plan: PlanArgs, prim: string): PlanArg
     handle: handlesFor(catalog, prim, kind)[0] ?? info.handles[0] ?? "",
     target: null,
     description: `${prim.replace("_", " ")} the ${(obj?.label ?? "object").toLowerCase()}.`.replace(/^./, (c) => c.toUpperCase()),
-    params: { ...defaults(info.params), ...(prim === "twist" && catalog.sim.twist_sense[kind] ? { direction: catalog.sim.twist_sense[kind] } : {}) },
+    params: {
+      ...defaults(info.params),
+      ...(prim === "twist" && catalog.sim.twist_sense[kind] ? { direction: catalog.sim.twist_sense[kind] } : {}),
+      ...(prim === "push" && obj?.kind === "spring_button" && obj.params.mount === "wall" ? { approach: "front" } : {}),
+    },
     constraints: { max_force_n: null, max_torque_nm: null, precision_mm: null, precision_deg: null },
     success,
     after: [],

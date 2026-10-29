@@ -75,6 +75,7 @@ export function RecommendationCard({ rec, plan, bestSingle }: { rec: Recommendat
               {t.family_title ? <span className="text-xs text-ink-3">{t.family_title}</span> : null}
               {t.fidelity ? <TierBadge tier={t.fidelity} /> : null}
             </span>
+            {t.rating ? <span className="mt-0.5 block text-xs text-ink-2" data-rating>{t.rating}</span> : null}
             {t.caveat && !stepCaveats.has(t.caveat) ? <span className="mt-1 block border-l-2 border-pending pl-2 text-xs text-pending">{t.caveat}</span> : null}
           </li>
         ))}

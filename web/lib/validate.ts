@@ -56,6 +56,7 @@ const FAILURE_MODES: readonly FailureMode[] = [
   "finger_env_collision",
   "not_registered",
   "physics_invalid",
+  "physics_unreliable",
   "invalid_build",
 ];
 

@@ -454,3 +454,19 @@ Results: `docs/RESULTS.md`.
 - **The whole project's AI Cloud ledger** (17 jobs since 2026-10-15, including the H100 jobs
   of day 1 and one failed cross-region pull): **$4.12** wall-based, $3.02 run-only.
 
+
+## Job ids by run (2026-10-26)
+
+Several jobs above are named only by their run. Their job ids were read from each run's
+`job.json` (field `job_id`) in the fetched run folder, `runs/cloud/<run>/job.json`, which is
+git-ignored.
+
+| Run | Job id |
+|---|---|
+| `m1-20261015-101446` | `aijob-e00bks4ffjszecva7v` |
+| `m1-20261015-102052` | `aijob-e00zxtr4x72h6m7v2s` |
+| `m1-20261015-133917` | `aijob-e00hm668j0f35aaj8k` |
+| `m1-20261015-170620` | `aijob-e05g4cwheb5k1pjeac` |
+| `m1-20261015-171556` | `aijob-e05wrnedvtp2tgwpqg` |
+| `search-20261015-172651` | `aijob-e05te2wrh14djpf6d0` |
+| `probe-20261015-173010` | `aijob-e05aceb379x12b3h1s` |

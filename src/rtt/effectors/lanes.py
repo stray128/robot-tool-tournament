@@ -37,12 +37,11 @@ from typing import TYPE_CHECKING, Any, Final
 import numpy as np
 
 from rtt.effectors.recommend import card_note
-from rtt.effectors.tournament import GROUP_ORDER, LANE_CONDITION, spec_from_dict
+from rtt.effectors.tournament import GROUP_ORDER, LANE_CONDITION, PART_FAMILIES, spec_from_dict
 from rtt.effectors.types import (
     CONTRACT_VERSION,
     FAMILY_FIDELITY,
     PRODUCT_MODE_LABEL,
-    EffectorFamily,
     EffectorSpec,
     RegistrationReference,
     find_brand_tokens,
@@ -81,6 +80,7 @@ FAMILY_TITLES: Final[Mapping[str, str]] = {
     "soft_arm": "Soft arm",
     "suction": "Suction cup",
     "designed": "Designed morphology",
+    "process_tool": "Process tool",
 }
 FAMILY_BLURBS: Final[Mapping[str, str]] = {
     "parallel_jaw": "The open-source parallel gripper of the core experiment, with its entrant fingers.",
@@ -495,7 +495,7 @@ def _families(tournament: Mapping[str, Any], recommendation: Mapping[str, Any]) 
         by_family.setdefault(c["family"], []).append(c)
     order = {row["effector_id"]: i for i, row in enumerate(recommendation["ranking"])}
     out = []
-    for fam in EffectorFamily:
+    for fam in PART_FAMILIES:
         status = tournament["families"].get(fam.value, "not available")
         cands = by_family.get(fam.value, [])
         screened = [c for c in cands if c["status"] == "screened"]
@@ -863,7 +863,7 @@ def export_web(
                 "fidelity": FAMILY_FIDELITY[f].value,
                 "available": f.value in avail,
             }
-            for f in EffectorFamily
+            for f in PART_FAMILIES
         ],
         "parts": entries,
     }

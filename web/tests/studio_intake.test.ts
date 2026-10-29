@@ -46,7 +46,7 @@ interface ParityCase {
 }
 
 const cases = (parityJson as unknown as { cases: ParityCase[] }).cases;
-const examples = (recordedJson as unknown as { examples: { case_id: string; hero: boolean; status: string; plan: Record<string, unknown>; uploads: { upload_id: string }[] }[] }).examples;
+const examples = (recordedJson as unknown as { examples: { case_id: string; hero: boolean; status: string; status_now: string; rules: string; recorded_at: string; plan: Record<string, unknown>; uploads: { upload_id: string }[] }[] }).examples;
 
 describe("Python-compatible text", () => {
   it("formats numbers like Python's g, repr and json", () => {
@@ -99,11 +99,34 @@ describe("validator parity with the Python judge", () => {
 
 describe("recorded plans", () => {
   it("validate to their recorded status, heroes first", () => {
-    expect(examples.filter((e) => e.hero).map((e) => e.case_id)).toEqual(["h1_tote", "h2_coupling", "h3_cabinet"]);
+    // h4_cnc has no valid recorded plan: it is listed with the rest of the test set, not offered as a hero
+    expect(examples.filter((e) => e.hero).map((e) => e.case_id)).toEqual(["h1_tote", "h5_solar", "h6_tile", "h2_coupling", "h7_hotel"]);
+    // the rest of the v1 test set follows, recorded on the v1 prompt (its own date)
+    expect(examples.filter((e) => !e.hero && e.case_id !== "x1_upload_tub").map((e) => e.case_id)).toEqual([
+      "h4_cnc",
+      "h3_cabinet",
+      "e1_drawer_kitting",
+      "e2_rod_nut",
+      "e3_isolation_valve",
+      "e4_vial_holder",
+      "e5_fridge_restock",
+      "u1_fold_shirt",
+      "u2_pour",
+    ]);
     for (const e of examples) {
+      // the page validates with rule set v2: the v2 heroes keep their recorded status; a v1 example gets
+      // what today's rules say of it (Python's verdict, status_now), which the v2 rules may change
       const verdict = validatePlan(catalog, planArgsOf(e.plan), e.uploads.map((u) => u.upload_id));
-      expect(verdict.status, e.case_id).toBe(e.status);
+      expect(verdict.status, e.case_id).toBe(e.status_now);
+      if (e.rules === "v2") expect(e.status_now, e.case_id).toBe(e.status);
     }
+    expect(examples.filter((e) => e.rules === "v1" && e.status_now !== e.status).map((e) => e.case_id)).toEqual(["e1_drawer_kitting", "e2_rod_nut"]);
+  });
+
+  it("carry the day each was recorded", () => {
+    const day = (id: string) => examples.find((e) => e.case_id === id)!.recorded_at.slice(0, 10);
+    expect(day("h1_tote")).toBe("2026-10-27");
+    expect(day("h3_cabinet")).toBe("2026-10-18");
   });
 
   it("an upload plan needs its upload", () => {
@@ -154,6 +177,39 @@ describe("edits", () => {
     expect(thread.steps.map((s) => [s.primitive, s.params.direction ?? null])).toEqual([["insert", null], ["twist", "cw"]]);
     expect(validatePlan(catalog, thread).problems).toEqual([]);
     expect(addStep(catalog, thread, "grasp").steps[2]!.object).not.toBe(thread.objects[0]!.name); // no pick on a thread
+  });
+
+  it("teach the job templates: an optional approach, a front push on a wall button, reach on the pose", async () => {
+    const hotel = () => planArgsOf(examples.find((e) => e.case_id === "h7_hotel")!.plan);
+    const plan = hotel();
+    const press = plan.steps.find((s) => s.primitive === "push")!;
+    expect(press.params.approach).toBe("front");
+    const base = validatePlan(catalog, plan);
+    expect(base.status).toBe("valid");
+    // approach top is push's default: written or left out, the step hashes the same
+    const tote = planArgsOf(examples.find((e) => e.case_id === "h1_tote")!.plan);
+    const id = await taskId(catalog, validatePlan(catalog, tote));
+    tote.steps.find((s) => s.primitive === "push")!.params.approach = "top";
+    expect(await taskId(catalog, validatePlan(catalog, tote))).toBe(id);
+    press.params.approach = "top";
+    expect(validatePlan(catalog, plan).problems).toEqual([
+      "steps[0] (press_button): a wall button faces sideways; push it with approach front (the tool tilted to point at its face)",
+    ]);
+    const away = hotel();
+    away.objects.find((o) => o.kind === "spring_button")!.pose.yaw_deg = 180;
+    const far = validatePlan(catalog, away).problems[0]!;
+    expect(far).toMatch(/^objects\[0\]\.pose \(call_button\): a wall button is pressed by a tool tilted/);
+    expect(problemTarget(far, away)).toEqual({ kind: "object", index: 0 });
+    // a push added on a wall button comes from the front and is judged by pressed
+    const step = addStep(catalog, addObject(catalog, emptyPlan(), "spring_button"), "push");
+    expect(step.steps[0]!.params.approach).toBe("front");
+    expect(step.steps[0]!.success).toEqual([{ quantity: "pressed", at_least: 1, at_most: null }]);
+    step.objects[0]!.pose = { x_mm: 0, y_mm: 200, yaw_deg: 0 }; // facing the centre, within reach
+    expect(validatePlan(catalog, step).problems).toEqual([]);
+    step.steps[0]!.params.approach = "top";
+    expect(validatePlan(catalog, step).problems).toEqual([
+      "steps[0] (push_spring_button): a wall button faces sideways; push it with approach front (the tool tilted to point at its face)",
+    ]);
   });
 
   it("exports TaskSpec.to_dict with the task id and fidelity", async () => {

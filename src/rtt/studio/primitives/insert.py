@@ -1,6 +1,9 @@
 """The ``insert`` primitive: align the held member over its seat and push it in with compliance.
 
-Objects: ``port_plug`` (``plug``) and ``threaded_joint`` (``member``).
+Objects: ``port_plug`` (``plug``), ``threaded_joint`` (``member``) and ``panel_rail`` (``member``: its
+clamp, a threaded member read through :func:`~rtt.studio.templates.thread_info`). A step whose
+planned moves or seat would put the palm outside its travel fails ``out_of_reach``, as every
+primitive does (:func:`~._common.reach_problem`).
 
 **Controller** (:class:`InsertController`):
 
@@ -78,18 +81,26 @@ from rtt.studio.primitives._common import (
     force_allowed,
     force_goal,
     heading_for_axis,
+    hold_out_of_reach,
+    idle_command,
     move_time,
     observed_state,
+    offset,
+    out_of_reach_verdict,
+    reach_problem,
     rot_z,
     safe_palm_z,
     schedule,
+    start_pose,
     tool_geoms,
     tool_of,
     tool_point_world,
     transit,
+    wrist_frame,
     wrist_target,
 )
 from rtt.studio.primitives._pick import pick_geometry
+from rtt.studio.templates import member_body, thread_info
 from rtt.studio.types import PrimitiveKind, TemplateKind
 
 __all__ = ["InsertController", "InsertPredicate", "goal_depth"]
@@ -152,7 +163,7 @@ def push_depth(ctx: StepContext) -> float:
 def goal_depth(ctx: StepContext) -> float:
     """The depth the step asks for (m): the ``depth_mm`` criterion plus 0.5 mm, else the full
     depth (seated, or for a thread its start)."""
-    info = ctx.obj.handles.info
+    info = thread_info(ctx.obj)
     full = info["depth_m"] - 0.0003 if ctx.obj.kind is TemplateKind.PORT_PLUG else info["lead_m"]
     lo, _ = criterion_bounds(ctx, "depth_mm")
     if lo is not None:
@@ -207,14 +218,14 @@ class InsertController:
 
     def plan(self, ctx: StepContext, model: mujoco.MjModel, data: mujoco.MjData) -> StepPlan:
         step, obj, task = ctx.step, ctx.obj, ctx.task
-        info = obj.handles.info
-        tool = tool_of(ctx, obj.body_ids[-1])
+        info = thread_info(obj)
+        tool = tool_of(ctx, member_body(obj))
         sch = schedule(ctx)
         sch.tool = tool
-        start = np.asarray(ctx.wrist_start, dtype=np.float64)
+        start = start_pose(ctx)
         roll = float(start[4])
         held = _held(ctx, model, data)
-        path = Path.start(start)
+        path = Path.start(start, ctx.scene.wrist.pitch_speed_dps)
         port = obj.kind is TemplateKind.PORT_PLUG
         yaw = float(start[3])
         guard = None
@@ -265,12 +276,17 @@ class InsertController:
             else:  # a cup or a soft arm presses on the member's top
                 tip_z = float(axis_pt[2]) - 0.004
             engage = wrist_target(np.array([axis_pt[0], axis_pt[1], tip_z]), tool.tip, yaw, roll)
-            above = engage + np.array([0.0, 0.0, 0.06, 0.0, 0.0])
+            above = engage + offset(z=0.06)
             transit(path, above, max(above[2], safe_palm_z(ctx, model, data, tool)))
             guard = Guarded(path.last, engage, path.end, 1.0 + BUDGET_S["engage_slack"])
             t_close = guard.end
             path.to(engage, guard.duration)
             path.hold(1.3)
+        # every planned move, and the seat the member goes into, within the palm's travel
+        mouth = wrist_target(ctx.observe_site(data, "socket" if port else "member"), tool.tip, yaw, roll)
+        far = reach_problem(*path.poses, mouth)
+        if far is not None:
+            return hold_out_of_reach(ctx, start, far, "a planned move or the seat")
         pre = tool.preshape(2.0 * info["flat_m"]) if (not held and not port) else 0.0
         t_align = path.end
         align_t = 1.2 if port else 0.0
@@ -345,6 +361,8 @@ class InsertController:
         sch = plan.values["schedule"]
         run = plan.values["run"]
         tool = sch.tool
+        if "idle" in run:  # out of reach: hold still, the tool as it was
+            return idle_command(t, ctx, run, model, data)
         v = sch.values
         guard: Guarded | None = run["guard"]
         if guard is not None and guard.t0 <= t < guard.end + 1e-9:
@@ -374,7 +392,7 @@ class InsertController:
                 rise = self._fist_rise(t, ctx, run, data, release)
                 if run.get("let_go_at") is not None:
                     closure *= max(0.0, 1.0 - (t - run["let_go_at"]) / RELEASE_S)
-            wrist = wrist + np.array([0.0, 0.0, rise, 0.0, 0.0])
+            wrist = wrist + offset(z=rise)
         phase = Phase.HOLD if held or t >= t_close else Phase.DESCEND
         return PrimitiveCommand(wrist, tool.controls(t, closure, model, data, phase))
 
@@ -405,10 +423,8 @@ class InsertController:
         tool = sch.tool
         if run["align"] is None:
             start = run["path"].last if run["guard"] is None else run["guard"].at(run["guard"].end, 1e9)
-            q = data.qpos
-            heading = float(q[ctx.scene.ids.palm_qpos[3]] + q[ctx.scene.ids.roll_qpos])
             tcp = tool_point_world(ctx.scene, data, tool.tcp)
-            tip_in_tool = rot_z(heading).T @ (ctx.observe_site(data, "plug_tip") - tcp)
+            tip_in_tool = wrist_frame(ctx.scene, data).T @ (ctx.observe_site(data, "plug_tip") - tcp)
             socket = ctx.observe_site(data, "socket")
             over = (
                 socket + np.array([0.0, 0.0, run["standoff"]]) - rot_z(run["yaw"] + run["roll"]) @ tip_in_tool
@@ -488,6 +504,7 @@ class InsertController:
                             run["z_cmd"],
                             base[3],
                             base[4],
+                            base[5],
                         ]
                     )
                     # under a step force limit the push eases off while the fingers let go (an
@@ -572,6 +589,9 @@ class InsertPredicate:
             acc["lateral_force_n"] = max(acc["lateral_force_n"], con.lateral)
 
     def verdict(self, ctx: StepContext, acc: Mapping[str, float]) -> StepVerdict:
+        far = out_of_reach_verdict(ctx, acc)
+        if far is not None:
+            return far
         q = dict(acc)
         goal = schedule(ctx).values.get("goal", goal_depth(ctx))
         q["jam"] = float(q.get("depth_mm", 0.0) < 1000.0 * goal - 1.0)  # goal carries the 0.5 mm margin

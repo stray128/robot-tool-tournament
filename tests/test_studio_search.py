@@ -45,6 +45,7 @@ from rtt.studio.search import (
     swept_volume_problems,
 )
 from rtt.studio.types import (
+    TOOL_CHANGE_S,
     ComplexityMetrics,
     FidelityTier,
     HeadMount,
@@ -409,7 +410,7 @@ def _result(
                 seed=(seeds or list(range(len(oks))))[i],
                 steps=steps,
                 cycle_time_s=cycle,
-                change_time_s=6.0 * changes,
+                change_time_s=TOOL_CHANGE_S * changes,
                 n_tool_changes=changes,
                 n_presentations=0,
                 tool_mass_kg=(0.4,),
@@ -439,16 +440,17 @@ def test_simplicity_rule_picks_the_simpler_setup_within_the_margins() -> None:
     rec = recommend_setups([tc, sg], best_single_id=single.setup_id)
     assert rec["evidence"] == "accepted"
     assert rec["recommendation"]["setup_id"] == single.setup_id
-    assert (
-        "simpler" in rec["recommendation"]["why"] and str(SIMPLICITY_MARGIN) in rec["recommendation"]["why"]
-    )
+    why = rec["recommendation"]["why"]
+    margin = SIMPLICITY_MARGIN["per_extra_effector"]
+    assert "R01" in why and "simpler" in why and f"not more than {100 * 2 * margin:g} points better" in why
     assert rec["versus_best_single"]["same_setup"] is True
     # outside the margin the better setup wins
     worse = _result(single, task, [True] * 15 + [False] * 5, 21.0)
     assert recommend_setups([tc, worse])["recommendation"]["setup_id"] == change.setup_id
-    # much slower is not "close" either
+    # integrator rule R01: a slower single tool that finishes the job still wins (cycle time never
+    # lets a more complex setup beat it; the old 10 % cycle rule gave the tool change here)
     slow = _result(single, task, oks, 30.0)
-    assert next(sr.setup.setup_id for sr, _ in rank_setups([tc, slow])) == change.setup_id
+    assert next(sr.setup.setup_id for sr, _ in rank_setups([tc, slow])) == single.setup_id
 
 
 def test_reference_results_are_refused_and_unfair_ones_raise() -> None:
@@ -479,25 +481,30 @@ def test_no_winner_is_reported_and_an_approximation_winner_carries_a_rigid_runne
     assert eligibility(reset) == (False, "a run reset the simulator (physics_invalid)")
 
 
-def test_sensitivity_recomputes_cycle_times_and_reports_rank_changes() -> None:
+def test_sensitivity_recomputes_cycle_times_and_cycle_time_never_overturns_r01() -> None:
+    """Re-timing is exact; the rank changes it can cause are tested in test_studio_rules.py
+    (between setups of the same complexity). Before integrator rule R01, a 3 s change made the
+    faster tool change win here; now the single tool that finishes the job wins at every time."""
     task, single, change = _pair()
     sg = _result(single, task, [True] * 4, 30.0)
-    tc = _result(change, task, [True] * 4, 27.0, changes=1)  # 21 s of steps + one 6 s change
+    tc = _result(change, task, [True] * 4, 27.0, changes=1)  # 19.5 s of steps + one 7.5 s change
     sens = sensitivity([sg, tc])
-    assert sens["baseline"]["order"][0] == change.setup_id
+    assert sens["baseline"]["order"] == [single.setup_id, change.setup_id]
     by = {(c["tool_change_s"], c["present_s"]): c for c in sens["combos"]}
-    assert len(by) == 9
-    assert by[(3.0, 1.5)]["recommended"] == change.setup_id
-    assert by[(12.0, 1.5)]["recommended"] == single.setup_id and by[(12.0, 1.5)]["changed"]
-    assert math.isclose(by[(12.0, 0.75)]["cycle_time_s"][change.setup_id], 33.0)
-    assert sens["recommendation_changes"] is True
+    assert len(by) == 15
+    assert math.isclose(by[(3.0, 1.5)]["cycle_time_s"][change.setup_id], 22.5)
+    assert math.isclose(by[(12.0, 0.75)]["cycle_time_s"][change.setup_id], 31.5)
+    assert all(c["recommended"] == single.setup_id and not c["changed"] for c in sens["combos"])
+    assert sens["recommendation_changes"] is False
 
 
 def test_library_tags_add_to_a_grippers_mechanism_and_are_all_a_tool_serves() -> None:
     grip = candidate_of(gripper(), "library", tags=("pinch",), item="x")
     assert PrimitiveKind.HOOK_PULL in grip.capabilities and grip.capabilities >= ACQUIRE
+    # a tool without a grip serves its tags, except hook_pull: whether a rigid tool hooks is its
+    # measured geometry (capability_problem), so a "hook" tag adds nothing
     hook = candidate_of(gripper(), "library", tags=("hook", "push"), item="y")
-    assert hook.capabilities == {PrimitiveKind.HOOK_PULL, PrimitiveKind.PUSH}
+    assert hook.capabilities == {PrimitiveKind.PUSH}
 
 
 def test_designed_effectors_are_not_pruned_for_their_build_on_steps_that_pick_nothing() -> None:
@@ -523,7 +530,13 @@ def test_designed_effectors_are_not_pruned_for_their_build_on_steps_that_pick_no
     designed = [candidate_of(spec_from_recipe(r), "designed") for r in reference_recipes()]
     eligible, pruned, _ = prune(task, designed)
     assert not [p.reason for p in pruned if "built against" in p.reason]
-    for j in range(3):
+    # integrator rule R03: the designed hands and the tentacle stay off the lid (the hook gripper
+    # opens it); every other pruning of the lid step is that rule, none is the build
+    rigid = {c.effector_id for c in designed if c.spec.recipe.kind == "hook_gripper"}
+    assert rigid and {c.effector_id for c in eligible[0]} == rigid
+    assert all("R03" in p.reason for p in pruned if p.step_id == "open")
+    assert {p.effector_id for p in pruned} == {c.effector_id for c in designed} - rigid
+    for j in (1, 2):
         assert {c.effector_id for c in eligible[j]} == {c.effector_id for c in designed}
     for c in designed:  # and the scene builds each of them for the chain, as the search said
         sub = sub_task(task, ("open",))

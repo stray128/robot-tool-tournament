@@ -9,7 +9,7 @@ import {
   type SpecTag,
 } from "@/lib/library";
 
-const BADGE = "num inline-flex items-center gap-1 border px-1.5 py-px text-[0.6875rem] uppercase tracking-wide";
+const BADGE = "inline-flex items-center gap-1 rounded-full border px-2 py-px text-xs";
 
 /** How an item is simulated: native model, generated proxy, visual only or link only (never colour alone). */
 export function SimStatusBadge({ status }: { status: SimStatus }) {
@@ -73,7 +73,7 @@ export function EntrantBadge({ entrant }: { entrant: boolean }) {
 /** A capability tag (pinch, hook, ...). */
 export function CapabilityTag({ tag, note }: { tag: string; note?: string }) {
   return (
-    <span className="inline-block border border-rule bg-paper-2/60 px-1.5 py-px text-xs text-ink-2" title={note}>
+    <span className="inline-block rounded-full border border-rule bg-paper-2/60 px-2 py-px text-xs text-ink-2" title={note}>
       {tag}
     </span>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { OrbitControls } from "@react-three/drei";
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
@@ -253,17 +253,46 @@ function CollisionOutline({ geom, color }: { geom: ReplayGeom; color: string }) 
   );
 }
 
-/** Fixed camera fitted to the bounds, or orbit controls (design page) with an optional turntable. */
+const Y_AXIS = new THREE.Vector3(0, 1, 0);
+
+/** Fit the camera along `dir`, then move it `zoom` times closer to the target. */
+function place(
+  camera: THREE.PerspectiveCamera,
+  bounds: Bounds,
+  dir: THREE.Vector3,
+  size: { width: number; height: number },
+  pad: { top: number; bottom: number },
+  zoom: number,
+): THREE.Vector3 {
+  const target = fitPerspective(camera, bounds, dir, size, pad);
+  if (zoom !== 1) {
+    camera.position.sub(target).multiplyScalar(1 / zoom).add(target);
+    camera.lookAt(target);
+  }
+  return target;
+}
+
+/**
+ * Fixed camera fitted to the bounds, or orbit controls (design page) with an optional turntable.
+ * `spin` turns the fixed camera slowly about the vertical axis while the clock plays (the fit is a
+ * bounding sphere, so every heading frames the whole scene); it stops when playback pauses.
+ */
 function StudioCamera({
   bounds,
   direction,
   pad,
   orbit,
+  spin,
+  zoom,
+  store,
 }: {
   bounds: Bounds;
   direction: THREE.Vector3;
   pad: { top: number; bottom: number };
   orbit: { autoRotate: boolean } | null;
+  spin: number;
+  zoom: number;
+  store: PlaybackStore;
 }) {
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const size = useThree((s) => s.size);
@@ -271,16 +300,24 @@ function StudioCamera({
   const invalidate = useThree((s) => s.invalidate);
   const controls = useRef<React.ComponentRef<typeof OrbitControls>>(null);
   const target = useRef(new THREE.Vector3());
+  const angle = useRef(0);
 
   useEffect(() => {
-    target.current.copy(fitPerspective(camera, bounds, direction, size, pad));
+    const dir = spin ? direction.clone().applyAxisAngle(Y_AXIS, angle.current) : direction;
+    target.current.copy(place(camera, bounds, dir, size, pad, zoom));
     placeFog(scene, camera.position.distanceTo(target.current));
     if (controls.current) {
       controls.current.target.copy(target.current);
       controls.current.update();
     }
     invalidate();
-  }, [camera, bounds, direction, size, pad, scene, invalidate]);
+  }, [camera, bounds, direction, size, pad, scene, invalidate, spin, zoom]);
+
+  useFrame((_, dt) => {
+    if (!spin || orbit || !store.getState().playing) return;
+    angle.current += Math.min(dt, 0.1) * spin;
+    place(camera, bounds, direction.clone().applyAxisAngle(Y_AXIS, angle.current), size, pad, zoom);
+  });
 
   if (!orbit) return null;
   return (
@@ -327,6 +364,10 @@ export interface StudioReplayCanvasProps {
   orbit?: { autoRotate: boolean } | null;
   /** Screen space kept free above and below for HTML readouts, CSS px. */
   pad?: { top: number; bottom: number };
+  /** Slow turn of the fixed camera while playing, radians per second (the home hero); 0 for none. */
+  spin?: number;
+  /** Move the fitted camera this many times closer (1: the whole swept volume in view). */
+  zoom?: number;
 }
 
 const NO_PAD = { top: 0, bottom: 0 };
@@ -343,6 +384,8 @@ export default function StudioReplayCanvas({
   options = NO_STUDIO_OPTIONS,
   orbit = null,
   pad = NO_PAD,
+  spin = 0,
+  zoom = 1,
 }: StudioReplayCanvasProps) {
   const bodies = useRef<(THREE.Group | null)[]>([]);
   const { header } = replay;
@@ -363,7 +406,7 @@ export default function StudioReplayCanvas({
       <StudioSetup palette={palette} />
       <StudioLights bounds={bounds} />
       <StudioFloor bounds={bounds} palette={palette} />
-      <StudioCamera bounds={bounds} direction={direction} pad={pad} orbit={orbit} />
+      <StudioCamera bounds={bounds} direction={direction} pad={pad} orbit={orbit} spin={spin} zoom={zoom} store={store} />
       <Cutaway cut={options.cut} />
       <group rotation={Z_UP_TO_Y_UP}>
         {/* The studio floor stands in for the table and the floor plane; other static geoms are drawn. */}

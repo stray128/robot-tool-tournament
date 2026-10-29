@@ -39,8 +39,8 @@ export function PlanView({ plan }: { plan: Plan }) {
           {plan.description ? <p className="mt-1 text-ink-2">{plan.description}</p> : null}
           <p className="num mt-1 text-xs text-ink-3">{how.join(" · ")}</p>
         </div>
-        <Link href="/studio/new/" className="link text-sm" data-edit-plan>
-          Edit this plan on /studio/new/
+        <Link href="/studio/#plan" className="link text-sm" data-edit-plan>
+          Plan your own task
         </Link>
       </div>
 

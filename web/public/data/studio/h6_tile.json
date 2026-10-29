@@ -1,0 +1,3055 @@
+{
+ "schema": "rtt-web-studio-hero",
+ "version": 1,
+ "label": "Product mode: not part of the pre-registered experiment",
+ "contract": "rtt-effectors/2",
+ "hero": "h6_tile",
+ "case_id": "h6_tile",
+ "title": "Floor tile setting",
+ "setting": "construction",
+ "use_case": "Floor tiling: a 300 x 300 mm porcelain floor tile (10 mm thick, 2.2 kg) goes on the fresh adhesive bed, where it sits about 2 mm proud of its finished height until it is pressed. Lay it on the bed, then tamp it down level: within 1 mm of its finished height and no more than 0.5 degrees out of level, pressing no harder than 60 N.",
+ "outcome": "recommended",
+ "headline": "A two-tool head completes the task in 8 of 8 runs.",
+ "plan": {
+  "task_id": "f9553b22ce12fc141c274d5532f25c97083ff5cd41faa49fc1927d9487fbc5a3",
+  "title": "Floor tiling",
+  "description": "Lift a 300x300 mm porcelain tile and set it on the fresh adhesive bed, then press it down until it is within 1 mm of its finished height and no more than 0.5 degrees out of level, using no more than 60 N of pressing force.",
+  "source": "nemotron",
+  "result": "valid_after_repair",
+  "calls": 2,
+  "model": "nvidia/nemotron-3-super-120b-a12b",
+  "layout_moves": [],
+  "assumptions": [
+   "Tile mass is 2.2 kg (2200 g).",
+   "Adhesive bed yields at 30 N and hardens 15 N/mm; pressing ~28 N sinks the tile ~1.3 mm to meet height tolerance after spring‑back."
+  ],
+  "clarifications": [],
+  "unsupported": [],
+  "objects": [
+   {
+    "name": "floor_tile",
+    "kind": "tile_bed",
+    "kind_title": "Tile on a mortar bed",
+    "label": "Floor tile",
+    "params": {
+     "bed_hardening_n_mm": 15,
+     "bed_yield_n": 30,
+     "mass_g": 2200,
+     "proud_mm": 2,
+     "thickness_mm": 10,
+     "tile_mm": 300
+    },
+    "pose": {
+     "x_mm": 0.0,
+     "y_mm": 0.0,
+     "yaw_deg": 0.0
+    },
+    "ref": null
+   }
+  ],
+  "steps": [
+   {
+    "id": "lay_tile",
+    "primitive": "grasp",
+    "primitive_title": "Grasp",
+    "object": "floor_tile",
+    "handle": "part",
+    "target": null,
+    "params": {
+     "hold_s": 1,
+     "lift_mm": 20
+    },
+    "constraints": {
+     "max_force_n": null,
+     "max_torque_nm": null,
+     "precision_mm": null,
+     "precision_deg": null
+    },
+    "success": [
+     {
+      "quantity": "lift_mm",
+      "unit": "mm",
+      "at_least": 5.0,
+      "at_most": null,
+      "text": "lift at least 5 mm"
+     },
+     {
+      "quantity": "hold_s",
+      "unit": "s",
+      "at_least": 0.5,
+      "at_most": null,
+      "text": "hold at least 0.5 s"
+     }
+    ],
+    "after": [],
+    "hold_after": false,
+    "description": "Lift the tile and set it back on the adhesive bed.",
+    "fidelity": "approximation",
+    "caveats": [
+     "The mortar bed is an approximation: nine plastic cells that yield and harden linearly and keep their set; no flow, suction or curing. A screen, not a promise."
+    ]
+   },
+   {
+    "id": "tamp_tile",
+    "primitive": "push",
+    "primitive_title": "Push",
+    "object": "floor_tile",
+    "handle": "part",
+    "target": null,
+    "params": {
+     "speed_mm_s": 20
+    },
+    "constraints": {
+     "max_force_n": 60.0,
+     "max_torque_nm": null,
+     "precision_mm": null,
+     "precision_deg": null
+    },
+    "success": [
+     {
+      "quantity": "height_err_mm",
+      "unit": "mm",
+      "at_least": null,
+      "at_most": 1.0,
+      "text": "height err mm at most 1 mm"
+     },
+     {
+      "quantity": "tilt_deg",
+      "unit": "deg",
+      "at_least": null,
+      "at_most": 0.5,
+      "text": "tilt at most 0.5 deg"
+     },
+     {
+      "quantity": "force_n",
+      "unit": "N",
+      "at_least": 28.0,
+      "at_most": null,
+      "text": "force at least 28 N"
+     }
+    ],
+    "after": [
+     "lay_tile"
+    ],
+    "hold_after": false,
+    "description": "Press the tile down to within 1 mm of its finished level.",
+    "fidelity": "approximation",
+    "caveats": [
+     "The mortar bed is an approximation: nine plastic cells that yield and harden linearly and keep their set; no flow, suction or curing. A screen, not a promise."
+    ]
+   }
+  ]
+ },
+ "screen": {
+  "n_candidates": 50,
+  "n_screened": 44,
+  "n_conditions": 3,
+  "runs": 132,
+  "wall_s": 171.1,
+  "candidates": [
+   {
+    "effector_id": "e0152a5f29e1756ccd2ed7b3602b13ce3a4d3a80d1fe1709d383db30284f82b7",
+    "display_name": "Four-finger 16-joint hand, power grasp",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "f4363e74967e4429fc2203073f9a2f6e8eed447a156149eaf424544d589cef8d",
+    "display_name": "Four-finger 16-joint hand, pinch",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "bc347dd620c711c06e02bbf5b6c610413ae5b0ac8b182fdbb98f5ae997e177af",
+    "display_name": "Five-finger 18-actuator hand, power grasp",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "300d169b6786c96007dbe4ce8c0fea66549c0e081cfcfe3f3fe07d6e46ec6a3f",
+    "display_name": "Five-finger 18-actuator hand, pinch",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "a0fc12482a70670906acabab94f5bc4b91ebbbff57fe669e9725afd57c80c75e",
+    "display_name": "Five-finger 22-joint hand, power grasp",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "594c4f4d5088689c599fdd9884d2675a7a3d69f8f7df8489ef57b6484db711f0",
+    "display_name": "Five-finger 22-joint hand, pinch",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "79372f1ed2ab4e3a5467c38ed239aa0795a8df3e5ce6af900af10a5a3e252050",
+    "display_name": "Two-finger parallel gripper, fin-ray pads",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "a03002d6c5e1107f0bef73bc8cf24cd90b390550654aaa5d9e8899933971f6d7",
+    "display_name": "Two-finger parallel gripper, rigid pads A",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "bbb8214caaf4a70aac3e2c08331f0166c12470bf97db57db00dc834a77ff4dd1",
+    "display_name": "Two-finger adaptive gripper, power grasp",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "52613f2b72143b61b490ddfc05c4e3ed38c49de7005b77f07a5ccbfada0ab476",
+    "display_name": "Two-finger adaptive gripper, pinch",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "730fd283dd6b7dd046711dfef0b73a64f6a577e2cc7a643ee6affb86f74ed0aa",
+    "display_name": "Three-finger adaptive gripper, power grasp",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "9dbe8879e66bd4a935e6db502db88cdb0ce74390f469ada567cc93eb165b5b58",
+    "display_name": "Three-finger adaptive gripper, pinch",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "e754a0d67325f2100c98c2f9af46bb60c49421f256a2026895fb59bcf82e547d",
+    "display_name": "Soft arm, 12 segments, 140 mm",
+    "family": "soft_arm",
+    "family_title": "Soft arm",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "soft_arm",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "743fc0bc1efc93c288065cff91b147fd993ad974831e50b7617f7f15a0ab66fc",
+    "display_name": "Soft arm, 16 segments, 160 mm",
+    "family": "soft_arm",
+    "family_title": "Soft arm",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "soft_arm",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "2f5e4f974b13a6445127a6afead695a9e58a54cdeb12a3101724db21f6b368e9",
+    "display_name": "Soft arm, 20 soft segments, 180 mm",
+    "family": "soft_arm",
+    "family_title": "Soft arm",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "soft_arm",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "f0b6543ba012ad8f54c8860c61407708f1bdfaf1d1b395d00a64ada8e883d6de",
+    "display_name": "Suction cup, 10 mm bellows",
+    "family": "suction",
+    "family_title": "Suction cup",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "suction",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "3907bc284d9e2c3399ddb8b45b1bf94dbb3b0ef0672705c6d90724839ecf7186",
+    "display_name": "Suction cup, 16 mm bellows",
+    "family": "suction",
+    "family_title": "Suction cup",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "suction",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "e72e88518c0ebe7a74ec5db104b671180e9dbb5b51d0b11045814506657f31bf",
+    "display_name": "Suction cup, 25 mm bellows",
+    "family": "suction",
+    "family_title": "Suction cup",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "suction",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "1a3dddd3d68cc0b6df6d003946cc16fb895f371d0001906c7ba2e72d729721ac",
+    "display_name": "Vacuum area frame, 2 x 2 cups, 300 mm",
+    "family": "suction",
+    "family_title": "Vacuum area frame",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "suction",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ],
+    "studio_only": true,
+    "rating": "rated 4.15 kg on a smooth face (holding force over a 1.5 safety factor)",
+    "caveat": "Vacuum area frame (approximation): the cups of the suction cup model on a rigid frame, each with its own seal test and its own vacuum valve (a cup that does not seal stays off). The holding force is the sum of the sealed cups' caps; the payload is that force over a safety factor (1.5 smooth, 2.0 porous, 2.5 swivelling, all [assumed]) at 1 g. Only the smooth rating is a simulated claim: the porous and swivelling ratings are arithmetic on the same force, because no leak, porosity or swivel is simulated. Not modelled: a shared vacuum source and its flow, the leak of an unsealed cup into the others, the frame's flex, peel across a long face, foam or needle area grippers. Treat frame results as a screen, then verify on hardware."
+   },
+   {
+    "effector_id": "530514a2ba01210b994060206aa74f49d498731eb80579282867d25195f8257a",
+    "display_name": "Vacuum area frame, 2 x 3 cups, 600 mm",
+    "family": "suction",
+    "family_title": "Vacuum area frame",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "suction",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ],
+    "studio_only": true,
+    "rating": "rated 8.47 kg on a smooth face (holding force over a 1.5 safety factor)",
+    "caveat": "Vacuum area frame (approximation): the cups of the suction cup model on a rigid frame, each with its own seal test and its own vacuum valve (a cup that does not seal stays off). The holding force is the sum of the sealed cups' caps; the payload is that force over a safety factor (1.5 smooth, 2.0 porous, 2.5 swivelling, all [assumed]) at 1 g. Only the smooth rating is a simulated claim: the porous and swivelling ratings are arithmetic on the same force, because no leak, porosity or swivel is simulated. Not modelled: a shared vacuum source and its flow, the leak of an unsealed cup into the others, the frame's flex, peel across a long face, foam or needle area grippers. Treat frame results as a screen, then verify on hardware."
+   },
+   {
+    "effector_id": "722d18369aa469f5d390011a204ced8a74f3d3c3b4596e2fb4822b13597fb1d4",
+    "display_name": "Nut runner, 13 mm hex socket",
+    "family": "process_tool",
+    "family_title": "Process tool",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "process",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "lay_tile",
+      "reason": "a nut runner turns a fastener; it cannot pick or hold a part"
+     },
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; a nut runner is a different process tool"
+     }
+    ],
+    "studio_only": true,
+    "rating": "rated 6.7 N m (clutch cap 10 N m); members at least 12 mm tall",
+    "caveat": "Nut runner (approximation): a rigid hex socket with a guide funnel on a lateral float; it engages a hex member by shape. The Studio wrist's roll is its spindle [assumed], at the wrist's speed: a clutch limits the torque to its cap (10 N m, under the wrist's 15 N m) and lets go at the release. The socket's walls are stacked slices so the simulator's contacts are as stiff as steel (a solver artifact). Supported in the Studio: members at least 12 mm tall. Not modelled: a motor, a torque transducer, cross-threading, socket wear, a reaction arm. Simulated, verify on hardware."
+   },
+   {
+    "effector_id": "e678af7b9e64e5522adab03ac14717d9103435946e5778f8e578c1bc2c7bf710",
+    "display_name": "Tamper pad, 200 mm",
+    "family": "process_tool",
+    "family_title": "Process tool",
+    "source": "preset",
+    "off_the_shelf": true,
+    "mechanism": "process",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "lay_tile",
+      "reason": "a tamper pad presses a face; it cannot pick or hold a part"
+     }
+    ],
+    "studio_only": true,
+    "rating": "rated 40 N (the stage slips at 60 N)",
+    "caveat": "Tamper pad (approximation): a rigid, level 200 mm square pad on a spring stage that slips at 60 N, so the pad never presses harder than that within the stage's 60 mm of travel. Not modelled: pad deformation, vibration or impact compaction, mortar flow, the pad's edge catching a joint. Simulated, verify on hardware."
+   },
+   {
+    "effector_id": "f7faa3ddd45fee96149330bbf1bc6cd179305044806e9f178ed0735f6f184b80",
+    "display_name": "Two-finger adaptive linkage gripper, 85 mm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "762b2cf206e7b33c97e3e70157492630c91ae3d28b3dae35580e25bfbbee9319",
+    "display_name": "Air-actuated mini parallel gripper",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "9aff5d8ef53e119ab1943eef6d8ba55af4795f806c1a2e111b89c7c0444c770b",
+    "display_name": "Two-finger parallel cobot hand, 80 mm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "6d286bacbd7431187a1a4bd5a48d194ea5e59399afb0a9e2227332f4fe006cf7",
+    "display_name": "Force-controlled parallel gripper, 48 mm stroke",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "5f28e092f268ff12c38c8c8a9da33cf6520bc235ddf0f15eef85705bf5abaa0d",
+    "display_name": "Rack-and-pinion parallel gripper for an open hobby arm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "02405ccb8d6393b7ca149262b1d03aad7a153238ce0bc32ea1d3eacad7657d39",
+    "display_name": "Two-finger linkage gripper of a cobot arm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "f2ea72dff094ac3680a7b59e05a96a2e9bc4d8191c7bfee56d30f1755987dff2",
+    "display_name": "Industrial servo parallel gripper, 110 mm stroke",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "19349473603b229ce8676b46cd97598dc1cd5b463f8f801d4455e1a7b01ba3e2",
+    "display_name": "Two-finger parallel gripper, teleop-arm fingers",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "7d8ca167a7b3a93e3461ebca357e274ec9c9ca4fa9c2f4e50daa4c0a5e027724",
+    "display_name": "Angular-jaw gripper of an open hobby arm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "5c8f1c25a0a4eb30f7b91746a547c19ff95ec2889aad7a739126582805adb41b",
+    "display_name": "Three-finger 12-joint industrial hand",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": "it weighs 4.14 kg; the arm carries at most 3 kg [assumed]",
+    "pruned_steps": []
+   },
+   {
+    "effector_id": "2f59fe9db92cd4baa4bcc418531f685100bc2ce00459fe887fe591b7f4d5fd65",
+    "display_name": "Servo-driven four-finger hand, 13 actuators, power grasp",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "7f12d546e0d7714e3d2aae831d9ea52eb2494283c1ccd5487920ac69fa27a720",
+    "display_name": "Servo-driven four-finger hand, 13 actuators, pinch",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "d702e265cd1c213b47f352e50c6c3d54ec8b736f9da8714cfdf936bece063264",
+    "display_name": "Tendon-driven five-finger hand, 16 joints, power grasp",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "ba4075426cf13421509805b4367919c507f396904da831894f373d928292dd01",
+    "display_name": "Tendon-driven five-finger hand, 16 joints, pinch",
+    "family": "catalog_hand",
+    "family_title": "Multi-finger hand",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "a5d7b1667b4f0d6582a36df49b9e600eeedc31f54dc883ddf7803fe113091f1d",
+    "display_name": "Suction cup, 40 mm bellows",
+    "family": "suction",
+    "family_title": "Suction cup",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "suction",
+    "fidelity": "approximation",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "ec23d0f17374171b7fa9c62da8dd8d680df2e2c98a747068750a83777cfa38a3",
+    "display_name": "Button-pusher tool",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "lay_tile",
+      "reason": "it cannot pick or hold a part (grasp step)"
+     },
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "38850807f92bc307da9f0519004f6c9a30606ed04934014a6791ad01acf0c88b",
+    "display_name": "Drawer-pull hook tool",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "lay_tile",
+      "reason": "it cannot pick or hold a part (grasp step)"
+     },
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "51bbed694beba24d5ba4332ad204033431cb1611ea4a4d092cc511f2bb3b9750",
+    "display_name": "Spring-loaded marker holder tool",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "lay_tile",
+      "reason": "it cannot pick or hold a part (grasp step)"
+     },
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "1c0215479859373feed025f8c8e3697830191fbbcded36d2720c98cf3f59c352",
+    "display_name": "Servo screwdriver attachment for a hobby arm",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "source": "library",
+    "off_the_shelf": true,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "pruned",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "lay_tile",
+      "reason": "it cannot pick or hold a part (grasp step)"
+     },
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "d4997bd4b38665bca7af77aeef09cc396279ecd231787f9df5fa34aa37fb5996",
+    "display_name": "Designed three-finger hand, 2 joints per finger d55e",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "ba0cc54331ca68ed6118c26302dc007b446c213c1d258f36631047ac5a2f05c8",
+    "display_name": "Designed four-finger hand, 3 joints per finger b56a",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "6148cfd23eae2b2e8959cc78a8c2b6ef324c0878a66bd0eee45e4a4105e20cb7",
+    "display_name": "Designed three-finger sliding hook gripper da49",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "d3b2b71d424b8c16205262a466257f916bc6e5e18f6b5873b0045f5632db2fe1",
+    "display_name": "Designed three-digit segmented tentacle f293",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "a4b30af09ff1818c87fcc9683805da8354923ecb0f35a77b14165fa5851bc3fa",
+    "display_name": "Designed three-finger hand, 2 joints per finger 3e58",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "25bb68ef395b04b7dddcb8a3adcae328743627edf36160b0ac26e75050f0dc27",
+    "display_name": "Designed four-finger hand, 1 joint per finger e352",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "890c6cb500dacbda950e3a31a2b543d39b89da3c2dfa1a61e7ae5c17cb25f65e",
+    "display_name": "Designed three-finger hand, 1 joint per finger ca8b",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "d6e87ec5705a8c93944dfc2db4945e98e2499a9aa761b0cc801420e51d5ec0ad",
+    "display_name": "Designed four-finger swinging hook gripper 052c",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   },
+   {
+    "effector_id": "251cbe9cc23c1ea18d77c6143d68090fce2a1837927f826a7bcc9bd430de8a81",
+    "display_name": "Designed three-digit segmented tentacle 90e8",
+    "family": "designed",
+    "family_title": "Designed morphology",
+    "source": "designed",
+    "off_the_shelf": false,
+    "mechanism": "fingers",
+    "fidelity": "rigid",
+    "built_for": null,
+    "status": "screened",
+    "pruned_reason": null,
+    "pruned_steps": [
+     {
+      "step_id": "tamp_tile",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    ]
+   }
+  ],
+  "pruned_reasons": [
+   {
+    "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed",
+    "count": 47
+   },
+   {
+    "reason": "It cannot pick or hold a part",
+    "count": 6
+   },
+   {
+    "reason": "Heavier than the arm payload limit [assumed]",
+    "count": 1
+   },
+   {
+    "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; a nut runner is a different process tool",
+    "count": 1
+   }
+  ]
+ },
+ "matrix": {
+  "steps": [
+   "lay_tile",
+   "tamp_tile"
+  ],
+  "rows": [
+   {
+    "effector_id": "e72e88518c0ebe7a74ec5db104b671180e9dbb5b51d0b11045814506657f31bf",
+    "display_name": "Suction cup, 25 mm bellows",
+    "family_title": "Suction cup",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "suction",
+      "failure_modes": {},
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "a5d7b1667b4f0d6582a36df49b9e600eeedc31f54dc883ddf7803fe113091f1d",
+    "display_name": "Suction cup, 40 mm bellows",
+    "family_title": "Suction cup",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "suction",
+      "failure_modes": {},
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "e678af7b9e64e5522adab03ac14717d9103435946e5778f8e578c1bc2c7bf710",
+    "display_name": "Tamper pad, 200 mm",
+    "family_title": "Process tool",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "pruned",
+      "reason": "a tamper pad presses a face; it cannot pick or hold a part"
+     },
+     "tamp_tile": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "carried"
+     }
+    }
+   },
+   {
+    "effector_id": "1a3dddd3d68cc0b6df6d003946cc16fb895f371d0001906c7ba2e72d729721ac",
+    "display_name": "Vacuum area frame, 2 x 2 cups, 300 mm",
+    "family_title": "Vacuum area frame",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "suction",
+      "failure_modes": {},
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "530514a2ba01210b994060206aa74f49d498731eb80579282867d25195f8257a",
+    "display_name": "Vacuum area frame, 2 x 3 cups, 600 mm",
+    "family_title": "Vacuum area frame",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "suction",
+      "failure_modes": {},
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "762b2cf206e7b33c97e3e70157492630c91ae3d28b3dae35580e25bfbbee9319",
+    "display_name": "Air-actuated mini parallel gripper",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "7d8ca167a7b3a93e3461ebca357e274ec9c9ca4fa9c2f4e50daa4c0a5e027724",
+    "display_name": "Angular-jaw gripper of an open hobby arm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "25bb68ef395b04b7dddcb8a3adcae328743627edf36160b0ac26e75050f0dc27",
+    "display_name": "Designed four-finger hand, 1 joint per finger e352",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "ba0cc54331ca68ed6118c26302dc007b446c213c1d258f36631047ac5a2f05c8",
+    "display_name": "Designed four-finger hand, 3 joints per finger b56a",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "d6e87ec5705a8c93944dfc2db4945e98e2499a9aa761b0cc801420e51d5ec0ad",
+    "display_name": "Designed four-finger swinging hook gripper 052c",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "251cbe9cc23c1ea18d77c6143d68090fce2a1837927f826a7bcc9bd430de8a81",
+    "display_name": "Designed three-digit segmented tentacle 90e8",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "d3b2b71d424b8c16205262a466257f916bc6e5e18f6b5873b0045f5632db2fe1",
+    "display_name": "Designed three-digit segmented tentacle f293",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "890c6cb500dacbda950e3a31a2b543d39b89da3c2dfa1a61e7ae5c17cb25f65e",
+    "display_name": "Designed three-finger hand, 1 joint per finger ca8b",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "a4b30af09ff1818c87fcc9683805da8354923ecb0f35a77b14165fa5851bc3fa",
+    "display_name": "Designed three-finger hand, 2 joints per finger 3e58",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "d4997bd4b38665bca7af77aeef09cc396279ecd231787f9df5fa34aa37fb5996",
+    "display_name": "Designed three-finger hand, 2 joints per finger d55e",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "6148cfd23eae2b2e8959cc78a8c2b6ef324c0878a66bd0eee45e4a4105e20cb7",
+    "display_name": "Designed three-finger sliding hook gripper da49",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "300d169b6786c96007dbe4ce8c0fea66549c0e081cfcfe3f3fe07d6e46ec6a3f",
+    "display_name": "Five-finger 18-actuator hand, pinch",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "bc347dd620c711c06e02bbf5b6c610413ae5b0ac8b182fdbb98f5ae997e177af",
+    "display_name": "Five-finger 18-actuator hand, power grasp",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "594c4f4d5088689c599fdd9884d2675a7a3d69f8f7df8489ef57b6484db711f0",
+    "display_name": "Five-finger 22-joint hand, pinch",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "a0fc12482a70670906acabab94f5bc4b91ebbbff57fe669e9725afd57c80c75e",
+    "display_name": "Five-finger 22-joint hand, power grasp",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "6d286bacbd7431187a1a4bd5a48d194ea5e59399afb0a9e2227332f4fe006cf7",
+    "display_name": "Force-controlled parallel gripper, 48 mm stroke",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "f4363e74967e4429fc2203073f9a2f6e8eed447a156149eaf424544d589cef8d",
+    "display_name": "Four-finger 16-joint hand, pinch",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "e0152a5f29e1756ccd2ed7b3602b13ce3a4d3a80d1fe1709d383db30284f82b7",
+    "display_name": "Four-finger 16-joint hand, power grasp",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "f2ea72dff094ac3680a7b59e05a96a2e9bc4d8191c7bfee56d30f1755987dff2",
+    "display_name": "Industrial servo parallel gripper, 110 mm stroke",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "5f28e092f268ff12c38c8c8a9da33cf6520bc235ddf0f15eef85705bf5abaa0d",
+    "display_name": "Rack-and-pinion parallel gripper for an open hobby arm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "7f12d546e0d7714e3d2aae831d9ea52eb2494283c1ccd5487920ac69fa27a720",
+    "display_name": "Servo-driven four-finger hand, 13 actuators, pinch",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "2f59fe9db92cd4baa4bcc418531f685100bc2ce00459fe887fe591b7f4d5fd65",
+    "display_name": "Servo-driven four-finger hand, 13 actuators, power grasp",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "e754a0d67325f2100c98c2f9af46bb60c49421f256a2026895fb59bcf82e547d",
+    "display_name": "Soft arm, 12 segments, 140 mm",
+    "family_title": "Soft arm",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "wrap",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "743fc0bc1efc93c288065cff91b147fd993ad974831e50b7617f7f15a0ab66fc",
+    "display_name": "Soft arm, 16 segments, 160 mm",
+    "family_title": "Soft arm",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "wrap",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "2f5e4f974b13a6445127a6afead695a9e58a54cdeb12a3101724db21f6b368e9",
+    "display_name": "Soft arm, 20 soft segments, 180 mm",
+    "family_title": "Soft arm",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "wrap",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "f0b6543ba012ad8f54c8860c61407708f1bdfaf1d1b395d00a64ada8e883d6de",
+    "display_name": "Suction cup, 10 mm bellows",
+    "family_title": "Suction cup",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "suction",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "3907bc284d9e2c3399ddb8b45b1bf94dbb3b0ef0672705c6d90724839ecf7186",
+    "display_name": "Suction cup, 16 mm bellows",
+    "family_title": "Suction cup",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "suction",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "ba4075426cf13421509805b4367919c507f396904da831894f373d928292dd01",
+    "display_name": "Tendon-driven five-finger hand, 16 joints, pinch",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "d702e265cd1c213b47f352e50c6c3d54ec8b736f9da8714cfdf936bece063264",
+    "display_name": "Tendon-driven five-finger hand, 16 joints, power grasp",
+    "family_title": "Multi-finger hand",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "9dbe8879e66bd4a935e6db502db88cdb0ce74390f469ada567cc93eb165b5b58",
+    "display_name": "Three-finger adaptive gripper, pinch",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "730fd283dd6b7dd046711dfef0b73a64f6a577e2cc7a643ee6affb86f74ed0aa",
+    "display_name": "Three-finger adaptive gripper, power grasp",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "52613f2b72143b61b490ddfc05c4e3ed38c49de7005b77f07a5ccbfada0ab476",
+    "display_name": "Two-finger adaptive gripper, pinch",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "bbb8214caaf4a70aac3e2c08331f0166c12470bf97db57db00dc834a77ff4dd1",
+    "display_name": "Two-finger adaptive gripper, power grasp",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "f7faa3ddd45fee96149330bbf1bc6cd179305044806e9f178ed0735f6f184b80",
+    "display_name": "Two-finger adaptive linkage gripper, 85 mm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "02405ccb8d6393b7ca149262b1d03aad7a153238ce0bc32ea1d3eacad7657d39",
+    "display_name": "Two-finger linkage gripper of a cobot arm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "9aff5d8ef53e119ab1943eef6d8ba55af4795f806c1a2e111b89c7c0444c770b",
+    "display_name": "Two-finger parallel cobot hand, 80 mm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "79372f1ed2ab4e3a5467c38ed239aa0795a8df3e5ce6af900af10a5a3e252050",
+    "display_name": "Two-finger parallel gripper, fin-ray pads",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "a03002d6c5e1107f0bef73bc8cf24cd90b390550654aaa5d9e8899933971f6d7",
+    "display_name": "Two-finger parallel gripper, rigid pads A",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   },
+   {
+    "effector_id": "19349473603b229ce8676b46cd97598dc1cd5b463f8f801d4455e1a7b01ba3e2",
+    "display_name": "Two-finger parallel gripper, teleop-arm fingers",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "lay_tile": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "tamp_tile": {
+      "state": "pruned",
+      "reason": "integrator rule R05: pressing \"Floor tile\" into its bed is a process step for a tamper pad; other tools do not press a tile level into its bed"
+     }
+    }
+   }
+  ]
+ },
+ "combinations": {
+  "counts": {
+   "single": 0,
+   "tool_change": 3,
+   "multi_head": 3,
+   "multi_head_geometry_searched": 3
+  },
+  "rejected": []
+ },
+ "finalists": [
+  {
+   "setup_id": "4adcc3231c74df612f82b2dbaba5f6dda3ab6ce38843e5a56d3752960e8519b0",
+   "kind": "multi_head",
+   "kind_title": "Two-tool head",
+   "label": "Two-tool head: Vacuum area frame + Tamper pad",
+   "tools": [
+    "Vacuum area frame, 2 x 2 cups, 300 mm",
+    "Tamper pad, 200 mm"
+   ],
+   "completion_rate": 1.0,
+   "completed_runs": 8,
+   "n_runs": 8,
+   "fidelity": "approximation",
+   "stops_at": null,
+   "cycle_time_s": 19.23,
+   "roles": [
+    "recommended"
+   ],
+   "eligible": true,
+   "reason": null,
+   "tool_details": [
+    {
+     "index": 0,
+     "effector_id": "1a3dddd3d68cc0b6df6d003946cc16fb895f371d0001906c7ba2e72d729721ac",
+     "display_name": "Vacuum area frame, 2 x 2 cups, 300 mm",
+     "family": "suction",
+     "family_title": "Vacuum area frame",
+     "fidelity": "approximation",
+     "off_the_shelf": true,
+     "studio_only": true,
+     "rating": "rated 4.15 kg on a smooth face (holding force over a 1.5 safety factor)",
+     "caveat": "Vacuum area frame (approximation): the cups of the suction cup model on a rigid frame, each with its own seal test and its own vacuum valve (a cup that does not seal stays off). The holding force is the sum of the sealed cups' caps; the payload is that force over a safety factor (1.5 smooth, 2.0 porous, 2.5 swivelling, all [assumed]) at 1 g. Only the smooth rating is a simulated claim: the porous and swivelling ratings are arithmetic on the same force, because no leak, porosity or swivel is simulated. Not modelled: a shared vacuum source and its flow, the leak of an unsealed cup into the others, the frame's flex, peel across a long face, foam or needle area grippers. Treat frame results as a screen, then verify on hardware."
+    },
+    {
+     "index": 1,
+     "effector_id": "e678af7b9e64e5522adab03ac14717d9103435946e5778f8e578c1bc2c7bf710",
+     "display_name": "Tamper pad, 200 mm",
+     "family": "process_tool",
+     "family_title": "Process tool",
+     "fidelity": "approximation",
+     "off_the_shelf": true,
+     "studio_only": true,
+     "rating": "rated 40 N (the stage slips at 60 N)",
+     "caveat": "Tamper pad (approximation): a rigid, level 200 mm square pad on a spring stage that slips at 60 N, so the pad never presses harder than that within the stage's 60 mm of travel. Not modelled: pad deformation, vibration or impact compaction, mortar flow, the pad's edge catching a joint. Simulated, verify on hardware."
+    }
+   ],
+   "step_success": {
+    "lay_tile": 1.0,
+    "tamp_tile": 1.0
+   },
+   "weakest_step": {
+    "step_id": "lay_tile",
+    "success_rate": 1.0
+   },
+   "complexity": {
+    "n_tools": 2,
+    "n_actuators": 5,
+    "total_mass_kg": 1.408,
+    "n_changes": 1,
+    "bracket": true
+   },
+   "payload_kg": 1.407,
+   "failure_modes": {},
+   "stops_at_detail": {}
+  },
+  {
+   "setup_id": "04a90f0c33a52aba5bcb57d856df9ca66bc93c5fe0bacd3ff7d8c04e973ee905",
+   "kind": "tool_change",
+   "kind_title": "Tool change",
+   "label": "Tool change: Suction cup > Tamper pad",
+   "tools": [
+    "Suction cup, 25 mm bellows",
+    "Tamper pad, 200 mm"
+   ],
+   "completion_rate": 1.0,
+   "completed_runs": 8,
+   "n_runs": 8,
+   "fidelity": "approximation",
+   "stops_at": null,
+   "cycle_time_s": 25.2,
+   "roles": [
+    "finalist"
+   ],
+   "eligible": true,
+   "reason": null,
+   "tool_details": [
+    {
+     "index": 0,
+     "effector_id": "e72e88518c0ebe7a74ec5db104b671180e9dbb5b51d0b11045814506657f31bf",
+     "display_name": "Suction cup, 25 mm bellows",
+     "family": "suction",
+     "family_title": "Suction cup",
+     "fidelity": "approximation",
+     "off_the_shelf": true,
+     "caveat": "Suction cup (approximation): a compliant lip of rigid segments on a bellows spring with a limited tilt; the seal is a geometric test (every lip segment touching the face, part material under 13 rays inside the lip) gating a MuJoCo adhesion actuator capped at vacuum x lip area (at most 60 kPa). The lip must touch the face: no pull across a gap. Not modelled: air flow, leak rate, porosity, vacuum build-up time (the vacuum follows the shared close ramp and is cut the control tick the seal is lost), lip material hysteresis, peel dynamics beyond the contact distribution. The lip's friction is the part's. Treat suction results as a screen, then verify on hardware."
+    },
+    {
+     "index": 1,
+     "effector_id": "e678af7b9e64e5522adab03ac14717d9103435946e5778f8e578c1bc2c7bf710",
+     "display_name": "Tamper pad, 200 mm",
+     "family": "process_tool",
+     "family_title": "Process tool",
+     "fidelity": "approximation",
+     "off_the_shelf": true,
+     "studio_only": true,
+     "rating": "rated 40 N (the stage slips at 60 N)",
+     "caveat": "Tamper pad (approximation): a rigid, level 200 mm square pad on a spring stage that slips at 60 N, so the pad never presses harder than that within the stage's 60 mm of travel. Not modelled: pad deformation, vibration or impact compaction, mortar flow, the pad's edge catching a joint. Simulated, verify on hardware."
+    }
+   ],
+   "step_success": {
+    "lay_tile": 1.0,
+    "tamp_tile": 1.0
+   },
+   "weakest_step": {
+    "step_id": "lay_tile",
+    "success_rate": 1.0
+   },
+   "complexity": {
+    "n_tools": 2,
+    "n_actuators": 2,
+    "total_mass_kg": 1.252,
+    "n_changes": 1,
+    "bracket": false
+   },
+   "payload_kg": 1.082,
+   "failure_modes": {},
+   "stops_at_detail": {}
+  },
+  {
+   "setup_id": "0438e63d9d5fb4ee5541f24898a36d05cf161bdfc1ab71d4611b0204942b688d",
+   "kind": "multi_head",
+   "kind_title": "Two-tool head",
+   "label": "Two-tool head: Suction cup + Tamper pad",
+   "tools": [
+    "Suction cup, 25 mm bellows",
+    "Tamper pad, 200 mm"
+   ],
+   "completion_rate": 0.0,
+   "completed_runs": 0,
+   "n_runs": 8,
+   "fidelity": "approximation",
+   "stops_at": "lay_tile",
+   "cycle_time_s": null,
+   "roles": [
+    "finalist"
+   ],
+   "eligible": false,
+   "reason": "never completed the task (stops at lay_tile in 8/8 runs: criterion_not_met 8x)",
+   "tool_details": [
+    {
+     "index": 0,
+     "effector_id": "e72e88518c0ebe7a74ec5db104b671180e9dbb5b51d0b11045814506657f31bf",
+     "display_name": "Suction cup, 25 mm bellows",
+     "family": "suction",
+     "family_title": "Suction cup",
+     "fidelity": "approximation",
+     "off_the_shelf": true,
+     "caveat": "Suction cup (approximation): a compliant lip of rigid segments on a bellows spring with a limited tilt; the seal is a geometric test (every lip segment touching the face, part material under 13 rays inside the lip) gating a MuJoCo adhesion actuator capped at vacuum x lip area (at most 60 kPa). The lip must touch the face: no pull across a gap. Not modelled: air flow, leak rate, porosity, vacuum build-up time (the vacuum follows the shared close ramp and is cut the control tick the seal is lost), lip material hysteresis, peel dynamics beyond the contact distribution. The lip's friction is the part's. Treat suction results as a screen, then verify on hardware."
+    },
+    {
+     "index": 1,
+     "effector_id": "e678af7b9e64e5522adab03ac14717d9103435946e5778f8e578c1bc2c7bf710",
+     "display_name": "Tamper pad, 200 mm",
+     "family": "process_tool",
+     "family_title": "Process tool",
+     "fidelity": "approximation",
+     "off_the_shelf": true,
+     "studio_only": true,
+     "rating": "rated 40 N (the stage slips at 60 N)",
+     "caveat": "Tamper pad (approximation): a rigid, level 200 mm square pad on a spring stage that slips at 60 N, so the pad never presses harder than that within the stage's 60 mm of travel. Not modelled: pad deformation, vibration or impact compaction, mortar flow, the pad's edge catching a joint. Simulated, verify on hardware."
+    }
+   ],
+   "step_success": {
+    "lay_tile": 0.0,
+    "tamp_tile": 0.0
+   },
+   "weakest_step": {
+    "step_id": "lay_tile",
+    "success_rate": 0.0
+   },
+   "complexity": {
+    "n_tools": 2,
+    "n_actuators": 2,
+    "total_mass_kg": 0.971,
+    "n_changes": 1,
+    "bracket": true
+   },
+   "payload_kg": 0.971,
+   "failure_modes": {
+    "criterion_not_met": 8,
+    "not_reached": 8
+   },
+   "stops_at_detail": {
+    "lay_tile": {
+     "runs": 8,
+     "failure_modes": {
+      "criterion_not_met": 8
+     }
+    }
+   }
+  },
+  {
+   "setup_id": "8738c1e479f6ce8b2e7693e134b6c868893e93e9e2b7fe0ca9e18729df2cb1d2",
+   "kind": "multi_head",
+   "kind_title": "Two-tool head",
+   "label": "Two-tool head: Suction cup + Tamper pad",
+   "tools": [
+    "Suction cup, 40 mm bellows",
+    "Tamper pad, 200 mm"
+   ],
+   "completion_rate": 0.0,
+   "completed_runs": 0,
+   "n_runs": 8,
+   "fidelity": "approximation",
+   "stops_at": "lay_tile",
+   "cycle_time_s": null,
+   "roles": [
+    "finalist"
+   ],
+   "eligible": false,
+   "reason": "never completed the task (stops at lay_tile in 8/8 runs: criterion_not_met 8x)",
+   "tool_details": [
+    {
+     "index": 0,
+     "effector_id": "a5d7b1667b4f0d6582a36df49b9e600eeedc31f54dc883ddf7803fe113091f1d",
+     "display_name": "Suction cup, 40 mm bellows",
+     "family": "suction",
+     "family_title": "Suction cup",
+     "fidelity": "approximation",
+     "off_the_shelf": true,
+     "caveat": "Suction cup (approximation): a compliant lip of rigid segments on a bellows spring with a limited tilt; the seal is a geometric test (every lip segment touching the face, part material under 13 rays inside the lip) gating a MuJoCo adhesion actuator capped at vacuum x lip area (at most 60 kPa). The lip must touch the face: no pull across a gap. Not modelled: air flow, leak rate, porosity, vacuum build-up time (the vacuum follows the shared close ramp and is cut the control tick the seal is lost), lip material hysteresis, peel dynamics beyond the contact distribution. The lip's friction is the part's. Treat suction results as a screen, then verify on hardware."
+    },
+    {
+     "index": 1,
+     "effector_id": "e678af7b9e64e5522adab03ac14717d9103435946e5778f8e578c1bc2c7bf710",
+     "display_name": "Tamper pad, 200 mm",
+     "family": "process_tool",
+     "family_title": "Process tool",
+     "fidelity": "approximation",
+     "off_the_shelf": true,
+     "studio_only": true,
+     "rating": "rated 40 N (the stage slips at 60 N)",
+     "caveat": "Tamper pad (approximation): a rigid, level 200 mm square pad on a spring stage that slips at 60 N, so the pad never presses harder than that within the stage's 60 mm of travel. Not modelled: pad deformation, vibration or impact compaction, mortar flow, the pad's edge catching a joint. Simulated, verify on hardware."
+    }
+   ],
+   "step_success": {
+    "lay_tile": 0.0,
+    "tamp_tile": 0.0
+   },
+   "weakest_step": {
+    "step_id": "lay_tile",
+    "success_rate": 0.0
+   },
+   "complexity": {
+    "n_tools": 2,
+    "n_actuators": 2,
+    "total_mass_kg": 1.008,
+    "n_changes": 1,
+    "bracket": true
+   },
+   "payload_kg": 1.008,
+   "failure_modes": {
+    "criterion_not_met": 8,
+    "not_reached": 8
+   },
+   "stops_at_detail": {
+    "lay_tile": {
+     "runs": 8,
+     "failure_modes": {
+      "criterion_not_met": 8
+     }
+    }
+   }
+  }
+ ],
+ "recommendation": {
+  "setup_id": "4adcc3231c74df612f82b2dbaba5f6dda3ab6ce38843e5a56d3752960e8519b0",
+  "kind": "multi_head",
+  "kind_title": "Two-tool head",
+  "label": "Two-tool head: Vacuum area frame + Tamper pad",
+  "tools": [
+   {
+    "index": 0,
+    "effector_id": "1a3dddd3d68cc0b6df6d003946cc16fb895f371d0001906c7ba2e72d729721ac",
+    "display_name": "Vacuum area frame, 2 x 2 cups, 300 mm",
+    "family": "suction",
+    "family_title": "Vacuum area frame",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "studio_only": true,
+    "rating": "rated 4.15 kg on a smooth face (holding force over a 1.5 safety factor)",
+    "caveat": "Vacuum area frame (approximation): the cups of the suction cup model on a rigid frame, each with its own seal test and its own vacuum valve (a cup that does not seal stays off). The holding force is the sum of the sealed cups' caps; the payload is that force over a safety factor (1.5 smooth, 2.0 porous, 2.5 swivelling, all [assumed]) at 1 g. Only the smooth rating is a simulated claim: the porous and swivelling ratings are arithmetic on the same force, because no leak, porosity or swivel is simulated. Not modelled: a shared vacuum source and its flow, the leak of an unsealed cup into the others, the frame's flex, peel across a long face, foam or needle area grippers. Treat frame results as a screen, then verify on hardware."
+   },
+   {
+    "index": 1,
+    "effector_id": "e678af7b9e64e5522adab03ac14717d9103435946e5778f8e578c1bc2c7bf710",
+    "display_name": "Tamper pad, 200 mm",
+    "family": "process_tool",
+    "family_title": "Process tool",
+    "fidelity": "approximation",
+    "off_the_shelf": true,
+    "studio_only": true,
+    "rating": "rated 40 N (the stage slips at 60 N)",
+    "caveat": "Tamper pad (approximation): a rigid, level 200 mm square pad on a spring stage that slips at 60 N, so the pad never presses harder than that within the stage's 60 mm of travel. Not modelled: pad deformation, vibration or impact compaction, mortar flow, the pad's edge catching a joint. Simulated, verify on hardware."
+   }
+  ],
+  "completion_rate": 1.0,
+  "completed_runs": 8,
+  "n_runs": 8,
+  "fidelity": "approximation",
+  "stops_at": null,
+  "cycle_time_s": 19.23,
+  "why": "Ties on completion (100%) and the weakest step, with the shorter cycle (19.2 s against 25.2 s).",
+  "caveat": "approximation: verify on hardware",
+  "verify_on_hardware": true,
+  "geometry": {
+   "mounts": [
+    {
+     "angle_deg": -60.0,
+     "lateral_mm": 0.0,
+     "spin_deg": 0.0,
+     "standoff_mm": 50.0
+    },
+    {
+     "angle_deg": 60.0,
+     "lateral_mm": 0.0,
+     "spin_deg": 0.0,
+     "standoff_mm": 50.0
+    }
+   ],
+   "clearance_mm": 45.04,
+   "present_s": 1.5
+  },
+  "steps": [
+   {
+    "step_id": "lay_tile",
+    "primitive": "grasp",
+    "primitive_used": "suction",
+    "tool": 0,
+    "tool_label": "Vacuum area frame, 2 x 2 cups, 300 mm",
+    "success_rate": 1.0,
+    "fidelity": "approximation",
+    "caveats": [
+     "The mortar bed is an approximation: nine plastic cells that yield and harden linearly and keep their set; no flow, suction or curing. A screen, not a promise.",
+     "Suction cup (approximation): a compliant lip of rigid segments on a bellows spring with a limited tilt; the seal is a geometric test (every lip segment touching the face, part material under 13 rays inside the lip) gating a MuJoCo adhesion actuator capped at vacuum x lip area (at most 60 kPa). The lip must touch the face: no pull across a gap. Not modelled: air flow, leak rate, porosity, vacuum build-up time (the vacuum follows the shared close ramp and is cut the control tick the seal is lost), lip material hysteresis, peel dynamics beyond the contact distribution. The lip's friction is the part's. Treat suction results as a screen, then verify on hardware."
+    ],
+    "verify_on_hardware": true
+   },
+   {
+    "step_id": "tamp_tile",
+    "primitive": "push",
+    "primitive_used": "push",
+    "tool": 1,
+    "tool_label": "Tamper pad, 200 mm",
+    "success_rate": 1.0,
+    "fidelity": "approximation",
+    "caveats": [
+     "The mortar bed is an approximation: nine plastic cells that yield and harden linearly and keep their set; no flow, suction or curing. A screen, not a promise.",
+     "Process tool (approximation): a rigid tool used by the Studio's own twist or push primitive. The nut runner's spindle is the wrist's roll through a torque-limiting clutch [assumed]; the tamper's stage is a spring that slips at its overload force. The torque, the force and the contact are simulated; the process (thread cross-threading, bed compaction) is not modelled beyond them. Verify on hardware."
+    ],
+    "verify_on_hardware": true
+   }
+  ],
+  "runner_up_rigid": {
+   "label": null,
+   "basis": "no rigid-tier setup is eligible"
+  },
+  "versus_best_single": null,
+  "versus_baseline": null
+ },
+ "best_single": null,
+ "baseline": {
+  "setup_id": null,
+  "basis": "no single tool is eligible: no single tool was among the finalists"
+ },
+ "no_winner": null,
+ "sensitivity": {
+  "recommendation_changes": false,
+  "order_changes": 0,
+  "n_pairs": 15,
+  "tool_change_s": [
+   3.0,
+   6.0,
+   7.5,
+   10.0,
+   12.0
+  ],
+  "present_s": [
+   0.75,
+   1.5,
+   3.0
+  ],
+  "note": "change times are a fixed clock advance, so cycle times are recomputed exactly from the same runs"
+ },
+ "constants": [
+  {
+   "key": "roll_torque_nm",
+   "value": 15.0,
+   "unit": "N m",
+   "note": "wrist roll torque limit",
+   "tag": "assumed"
+  },
+  {
+   "key": "roll_speed_max_deg_s",
+   "value": 180.0,
+   "unit": "deg/s",
+   "note": "wrist roll speed cap",
+   "tag": "assumed"
+  },
+  {
+   "key": "pitch_range_deg",
+   "value": 90.0,
+   "unit": "deg",
+   "note": "wrist pitch limit, +- from straight down",
+   "tag": "assumed"
+  },
+  {
+   "key": "pitch_speed_dps",
+   "value": 180.0,
+   "unit": "deg/s",
+   "note": "wrist pitch speed cap",
+   "tag": "assumed"
+  },
+  {
+   "key": "pitch_torque_nm",
+   "value": 15.0,
+   "unit": "N m",
+   "note": "wrist pitch torque limit",
+   "tag": "assumed"
+  },
+  {
+   "key": "tool_change_s",
+   "value": 7.5,
+   "unit": "s",
+   "note": "automatic tool change time (a fixed clock advance)",
+   "tag": "assumed"
+  },
+  {
+   "key": "present_s",
+   "value": 1.5,
+   "unit": "s",
+   "note": "multi-tool head switch time (a fixed tilt, not simulated)",
+   "tag": "assumed"
+  },
+  {
+   "key": "changer_master_kg",
+   "value": 0.25,
+   "unit": "kg",
+   "note": "tool changer master plate (stays on the wrist)",
+   "tag": "assumed"
+  },
+  {
+   "key": "changer_tool_plate_kg",
+   "value": 0.1,
+   "unit": "kg",
+   "note": "tool changer plate on every tool",
+   "tag": "assumed"
+  },
+  {
+   "key": "changer_stack_mm",
+   "value": 52.0,
+   "unit": "mm",
+   "note": "tool changer stack height",
+   "tag": "assumed"
+  },
+  {
+   "key": "arm_payload_kg",
+   "value": 3.0,
+   "unit": "kg",
+   "note": "largest tool stack the arm may carry; heavier setups are refused",
+   "tag": "assumed"
+  },
+  {
+   "key": "bracket_density_kg_m3",
+   "value": 1300.0,
+   "unit": "kg/m^3",
+   "note": "printed carbon-filled polymer bracket",
+   "tag": "assumed"
+  },
+  {
+   "key": "placement_error_mm",
+   "value": 2.0,
+   "unit": "mm",
+   "note": "per-object placement error of the condition grid (uniform)",
+   "tag": "assumed"
+  },
+  {
+   "key": "simplicity_per_extra_effector",
+   "value": 0.05,
+   "unit": "rate",
+   "note": "integrator rule R01: completion a setup must add per added effector or changer",
+   "tag": "assumed"
+  },
+  {
+   "key": "simplicity_step_floor",
+   "value": 0.5,
+   "unit": "rate",
+   "note": "integrator rule R01: a weakest step under this fails outright",
+   "tag": "assumed"
+  },
+  {
+   "key": "tie_margin",
+   "value": 0.05,
+   "unit": "rate",
+   "note": "completion-rate tie among setups of the same complexity",
+   "tag": "assumed"
+  },
+  {
+   "key": "cycle_margin",
+   "value": 0.1,
+   "unit": "fraction",
+   "note": "among setups of the same complexity, a simpler one may be this much slower",
+   "tag": "assumed"
+  },
+  {
+   "key": "soft_arm_max_part_kg",
+   "value": 2.5,
+   "unit": "kg",
+   "note": "integrator rule R09: the heaviest part a soft arm may carry",
+   "tag": "assumed"
+  },
+  {
+   "key": "hook_min_mm",
+   "value": 5.0,
+   "unit": "mm",
+   "note": "a rigid tool hooks if its tip reaches this far sideways past the tool and flange",
+   "tag": "assumed"
+  },
+  {
+   "key": "hook_throat_mm",
+   "value": 6.0,
+   "unit": "mm",
+   "note": "room a lip needs between a hook and the flange, else the flange blocks it",
+   "tag": "assumed"
+  },
+  {
+   "key": "process_torque_nm",
+   "value": 4.0,
+   "unit": "N m",
+   "note": "integrator rule R05: tightening a threaded member to this torque or more needs a nut runner (1 N m above hand-tight)",
+   "tag": "assumed"
+  },
+  {
+   "key": "socket_fit_mm",
+   "value": 0.5,
+   "unit": "mm",
+   "note": "a nut runner's socket drives a hex at most this much under its own size",
+   "tag": "assumed"
+  },
+  {
+   "key": "sweep_clearance_mm",
+   "value": 5.0,
+   "unit": "mm",
+   "note": "multi-tool head swept-volume clearance",
+   "tag": "assumed"
+  }
+ ],
+ "fixed_caveats": [
+  "The floating wrist abstracts the arm: there is no arm reach or arm collision model.",
+  "Presenting a multi-tool head is a fixed tilt per segment plus a fixed time, not a simulated motion.",
+  "A tool change is a fixed time, not a simulated docking.",
+  "Controllers are scripted and open-loop on the placement error.",
+  "A recommendation is a simulation ranking under the stated conditions, not a hardware guarantee."
+ ],
+ "lanes": [
+  {
+   "id": "recommended",
+   "title": "Recommended",
+   "setup_id": "4adcc3231c74df612f82b2dbaba5f6dda3ab6ce38843e5a56d3752960e8519b0",
+   "kind": "multi_head",
+   "label": "Two-tool head: Vacuum area frame + Tamper pad",
+   "replay": "studio/replays/h6_tile/recommended",
+   "condition_id": "nominal",
+   "seed": 0,
+   "condition_text": "nominal placement, seed 0",
+   "traj_sha": "1a71f3c7503720e67ecf1ec568c331fa9b34fbde6ce7f3dbd1e9c32ed75346ab",
+   "completed": true,
+   "cycle_time_s": 19.226,
+   "fps": 100,
+   "n_frames": 75,
+   "duration_s": 19.22,
+   "quantised": false,
+   "max_error_vs_recording_mm": 0.987,
+   "bytes": 32193,
+   "asset_bytes": 64872,
+   "segments": [
+    {
+     "index": 0,
+     "tool": 0,
+     "tool_label": "Vacuum area frame, 2 x 2 cups, 300 mm",
+     "start_s": 0.0,
+     "end_s": 9.252,
+     "change": "none",
+     "change_s": 0.0,
+     "change_start_s": 0.0,
+     "steps": [
+      "lay_tile"
+     ]
+    },
+    {
+     "index": 1,
+     "tool": 1,
+     "tool_label": "Tamper pad, 200 mm",
+     "start_s": 10.752,
+     "end_s": 19.226,
+     "change": "present",
+     "change_s": 1.5,
+     "change_start_s": 9.252,
+     "steps": [
+      "tamp_tile"
+     ]
+    }
+   ],
+   "steps": [
+    {
+     "step_id": "lay_tile",
+     "primitive": "grasp",
+     "tool": 0,
+     "start_s": 0.0,
+     "duration_s": 9.252,
+     "success": true,
+     "failure_mode": null,
+     "fidelity": "approximation",
+     "quantities": {
+      "engaged": 1.0,
+      "force_n": 66.676,
+      "height_err_mm": 1.846,
+      "hold_s": 1.49,
+      "in_target": 0.0,
+      "lift_mm": 11.465,
+      "penetration_mm": 0.156,
+      "penetration_ms": 0.0,
+      "penetration_transient": 0.0,
+      "tilt_deg": 0.0
+     }
+    },
+    {
+     "step_id": "tamp_tile",
+     "primitive": "push",
+     "tool": 1,
+     "start_s": 10.752,
+     "duration_s": 8.474,
+     "success": true,
+     "failure_mode": null,
+     "fidelity": "approximation",
+     "quantities": {
+      "force_n": 29.088,
+      "height_err_mm": 0.483,
+      "penetration_mm": 0.27,
+      "penetration_ms": 0.0,
+      "penetration_transient": 0.0,
+      "tilt_deg": 0.001
+     }
+    }
+   ],
+   "credits": []
+  }
+ ],
+ "build_pack": {
+  "zip": "studio/h6_tile/build_pack.zip",
+  "bytes": 294392,
+  "sha256": "9b75536d1b5a8b2ad33901750240e7e3bb572bf592d98a5bbd9411d8e4a112ae",
+  "setup_id": "4adcc3231c74df612f82b2dbaba5f6dda3ab6ce38843e5a56d3752960e8519b0",
+  "label": "Two-tool head: Vacuum area frame + Tamper pad",
+  "for": "recommended",
+  "files": [
+   {
+    "path": "ASSEMBLY.md",
+    "kind": "notes",
+    "format": "md",
+    "license": "CC0-1.0",
+    "bytes": 2043
+   },
+   {
+    "path": "CREDITS.txt",
+    "kind": "licence",
+    "format": "txt",
+    "license": "CC0-1.0",
+    "bytes": 223
+   },
+   {
+    "path": "README.txt",
+    "kind": "notes",
+    "format": "txt",
+    "license": "CC0-1.0",
+    "bytes": 1089
+   },
+   {
+    "path": "bom.csv",
+    "kind": "bom",
+    "format": "csv",
+    "license": "CC0-1.0",
+    "bytes": 569
+   },
+   {
+    "path": "bracket.stl",
+    "kind": "bracket",
+    "format": "stl",
+    "license": "CC0-1.0",
+    "bytes": 165784
+   },
+   {
+    "path": "cad/tool0_reference.stl",
+    "kind": "effector_cad",
+    "format": "stl",
+    "license": "CC0-1.0",
+    "bytes": 1153884
+   },
+   {
+    "path": "cad/tool1_reference.stl",
+    "kind": "effector_cad",
+    "format": "stl",
+    "license": "CC0-1.0",
+    "bytes": 13484
+   },
+   {
+    "path": "certificate.html",
+    "kind": "certificate",
+    "format": "html",
+    "license": "CC0-1.0",
+    "bytes": 13151
+   },
+   {
+    "path": "mjcf/setup_tool0.xml",
+    "kind": "mjcf",
+    "format": "xml",
+    "license": "CC0-1.0",
+    "bytes": 27482
+   },
+   {
+    "path": "mjcf/setup_tool1.xml",
+    "kind": "mjcf",
+    "format": "xml",
+    "license": "CC0-1.0",
+    "bytes": 28099
+   }
+  ],
+  "links": [],
+  "caveats": [
+   "The mortar bed is an approximation: nine plastic cells that yield and harden linearly and keep their set; no flow, suction or curing. A screen, not a promise.",
+   "Suction cup (approximation): a compliant lip of rigid segments on a bellows spring with a limited tilt; the seal is a geometric test (every lip segment touching the face, part material under 13 rays inside the lip) gating a MuJoCo adhesion actuator capped at vacuum x lip area (at most 60 kPa). The l",
+   "Process tool (approximation): a rigid tool used by the Studio's own twist or push primitive. The nut runner's spindle is the wrist's roll through a torque-limiting clutch [assumed]; the tamper's stage is a spring that slips at its overload force. The torque, the force and the contact are simulated; ",
+   "The floating wrist abstracts the arm: there is no arm reach or arm collision model.",
+   "Presenting a multi-tool head is a fixed tilt per segment plus a fixed time, not a simulated motion.",
+   "A tool change is a fixed time, not a simulated docking.",
+   "Controllers are scripted and open-loop on the placement error.",
+   "A recommendation is a simulation ranking under the stated conditions, not a hardware guarantee."
+  ]
+ },
+ "build_pack_note": null,
+ "session": null,
+ "provenance": {
+  "code_version": "d4755dfc699a",
+  "report_sha256": "c0a14724fc5a7de8ca5542450f15678fb11d5183920c956c29a0263fd8257677",
+  "task_id": "f9553b22ce12fc141c274d5532f25c97083ff5cd41faa49fc1927d9487fbc5a3",
+  "controllers": "default",
+  "evidence": "accepted",
+  "conditions": [
+   {
+    "condition_id": "nominal",
+    "seed": 0,
+    "aim_offsets_mm": {}
+   },
+   {
+    "condition_id": "place01",
+    "seed": 1,
+    "aim_offsets_mm": {
+     "floor_tile": [
+      0.306,
+      -0.193
+     ]
+    }
+   },
+   {
+    "condition_id": "place02",
+    "seed": 2,
+    "aim_offsets_mm": {
+     "floor_tile": [
+      0.089,
+      0.245
+     ]
+    }
+   },
+   {
+    "condition_id": "place03",
+    "seed": 3,
+    "aim_offsets_mm": {
+     "floor_tile": [
+      -1.497,
+      -1.834
+     ]
+    }
+   },
+   {
+    "condition_id": "place04",
+    "seed": 4,
+    "aim_offsets_mm": {
+     "floor_tile": [
+      -0.003,
+      1.467
+     ]
+    }
+   },
+   {
+    "condition_id": "place05",
+    "seed": 5,
+    "aim_offsets_mm": {
+     "floor_tile": [
+      -1.633,
+      -1.202
+     ]
+    }
+   },
+   {
+    "condition_id": "place06",
+    "seed": 6,
+    "aim_offsets_mm": {
+     "floor_tile": [
+      -0.225,
+      0.272
+     ]
+    }
+   },
+   {
+    "condition_id": "place07",
+    "seed": 7,
+    "aim_offsets_mm": {
+     "floor_tile": [
+      -1.498,
+      1.477
+     ]
+    }
+   }
+  ],
+  "fairness_sha": "82b5bcdac3b461e77bc17444036a535a9acb32f29bafd804947228e68090636d",
+  "workers": 4,
+  "timings": {
+   "screen_s": 171.1,
+   "combine_s": 5.7,
+   "finalists_s": 101.0,
+   "total_s": 278.6
+  },
+  "determinism": []
+ }
+}

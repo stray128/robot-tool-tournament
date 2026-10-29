@@ -5,13 +5,19 @@ dated log under it is the evidence: every number there names the file it came fr
 
 ## Feedback for the Devpost field
 
-**What we built and how much we used.** Effector Lab designs gripper fingers and other
-end-effectors for an uploaded part. NVIDIA Nemotron 3 Super proposes designs through Nebius
-Token Factory, and Nebius Serverless AI Jobs score them in MuJoCo physics on CPU. Our
-pre-registered experiment ran 32 search runs per arm, one job per arm. The Nemotron arm made
-473 Token Factory calls from inside a Serverless Job: 6.98M prompt and 1.64M completion
-tokens, 0 errors, no retries, $3.57. The whole project used 17 Serverless Jobs for about
-$4.12 (wall-time estimate), and the confirmatory batch simulated 132,320 grasps.
+**What we built and how much we used.** Effector Lab turns a multi-step robot job, described in
+plain words, into a tested setup: one tool, a two-tool head or a tool change, with replays and a
+build pack. NVIDIA Nemotron 3 Super on Nebius Token Factory plans the job as objects, steps and
+pass criteria (a forced tool call with the task contract's schema), designs fingers and other
+effectors, and runs the agent's tool loop; Nemotron 3.5 Lightning writes step summaries. Nebius
+Serverless Jobs run the scored MuJoCo physics on CPU. Usage: the finger experiment's Nemotron arm
+made 473 Token Factory calls from inside one Serverless Job (6.98M prompt and 1.64M completion
+tokens, 0 errors, no retries, $3.57); the first Studio's Task Engineer made 17 calls for its
+recorded gate ($0.133); re-planning the six jobs of this version took 61 calls ($0.56), two
+draft recordings included. The project ran 18 Serverless Jobs for about $4.18 (wall-time estimate) before this
+version: 17 through the finger experiment, which simulated 132,320 grasps in its confirmatory
+batch, and one 206 s job for the Studio's pre-registered use-case benchmark. This version's job
+searches ran on a local machine, not on Nebius.
 
 ### Token Factory
 
@@ -25,6 +31,10 @@ What worked:
   token budget, it was the most reliable output mode we tested.
 - It was dependable at scale: 32 search runs called it in lockstep from one job, 473 calls,
   not one error or retry. p50 latency 15.1 s, max 65.8 s, with 16,384 max tokens.
+- **A forced tool call with a 33 KB schema just worked.** The Studio's Task Engineer sends the
+  whole task contract as one `submit_task_plan` tool (every object and step a closed `anyOf`
+  branch, about 21k prompt tokens per call). In the recorded gate all 17 calls returned a
+  usable tool call, with 0 errors and no retries, for $0.133.
 
 What needs work:
 
@@ -44,6 +54,35 @@ What needs work:
   reflection call reasoned 4.7x longer than the main call on a similar prompt.
 - **No `seed` parameter.** We cache every response so our runs replay exactly, but nobody
   else can re-draw our model answers. A seed would make LLM experiments reproducible.
+- **Tool schemas guide, but do not bind.** With a compact copy of the same strict schema
+  (descriptions removed, 22 KB), Nemotron 3 Super left out a required field in both calls of a
+  live trial. The full schema fixed it, but a constrained decoder would not have let it happen.
+  Please document whether `tools` parameters are enforced while decoding, or offer a strict
+  mode for forced tool calls.
+- **"None" written as text in nullable fields.** In most plans the model wrote
+  `"refusal": "None"` (Python's null as a string) where the schema allows null, and one
+  otherwise valid plan was lost to it before we read "None", "null", "n/a" and "" as null in
+  nullable fields. Schema enforcement would prevent this; until then, a line in the model
+  guidance would help.
+- **Completions run on after a complete tool call, and are billed.** In our first four
+  recording rounds, 7 calls with a forced tool call kept generating after the call was complete
+  and ran to `max_tokens` (8,000 or 12,000); every token was billed, while the other 83 calls
+  finished within 3,150 completion tokens. We cut `max_tokens` to 5,000; one complete call later
+  used 4,403, so the margin is thin. Ending the response once a forced tool call is complete
+  would make the cap a safety net instead of a cost.
+- **Latency per call is long for large tool prompts, with no progress signal.** Task Engineer
+  calls (about 21k prompt tokens, up to 4,403 completion tokens) took 17 to 40 s, p50 23.7 s.
+  Short agent turns took 0.7 to 2.4 s and Lightning summaries 0.4 to 1.0 s. Streaming the
+  tool-call arguments, or a documented latency per model and prompt size, would let a UI show
+  progress during the long calls.
+- **HTTP 529 without guidance.** In one recording run of this version, 8 of 12 planning calls
+  came back HTTP 529 and no answer. Our client did not retry 529 at first; it does now, and a
+  second pass got every answer. Please document what 529 means on Token Factory and send a
+  `Retry-After` header with it.
+- **A cut-off call is billed and gives nothing.** One repair call ran to its 5,000-token cap
+  (`finish_reason: length`) with no tool call that parsed, and its $0.013 was billed. We now treat
+  such a call as failed and never judge it. Ending a forced tool call once its arguments are
+  complete, as above, would prevent most of these.
 - **Small things.** Tool definitions are billed as prompt tokens (about 1,330 tokens against
   600 for the same messages with json_schema); that deserves a line in the pricing docs.
   Model IDs mix casing and separators (`nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B`,
@@ -64,6 +103,9 @@ What worked:
   nothing on the command line or in the image.
 - **The registry credential helper** (`nebius registry docker-credential`) worked from a
   throwaway `DOCKER_CONFIG`, so no token touched disk. Code-only re-pushes took about 10 s.
+- **One CPU job carried a whole pre-registered evaluation.** The Studio's use-case benchmark
+  ran every frozen arm of three use cases in one uk-south2 `cpu-d3` 32-vCPU job: 206 s wall,
+  about $0.06, and its outcomes matched our laptop's on 72 of 72 development re-runs.
 
 What needs work:
 
@@ -73,7 +115,9 @@ What needs work:
   fast or warn at submit. Capacity advice also has no CPU rows.
 - **The default CPU quota in eu-north1 is 0** (`compute.instance.non-gpu.vcpu`). CPU-only
   jobs there are impossible without a request, so our first jobs ran CPU physics on an idle
-  H100 at $4.50/h. uk-south2 has 200 by default.
+  H100 at $4.50/h. uk-south2 has 200 by default. It still shapes the fallback: when uk-south2
+  cannot start a CPU job, our fallback is eu-north1's GPU target, so the CPU physics runs on an
+  idle H100 at $4.50/h against $1.056/h for the 32-vCPU CPU preset.
 - **The dry run misses two late failures.** A uk-south2 job could not pull from the
   eu-north1 registry: the dry run passed, then the job spent about 64 s pulling and ended
   `StartFailed`. A new uk-south2 bucket defaulted to a storage class with 0 quota, so the
@@ -84,7 +128,9 @@ What needs work:
   now stage files locally and copy them front to back. One paragraph listing the supported
   operations would save others a day.
 - **CLI details.** `--volume <bucket name>` fails with `unsupported volume source type`;
-  only the bucket ID works, and the message could say so. `ai job cancel` blocked for more
+  only the bucket ID works, and the message could say so. So every region's bucket ID has to
+  live in our private config next to its name; accepting a name or an `s3://` URI would remove
+  that step. `ai job cancel` blocked for more
   than 2 minutes on a job that never started. `--dry-run` prints plain text even with
   `--format json`. `ai job get-by-name` requires `--parent-id` even when the profile sets
   one. The `IMAGE_PULLING` state is missing from the jobs docs.
@@ -92,13 +138,17 @@ What needs work:
   credential helper printed `exit status 7`, and `docker push` waited out a 10-minute
   timeout instead of failing. `nebius iam whoami` waited for a browser login. Please fail
   fast when no terminal is attached, and document service-account profiles next to the
-  quick start.
+  quick start. The docs show how to make a service account's S3 access key, but not how to
+  point the CLI itself at a service account, so our procedure starts every scored batch from a
+  freshly refreshed browser session.
 - **Budgets are console-only.** There is no CLI or API for budgets or alerts, so we enforce
   our own spend cap from a ledger of wall-time estimates.
-- **About 2 minutes of overhead per job** (provisioning, starting, image pull) before the
-  container runs. Warm pools or pre-pulled images for a repeated digest would help short
-  jobs. There is also no job ID inside the container; a `NEBIUS_JOB_ID` variable would let
-  outputs name the job that made them.
+- **About 2 minutes of overhead per job** before the container runs: 111 to 128 s from
+  creation to container start on uk-south2, of which the 717 MB image pull took 21 to 32 s. In
+  the use-case benchmark's job that was 119 s of overhead against 88 s of work, so we fan the
+  Studio's search out one job per phase, not per shard. Warm pools or pre-pulled images for a
+  repeated digest would help short jobs. There is also no job ID inside the container; a
+  `NEBIUS_JOB_ID` variable would let outputs name the job that made them.
 - **CPU prices are split across two pages** (per vCPU-hour and per GiB-hour). A per-preset
   table like the GPU one would help.
 
@@ -114,6 +164,31 @@ What needs work:
   slots, and many proposals were near-copies. Asking for 4 reserve designs per call fixed
   most of this. In the confirmatory arm, 131 of 1,024 model slots (13%) still fell back to
   random designs.
+- **Super as a planner is good after one repair, rarely on the first call.** On the Studio's
+  recorded gate, 8 of 8 use cases ended with a valid plan (1 on the first call, 5 after one
+  repair call, 2 after our layout fixer), and 2 of 2 unsupported tasks (folding a shirt,
+  pouring) were refused with the nearest primitive. The first-call rate was 1 of 8 in three
+  recording rounds in a row. The failures were spatial and sequential: parts placed inside
+  their totes, a latch and a valve against a door, a step left holding an object while the next
+  acted on another. Given every problem with its path, the repair call fixed them.
+- **Super as a planner of real jobs needs physics in the loop.** For the six jobs of this version
+  (a tote, machine tending, a solar panel, floor tiles, a pipe coupling, a hotel delivery), the
+  prompt grew to about 27,000 tokens and a call cost about $0.01. In the recorded run of record,
+  no plan was valid on the first call: 3 were valid after one repair, 2 after our layout fixer, and
+  1 failed. Plans that passed every check could still not run in physics: a pass criterion asking
+  for 4 mm of overlap, a door edge 350 mm out against a 338 mm safe reach, a lift shorter than the
+  vacuum frame gives under an 8 kg panel. Each became a check with a plain message, and the repair
+  call then fixed most of them. One repair raised a pass criterion together with the lift it was
+  told to raise, because our message named the quantity and not the field. Naming the exact field
+  path fixed that for us.
+- **The same model at two providers.** Nemotron 3 Super is also listed on the NVIDIA API catalog,
+  behind an OpenAI-compatible endpoint. One model at two providers means a planner can take either
+  an NVIDIA key or a Token Factory key, with only the base URL and the model string to change.
+- **Super as a tool-calling agent was crisp.** Each recorded Studio session called
+  `plan_task`, `run_task_tournament` and `export_build_pack` in order, 3 tool calls in 4 turns,
+  for $0.0037 to $0.0041. Its final answers use typographic characters (U+2011 non-breaking
+  hyphens, U+202F narrow spaces) even inside setup IDs, which breaks a plain-text search for
+  the ID; we read IDs from the tool results, never from the prose.
 - **Nemotron 3 Ultra** was clean in every mode at 8.4x Super's cost per call. We did not
   need it for format reliability.
 - **Nemotron 3 Nano** was the slowest by wall clock (p50 30-44 s with thinking on), and in
@@ -143,8 +218,10 @@ Serverless Jobs suit a pre-registered experiment: every scored number comes from
 pinned image, and the whole project's compute cost about $4. What cost us time were the
 silent failures: capacity waits, image-pull and quota errors that the dry run let through,
 the non-POSIX bucket mount, the CLI hang after the session expired, and schema options that
-a model accepts and then ignores. Fix those first and the platform is excellent for this
-kind of work.
+a model accepts and then ignores. The Studio added two of the same kind: tool schemas that a
+model may step outside, and completions billed past a complete tool call. This version added one more: HTTP 529 answers with no
+guidance on when to retry. Fix those first and
+the platform is excellent for this kind of work.
 
 ---
 
@@ -237,6 +314,68 @@ Sources: `docs/NEBIUS.md` ("Confirmatory and held-out jobs"), the Nemotron arm's
 - Main proposals, reflections and repairs: 256, 130 and 87 calls. 1,766 proposals were
   rejected (910 too similar, 499 invalid, 214 not novel, 143 duplicates), and 131 of the
   1,024 model slots were filled at random [derived: 32 runs x 32 model slots].
+
+#### 2026-10-18: the Studio's Task Engineer (a 33 KB forced tool call)
+
+Sources: `docs/STUDIO_ENGINEER.md` (sections 1, 6 and 7) and the recorded gate run,
+`src/rtt/studio/engineer/recorded/gate-2026-10-18-s4e/` (`manifest.json`, `ledger.jsonl`).
+Nemotron 3 Super, forced `submit_task_plan` call, thinking on, temperature 0.6, top_p 0.95,
+`max_tokens` 5,000.
+
+What worked:
+
+- The tool is the contract's own schema, 33,196 bytes with descriptions: every object and step
+  is a closed `anyOf` branch with const discriminators and bounded fields. Token Factory took it
+  as a forced `tool_choice` without complaint. The one gate run made 17 live calls: 352,696
+  prompt and 29,998 completion tokens, 0 errors, no retries, $0.133 (cap $0.24).
+- Latency: p50 23.7 s, 17.2 to 40.1 s, for 20.3k to 21.7k prompt tokens per call.
+
+What surprised us:
+
+- **A compact schema let the model skip required fields.** `--compact-tool` drops every
+  description (22 KB, the same strict structure). In a live trial on the cabinet case the model
+  then left out the steps' required `description` field in both calls. The full schema is the
+  default; its extra 11 KB costs about 2,800 prompt tokens, $0.0008 a call.
+- **"None" as a string.** Nemotron writes `"refusal": "None"` in most plans; a first trial lost an
+  otherwise valid cabinet plan to it. `normalise_nulls` now reads `"None"`, `"null"`, `"n/a"` and
+  `""` as null in nullable fields (refusal, target, ref, criterion bounds, constraints, nearest
+  primitive), and the plan notes it. Nothing else is rewritten.
+- **Run-on completions.** Through the fourth recording round, 83 complete calls used at most
+  3,150 completion tokens (reasoning included), but 7 calls kept generating after a complete
+  tool call and ran to the cap (8,000 or 12,000), which was billed. The fifth round lowered the
+  cap to 5,000; no call ran to it, but one complete call used 4,403 tokens.
+- **First calls.** 1 of 8 plans was valid on the first call in each of the last three recording
+  rounds (see the Nemotron section below).
+- *Suggestions:* say whether tool parameters are constrained while decoding (or offer a strict
+  mode); stop generating once a forced tool call is complete; stream tool-call arguments so a
+  20 to 40 s call can show progress.
+
+#### 2026-10-26 and 27: re-planning six real jobs (Studio v2)
+
+Source: the Studio v2 build's Task Engineer recordings (`recorded/gate-2026-10-27-v2*`, their
+`manifest.json` and `ledger.jsonl`) and the task report's spend tables. Nemotron 3 Super, forced
+`submit_task_plan` call, `max_tokens` 5,000.
+
+- **Spend.** 54 live calls in three rounds to 27 October, $0.4845 in all (first round 15 calls,
+  $0.1528; second round 35 calls, $0.2903; third round 4 calls, $0.0414). Prompts ran 27,129 to
+  29,320 tokens and completions 928 to 3,561 tokens on complete calls; a call cost $0.009 to
+  $0.013.
+- **HTTP 529.** In one run (v2b), 8 of 12 calls returned HTTP 529 with no answer. The client did
+  not retry 529 then; after the fix, the four cases without an answer were re-run once and all
+  ended valid. That run was later superseded, because the rules changed.
+- **A call cut at the cap.** In the run of record (v2c), the hotel job's repair call used all
+  5,000 completion tokens and returned no tool call that parsed ($0.013). The plan came from the
+  main call plus our layout fixer. Under the v2 rule set, a call with `finish_reason: length` is
+  recorded as truncated and never judged.
+- **First calls.** In v2c no plan was valid on the first call (0 of 6): 3 after one repair, 2 after
+  the layout fixer, 1 failed (the machine-tending layout, inside the machine). The first version's
+  gate had 1 of 8 on the first call.
+- **What a physics probe found after the checks passed.** A solar plan asking for at least 4 mm of
+  `penetration_mm` together with a gap bound below its start gap; a hotel door whose free edge sat
+  350 mm out (the safe reach is 338 mm); a machine tray beside the machine where the words put it
+  inside; a lift of 20 mm under a vacuum frame that gives about 23 mm under 8 kg before the panel
+  rises. None was hand-edited. Each became a check and a line in the prompt, and the case was
+  planned again.
 
 ### AI Cloud / Serverless Jobs
 
@@ -363,7 +502,52 @@ What surprised us:
   quickly, and document service-account profiles for unattended use next to the federation
   quick-start.
 
+#### 2026-10-19: the use-case benchmark on uk-south2 CPU
+
+Sources: `docs/USECASE_V1_RESULTS.md` (Compute), `docs/USECASE_V1.md` (sections 8, 9 and 11)
+and the benchmark's own spend ledger `runs/cloud/usecase-v1-spend.jsonl` (git-ignored).
+
+- **One job, one evaluation.** `aijob-e05e55n905qj9va2fh` ran every frozen arm of the three
+  use cases, 32 held-out and 8 development conditions each, on `cpu-d3` `32vcpu-128gb` in
+  uk-south2: 119 s from creation to container start, 88 s running, 206 s wall, about $0.06
+  (wall-based; $0.026 run-only). Its outcomes matched the laptop's on 72 of 72 development
+  re-runs; trajectory hashes matched on 41 of 72, the rest differing by floating-point rounding
+  between CPUs, never in an outcome.
+- **Provisioning shaped the design.** With about 2 minutes before any container runs, the
+  Studio's fan-out (`rtt.studio.cloud`) sends one job per phase of the search, not one per
+  shard, and the benchmark budgeted two attempts cancelled at the 15-minute provisioning
+  timeout as contingency. Neither was needed.
+- **Bucket mount, again.** Phase inputs and results go through the same local staging as
+  every other job, because the mount rejects seeks and renames; the bucket is mounted by ID.
+- **The secret stayed on the laptop.** The job received only the derived conditions as work
+  items; no job got the held-out secret or the Token Factory key.
+- **The CLI session.** The procedure starts from a fresh browser-federated CLI session (it
+  lasts about 12 hours), because we have no documented way to run the CLI as a service account.
+
 ### NVIDIA Nemotron models
+
+#### 2026-10-18: Super as the Studio's planner and agent
+
+Sources: `docs/STUDIO_ENGINEER.md` (section 6), the recorded Studio sessions
+`web/public/data/studio/sessions/h{1,2,3}.json`, and `docs/EFFECTORS_RESULTS.md` (sections 4
+and 6) for the effector designer.
+
+- **Planner.** In the one judged gate run, 8 of 8 use cases ended valid: 1 on the first call,
+  5 after one repair call, 2 after the code's layout fixer; 0 failed. 2 of 2 unsupported tasks
+  (fold a shirt, pour) were refused with a nearest primitive. What the repair calls fixed: parts
+  inside the tote, the tray or the drawer; the latch and the valve against the door; a valve
+  against a hatch; steps left holding while the next acted on another object; an insert of a
+  thread left holding; a twist on a nut before its insert. The first-call rate was 1 of 8 in
+  the last three recording rounds alike.
+- **Agent.** Each recorded session ran `plan_task`, `run_task_tournament` and
+  `export_build_pack` in order: 4 agent turns, 3 tool calls, $0.0037 to $0.0041 per session.
+  Agent turns took 0.66 to 2.42 s; Lightning summaries 0.38 to 1.0 s. The final answers carry
+  U+2011 (non-breaking hyphen) and U+202F (narrow no-break space) characters, also inside setup
+  IDs such as "setup 72c634ec4fa3"; IDs are read from the tool results, never from the prose.
+- **Effector designer.** 23 live calls (12 proposals, 11 repairs), 188,427 prompt and 25,864
+  completion tokens, $0.0798, every call successful. 15 of the 48 designs requested did not
+  become candidates: refused by the validators (mostly the opening rule `too_narrow`) or by the
+  duplicate and too-similar screens.
 
 #### 2026-10-16: the v2 design tool on the real prompt
 

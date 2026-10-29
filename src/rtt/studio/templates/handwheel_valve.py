@@ -37,10 +37,13 @@ import numpy as np
 
 from rtt.sim.scene import OBJECT_RGBA
 from rtt.studio.templates import (
+    FRAME_RGBA,
+    FRICTION_SOLIMP,
     ResolvedHandles,
     TemplateBuilder,
     TemplateContext,
     TemplateHandles,
+    quat_z,
     register_template_builder,
 )
 from rtt.studio.templates.threaded_joint import add_friction_anchor, friction_anchor
@@ -52,8 +55,6 @@ WHEEL_Z: Final = 0.110  # m, wheel mid-plane above the table [assumed]
 RIM_SEGMENTS: Final = 24
 DENSITY: Final = 2700.0  # kg/m^3, a cast aluminium wheel [assumed]
 STATIC_FRACTION: Final = 0.5
-FRAME_RGBA: Final = (0.55, 0.58, 0.62, 1.0)
-FRICTION_SOLIMP: Final = (0.999, 0.9999, 0.0001, 0.5, 2.0)  # a near-hard dry friction (no creep)
 
 
 def torque_curve(angle: float, travel: float) -> float:
@@ -62,10 +63,6 @@ def torque_curve(angle: float, travel: float) -> float:
     if u >= 0.9:
         return 0.6 + 0.2 * min(1.0, (u - 0.9) / 0.1)
     return 1.0 - 0.4 * min(1.0, max(0.0, u) / 0.2)
-
-
-def _quat_z(angle: float) -> list[float]:
-    return [math.cos(0.5 * angle), 0.0, 0.0, math.sin(0.5 * angle)]
 
 
 class HandwheelValveBuilder(TemplateBuilder):
@@ -86,7 +83,7 @@ class HandwheelValveBuilder(TemplateBuilder):
         frame = ctx.spec.worldbody.add_body(
             name=f"{p}body",
             pos=[pose.x_mm / 1000.0, pose.y_mm / 1000.0, ctx.table_top_z],
-            quat=_quat_z(yaw),
+            quat=quat_z(yaw),
         )
         geoms: list[str] = []
 

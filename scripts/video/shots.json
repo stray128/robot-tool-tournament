@@ -1,0 +1,339 @@
+{
+  "format": "rtt-video-shots/2",
+  "title": "Effector Lab",
+  "script": "docs/VIDEO_SCRIPT.md",
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "max_duration_s": 179,
+  "site": {
+    "live": "https://stray128.github.io/robot-tool-tournament",
+    "base": "/robot-tool-tournament",
+    "repo": "https://github.com/stray128/robot-tool-tournament"
+  },
+  "presentation": {
+    "note": "Like browser zoom at 150 %: a larger root font size and a container as wide as the zoomed one. Layout only; no content changes.",
+    "root_font_pct": 150,
+    "container_px": 1800
+  },
+  "flags": {
+    "hosted_runner": false
+  },
+  "labels": {
+    "product": "Product mode: not part of the pre-registered experiment · simulated",
+    "prereg_studio": "Product mode · pre-registered use-case benchmark (usecase-v1), first version · simulated",
+    "prereg_fingers": "Pre-registered experiment (prereg-v1) · simulated",
+    "atlas": "Use-case atlas · research estimates, not simulation results",
+    "docs": "Open source · Apache-2.0"
+  },
+  "end_card": {
+    "title": "Effector Lab",
+    "lines": [
+      "Describe a robot job. Get a tested tool setup, with replays and evidence.",
+      "Everything shown is simulated. Verify on hardware.",
+      "Voice-over: AI text-to-speech."
+    ],
+    "links": [
+      "stray128.github.io/robot-tool-tournament",
+      "github.com/stray128/robot-tool-tournament"
+    ],
+    "credit": "Built with Nebius Token Factory, NVIDIA Nemotron and Nebius Serverless Jobs"
+  },
+  "thumbnail": {
+    "shot": "s01",
+    "at_s": 8,
+    "title": "Effector Lab",
+    "subtitle": "Describe a job. Get a tested tool setup."
+  },
+  "shots": [
+    {
+      "id": "s01",
+      "start": 0,
+      "duration": 13,
+      "page": "/",
+      "on_screen": "Home: the headline and the tote replay in the hero, then the four stages of how it works.",
+      "voiceover": "Robot jobs take several steps. Open a lid, put two parts in, close it. One tool rarely suits every step, so teams guess, then find out on the robot.",
+      "caption": null,
+      "tag": "product",
+      "setup": [
+        { "do": "goto", "path": "/" },
+        { "do": "waitSelector", "selector": "#hero-title" },
+        { "do": "scrollTo", "selector": "#hero-title", "offset": -140 }
+      ],
+      "timeline": [
+        { "do": "pause", "s": 6.5 },
+        { "do": "smoothScroll", "to": "#how-title", "offset": -110, "s": 3 }
+      ]
+    },
+    {
+      "id": "s02",
+      "start": 13,
+      "duration": 13,
+      "page": "/studio/new/",
+      "on_screen": "Plan a job: pick the returns-tote example, press Plan, and the recorded planner calls appear one by one until the plan is valid.",
+      "voiceover": "Effector Lab starts with plain words. You describe the job, and Nemotron, running on Nebius Token Factory, plans it as objects, steps and pass criteria a simulator can check.",
+      "caption": "Nemotron on Nebius Token Factory · recorded calls, replayed",
+      "tag": "product",
+      "setup": [
+        { "do": "goto", "path": "/studio/new/" },
+        { "do": "waitSelector", "selector": "[aria-label='Example use cases'] button" },
+        { "do": "scrollTo", "selector": "#usecase-title", "offset": -100 }
+      ],
+      "timeline": [
+        { "do": "pause", "s": 1.5 },
+        { "do": "click", "selector": "[aria-label='Example use cases'] button:has-text('Returns tote')" },
+        { "do": "pause", "s": 2.5 },
+        { "do": "click", "selector": "[data-plan-button]" },
+        { "do": "waitText", "text": "Plan is valid", "timeout_s": 10 },
+        { "do": "pause", "s": 2 },
+        { "do": "smoothScroll", "by": 220, "s": 2 }
+      ]
+    },
+    {
+      "id": "s03",
+      "start": 26,
+      "duration": 13,
+      "page": "/studio/new/",
+      "on_screen": "The checks: the problems the first call sent back, then an impossible lift on step 2 turns the step red, and a sensible one makes the plan valid again.",
+      "voiceover": "Code checks every rule, from reach to what each step must measure. If a plan breaks one, Nemotron gets the problems back and repairs it. You can edit any step.",
+      "caption": null,
+      "tag": "product",
+      "setup": [
+        { "do": "goto", "path": "/studio/new/" },
+        { "do": "waitSelector", "selector": "[aria-label='Example use cases'] button" },
+        { "do": "click", "selector": "[aria-label='Example use cases'] button:has-text('Returns tote')" },
+        { "do": "click", "selector": "[data-plan-button]" },
+        { "do": "waitText", "text": "Plan is valid", "timeout_s": 10 },
+        { "do": "scrollTo", "selector": "[aria-label='Planner calls']", "offset": -160 }
+      ],
+      "timeline": [
+        { "do": "pause", "s": 0.8 },
+        { "do": "click", "selector": "[aria-label='Planner calls'] details summary" },
+        { "do": "pause", "s": 3 },
+        { "do": "smoothScroll", "to": "article[aria-label^='Step 2']", "offset": -150, "s": 1.8 },
+        { "do": "pause", "s": 0.5 },
+        { "do": "type", "selector": "input[aria-label='Step 2 lift_mm']", "text": "5000", "delay_ms": 150 },
+        { "do": "pause", "s": 2.4 },
+        { "do": "type", "selector": "input[aria-label='Step 2 lift_mm']", "text": "120", "delay_ms": 150 },
+        { "do": "waitText", "text": "Plan is valid", "timeout_s": 5 }
+      ]
+    },
+    {
+      "id": "s04",
+      "start": 39,
+      "duration": 14,
+      "page": "/studio/h1_tote/#all-data",
+      "on_screen": "Show all data on the returns tote: why candidates were ruled out before physics (among them a nut runner and a tamper pad), then the success matrix, every screened tool against every step with pass rates and ruled-out cells, scrolled slowly down to the tamper pad and the vacuum frame.",
+      "voiceover": "Then physics decides, in simulation. Every tool tries every step it could do, from grippers to vacuum frames, a nut runner and a tamper. Misfits are ruled out.",
+      "caption": "Every candidate × every step · simulated",
+      "tag": "product",
+      "setup": [
+        { "do": "goto", "path": "/studio/h1_tote/" },
+        { "do": "click", "selector": "#all-data > summary" },
+        { "do": "waitSelector", "selector": "#all-data [data-cell]" },
+        { "do": "scrollTo", "selector": "#all-data ul[data-pruned-reasons] li", "text": "a nut runner turns a fastener", "offset": -620 }
+      ],
+      "timeline": [
+        { "do": "pause", "s": 2.5 },
+        { "do": "smoothScroll", "to": "#all-data [data-cell]", "offset": -300, "s": 2 },
+        { "do": "smoothScroll", "by": 1600, "s": 6.5 }
+      ]
+    },
+    {
+      "id": "s05",
+      "start": 53,
+      "duration": 15,
+      "page": "/studio/h1_tote/",
+      "on_screen": "The tote's answer in one sentence (a single servo gripper, 8 of 8 runs, also the best single tool) with its fidelity and 'Simulated, verify on hardware' badges, then 'Why this setup' and the comparison with the best single tool: no second tool earned its place.",
+      "voiceover": "The answer follows an integrator's rules. One tool is the default, and a second tool has to earn its place. For the tote, one servo gripper finished eight of eight runs, and nothing beat it.",
+      "caption": "One tool by default · simulated, verify on hardware",
+      "tag": "product",
+      "setup": [
+        { "do": "goto", "path": "/studio/h1_tote/" },
+        { "do": "waitSelector", "selector": "[data-answer]" },
+        { "do": "scrollTo", "selector": "[data-answer]", "offset": -260 }
+      ],
+      "timeline": [
+        { "do": "pause", "s": 5 },
+        { "do": "smoothScroll", "to": "[aria-label='Why this setup']", "offset": -120, "s": 2.5 },
+        { "do": "pause", "s": 3 },
+        { "do": "smoothScroll", "to": "#head-to-head", "offset": -90, "s": 2 }
+      ]
+    },
+    {
+      "id": "s06",
+      "start": 68,
+      "duration": 14,
+      "page": "/studio/h5_solar/#replays",
+      "on_screen": "The solar job's replay at 2x, from just before the first tool change: the 'Changing tool' card covers the change to the suction cup, the cup starts the clamp, then a second card covers the change to the nut runner.",
+      "voiceover": "Every replay is recorded physics that passed a quality gate. Parts are set down, and every pair of objects is checked for overlap. A tool change shows as a card.",
+      "caption": "Recorded physics · quality-gated · simulated",
+      "tag": "product",
+      "presentation": { "container_px": 1240 },
+      "setup": [
+        { "do": "goto", "path": "/studio/h5_solar/" },
+        { "do": "replayReady", "speed": 2 },
+        { "do": "replaySeek", "step": 2, "offset_s": -10 },
+        { "do": "scrollTo", "selector": "[data-studio-transport]", "offset": -84 }
+      ],
+      "timeline": [{ "do": "replayPlay" }]
+    },
+    {
+      "id": "s07",
+      "start": 82,
+      "duration": 14,
+      "page": "/studio/h5_solar/",
+      "on_screen": "The solar job's answer (a tool change, vacuum area frame then suction cup then nut runner, 7 of 8 runs) and the task in plain words, then its step cards: place the panel, insert the clamp, tighten it.",
+      "voiceover": "An eight-kilogram solar panel goes onto its rails, then its clamp is tightened to six newton metres, a nut runner's job. A tool change, vacuum frame, suction cup, then nut runner, finished seven of eight runs.",
+      "caption": "Tool change: vacuum frame > suction cup > nut runner · 7 of 8 runs · simulated",
+      "tag": "product",
+      "setup": [
+        { "do": "goto", "path": "/studio/h5_solar/" },
+        { "do": "waitSelector", "selector": "[data-answer]" },
+        { "do": "scrollTo", "selector": "[data-answer]", "offset": -380 }
+      ],
+      "timeline": [
+        { "do": "pause", "s": 5.5 },
+        { "do": "smoothScroll", "to": "#steps", "offset": -90, "s": 2.5 },
+        { "do": "smoothScroll", "by": 500, "s": 4 }
+      ]
+    },
+    {
+      "id": "s08",
+      "start": 96,
+      "duration": 13,
+      "page": "/studio/h6_tile/#replays",
+      "on_screen": "The tile job's replay at 1x from just before the head switch: the tile set on its bed by the vacuum frame, the switch to the tamper pad on the same head, then the press that levels it.",
+      "voiceover": "A floor tile goes onto fresh adhesive and is tamped level, within one millimetre, at no more than sixty newtons. A two-tool head, vacuum frame plus tamper, finished eight of eight.",
+      "caption": "Within 1 mm · at most 60 N · two-tool head, 8 of 8 runs · simulated",
+      "tag": "product",
+      "presentation": { "container_px": 1240 },
+      "setup": [
+        { "do": "goto", "path": "/studio/h6_tile/" },
+        { "do": "replayReady", "speed": 1 },
+        { "do": "replaySeek", "step": 2, "offset_s": -5.5 },
+        { "do": "scrollTo", "selector": "[data-studio-transport]", "offset": -84 }
+      ],
+      "timeline": [{ "do": "replayPlay" }]
+    },
+    {
+      "id": "s09",
+      "start": 109,
+      "duration": 13,
+      "page": "/studio/h7_hotel/#replays",
+      "on_screen": "The hotel job's replays at 2x: the recommended two-tool head's angular-jaw gripper pulls the door open, then the scrubber jumps to the last step, where its 25 mm suction cup places the parcel in the tray; beside it the best single tool, stopped at the button.",
+      "voiceover": "A hotel delivery presses an elevator call button, opens a door and places a parcel. A two-tool head, a suction cup and an angular-jaw gripper, finished eight of eight runs.",
+      "caption": "Two-tool head: suction cup + angular-jaw gripper · 8 of 8 runs · simulated",
+      "tag": "product",
+      "setup": [
+        { "do": "goto", "path": "/studio/h7_hotel/" },
+        { "do": "replayReady", "speed": 2 },
+        { "do": "replaySeek", "step": 2, "offset_s": 6 },
+        { "do": "scrollTo", "selector": "[data-studio-transport]", "offset": -84 }
+      ],
+      "timeline": [
+        { "do": "replayPlay" },
+        { "do": "pause", "s": 6.2 },
+        { "do": "replaySeek", "step": 3, "offset_s": 1.5 },
+        { "do": "replayPlay" }
+      ]
+    },
+    {
+      "id": "s10",
+      "start": 122,
+      "duration": 17,
+      "page": "/evidence/",
+      "on_screen": "Evidence: the use-case benchmark card with its three held-out rows and the job, then the dated note on what the first version could not test.",
+      "voiceover": "Does it hold up? Our first version took a pre-registered test on Nebius Serverless Jobs. On thirty-two held-out conditions per job, its picks finished thirty-two, thirty-two and ten. The best single tool finished none of ninety-six.",
+      "caption": "First version, held out: 32/32 · 32/32 · 10/32 against 0/96 for the best single tool",
+      "tag": "prereg_studio",
+      "setup": [
+        { "do": "goto", "path": "/evidence/" },
+        { "do": "scrollTo", "selector": "[data-evidence='usecase']", "offset": -110 }
+      ],
+      "timeline": [
+        { "do": "pause", "s": 10 },
+        { "do": "smoothScroll", "to": "#v1-note", "offset": -110, "s": 3 }
+      ]
+    },
+    {
+      "id": "s11",
+      "start": 139,
+      "duration": 10,
+      "page": "/results/",
+      "on_screen": "The finger experiment: the S1 table and the best-so-far chart.",
+      "voiceover": "In a second pre-registered test, Nemotron with simulator feedback found good gripper fingers in fewer designs than random search.",
+      "caption": "Pre-registered: p = 0.0011",
+      "tag": "prereg_fingers",
+      "setup": [
+        { "do": "goto", "path": "/results/" },
+        { "do": "scrollTo", "selector": "#s1-title", "offset": -110 }
+      ],
+      "timeline": [
+        { "do": "pause", "s": 3 },
+        { "do": "smoothScroll", "by": 700, "s": 5 }
+      ]
+    },
+    {
+      "id": "s12",
+      "start": 149,
+      "duration": 11,
+      "page": "/atlas/",
+      "on_screen": "The use-case atlas: 'What the research says' with the one-tool share and the bars by domain, then the browser of 95 jobs.",
+      "voiceover": "The use-case atlas lists ninety-five real jobs with the setup an integrator would expect, as research estimates. Sixty-nine of them need one tool.",
+      "caption": null,
+      "tag": "atlas",
+      "setup": [
+        { "do": "goto", "path": "/atlas/" },
+        { "do": "scrollTo", "selector": "#split-title", "offset": -160 }
+      ],
+      "timeline": [
+        { "do": "pause", "s": 4.5 },
+        { "do": "smoothScroll", "to": "#browse", "offset": -90, "s": 3 }
+      ]
+    },
+    {
+      "id": "s13",
+      "start": 160,
+      "duration": 11,
+      "flag": "hosted_runner",
+      "page": "/studio/new/",
+      "on_screen": "{{pending: hosted runner live}} Plan a job: the key field and the hosted run starting, with its daily cap shown.",
+      "voiceover": "It is all open source. Plan a job here with your own NVIDIA or Token Factory key, and the physics runs on our capped Nebius jobs.",
+      "caption": null,
+      "tag": "product",
+      "setup": [
+        { "do": "goto", "path": "/studio/new/" },
+        { "do": "scrollTo", "selector": "#usecase-title", "offset": -100 }
+      ],
+      "timeline": [{ "do": "pause", "s": 2 }],
+      "fallback": {
+        "page": "/docs/tutorials/run-it-yourself/",
+        "on_screen": "Run it yourself: the install commands, then the Docker commands.",
+        "voiceover": "It is all open source. Run the search on your own machine with one command, or in Docker.",
+        "caption": null,
+        "tag": "docs",
+        "setup": [
+          { "do": "goto", "path": "/docs/tutorials/run-it-yourself/" },
+          { "do": "scrollTo", "selector": "#install", "offset": -100 }
+        ],
+        "timeline": [
+          { "do": "pause", "s": 3.5 },
+          { "do": "smoothScroll", "to": "#docker", "offset": -100, "s": 3 }
+        ]
+      }
+    },
+    {
+      "id": "s14",
+      "start": 171,
+      "duration": 7,
+      "page": null,
+      "on_screen": "End card: the name, the links, the simulation caveat, the AI voice-over note and the credit line.",
+      "voiceover": "Everything here is simulated, so verify on hardware. Try it at the link below.",
+      "caption": null,
+      "tag": null,
+      "setup": [{ "do": "endCard" }],
+      "timeline": []
+    }
+  ]
+}

@@ -100,7 +100,7 @@ class ToyKnob(TemplateBuilder):
             name=f"{p}plate",
             type=mujoco.mjtGeom.mjGEOM_BOX,
             size=[0.04, 0.04, 0.01],
-            pos=[0, 0, -0.005],
+            pos=[0, 0, -0.01],  # its top is where the knob starts: they touch, they do not overlap
             priority=1,
         )
         head = base.add_body(name=f"{p}head", pos=[0.0, 0.0, 0.0])

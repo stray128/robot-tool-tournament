@@ -74,7 +74,19 @@ export function ScreenView({ screen, plan }: { screen: Screen; plan: Plan }) {
                     <span className="mt-0.5 block text-xs text-ink-3">
                       {c.family_title}
                       {c.built_for ? `, shaped for the ${humanize(c.built_for).toLowerCase()}` : ""}
+                      {c.studio_only ? ", Studio only" : ""}
                     </span>
+                    {c.rating ? (
+                      <span className="mt-0.5 block text-xs text-ink-2" data-rating>
+                        {c.rating}
+                      </span>
+                    ) : null}
+                    {c.studio_only && c.caveat ? (
+                      <details className="mt-1 text-xs" data-tool-caveat>
+                        <summary className="cursor-pointer text-pending">Caveat</summary>
+                        <p className="mt-1 max-w-[60ch] text-ink-2">{c.caveat}</p>
+                      </details>
+                    ) : null}
                   </th>
                   <td className="py-2 pr-3 text-xs text-ink-2">
                     {SOURCE_LABELS[c.source] ?? humanize(c.source).toLowerCase()}

@@ -1,12 +1,16 @@
 import type { Metadata, Viewport } from "next";
-import { Archivo, B612_Mono } from "next/font/google";
+import { Archivo, Atkinson_Hyperlegible_Next, Red_Hat_Mono } from "next/font/google";
 import type { ReactNode } from "react";
 
+import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { APP_DESCRIPTION, APP_NAME, APP_TAGLINE } from "@/lib/site";
 
+import { featuredHero } from "./studio/data";
+
 import "./globals.css";
 
+/** Display: an expanded grotesk (its width axis drives the headings). */
 const archivo = Archivo({
   subsets: ["latin"],
   axes: ["wdth"],
@@ -14,10 +18,17 @@ const archivo = Archivo({
   display: "swap",
 });
 
-const b612Mono = B612_Mono({
+/** Text: a face drawn for legibility, for running text and controls. */
+const text = Atkinson_Hyperlegible_Next({
   subsets: ["latin"],
-  weight: ["400", "700"],
-  variable: "--font-b612-mono",
+  variable: "--font-text",
+  display: "swap",
+});
+
+/** Numbers and ids: a compact mono with clear decimals. */
+const mono = Red_Hat_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono-face",
   display: "swap",
 });
 
@@ -30,32 +41,36 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f2f3ef" },
-    { media: "(prefers-color-scheme: dark)", color: "#0e1b2c" },
-  ],
+  themeColor: "#15181c",
 };
 
-/** Applies a saved light/dark choice before first paint (no flash of the wrong theme). */
+/** Applies a saved light/dark choice before first paint (no flash of the wrong theme). Dark is the default. */
 const THEME_SCRIPT = `try{var t=localStorage.getItem("theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`;
+
+/** The footer's worked-example link: the featured hero of the Studio's data, when there is one. */
+function footerExample(): { href: string; label: string } | null {
+  const h = featuredHero();
+  return h ? { href: `/studio/${h.hero}/`, label: `Worked example: ${h.title.charAt(0).toLowerCase()}${h.title.slice(1)}` } : null;
+}
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${archivo.variable} ${b612Mono.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${archivo.variable} ${text.variable} ${mono.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
-      <body className="min-h-dvh antialiased">
+      <body className="flex min-h-dvh flex-col antialiased">
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:bg-paper focus:px-3 focus:py-2 focus:text-ink"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:text-ink"
         >
           Skip to content
         </a>
         <SiteHeader />
-        <main id="main" className="mx-auto w-full max-w-[1200px] px-4 pb-16 sm:px-6 lg:px-8">
+        <main id="main" className="mx-auto w-full max-w-[1240px] flex-1 px-4 sm:px-6 lg:px-8">
           {children}
         </main>
+        <SiteFooter example={footerExample()} />
       </body>
     </html>
   );

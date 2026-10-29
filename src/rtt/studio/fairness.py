@@ -3,15 +3,19 @@
 Every candidate setup in one comparison must share:
 
 1. **the wrist**: the four frozen core servos (x, y, z, yaw: ranges, armature, damping, gains,
-   force limits) and the continuous roll (unlimited range, armature, gain, torque limit, the
-   roll speed cap), and the wrist bodies' masses and gravity compensation
-   (:func:`wrist_signature`), plus the solver options;
+   force limits), the continuous roll (unlimited range, armature, gain, torque limit, the roll
+   speed cap) and the limited pitch (range, armature, gains, torque limit, the pitch
+   speed cap), and the wrist bodies' masses and gravity compensation (:func:`wrist_signature`),
+   plus the solver options;
 2. **the Studio constants**: :data:`~rtt.studio.types.STUDIO_WRIST`, the tool changer of every
    tool-change setup, the presentation time of every multi-tool head;
+   **the scoring rules** (:func:`scoring_signature`): the success tolerances
+   (:data:`~rtt.studio.types.CRITERION_TOLERANCE`), the 1 mm penetration limit and the 10 ms
+   transient allowance (:data:`~rtt.studio.plan.PENETRATION_TRANSIENT_MS`);
 3. **the task and the conditions**: the same ``task_id``, the same ``(condition_id, seed)``
    list in the same order for every setup (common random numbers), the same controller set.
 
-:func:`fairness_sha` hashes 1 and the constants of 2 for a scene; every
+:func:`fairness_sha` hashes 1 and the constants and scoring rules of 2 for a scene; every
 :class:`~rtt.studio.types.TaskResult` carries it. :func:`fairness_problems` lists every
 violation in a set of results (empty when fair); :func:`assert_fair` raises on any. The
 recommender (track S5) calls :func:`assert_fair` before it ranks.
@@ -26,15 +30,16 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 
 from rtt.effectors.types import ContractError, canonical_json
+from rtt.studio.plan import HELD_PENETRATION_MAX_MM, PENETRATION_TRANSIENT_MS
 from rtt.studio.scene import WRIST_BODIES, WRIST_JOINTS
-from rtt.studio.types import CONTRACT_VERSION, Setup, SetupKind, TaskResult
+from rtt.studio.types import CONTRACT_VERSION, CRITERION_TOLERANCE, Setup, SetupKind, TaskResult
 
 if TYPE_CHECKING:
     import mujoco
 
     from rtt.studio.scene import StudioScene
 
-__all__ = ["assert_fair", "fairness_problems", "fairness_sha", "wrist_signature"]
+__all__ = ["assert_fair", "fairness_problems", "fairness_sha", "scoring_signature", "wrist_signature"]
 
 
 def _vec(a: Any, digits: int = 9) -> list[float]:
@@ -42,7 +47,7 @@ def _vec(a: Any, digits: int = 9) -> list[float]:
 
 
 def wrist_signature(model: mujoco.MjModel) -> dict[str, Any]:
-    """The five wrist joints and servos, the wrist bodies and the solver options of a model."""
+    """The six wrist joints and servos, the wrist bodies and the solver options of a model."""
     out: dict[str, Any] = {}
     for name in WRIST_JOINTS:
         j, a = model.joint(name), model.actuator(name)
@@ -84,12 +89,24 @@ def wrist_signature(model: mujoco.MjModel) -> dict[str, Any]:
     return out
 
 
+def scoring_signature() -> dict[str, Any]:
+    """The rules a step is scored by, as constants: the success tolerance of every quantity that has
+    one, the penetration limit (mm) and the longest transient above it (ms)."""
+    return {
+        "criterion_tolerance": {k: float(v) for k, v in sorted(CRITERION_TOLERANCE.items())},
+        "penetration_limit_mm": float(HELD_PENETRATION_MAX_MM),
+        "penetration_transient_ms": float(PENETRATION_TRANSIENT_MS),
+    }
+
+
 def fairness_sha(scene: StudioScene) -> str:
-    """sha256 of the scene's wrist signature, task digest and the Studio wrist constants."""
+    """sha256 of the scene's wrist signature, task digest, the Studio wrist constants and the
+    scoring rules (:func:`scoring_signature`)."""
     payload = {
         "contract": CONTRACT_VERSION,
         "wrist": wrist_signature(scene.model),
         "wrist_limits": scene.wrist.to_dict(),
+        "scoring": scoring_signature(),
         "task_digest": scene.task_digest,
     }
     return hashlib.sha256(canonical_json(payload).encode()).hexdigest()

@@ -24,7 +24,7 @@ function Segmented<T extends string | number>({
   disabled?: boolean;
 }) {
   return (
-    <div role="group" aria-label={label} className="inline-flex border border-rule">
+    <div role="group" aria-label={label} className="inline-flex overflow-hidden rounded-md border border-rule">
       {options.map((o) => (
         <button
           key={String(o.id)}
@@ -56,14 +56,14 @@ export function StudioTransport({ disabled = false }: { disabled?: boolean }) {
   const scrubId = useId();
   const span = duration || 1;
   return (
-    <div className="border border-rule bg-paper/80 px-3 py-2.5" data-studio-transport>
+    <div className="rounded-lg border border-rule bg-surface px-3 py-2.5" data-studio-transport>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => store.getState().toggle()}
             disabled={disabled}
-            className="inline-flex h-8 items-center gap-1.5 bg-accent px-3 text-sm text-accent-ink disabled:opacity-50"
+            className="inline-flex h-8 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-semibold text-accent-ink disabled:opacity-50"
           >
             <svg viewBox="0 0 12 12" className="size-3" aria-hidden="true">
               {playing ? <path d="M2 1h3v10H2zM7 1h3v10H7z" fill="currentColor" /> : <path d="M2 1l9 5-9 5z" fill="currentColor" />}
@@ -74,7 +74,7 @@ export function StudioTransport({ disabled = false }: { disabled?: boolean }) {
             type="button"
             onClick={() => store.getState().seek(0)}
             disabled={disabled}
-            className="inline-flex h-8 items-center border border-rule px-2.5 text-sm text-ink-2 hover:text-ink disabled:opacity-50"
+            className="inline-flex h-8 items-center rounded-md border border-rule px-2.5 text-sm text-ink-2 hover:text-ink disabled:opacity-50"
           >
             Restart
           </button>

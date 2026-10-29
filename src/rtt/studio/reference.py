@@ -2,6 +2,7 @@
 
 They exist so the contract runs end to end before the real controllers land (track S2): each
 compiles, plans a short min-jerk wrist path from the step's handle site and keeps the tool open.
+They command all six wrist servos and hold the pitch where the step began.
 
 * ``push``: down onto the handle (the top of a part), 3 mm past contact, back up.
 * ``twist``: down onto the handle, then the wrist roll turns by the step's ``angle_deg`` target
@@ -73,11 +74,13 @@ class ReferenceController:
     SPEED_MM_S: ClassVar[float] = 80.0  # free-space moves
 
     def _wrist_at(self, ctx: StepContext, tcp_point: np.ndarray, yaw: float, roll: float) -> np.ndarray:
-        palm = tcp_point - ctx.tcp_offset(yaw)
-        return np.array([palm[0], palm[1], palm[2], yaw, roll])
+        pitch = ctx.wrist_pitch_start
+        palm = tcp_point - ctx.tcp_offset(yaw, pitch)
+        return np.array([palm[0], palm[1], palm[2], yaw, roll, pitch])
 
     def plan(self, ctx: StepContext, model: mujoco.MjModel, data: mujoco.MjData) -> StepPlan:
-        step, start = ctx.step, np.asarray(ctx.wrist_start, dtype=np.float64)
+        step = ctx.step
+        start = np.append(np.asarray(ctx.wrist_start, dtype=np.float64), ctx.wrist_pitch_start)
         yaw, roll = float(start[3]), float(start[4])
         handle = ctx.observe_site(data, step.handle)
         if ctx.obj.kind is TemplateKind.PART:
@@ -123,7 +126,7 @@ class ReferenceController:
                 self._wrist_at(ctx, beside, yaw, roll),
                 self._wrist_at(ctx, beside + dist * away, yaw, roll),
             ]
-            poses += [poses[-1].copy() + np.array([0.0, 0.0, CLEARANCE, 0.0, 0.0])]
+            poses += [poses[-1].copy() + np.array([0.0, 0.0, CLEARANCE, 0.0, 0.0, 0.0])]
             durations += [0.8, 1.875 * dist / speed, 0.6]
         times = np.concatenate([[0.0], np.cumsum(durations)])
         return StepPlan(

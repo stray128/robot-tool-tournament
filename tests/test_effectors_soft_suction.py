@@ -51,6 +51,7 @@ from rtt.effectors.suction import (
     SealTest,
     SuctionFamily,
     cup_spec,
+    is_frame,
 )
 from rtt.effectors.suction import (
     FIDELITY_CAVEAT as CUP_CAVEAT,
@@ -111,19 +112,22 @@ def nominal(nominal_jobs: list[EffectorJob]) -> dict[tuple[str, str], Any]:
 
 
 @pytest.mark.parametrize(
-    ("family", "cls", "group", "caveat"),
+    ("family", "cls", "group", "caveat", "n_presets"),
     [
-        (EffectorFamily.SUCTION, SuctionFamily, EntrantGroup.SUCTION, CUP_CAVEAT),
-        (EffectorFamily.SOFT_ARM, SoftArmFamily, EntrantGroup.SOFT_ARM, ARM_CAVEAT),
+        # Studio v2 adds two vacuum area frames to the three cups (tests/test_effectors_process.py)
+        (EffectorFamily.SUCTION, SuctionFamily, EntrantGroup.SUCTION, CUP_CAVEAT, 5),
+        (EffectorFamily.SOFT_ARM, SoftArmFamily, EntrantGroup.SOFT_ARM, ARM_CAVEAT, 3),
     ],
 )
-def test_family_registers_as_a_labelled_approximation(family: Any, cls: Any, group: Any, caveat: str) -> None:
+def test_family_registers_as_a_labelled_approximation(
+    family: Any, cls: Any, group: Any, caveat: str, n_presets: int
+) -> None:
     impl = get_family(family)
     assert isinstance(impl, cls) and impl.fidelity is Fidelity.APPROXIMATION
     assert impl.reference_mode == "nominal_episode" and impl.caveat == caveat
     assert "approximation" in caveat.lower() and "not modelled" in caveat.lower()
     specs = impl.presets()
-    assert len(specs) == 3 and len({s.effector_id for s in specs}) == 3
+    assert len(specs) == n_presets and len({s.effector_id for s in specs}) == n_presets
     for s in specs:
         assert s.origin == "preset" and s.group is group and s.fidelity is Fidelity.APPROXIMATION
         assert not find_brand_tokens(s.display_name) and len(s.display_name) <= 60
@@ -197,6 +201,8 @@ def test_param_space_round_trips_through_recipes_and_builds(family: Any, kind: s
 def test_presets_build_with_their_declared_actuation(task: Any) -> None:
     block = get_part("block")
     for spec in presets_of(FAMILIES):
+        if is_frame(spec.params):
+            continue  # a frame has one valve a cup; tests/test_effectors_process.py covers it
         impl = get_family(spec.family)
         scene = build_effector_scene(impl, spec, block, task)
         m, b = scene.model, scene.build

@@ -6,7 +6,7 @@
  * public/data/studio is checked too when it exists.
  */
 
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -52,6 +52,8 @@ import { DataError } from "@/lib/validate";
 const WEB = path.join(__dirname, "..");
 const REPO = path.join(WEB, "..");
 const FIXTURE = path.join(__dirname, "fixtures", "studio");
+/** The published v1 Studio data, kept as a fixture when the v2 heroes replaced it. */
+const V1_FIXTURE = { data: path.join(__dirname, "fixtures", "studio_v1", "data"), site: path.join(__dirname, "fixtures", "studio_v1", "site") };
 const FIX: StudioDirs = { data: path.join(FIXTURE, "data"), site: path.join(FIXTURE, "site"), repo: REPO };
 const published = existsSync(path.join(DEFAULT_DIRS.data, "studio", "index.json"));
 const BRAND = brandPattern(brandTokens(REPO));
@@ -154,7 +156,9 @@ describe("the parsers reject a broken export", () => {
     expect(parseEdited((d) => (d.lanes[0].setup_id = d.best_single.setup_id))).toThrow(/not the page's recommended setup/);
     expect(parseEdited((d) => (d.lanes[0].replay = "studio/replays/f2/recommended"))).toThrow(/under studio\/replays\/f1/);
     expect(parseEdited((d) => (d.lanes[0].segments[1].change = "none"))).toThrow(/tool change or a head switch/);
-    expect(parseEdited((d) => (d.lanes[0].duration_s = 30))).toThrow(/frames at/);
+    // A lane with its own frame times ends on the last one (other lanes are checked against their replay).
+    expect(parseEdited((d) => (d.lanes[0].t = Array.from({ length: d.lanes[0].n_frames }, (_, i) => i / 20)))).toThrow(/last frame is at 9.050 s/);
+    expect(parseEdited((d) => (d.lanes[0].t = [0, 1, 2]))).toThrow(/one time per frame/);
   });
 
   it("counts, rates and packs that do not add up", () => {
@@ -182,6 +186,53 @@ describe("the parsers reject a broken export", () => {
 });
 
 describe("the build-time file checks", () => {
+  it("a uniform lane whose duration does not fit its frames", () => {
+    const page = heroPage();
+    page.lanes[0]!.duration_s = 30;
+    expect(() => checkLaneFiles(page, "studio/f1.json", FIX)).toThrow(/182 frames at 30 fps span 6.033 s/);
+  });
+
+  it("a keyframed lane: its replay header has t and cuts, and the lane's clock ends on t", () => {
+    const dirs = copyFixture();
+    const headerFile = path.join(dirs.data, "studio", "replays", "f1", "recommended.json");
+    const header = JSON.parse(readFileSync(headerFile, "utf8"));
+    // 182 keys: 30 fps up to frame 75 (2.5 s, the end of segment 0), the 1 s change, then 30 fps
+    // again from frame 76 at 3.5 s, where segment 1 starts (a cut). The fps is the recording's.
+    const t = Array.from({ length: header.n_frames }, (_, i) => Number((i < 76 ? i / 30 : (i - 76) / 30 + 3.5).toFixed(6)));
+    const keyframes = { recorded_fps: header.fps, samples: 400, tolerance_mm: 1, max_error_vs_recording_mm: 0.9 };
+    writeFileSync(headerFile, JSON.stringify({ ...header, t, cuts: [76], meta: { ...header.meta, keyframes } }));
+    const pageFile = path.join(dirs.data, "studio", "f1.json");
+    const doc = JSON.parse(readFileSync(pageFile, "utf8"));
+    const lane = doc.lanes.find((l: { id: string }) => l.id === "recommended");
+    const grow = statSync(headerFile).size - (lane.bytes - header.n_frames * header.n_bodies * 28 - (header.overlays ? header.n_frames * header.overlays.channels.length * 2 : 0));
+    lane.bytes += grow;
+    lane.duration_s = t[t.length - 1];
+    lane.max_error_vs_recording_mm = 0.9;
+    const parse = () => parseStudioHero(structuredClone(doc), "studio/f1.json", { brand: BRAND });
+    // The header's times alone: the lane's clock is checked against them.
+    expect(() => checkLaneFiles(parse(), "studio/f1.json", dirs)).not.toThrow();
+    // The lane carrying the same times and cuts.
+    lane.t = t;
+    lane.cuts = [76];
+    expect(parse().lanes[0]!.cuts).toEqual([76]);
+    expect(() => checkLaneFiles(parse(), "studio/f1.json", dirs)).not.toThrow();
+    // A duration that does not end on the last key, times or cuts that differ from the replay's.
+    const bad = (edit: (l: Record<string, any>) => void) => {
+      const d = structuredClone(doc);
+      edit(d.lanes.find((l: { id: string }) => l.id === "recommended"));
+      return () => checkLaneFiles(parseStudioHero(d, "studio/f1.json", { brand: BRAND }), "studio/f1.json", dirs);
+    };
+    expect(bad((l) => delete l.t)).not.toThrow();
+    expect(bad((l) => ((l.duration_s = 6.033), delete l.t))).toThrow(/last frame is at 7.000 s/);
+    expect(bad((l) => (l.cuts = [81]))).toThrow(/cuts \[81\] differ/);
+    expect(bad((l) => (l.t = t.map((v: number, i: number) => (i === 5 ? v + 0.001 : v))))).toThrow(/frame times differ/);
+    // The keyframing error and the encoding are the replay's; a cut sits on a segment start.
+    expect(bad((l) => (l.max_error_vs_recording_mm = 0.5))).toThrow(/error against the recording/);
+    expect(bad((l) => delete l.max_error_vs_recording_mm)).toThrow(/states its error against the recording/);
+    expect(bad((l) => (l.quantised = true))).toThrow(/poses are float32; the page says int16/);
+    expect(bad((l) => (l.segments[1].start_s = 3.6))).toThrow(/is not at segment 1's start/);
+  });
+
   it("a lane whose bytes differ from its files", () => {
     const page = heroPage();
     page.lanes[0]!.bytes += 1;
@@ -278,7 +329,7 @@ describe("lanes on the clock", () => {
 
   it("says how a run ends", () => {
     expect(outcomeText(lane, plan)).toBe("Completed in 6.0 s");
-    expect(outcomeText(heroPage().lanes[1]!, plan)).toBe("Stopped at 2. Twist cap: slip");
+    expect(outcomeText(heroPage().lanes[1]!, plan)).toBe("Stopped at 2. Twist cap: slipped");
     expect(runEnd(heroPage().lanes[1]!)).toBeCloseTo(5.9);
   });
 });
@@ -367,7 +418,9 @@ describe("the server-rendered sections", () => {
     expect(all).toContain("No setup completes this task");
     expect(all).toContain("0.09 to 1.15 N m against at least 3 N m, at most 8 N m");
     expect(all).toContain("verify on hardware");
-    expect(all).toContain("Edit this plan on /studio/new/");
+    expect(all).toContain("Plan your own task");
+    expect(all).not.toContain("/studio/new/"); // no raw route on screen
+    expect(html[3]).toMatch(/data-edit-plan="true" href="[^"]*\/studio\/?#plan"/); // the planner on the Studio page
     expect(all).toContain("nothing to pack");
     expect(all).toMatch(/Download the build pack \(zip, \d/);
     expect(all).not.toMatch(/http|www\./i);
@@ -376,7 +429,7 @@ describe("the server-rendered sections", () => {
     expect(html[4]).toContain('href="https://example.org/upstream/gripper"');
     expect(html[4]).toContain(`href="${BASE_PATH}/data/studio/f1/build_pack.zip"`);
     // A caveat shared by later steps is written out once (the published two-tool head repeats one).
-    const h1 = published ? getStudioHero("h1") : undefined;
+    const h1 = getStudioHero("h1", { ...V1_FIXTURE, repo: REPO });
     if (h1?.recommendation) {
       const card = text(renderToStaticMarkup(h(RecommendationCard, { rec: h1.recommendation, plan: h1.plan, bestSingle: h1.best_single })));
       const caveats = h1.recommendation.steps.flatMap((s) => s.caveats);

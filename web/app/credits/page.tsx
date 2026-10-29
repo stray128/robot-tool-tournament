@@ -299,7 +299,8 @@ export default function CreditsPage() {
 
       <Section id="fonts" title="Fonts">
         <Credit name="Archivo (Omnibus-Type)" licence="OFL-1.1" />
-        <Credit name="B612 Mono (Airbus, Intactile Design)" licence="OFL-1.1" />
+        <Credit name="Atkinson Hyperlegible Next (Braille Institute of America)" licence="OFL-1.1" />
+        <Credit name="Red Hat Mono (Red Hat)" licence="OFL-1.1" />
       </Section>
 
       <TitleBlock title="Credits" drawing="/credits" sheet="Appendix" />

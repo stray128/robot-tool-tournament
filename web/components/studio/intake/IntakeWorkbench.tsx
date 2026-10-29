@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { type DragEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { apiBase } from "@/lib/api";
 import { formatBytes, formatInt } from "@/lib/format";
+import { PREFILL_KEY } from "@/lib/site";
 import { binaryTriangleCount, checkStlBuffer, checkStlFile, guessUnit, measurePositions, toMillimetres, type Vec3 } from "@/lib/stl";
 
 import { planLive, type PlanResultView, type RemoteVerdict, uploadStl, validateRemote } from "./api";
@@ -17,6 +19,8 @@ export interface RecordedExample extends PlanResultView {
   text: string;
   hero: boolean;
   expect: "plan" | "refusal";
+  /** When this example was recorded live (the v2 heroes and the v1 test set were recorded apart). */
+  recorded_at?: string;
 }
 
 export interface RecordedPlans {
@@ -104,7 +108,16 @@ async function readStl(file: File): Promise<LoadedStl> {
  * edit the step list. Without NEXT_PUBLIC_API_URL (the public static site) Plan replays the
  * recorded plan of an example, calls and all; with it, Plan calls the local API (passcode).
  */
-export default function IntakeWorkbench({ catalog, recorded }: { catalog: Catalog; recorded: RecordedPlans }) {
+export default function IntakeWorkbench({
+  catalog,
+  recorded,
+  results = {},
+}: {
+  catalog: Catalog;
+  recorded: RecordedPlans;
+  /** Recorded use cases with a results page: case id to its route. */
+  results?: Record<string, string>;
+}) {
   const base = useMemo(() => apiBase(), []);
   const live = base !== null;
   const heroes = recorded.examples.filter((e) => e.hero);
@@ -135,6 +148,27 @@ export default function IntakeWorkbench({ catalog, recorded }: { catalog: Catalo
     clearTimers();
     abort.current?.abort();
   }, []);
+
+  // Text handed over by the home page's question box (session storage), a ?q= link or an
+  // ?example=<id> link: prefill it and plan it once, as if the visitor had pressed Plan.
+  const [pendingPlan, setPendingPlan] = useState(false);
+  useEffect(() => {
+    let incoming: string | null = null;
+    try {
+      incoming = sessionStorage.getItem(PREFILL_KEY);
+      if (incoming) sessionStorage.removeItem(PREFILL_KEY);
+    } catch {
+      incoming = null;
+    }
+    const params = new URLSearchParams(window.location.search);
+    if (!incoming) incoming = params.get("q");
+    const ex = params.get("example");
+    if (!incoming && ex) incoming = recorded.examples.find((e) => e.case_id === ex || e.case_id.startsWith(`${ex}_`))?.text ?? null;
+    if (incoming && incoming.trim()) {
+      setText(incoming.trim().slice(0, 2000));
+      setPendingPlan(true);
+    }
+  }, [recorded]);
 
   const verdict = useMemo(() => (plan ? validatePlan(catalog, plan, uploads) : null), [catalog, plan, uploads]);
   useEffect(() => {
@@ -243,9 +277,17 @@ export default function IntakeWorkbench({ catalog, recorded }: { catalog: Catalo
       return;
     }
     setMessage(
-      "This static site has no model to call: it replays the recorded plans of the examples. Pick an example, or build a plan by hand below. To plan your own text, run the local API and build the site with NEXT_PUBLIC_API_URL set.",
+      "This public site runs in Explore mode: it has no model to call, so it can only replay the recorded plans of the examples. Pick an example, or build your plan by hand below. To plan your own words, run the Studio locally with its API.",
     );
   }
+
+  useEffect(() => {
+    if (!pendingPlan || !text) return;
+    setPendingPlan(false);
+    onPlan();
+    // onPlan reads the text just set; it runs once per hand-over.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingPlan, text]);
 
   /** A hand-built plan with one step of `prim` on a default object it acts on. */
   function startFrom(prim: string) {
@@ -290,9 +332,9 @@ export default function IntakeWorkbench({ catalog, recorded }: { catalog: Catalo
                 type="button"
                 onClick={() => pickExample(e.case_id)}
                 aria-pressed={text === e.text}
-                className={`border px-3 py-2 text-left text-sm transition-colors ${text === e.text ? "border-accent bg-accent-soft" : "border-rule-strong hover:bg-paper-2"}`}
+                className={`rounded-lg border px-3 py-2 text-left text-sm transition-colors ${text === e.text ? "border-accent bg-accent-soft" : "border-rule-strong hover:bg-paper-2"}`}
               >
-                <span className="block text-xs uppercase tracking-wide text-ink-3">{e.setting}</span>
+                <span className="block text-xs text-ink-3">{e.setting.charAt(0).toUpperCase() + e.setting.slice(1)}</span>
                 <span className="block text-ink">{e.title}</span>
               </button>
             ))}
@@ -301,7 +343,7 @@ export default function IntakeWorkbench({ catalog, recorded }: { catalog: Catalo
             <label className="mt-3 grid gap-1 text-sm">
               <span className="text-xs text-ink-3">More recorded descriptions (the rest of the planner&apos;s test set)</span>
               <select
-                className="border border-rule-strong bg-paper px-2 py-1.5 text-ink"
+                className="rounded-md border border-rule-strong bg-surface px-2 py-1.5 text-ink"
                 value={recorded.examples.find((e) => e.text === text && !e.hero)?.case_id ?? ""}
                 onChange={(e) => e.target.value && pickExample(e.target.value)}
               >
@@ -324,7 +366,7 @@ export default function IntakeWorkbench({ catalog, recorded }: { catalog: Catalo
               rows={6}
               maxLength={2000}
               placeholder="For example: open the hinged lid of the tote, put the carton from the bench in it, close the lid."
-              className="w-full border border-rule-strong bg-paper px-3 py-2 text-ink"
+              className="w-full rounded-lg border border-rule-strong bg-surface px-3 py-2 text-ink focus:border-accent/70"
             />
           </label>
 
@@ -335,7 +377,7 @@ export default function IntakeWorkbench({ catalog, recorded }: { catalog: Catalo
             }}
             onDragLeave={() => setDragging(false)}
             onDrop={onDrop}
-            className={`mt-4 flex cursor-pointer flex-col gap-1 border border-dashed px-4 py-3 text-sm focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent ${
+            className={`mt-4 flex cursor-pointer flex-col gap-1 rounded-lg border border-dashed px-4 py-3 text-sm focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent ${
               dragging ? "border-accent bg-accent-soft" : "border-rule-strong bg-paper-2/40 hover:bg-paper-2/70"
             }`}
           >
@@ -383,7 +425,7 @@ export default function IntakeWorkbench({ catalog, recorded }: { catalog: Catalo
           <h2 id="plan-title" className="heading flex items-baseline gap-3 text-xl">
             <span className="num text-sm text-accent">02</span> Plan it
           </h2>
-          <div className="mt-4 border border-rule bg-paper/80 p-4">
+          <div className="panel mt-4 p-4">
             <p className="flex flex-wrap items-center gap-2 text-sm">
               <span className={`stamp ${live ? "text-pass" : "text-pending"}`}>{live ? "LIVE" : "RECORDED PLANS"}</span>
               <span className="text-ink-2">
@@ -411,13 +453,13 @@ export default function IntakeWorkbench({ catalog, recorded }: { catalog: Catalo
                   value={passcode}
                   onChange={(e) => setPasscode(e.target.value)}
                   disabled={busy}
-                  className="border border-rule-strong bg-paper px-2 py-1.5 text-ink"
+                  className="rounded-md border border-rule-strong bg-surface px-2 py-1.5 text-ink"
                 />
                 <span className="text-xs text-ink-3">A new description calls a paid model, so the API asks for it. It goes in a request header, never in a URL.</span>
               </label>
             ) : null}
             <div className="mt-5 flex flex-wrap items-center gap-3">
-              <button type="button" onClick={onPlan} disabled={busy} className="bg-accent px-5 py-2.5 text-accent-ink disabled:cursor-not-allowed disabled:opacity-50">
+              <button type="button" onClick={onPlan} disabled={busy} className="btn btn-primary" data-plan-button>
                 Plan
               </button>
               <button
@@ -491,7 +533,9 @@ export default function IntakeWorkbench({ catalog, recorded }: { catalog: Catalo
                         : result.repaired
                           ? "Valid after one repair call."
                           : ""}{" "}
-                    {shown!.source === "recorded" ? `Recorded live on ${recorded.recorded_at.slice(0, 10)}; replayed, no model called.` : "Planned live."}{" "}
+                    {shown!.source === "recorded"
+                      ? `Recorded live on ${(recorded.examples.find((e) => e.case_id === shown!.caseId)?.recorded_at || recorded.recorded_at).slice(0, 10)}; replayed, no model called.`
+                      : "Planned live."}{" "}
                     {shown!.spend ?? ""}
                   </p>
                   {result.layout_moves?.length ? (
@@ -504,6 +548,14 @@ export default function IntakeWorkbench({ catalog, recorded }: { catalog: Catalo
                     </ul>
                   ) : null}
                   {result.notes.length ? <p className="mt-1 text-xs text-ink-3">{result.notes.join(" ")}</p> : null}
+                  {shown?.caseId && results[shown.caseId] ? (
+                    <p className="mt-3 flex flex-wrap items-center gap-3">
+                      <Link href={results[shown.caseId]!} className="btn btn-quiet" data-recorded-results>
+                        See how every tool did on this task
+                      </Link>
+                      <span className="text-xs text-ink-3">Recorded test results: the screen, the recommendation and the replays.</span>
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -534,7 +586,7 @@ export default function IntakeWorkbench({ catalog, recorded }: { catalog: Catalo
         </div>
 
         {refusal ? (
-          <div className="mt-4 border border-pending p-4">
+          <div className="mt-4 rounded-lg border border-pending p-4">
             <p className="text-sm text-ink">
               <span className="stamp mr-2 text-pending">NOT SIMULATED</span>
               {refusal.refusal}
@@ -614,7 +666,7 @@ export default function IntakeWorkbench({ catalog, recorded }: { catalog: Catalo
         ) : null}
 
         {!plan ? (
-          <p className="mt-4 border border-dashed border-rule-strong p-6 text-sm text-ink-3">Plan a use case, or build one by hand, to edit its steps here. Nothing runs until you export the plan.</p>
+          <p className="mt-4 rounded-lg border border-dashed border-rule-strong p-6 text-sm text-ink-3">Plan a use case, or build one by hand, to edit its steps here. Nothing runs until you export the plan.</p>
         ) : null}
 
         {plan && !refusal ? (
@@ -623,7 +675,7 @@ export default function IntakeWorkbench({ catalog, recorded }: { catalog: Catalo
               type="button"
               disabled={!exportText}
               onClick={() => exportText && download(`taskspec-${(id ?? "plan").slice(0, 12)}.json`, `${exportText}\n`)}
-              className="bg-accent px-4 py-2 text-accent-ink disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn btn-primary"
             >
               Download TaskSpec JSON
             </button>
@@ -631,7 +683,7 @@ export default function IntakeWorkbench({ catalog, recorded }: { catalog: Catalo
               type="button"
               disabled={!exportText}
               onClick={() => exportText && void navigator.clipboard?.writeText(exportText)}
-              className="border border-rule-strong px-4 py-2 text-ink hover:bg-paper-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn btn-quiet"
             >
               Copy JSON
             </button>

@@ -32,9 +32,9 @@ function Counts({ index }: { index: LibraryIndex }) {
     { label: "Excluded, red", value: c.excluded_red },
   ];
   return (
-    <dl className="mt-8 grid grid-cols-2 border-l border-t border-rule-strong sm:grid-cols-4 lg:grid-cols-8" aria-label="Library in numbers" data-library-counts>
+    <dl className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-rule bg-rule sm:grid-cols-4 lg:grid-cols-8" aria-label="Library in numbers" data-library-counts>
       {cells.map((cell) => (
-        <div key={cell.label} className="border-b border-r border-rule-strong px-3 py-2">
+        <div key={cell.label} className="bg-surface px-3 py-2">
           <dt className="text-xs text-ink-3">{cell.label}</dt>
           <dd className="num text-2xl text-ink">{cell.value}</dd>
           {cell.note ? <dd className="text-xs text-ink-3">{cell.note}</dd> : null}
@@ -84,8 +84,7 @@ export default function LibraryPage() {
 
   return (
     <>
-      <ProductModeBanner detail={false} />
-      <PageHeader title="Effector library" lede={lede}>
+      <PageHeader title="Library" lede={lede}>
         <p className="prose-measure text-sm text-ink-3">
           Each entrant is built in the tournament&apos;s shared scene on the training parts. That gate, and its nominal
           episodes, are product mode. The benchmark&apos;s pre-registered result is on{" "}
@@ -94,6 +93,7 @@ export default function LibraryPage() {
           </Link>
           .
         </p>
+        <ProductModeBanner detail={false} />
       </PageHeader>
 
       <Counts index={index} />

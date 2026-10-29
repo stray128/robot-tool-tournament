@@ -41,10 +41,13 @@ import numpy as np
 
 from rtt.sim.scene import OBJECT_RGBA
 from rtt.studio.templates import (
+    FRAME_RGBA,
+    FRICTION_SOLIMP,
     ResolvedHandles,
     TemplateBuilder,
     TemplateContext,
     TemplateHandles,
+    quat_z,
     register_template_builder,
 )
 from rtt.studio.types import TemplateKind
@@ -57,12 +60,6 @@ RUNNING_FRACTION: Final = 0.25  # of torque_nm when there is a detent [assumed]
 FIN_FRACTION: Final = 0.20
 SLOT_FRACTION: Final = 0.30
 DENSITY: Final = 2000.0  # kg/m^3, a filled polymer or zinc-alloy head [assumed]
-FRAME_RGBA: Final = (0.55, 0.58, 0.62, 1.0)
-FRICTION_SOLIMP: Final = (0.999, 0.9999, 0.0001, 0.5, 2.0)  # a near-hard dry friction (no creep)
-
-
-def _quat_z(angle: float) -> list[float]:
-    return [math.cos(0.5 * angle), 0.0, 0.0, math.sin(0.5 * angle)]
 
 
 def _segment_prism(r: float, y0: float, z0: float, z1: float, n: int = 10) -> list[float]:
@@ -92,7 +89,7 @@ class QuarterTurnLatchBuilder(TemplateBuilder):
         panel = ctx.spec.worldbody.add_body(
             name=f"{p}panel",
             pos=[pose.x_mm / 1000.0, pose.y_mm / 1000.0, ctx.table_top_z],
-            quat=_quat_z(yaw),
+            quat=quat_z(yaw),
         )
         panel.add_geom(
             name=f"{p}plate",

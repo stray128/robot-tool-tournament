@@ -40,10 +40,12 @@ import numpy as np
 
 from rtt.sim.scene import OBJECT_RGBA
 from rtt.studio.templates import (
+    FRAME_RGBA,
     ResolvedHandles,
     TemplateBuilder,
     TemplateContext,
     TemplateHandles,
+    quat_z,
     register_template_builder,
 )
 from rtt.studio.types import TemplateKind
@@ -63,11 +65,6 @@ PAD_SQUEEZE: Final = 0.0004  # m: a centred plug pushes each pad out this far
 GROOVE_DEPTH: Final = 0.0008  # m
 TIP_CHAMFER: Final = 0.0006  # m, the plug's own tip chamfer [assumed]
 SEAT_TOL: Final = 0.0001  # m: a plug this close to the floor reads as seated (full depth)
-FRAME_RGBA: Final = (0.55, 0.58, 0.62, 1.0)
-
-
-def _quat_z(angle: float) -> list[float]:
-    return [math.cos(0.5 * angle), 0.0, 0.0, math.sin(0.5 * angle)]
 
 
 class PortPlugBuilder(TemplateBuilder):
@@ -85,7 +82,7 @@ class PortPlugBuilder(TemplateBuilder):
         yaw = math.radians(pose.yaw_deg)
         c, s = math.cos(yaw), math.sin(yaw)
         origin = np.array([pose.x_mm / 1000.0, pose.y_mm / 1000.0, ctx.table_top_z])
-        socket = ctx.spec.worldbody.add_body(name=f"{p}socket", pos=origin.tolist(), quat=_quat_z(yaw))
+        socket = ctx.spec.worldbody.add_body(name=f"{p}socket", pos=origin.tolist(), quat=quat_z(yaw))
         socket.add_geom(
             name=f"{p}floor",
             type=mujoco.mjtGeom.mjGEOM_CYLINDER,
@@ -160,7 +157,7 @@ class PortPlugBuilder(TemplateBuilder):
 
         offset = r_out / math.cos(half) + PLUG_GAP + 0.5 * dia
         start = origin + np.array([c * offset, s * offset, 0.5 * plen])
-        plug = ctx.spec.worldbody.add_body(name=f"{p}plug", pos=start.tolist(), quat=_quat_z(yaw))
+        plug = ctx.spec.worldbody.add_body(name=f"{p}plug", pos=start.tolist(), quat=quat_z(yaw))
         plug.add_freejoint(name=f"{p}free")
         bodies.append(f"{p}plug")
         rp = 0.5 * dia

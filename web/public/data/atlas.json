@@ -1,0 +1,5398 @@
+{
+ "schema": "rtt-web-atlas",
+ "version": 1,
+ "generated": "2026-10-26",
+ "note": "Researched jobs and the setup an experienced integrator would expect for each. Research estimates, not simulation results, except where a task links to a worked example.",
+ "domains": [
+  {
+   "id": "construction",
+   "title": "Construction"
+  },
+  {
+   "id": "manufacturing",
+   "title": "Factories, warehouses and retail"
+  },
+  {
+   "id": "lab_food_service",
+   "title": "Labs, food and services"
+  }
+ ],
+ "tasks": [
+  {
+   "id": "con_solar_module_install",
+   "domain": "construction",
+   "setting": "construction",
+   "title": "Utility-scale solar module installation on trackers",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "module from the crate",
+     "note": "Use a vacuum frame and blow off dust before sealing."
+    },
+    {
+     "verb": "place",
+     "object": "module onto the rail or torque-tube clamps",
+     "note": "One deployed system reports placement within plus or minus 1 mm."
+    },
+    {
+     "verb": "torque",
+     "object": "clamp bolts to spec",
+     "note": "Shared mid-clamps are torqued as the next module goes on."
+    }
+   ],
+   "setup": {
+    "kind": "two_tool_head",
+    "tools": [
+     "Vacuum frame, 4 to 6 cups, per-cup vacuum, blow-off",
+     "Nut runner on a short offset axis"
+    ]
+   },
+   "why": "The module must never sit unsecured in wind. A vacuum frame with an offset nut runner torques the shared clamp while the new module is still held, so one arm does what production systems do with two.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": "h5_solar",
+    "match": "same"
+   },
+   "demo_score": 5,
+   "sources": [
+    {
+     "url": "https://www.aes.com/about-us/innovation/maximo"
+    },
+    {
+     "url": "https://www.aes.com/sites/aesvault.com/files/2025-05/Maximo-Fact-Sheet-May-2025.pdf"
+    },
+    {
+     "url": "https://www.pv-tech.org/accelerating-solar-deployment-through-robotics/"
+    },
+    {
+     "url": "https://www.kuka.com/en-us/industries/solutions-database/2025/12/automating-solar-panel-installation"
+    },
+    {
+     "url": "https://www.robotsinconstruction.com/jobs/utility-scale-solar-installation/"
+    },
+    {
+     "url": "https://patentsgazette.uspto.gov/week10/OG/html/1544-2/US12569987-20260310.html"
+    }
+   ]
+  },
+  {
+   "id": "con_roof_shingle_nailing",
+   "domain": "construction",
+   "setting": "construction",
+   "title": "Asphalt shingle roofing: place and nail shingles",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "shingle from the hopper",
+     "note": "Paired suction cups give a fallback when one lands on an edge."
+    },
+    {
+     "verb": "place",
+     "object": "shingle to the course line",
+     "note": "A camera on the previous course checks exposure and offset."
+    },
+    {
+     "verb": "nail",
+     "object": "shingle along the nail line",
+     "note": "Drive 4 to 6 nails while the shingle is still held."
+    }
+   ],
+   "setup": {
+    "kind": "two_tool_head",
+    "tools": [
+     "Suction cup array, single and paired cups",
+     "Coil nailers, 2 to 4, fixed along the nail line"
+    ]
+   },
+   "why": "A floppy shingle cannot be re-registered after release, so it must stay held at its course line while nailed. Nailers on the same head make that possible.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 5,
+   "sources": [
+    {
+     "url": "https://techcrunch.com/2024/08/20/watch-this-robot-quickly-install-roof-shingles/"
+    },
+    {
+     "url": "https://techcrunch.com/2023/03/02/renovate-is-building-robots-to-install-roof-shingles/"
+    },
+    {
+     "url": "https://www.patents-review.com/a/20240018786-devices-configured-operate-angled-surface-systems-methods.html"
+    },
+    {
+     "url": "https://www.youtube.com/watch?v=Z3IIn3P5UVc"
+    },
+    {
+     "url": "https://www.robotsinconstruction.com/jobs/roofing/"
+    },
+    {
+     "url": "https://www.bls.gov/charts/census-of-fatal-occupational-injuries/rate-and-number-of-fatal-work-injuries-in-selected-occupations.htm"
+    }
+   ]
+  },
+  {
+   "id": "con_interior_spray_painting",
+   "domain": "construction",
+   "setting": "construction",
+   "title": "Interior wall and ceiling spray painting",
+   "subtasks": [
+    {
+     "verb": "mask",
+     "object": "trims, openings and floor",
+     "note": "The crew does this and the robot avoids masked zones."
+    },
+    {
+     "verb": "spray",
+     "object": "wall and ceiling field in overlapping passes",
+     "note": "Constant standoff and overlap set coverage and film uniformity."
+    },
+    {
+     "verb": "touch up",
+     "object": "edges and missed spots",
+     "note": "A camera inspects, then touch-up is by hand or a second pass."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Airless spray gun with fan tip and standoff sensor"
+    ]
+   },
+   "why": "One nozzle on a lift-mounted arm covers walls and ceilings, and standoff and overlap control the result. A dual-nozzle bar only adds throughput. A roller wins only where overspray is unacceptable.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 5,
+   "sources": [
+    {
+     "url": "https://okibo.com/"
+    },
+    {
+     "url": "https://okibo.com/okibo-unleashes-blaster-technology-a-breakthrough-in-autonomous-high-speed-coating-for-the-construction-industry/"
+    },
+    {
+     "url": "https://www.robotsinconstruction.com/robots/okibo-paint/"
+    },
+    {
+     "url": "https://www.robotsinconstruction.com/jobs/interior-finishes/"
+    },
+    {
+     "url": "https://linkedin.com/company/bright-dream-robotics-co-ltd"
+    },
+    {
+     "url": "https://www.marketsandmarkets.com/ResearchInsight/architectural-painting-robot-companies.asp"
+    },
+    {
+     "url": "https://www.abc.org/News-Media/News-Releases/abc-construction-industry-must-attract-349000-workers-in-2026-despite-macroeconomic-headwinds"
+    }
+   ]
+  },
+  {
+   "id": "con_overhead_drilling_anchors",
+   "domain": "construction",
+   "setting": "construction",
+   "title": "Ceiling drilling and anchor installation",
+   "subtasks": [
+    {
+     "verb": "locate",
+     "object": "hole position from the plan",
+     "note": "Use a total station or building model and avoid rebar."
+    },
+    {
+     "verb": "drill",
+     "object": "hole to diameter and depth",
+     "note": "Use dust extraction and depth sensing."
+    },
+    {
+     "verb": "set",
+     "object": "anchor in the hole",
+     "note": "Hammer-set or torque-set, a step some deployed systems skip."
+    }
+   ],
+   "setup": {
+    "kind": "tool_change",
+    "tools": [
+     "Rotary hammer with dust shroud and depth stop",
+     "Anchor-setting tool with anchor feeder"
+    ]
+   },
+   "why": "Drill every hole in reach, swap once, set every anchor, then move the base. Batching makes the swap almost free and covers anchor setting, where the remaining labour is.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://www.hilti.com/content/hilti/W1/US/en/business/business/trends/jaibot.html"
+    },
+    {
+     "url": "https://www.hilti.group/content/hilti/CP/XX/en/company/media-relations/media-releases/hilti_releases_new_features_jaibot_2022.html"
+    },
+    {
+     "url": "https://www.robotsinconstruction.com/robots/hilti-jaibot/"
+    },
+    {
+     "url": "https://essential.construction/news/hiltis-robot-breaks-records-on-a-yit-construction-site/"
+    },
+    {
+     "url": "https://group.schindler.com/en/company/innovations/schindler-rise.html"
+    },
+    {
+     "url": "https://new.abb.com/news/detail/53854/autonomous-drilling-robot-debut"
+    },
+    {
+     "url": "https://www.skanska.com/uk/en-gb/news-insights/press-releases/2025/skanska-brings-cutting-edge-technology-to-london"
+    },
+    {
+     "url": "https://www.robotsinconstruction.com/jobs/mep-installation/"
+    },
+    {
+     "url": "https://probuildrobotics.com/drill_screw_robot/"
+    }
+   ]
+  },
+  {
+   "id": "con_floor_tile_setting",
+   "domain": "construction",
+   "setting": "construction",
+   "title": "Floor tile setting: spread adhesive, place and level tiles",
+   "subtasks": [
+    {
+     "verb": "spread",
+     "object": "adhesive bed on the slab",
+     "note": "Production robots spread one lane at a time from an applicator on the mobile base."
+    },
+    {
+     "verb": "place",
+     "object": "tile onto the bed at joint offset",
+     "note": "Vision sets the joint, so no plastic spacers are needed."
+    },
+    {
+     "verb": "tamp and level",
+     "object": "tile to height",
+     "note": "Vibrate or press until lippage to neighbours is under about 1 mm."
+    }
+   ],
+   "setup": {
+    "kind": "tool_change",
+    "tools": [
+     "Hose-fed notched-trowel or bead-extruder spreader",
+     "Vacuum pad array, 4 to 6 cups, with vibration tamper"
+    ]
+   },
+   "why": "Spread one lane, swap once, then set it, so the swap stays cheap. The tamper sits inside the vacuum head because the tile must be vibrated into the bed.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": "h6_tile",
+    "match": "same"
+   },
+   "demo_score": 5,
+   "sources": [
+    {
+     "url": "https://www.red-dot.org/project/floor-tile-paving-robot-r-19-58278"
+    },
+    {
+     "url": "https://www.partnerrobotics.com/pages/faqs"
+    },
+    {
+     "url": "https://www.robotsinconstruction.com/robots/pavepal-tiling/"
+    },
+    {
+     "url": "https://www.innogreen.com.sg/_files/ugd/77bb48_436c5b4bb98549268fe7c20c4fc26c6a.pdf"
+    },
+    {
+     "url": "https://www.humanfriendly.bot/"
+    },
+    {
+     "url": "https://www.protradecraft.com/construction-phase/tile-flooring-drywall/video/55181506/this-robot-sets-tile-twice-as-fast-as-a-human"
+    },
+    {
+     "url": "https://www.legendrobot.com/products/tile-laying-robot/"
+    },
+    {
+     "url": "https://www.straitstimes.com/singapore/housing/robots-that-paint-and-lay-floor-tiles-are-revolutionising-construction-in-singapore"
+    },
+    {
+     "url": "https://www.robotsinconstruction.com/jobs/flooring-installation/"
+    },
+    {
+     "url": "https://www.bls.gov/ooh/construction-and-extraction/tile-and-marble-setters.htm"
+    },
+    {
+     "url": "https://www.abc.org/News-Media/News-Releases/abc-construction-industry-must-attract-349000-workers-in-2026-despite-macroeconomic-headwinds"
+    }
+   ]
+  },
+  {
+   "id": "con_drywall_hanging",
+   "domain": "construction",
+   "setting": "construction",
+   "title": "Drywall hanging on walls and ceilings",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "board from the stack",
+     "note": "Use a vacuum frame and separate the top sheet."
+    },
+    {
+     "verb": "position",
+     "object": "board against studs or ceiling grid",
+     "note": "It must stay held until the first screws are in."
+    },
+    {
+     "verb": "drive",
+     "object": "screws along the framing members",
+     "note": "Limit depth so heads dimple the paper without tearing it."
+    }
+   ],
+   "setup": {
+    "kind": "two_tool_head",
+    "tools": [
+     "Board vacuum frame, 4 to 6 foam cups, dual circuit",
+     "Autofeed screw spindle on a short linear axis"
+    ]
+   },
+   "why": "The board must stay flat against the framing while the first screws go in, and one arm cannot swap tools mid-hold. A spindle on the vacuum frame lets the arm hold and fasten in one pose.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://www.aist.go.jp/aist_e/list/latest_research/2018/20181116/en20181116.html"
+    },
+    {
+     "url": "https://www.shimz.co.jp/en/company/about/news-release/2018/2018006.html"
+    },
+    {
+     "url": "https://www.shimz.co.jp/en/topics/construction/item12/"
+    },
+    {
+     "url": "https://www.ipros.com/en/product/detail/2000339349/"
+    },
+    {
+     "url": "https://exa.ai/library/legal/patent/79jt2jq7pxn"
+    },
+    {
+     "url": "https://www.iaarc.org/publications/2025_proceedings_of_the_42nd_isarc_montreal_canada/autonomous_construction_robot_with_telescopic_arm_for_drywall_panel_installation.html"
+    },
+    {
+     "url": "https://www.robotsinconstruction.com/robots/family/kobots/"
+    },
+    {
+     "url": "https://www.robotsinconstruction.com/jobs/interior-finishes/"
+    },
+    {
+     "url": "https://www.abc.org/News-Media/News-Releases/abc-construction-industry-must-attract-349000-workers-in-2026-despite-macroeconomic-headwinds"
+    }
+   ]
+  },
+  {
+   "id": "con_bricklaying",
+   "domain": "construction",
+   "setting": "construction",
+   "title": "Bricklaying: butter, lay and level bricks to the line",
+   "subtasks": [
+    {
+     "verb": "butter",
+     "object": "brick with mortar",
+     "note": "Bed and head joints are buttered at a station before placing."
+    },
+    {
+     "verb": "lay",
+     "object": "brick to the line and level",
+     "note": "A camera corrects for how the brick sits in the gripper, with joints of about 10 mm."
+    },
+    {
+     "verb": "strike",
+     "object": "mortar joints",
+     "note": "This step stays with the mason in every deployed system."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Parallel brick clamp, long flat padded jaws",
+     "Camera for brick offset in the jaws"
+    ]
+   },
+   "why": "A padded parallel clamp grips a rigid brick repeatably and leaves the bed and head faces free for mortar. Mortar comes from a fixed buttering station or a separate mortar robot, so the arm never changes tools.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 5,
+   "sources": [
+    {
+     "url": "https://sites.psu.edu/constructionrobotics/semi-automated-mason-sam/"
+    },
+    {
+     "url": "https://www.aon.com/getmedia/634d53cc-8879-4e60-89f0-f33c4fc0666c/Construction-Robotics-SAM-Tech.aspx"
+    },
+    {
+     "url": "https://www.technologyreview.com/2015/09/02/10587/robots-lay-three-times-as-many-bricks-as-construction-workers"
+    },
+    {
+     "url": "https://buildmonumental.substack.com/p/can-robots-build-pretty-things"
+    },
+    {
+     "url": "https://www.pbctoday.co.uk/news/digital-construction-news/construction-technology-news/robot-bricklayers-uk-new-startup/137151/"
+    },
+    {
+     "url": "https://www.robotsinconstruction.com/jobs/masonry-installation/"
+    },
+    {
+     "url": "https://www.cpwrconstructionsolutions.org/masonry/solution/1055/bricklaying-robotic-system.html"
+    }
+   ]
+  },
+  {
+   "id": "con_rebar_tying",
+   "domain": "construction",
+   "setting": "construction",
+   "title": "Rebar tying at bar intersections",
+   "subtasks": [
+    {
+     "verb": "locate",
+     "object": "rebar intersection",
+     "note": "A camera finds the crossings without pre-mapping in one deployed system."
+    },
+    {
+     "verb": "position",
+     "object": "tying tool around the intersection",
+     "note": "The jaws must enclose both bars."
+    },
+    {
+     "verb": "tie",
+     "object": "wire wrap and twist",
+     "note": "One tool cycle takes about a second."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Automatic rebar tying tool",
+     "Camera"
+    ]
+   },
+   "why": "The tie itself is a solved product, so the integrator buys a tying unit and only solves positioning. A gripper plus a wire twister would reinvent the tool.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://www.constructionrobots.com/tybot"
+    },
+    {
+     "url": "https://www.equipmentworld.com/roadbuilding-equipment/article/15684551/new-generation-of-rebartying-robot-tybot-30-hits-the-market"
+    },
+    {
+     "url": "https://www.enr.com/articles/56551-robot-performs-1-100-rebar-ties-per-hour-on-wisconsin-bridge-job"
+    },
+    {
+     "url": "https://constructionrobots.com/news/tybot-case-study-koppel-bridge"
+    },
+    {
+     "url": "https://www.prnewswire.com/news-releases/max-to-exhibit-at-world-of-concrete-2025-introducing-autonomous-mobile-tying-robot-rebar-tying-unit-for-automation-302351224.html"
+    },
+    {
+     "url": "https://www.max-ltd.co.jp/en/about/ir/upload_file/m004-m004_01/tansinEN_FY2026q2_qa2.pdf"
+    },
+    {
+     "url": "https://www.robotsinconstruction.com/jobs/concrete-construction/"
+    }
+   ]
+  },
+  {
+   "id": "con_glazing_install",
+   "domain": "construction",
+   "setting": "construction",
+   "title": "Window and glass panel installation",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "glass unit from the stillage",
+     "note": "A vacuum frame picks from a tilted rack."
+    },
+    {
+     "verb": "insert",
+     "object": "unit into the frame on setting blocks",
+     "note": "Tilt and translate with clearance on every side and a force-limited set-down."
+    },
+    {
+     "verb": "hold",
+     "object": "unit while beads or clips are fixed",
+     "note": "Fixing stays with the glazier."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Vacuum pad frame, 4 to 8 pads, dual circuit",
+     "Low-vacuum alarm",
+     "5 to 6 axis manipulator"
+    ]
+   },
+   "why": "Glazing robots on the market all use a multi-pad, dual-circuit vacuum frame, so the tool is solved. The engineering lies in the manipulator and the tilt-and-insert motion.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://www.ggrgroup.com/products/glazing-robots/atom-800-tracked-glazing-robot/"
+    },
+    {
+     "url": "https://www.ggrgroup.com/products/glazing-robots/oscar-1000-plus/"
+    },
+    {
+     "url": "https://smartlift.com/en-us/glass-lifter"
+    },
+    {
+     "url": "https://winlet.co.uk/the-winlet-difference/"
+    },
+    {
+     "url": "https://sitehandling.ca/glass-robot"
+    },
+    {
+     "url": "https://wolift.com/products/portable-lifting-trolleys/glass-lifting-robot/"
+    }
+   ]
+  },
+  {
+   "id": "con_layout_marking",
+   "domain": "construction",
+   "setting": "construction",
+   "title": "Floor layout marking from the building model",
+   "subtasks": [
+    {
+     "verb": "localise",
+     "object": "robot to site control",
+     "note": "A total station tracks a prism on the robot."
+    },
+    {
+     "verb": "traverse",
+     "object": "slab along the print path",
+     "note": "The robot avoids obstacles within edge clearance limits."
+    },
+    {
+     "verb": "print",
+     "object": "lines, points and text",
+     "note": "Inkjet ink is chosen for surface and temperature."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Inkjet print head or marker",
+     "Mobile base",
+     "Prism for total station tracking"
+    ]
+   },
+   "why": "Layout involves no manipulation. The effector is a print head and the robot is the mobile base, so an arm adds nothing.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://support.dustyrobotics.com/hc/en-us/articles/52682349645851-FieldPrinter-Specs"
+    },
+    {
+     "url": "https://www.dustyrobotics.com/discover/floor-layout-robot"
+    },
+    {
+     "url": "https://www.robotsinconstruction.com/robots/"
+    },
+    {
+     "url": "https://www.robotsinconstruction.com/jobs/"
+    }
+   ]
+  },
+  {
+   "id": "con_block_laying",
+   "domain": "construction",
+   "setting": "construction",
+   "title": "Concrete and clay block laying",
+   "subtasks": [
+    {
+     "verb": "apply",
+     "object": "adhesive or mortar to the block bed",
+     "note": "An in-line applicator works before the gripper in one deployed system."
+    },
+    {
+     "verb": "place",
+     "object": "block to the course",
+     "note": "The heavy payload needs a slow, stiff trajectory."
+    },
+    {
+     "verb": "verify",
+     "object": "level and plumb",
+     "note": "A laser or camera checks the result."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Servo clamp gripper, 300 to 400 mm flat jaws",
+     "Grip force control"
+    ]
+   },
+   "why": "The logic matches bricks but the units are heavier, so a strong clamp is the only tool. Adhesive goes on in-line before the gripper takes the block.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://www.fbr.com.au/view/faqs"
+    },
+    {
+     "url": "https://announcements.asx.com.au/asxpdf/20230508/pdf/05pgdr7twh4v7b.pdf"
+    },
+    {
+     "url": "https://investors.fbr.com.au/announcements/LwgV90-fbr-investor-presentation"
+    },
+    {
+     "url": "https://newatlas.com/robotics/construction-robot-america/"
+    },
+    {
+     "url": "https://www.robotsinconstruction.com/jobs/masonry-installation/"
+    },
+    {
+     "url": "https://www.cpwrconstructionsolutions.org/masonry/solution/1055/bricklaying-robotic-system.html"
+    }
+   ]
+  },
+  {
+   "id": "con_wall_panel_framing",
+   "domain": "construction",
+   "setting": "construction",
+   "title": "Offsite timber wall framing: place studs and nail plates",
+   "subtasks": [
+    {
+     "verb": "place",
+     "object": "stud between the plates at spacing",
+     "note": "The stud sits square to the plate."
+    },
+    {
+     "verb": "nail",
+     "object": "plates to stud ends",
+     "note": "Two nails go in each end while the stud is held square."
+    },
+    {
+     "verb": "sheathe",
+     "object": "sheathing panels",
+     "note": "This is often done on a separate nailing bridge."
+    }
+   ],
+   "setup": {
+    "kind": "two_tool_head",
+    "tools": [
+     "Long-stroke parallel gripper for lumber",
+     "Pneumatic framing nailer beside the jaws"
+    ]
+   },
+   "why": "The stud must stay square to the plate while it is nailed, and a nailer beside the gripper lets one arm place and fasten in one pose. Production lines often split this between a placing robot and a nailing bridge.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://thehouseofdesign.com/"
+    },
+    {
+     "url": "https://buildersfilmstudio.com/house-of-design-robotics"
+    },
+    {
+     "url": "https://www.youtube.com/watch?v=O3al52UWoc0"
+    },
+    {
+     "url": "https://www.robotsinconstruction.com/jobs/off-site-prefabrication/"
+    }
+   ]
+  },
+  {
+   "id": "con_lvp_plank_flooring",
+   "domain": "construction",
+   "setting": "construction",
+   "title": "Vinyl or laminate plank flooring, click-lock installation",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "plank from the stack",
+     "note": "A vacuum bar runs along the plank."
+    },
+    {
+     "verb": "angle in",
+     "object": "plank into the previous row's groove",
+     "note": "Rotate about the long edge, push and lower so the short end folds down to lock."
+    },
+    {
+     "verb": "tap",
+     "object": "end joint closed",
+     "note": "The same tool gives a force-limited sideways push."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Vacuum bar, 2 to 3 cups, on a force-torque sensing wrist"
+    ]
+   },
+   "why": "The arm's own motion closes the click joint by angling, pushing and dropping, then a sideways push finishes it. Force sensing matters more than special tooling.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://www.robotsinconstruction.com/robots/robuild/"
+    },
+    {
+     "url": "https://www.humanfriendly.bot/"
+    },
+    {
+     "url": "https://www.robotsinconstruction.com/robots/con-humanfriendly/"
+    },
+    {
+     "url": "https://361robotics.ru/journal/iz-kitaya/bright-dream/"
+    },
+    {
+     "url": "https://www.bls.gov/ooh/construction-and-extraction/tile-and-marble-setters.htm"
+    }
+   ]
+  },
+  {
+   "id": "con_exterior_spray_painting",
+   "domain": "construction",
+   "setting": "construction",
+   "title": "Exterior facade spray painting from a lift",
+   "subtasks": [
+    {
+     "verb": "prep",
+     "object": "facade surface",
+     "note": "Wash and clean the surface, which some robots also do."
+    },
+    {
+     "verb": "spray",
+     "object": "facade in fixed-size boxes from the lift",
+     "note": "One deployed system scans a box of about 50 sq ft, then sprays it, box by box."
+    },
+    {
+     "verb": "inspect",
+     "object": "coat coverage",
+     "note": "Imaging checks quality and guides touch-up."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Multi-nozzle spray bar on a 2-axis gantry"
+    ]
+   },
+   "why": "Large flat facades suit a wide spray bar moving in a raster better than an articulated arm. The lift supplies the reach.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://paintjet.com/"
+    },
+    {
+     "url": "https://www.cnbc.com/2023/10/18/paintjet-puts-robots-to-work-in-construction-where-labor-is-tight.html"
+    },
+    {
+     "url": "https://techcrunch.com/2023/12/20/paintjet-is-building-big-industrial-robots-for-big-industrial-paint-jobs/"
+    },
+    {
+     "url": "https://www.robotsinconstruction.com/jobs/exterior-coatings/"
+    },
+    {
+     "url": "https://www.bzlrobot.com/en/channels/40.html"
+    }
+   ]
+  },
+  {
+   "id": "con_curtainwall_bracket",
+   "domain": "construction",
+   "setting": "construction",
+   "title": "Curtain wall bracket installation at the slab edge",
+   "subtasks": [
+    {
+     "verb": "lay out",
+     "object": "bracket position at the slab edge",
+     "note": "A total station gives the reference."
+    },
+    {
+     "verb": "drill",
+     "object": "anchor holes or scan the cast-in channel",
+     "note": "A hammer drill works near the edge."
+    },
+    {
+     "verb": "fix",
+     "object": "bracket with bolts torqued to spec",
+     "note": "Torque is logged for each bracket."
+    }
+   ],
+   "setup": {
+    "kind": "tool_change",
+    "tools": [
+     "Rotary hammer drill with dust shroud",
+     "Nut runner or pulse torque driver with bracket fingers"
+    ]
+   },
+   "why": "Drilling and fastening happen in sequence, so drill every hole in reach, swap once, then fasten. One deployed system uses this approach with two arms per base, so one arm holds while the other drives.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://www.therobotreport.com/raise-robotics-deploys-ur-cobots-with-harmon-for-high-rise-fastener-installation/"
+    },
+    {
+     "url": "https://www.universal-robots.com/case-stories/raise-robotics/"
+    },
+    {
+     "url": "https://www.usglassmag.com/tsi-corp-partners-with-robotics-firm-to-install-curtainwall-brackets/"
+    },
+    {
+     "url": "https://www.enr.com/articles/61108-raise-robotics-nets-775m-in-seed-funding-to-build-out-multipurpose-robot-platform"
+    },
+    {
+     "url": "https://raiserobotics.ai/about/"
+    },
+    {
+     "url": "https://www.robotsinconstruction.com/jobs/mep-installation/"
+    }
+   ]
+  },
+  {
+   "id": "con_pipe_conduit_install",
+   "domain": "construction",
+   "setting": "construction",
+   "title": "Overhead pipe and conduit installation on hangers",
+   "subtasks": [
+    {
+     "verb": "install",
+     "object": "threaded hanger rods into anchors",
+     "note": "Spin each rod in to depth."
+    },
+    {
+     "verb": "seat",
+     "object": "pipe or conduit into the hangers",
+     "note": "3 m sticks need support at two points."
+    },
+    {
+     "verb": "clamp",
+     "object": "pipe in the hanger",
+     "note": "Close the clamp and torque the nuts."
+    }
+   ],
+   "setup": {
+    "kind": "tool_change",
+    "tools": [
+     "Parallel gripper with V-jaws sized to the pipe range",
+     "Nut runner with rod chuck"
+    ]
+   },
+   "why": "Rods go up first along a run, pipe is seated later and clamps come last, so one swap per run is enough. V-jaws centre round stock of different sizes, and one nut runner spins rods and tightens clamp nuts.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": "h2_coupling",
+    "match": "related"
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://www.robotsinconstruction.com/jobs/mep-installation/"
+    },
+    {
+     "url": "https://www.jfe-eng.co.jp/dx/en/case-9.html"
+    },
+    {
+     "url": "https://www.jfe-eng.co.jp/news/2021/20211118.html"
+    },
+    {
+     "url": "https://probuildrobotics.com/drill_screw_robot/"
+    },
+    {
+     "url": "https://www.patents-review.com/a/20250326613-robotic-arms-scissor-lift-conduit-bending-apparatus.html"
+    },
+    {
+     "url": "https://www.humanfriendly.bot/"
+    },
+    {
+     "url": "https://www.abc.org/News-Media/News-Releases/abc-construction-industry-must-attract-349000-workers-in-2026-despite-macroeconomic-headwinds"
+    }
+   ]
+  },
+  {
+   "id": "con_wall_tile_setting",
+   "domain": "construction",
+   "setting": "construction",
+   "title": "Wall tile setting, butter, press and align tiles",
+   "subtasks": [
+    {
+     "verb": "butter",
+     "object": "tile back with adhesive",
+     "note": "A comb pass at a fixed station keeps adhesive fresh for each tile."
+    },
+    {
+     "verb": "press",
+     "object": "tile onto the wall at joint offset",
+     "note": "Push and slide into the bed, then hold briefly so the tile does not slip."
+    },
+    {
+     "verb": "check",
+     "object": "plane and joint width",
+     "note": "A camera or laser checks against neighbours, with lippage under about 1 mm."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Vacuum pad array, 4 cups, with force-controlled pressing plate"
+    ]
+   },
+   "why": "Wall tiles are small and light, so one vacuum head pressing with controlled force is enough. Buttering at a fixed station keeps the arm on one tool and stops adhesive skinning on the wall.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://probuildrobotics.com/wall-tile-laying-robot/"
+    },
+    {
+     "url": "https://361robotics.ru/journal/iz-kitaya/bright-dream/"
+    },
+    {
+     "url": "https://www.xjishu.com/zhuanli/10/202210819459.html"
+    },
+    {
+     "url": "https://www.politesi.polimi.it/handle/10589/150362"
+    },
+    {
+     "url": "https://eureka.patsnap.com/patent-CN106381990A"
+    }
+   ]
+  },
+  {
+   "id": "con_drywall_finishing",
+   "domain": "construction",
+   "setting": "construction",
+   "title": "Drywall finishing, spray joint compound and sand",
+   "subtasks": [
+    {
+     "verb": "spray",
+     "object": "joint compound on seams or full skim",
+     "note": "Level 4 covers seams, Level 5 covers the whole wall."
+    },
+    {
+     "verb": "sand",
+     "object": "dried compound to a flat finish",
+     "note": "Orbital sanding at steady contact force with dust extraction, as compound scratches easily."
+    },
+    {
+     "verb": "prime",
+     "object": "finished wall",
+     "note": "This step is optional and uses the same spray tool."
+    }
+   ],
+   "setup": {
+    "kind": "tool_change",
+    "tools": [
+     "Joint compound spray nozzle",
+     "Random-orbit sander with vacuum shroud on force-controlled wrist"
+    ]
+   },
+   "why": "Hours of drying separate spraying and sanding, so one swap per pass costs nothing. The key choice is force control for sanding, which one deployed system gets from the arm's built-in force control.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://www.jlg.com/en/canvas"
+    },
+    {
+     "url": "https://www.jlg.com/en/canvas/2000cx"
+    },
+    {
+     "url": "https://www.universal-robots.com/case-stories/canvas/"
+    },
+    {
+     "url": "https://okibo.com/okibo-announces-national-launch-of-eg7-robot-following-successful-premiere-at-hensel-phelps-innovation-day/"
+    },
+    {
+     "url": "https://www.wconline.com/articles/98795-origin-raises-20-million-for-wall-finishing-robots"
+    },
+    {
+     "url": "https://www.robotsinconstruction.com/jobs/interior-finishes/"
+    }
+   ]
+  },
+  {
+   "id": "con_facade_panel_install",
+   "domain": "construction",
+   "setting": "construction",
+   "title": "Facade cladding and retrofit panel installation",
+   "subtasks": [
+    {
+     "verb": "fix",
+     "object": "substructure brackets to the wall",
+     "note": "Drill and anchor across the whole bay first."
+    },
+    {
+     "verb": "hang",
+     "object": "panel on the brackets",
+     "note": "Lift the panel, then align it finely."
+    },
+    {
+     "verb": "fasten",
+     "object": "panel to the substructure",
+     "note": "Use screws or clips."
+    }
+   ],
+   "setup": {
+    "kind": "tool_change",
+    "tools": [
+     "Vacuum pad frame for panel hanging",
+     "Drill driver for brackets and fixings"
+    ]
+   },
+   "why": "Brackets go on across a whole bay before any panel is hung, so the tool swap happens once per bay, not per panel. A crane or cable robot often takes the heavy lift, while the arm aligns and fastens.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://doi.org/10.1007/s41693-025-00160-2"
+    },
+    {
+     "url": "https://shieldbot.eu/demo-cases/"
+    },
+    {
+     "url": "https://doi.org/10.22260/isarc2024/0140"
+    },
+    {
+     "url": "https://www.energy.gov/cmei/buildings/articles/doe-announces-its-e-robot-prize-phase-1-winners"
+    },
+    {
+     "url": "https://winlet.co.uk/the-winlet-difference/"
+    }
+   ]
+  },
+  {
+   "id": "con_deck_roof_fasteners",
+   "domain": "construction",
+   "setting": "construction",
+   "title": "Deck and roof fastener driving",
+   "subtasks": [
+    {
+     "verb": "locate",
+     "object": "joist, purlin or high rib below",
+     "note": "Find it through the deck or insulation."
+    },
+    {
+     "verb": "drive",
+     "object": "screw with plate to depth or torque",
+     "note": "The fastener is the same every time."
+    },
+    {
+     "verb": "verify",
+     "object": "seating and pattern",
+     "note": "Mark failures for rework."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Autofeed screw spindle, strip or blow feed",
+     "Depth and torque sensing nose",
+     "Plate feeder, optional"
+    ]
+   },
+   "why": "Every fastener is identical, so an autofeed spindle on a carriage or gantry beats an arm picking screws one by one. No timber decking robot was found, but the same tool applies.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://rufr.com/"
+    },
+    {
+     "url": "https://exa.ai/library/legal/patent/vvyc4641z58"
+    },
+    {
+     "url": "https://exa.ai/library/legal/patent/1qy0l7l1sh2"
+    },
+    {
+     "url": "https://uk.sfs.com/systems/flat-roofing/isotak?fn=true"
+    },
+    {
+     "url": "https://meshautomationinc.com/case_studies/panel-screw-assembly/"
+    },
+    {
+     "url": "https://www.robotsinconstruction.com/jobs/roofing/"
+    },
+    {
+     "url": "https://www.bls.gov/charts/census-of-fatal-occupational-injuries/rate-and-number-of-fatal-work-injuries-in-selected-occupations.htm"
+    }
+   ]
+  },
+  {
+   "id": "con_stud_bracket_welding",
+   "domain": "construction",
+   "setting": "construction",
+   "title": "Shear stud and bracket welding on structural steel",
+   "subtasks": [
+    {
+     "verb": "load",
+     "object": "stud and ferrule into the gun",
+     "note": "Studs and ferrules come from bowl feeders."
+    },
+    {
+     "verb": "position",
+     "object": "gun on the weld point",
+     "note": "Hold it perpendicular to the flange."
+    },
+    {
+     "verb": "fire",
+     "object": "weld and verify",
+     "note": "The arc lasts about a second, then bend test a sample."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Stud welding gun with stud and ferrule feed"
+    ]
+   },
+   "why": "The gun picks and holds the stud and the feeders present studs and ferrules, so no gripper is needed. Bracket and column welds need a welding torch with a seam sensor instead.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://exa.ai/library/legal/patent/5r8z5j7fj3p"
+    },
+    {
+     "url": "https://engineering.lehigh.edu/ugrs/2026/burd-kostas-salem"
+    },
+    {
+     "url": "https://www.iaarc.org/publications/proceedings_of_the_6th_isarc/the_design_and_fabrication_of_an_automated_shear_stud_welding_system.html"
+    },
+    {
+     "url": "https://www.shimz.co.jp/en/company/about/news-release/2021/2020056.html"
+    },
+    {
+     "url": "https://www.shimz.co.jp/en/company/about/news-release/2018/2018006.html"
+    },
+    {
+     "url": "https://www.bls.gov/charts/census-of-fatal-occupational-injuries/rate-and-number-of-fatal-work-injuries-in-selected-occupations.htm"
+    }
+   ]
+  },
+  {
+   "id": "con_rebar_placement",
+   "domain": "construction",
+   "setting": "construction",
+   "title": "Rebar placement on chairs at spacing",
+   "subtasks": [
+    {
+     "verb": "singulate",
+     "object": "one bar from the bundle",
+     "note": "This step is contact rich and the hardest to automate."
+    },
+    {
+     "verb": "carry",
+     "object": "bar onto chairs at spacing",
+     "note": "Support at several points stops long bars swinging."
+    },
+    {
+     "verb": "check",
+     "object": "spacing and cover",
+     "note": "Do this before tying."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Spreader beam with 2 to 4 V-jaw parallel grippers"
+    ]
+   },
+   "why": "Long bars sag and swing, so gripping at several points keeps them straight. A lifting magnet suits black bar but likely loses hold on epoxy coated bar and cannot lift fibreglass bar, both used on bridge decks.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://constructionrobots.com/"
+    },
+    {
+     "url": "https://www.equipmentworld.com/roadbuilding-equipment/article/15684551/new-generation-of-rebartying-robot-tybot-30-hits-the-market"
+    },
+    {
+     "url": "https://www.robotsinconstruction.com/jobs/concrete-construction/"
+    },
+    {
+     "url": "https://www.robotsinconstruction.com/jobs/off-site-prefabrication/"
+    }
+   ]
+  },
+  {
+   "id": "con_caulking_sealant",
+   "domain": "construction",
+   "setting": "construction",
+   "title": "Caulking and sealant joints on facades and windows",
+   "subtasks": [
+    {
+     "verb": "insert",
+     "object": "backer rod into the joint",
+     "note": "The deformable foam rod stays a crew task."
+    },
+    {
+     "verb": "gun",
+     "object": "sealant bead along the joint",
+     "note": "Angle the nozzle into the joint at a constant speed matched to flow."
+    },
+    {
+     "verb": "tool",
+     "object": "bead to profile",
+     "note": "Use a trailing shoe or spatula."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Motorised sealant dispenser with nozzle",
+     "Laser seam tracker",
+     "Trailing tooling shoe"
+    ]
+   },
+   "why": "One pass can bead and tool the joint if a shoe trails the nozzle. The tracker keeps the nozzle centred on a joint that wanders, and backer rod stays with the crew.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://www.robotsinconstruction.com/jobs/exterior-coatings/"
+    },
+    {
+     "url": "https://doi.org/10.22260/isarc1988/0051"
+    },
+    {
+     "url": "https://doi.org/10.29173/mocs308"
+    },
+    {
+     "url": "https://jpm.front-sci.com/index.php/jpm/article/download/8891/8700"
+    },
+    {
+     "url": "https://doi.org/10.3390/buildings8090120"
+    },
+    {
+     "url": "https://www.amcbridge.com/technology-demos/labs/robotic-construction-caulking-for-autodesk-inventor"
+    }
+   ]
+  },
+  {
+   "id": "con_tile_grouting",
+   "domain": "construction",
+   "setting": "construction",
+   "title": "Tile grouting: fill joints and wipe haze",
+   "subtasks": [
+    {
+     "verb": "spread",
+     "object": "grout across the joints",
+     "note": "Use a rubber float or squeegee in diagonal passes."
+    },
+    {
+     "verb": "pack",
+     "object": "grout into the joints",
+     "note": "Fill to depth, as compression matters, not only surface finish."
+    },
+    {
+     "verb": "wipe",
+     "object": "haze off the tile faces",
+     "note": "Use a damp sponge after initial set."
+    }
+   ],
+   "setup": {
+    "kind": "tool_change",
+    "tools": [
+     "Rubber float or squeegee head, compliant mount",
+     "Damp sponge pad or roller with water feed"
+    ]
+   },
+   "why": "The grout set time separates floating from wiping, so working zone by zone needs one tool swap per zone. A combined head adds weight for no gain.",
+   "sim": {
+    "feasibility": "out_of_scope",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://www.fabrica.ai/"
+    },
+    {
+     "url": "https://www.moe.gov.sg/sgis/sponsoring-organisations/industries/built-environment/fabrica-ai"
+    },
+    {
+     "url": "https://www.straitstimes.com/singapore/housing/robots-that-paint-and-lay-floor-tiles-are-revolutionising-construction-in-singapore"
+    },
+    {
+     "url": "https://www.robotsinconstruction.com/jobs/flooring-installation/"
+    }
+   ]
+  },
+  {
+   "id": "con_concrete_grinding",
+   "domain": "construction",
+   "setting": "construction",
+   "title": "Hardened concrete wall and ceiling grinding",
+   "subtasks": [
+    {
+     "verb": "scan",
+     "object": "surface for high spots",
+     "note": "Use a laser scan or a straightedge."
+    },
+    {
+     "verb": "grind",
+     "object": "wall or ceiling surface",
+     "note": "A diamond cup wheel with a dust shroud works at steady contact force."
+    },
+    {
+     "verb": "check",
+     "object": "flatness",
+     "note": "Rescan the surface."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Diamond cup-wheel grinder with vacuum shroud",
+     "Compliant, force-controlled mount"
+    ]
+   },
+   "why": "The job needs only one abrasive tool. The real engineering is in controlling contact force and capturing dust, so a compliant, force-controlled mount with a vacuum shroud fits.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 2,
+   "sources": [
+    {
+     "url": "https://www.bzlrobot.com/en/channels/40.html"
+    },
+    {
+     "url": "https://www.robotsinconstruction.com/jobs/interior-finishes/"
+    }
+   ]
+  },
+  {
+   "id": "con_insulation_install",
+   "domain": "construction",
+   "setting": "construction",
+   "title": "Rigid insulation board installation, spray foam variant",
+   "subtasks": [
+    {
+     "verb": "apply",
+     "object": "adhesive to the board back",
+     "note": "Apply dabs or a ribbon at a station."
+    },
+    {
+     "verb": "place",
+     "object": "board in staggered bond, tight to neighbours",
+     "note": "Gaps cause thermal bridges."
+    },
+    {
+     "verb": "fix",
+     "object": "insulation anchors",
+     "note": "Drill and set a dowel per area."
+    }
+   ],
+   "setup": {
+    "kind": "tool_change",
+    "tools": [
+     "Large low-vacuum foam pad or needle gripper",
+     "Drill with anchor and dowel driver"
+    ]
+   },
+   "why": "Boards go up course by course and anchors follow per area, so one tool swap per area is enough. Mineral wool is porous, so a needle gripper replaces the vacuum pad there.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 2,
+   "sources": [
+    {
+     "url": "https://q-bot.co/faqs/"
+    },
+    {
+     "url": "https://ukgbc.org/resources/robotic-installation-of-underfloor-insulation/"
+    },
+    {
+     "url": "https://doi.org/10.1109/mra.2015.2472075"
+    },
+    {
+     "url": "https://www.politesi.polimi.it/handle/10589/150362"
+    },
+    {
+     "url": "https://www.energy.gov/cmei/buildings/articles/doe-announces-its-e-robot-prize-phase-1-winners"
+    },
+    {
+     "url": "https://shieldbot.eu/demo-cases/"
+    }
+   ]
+  },
+  {
+   "id": "con_concrete_troweling",
+   "domain": "construction",
+   "setting": "construction",
+   "title": "Fresh concrete floor screeding and troweling",
+   "subtasks": [
+    {
+     "verb": "screed",
+     "object": "fresh concrete to laser level",
+     "note": "Use a laser-referenced screed."
+    },
+    {
+     "verb": "float",
+     "object": "surface",
+     "note": "Float after the bleed water."
+    },
+    {
+     "verb": "trowel",
+     "object": "surface to finish",
+     "note": "Make several power-trowel passes."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Rotary trowel discs or blades on a mobile base"
+    ]
+   },
+   "why": "This is a machine task, not an arm task. The effector is the trowel rotor and the mobile base carries it.",
+   "sim": {
+    "feasibility": "out_of_scope",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 2,
+   "sources": [
+    {
+     "url": "https://www.red-dot.org/project/ground-troweling-robot-bdr-1-58284"
+    },
+    {
+     "url": "https://www.robotsinconstruction.com/jobs/concrete-construction/"
+    },
+    {
+     "url": "https://www.bzlrobot.com/en/channels/40.html"
+    }
+   ]
+  },
+  {
+   "id": "WH-01",
+   "domain": "manufacturing",
+   "setting": "warehouse",
+   "title": "Mixed item piece picking for order fulfilment",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "one item from a cluttered mixed tote",
+     "note": "Boxes and blister packs are rigid, but polybags wrinkle and break suction seals."
+    },
+    {
+     "verb": "scan",
+     "object": "the item barcode",
+     "note": "A fixed scanner or scan tunnel usually reads it, and the robot only presents or drops the item."
+    },
+    {
+     "verb": "place",
+     "object": "the item into the order tote or cubby",
+     "note": "No precise orientation is needed."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Suction cup"
+    ]
+   },
+   "why": "Suction is the usual default for single items, and one deployed system reported 97% first-pick success in fashion with one high-flow cup. Add fingers to the cup only for many books, granular bags or heavy items.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://www.aboutamazon.com/news/operations/amazon-introduces-sparrow-a-state-of-the-art-robot-that-handles-millions-of-diverse-products"
+    },
+    {
+     "url": "https://www.vision-systems.com/embedded/article/14287150/amazon-testing-robotic-arm-that-identifies-individual-products"
+    },
+    {
+     "url": "https://righthandrobotics.com/products"
+    },
+    {
+     "url": "https://righthandrobotics.com/the-latest/righthand-robotics-introduces-the-rightpick-4-system"
+    },
+    {
+     "url": "https://www.materialhandling247.com/product/righthand_robotics_rightpick_3_piece_picking_system_with_new_suction_cup_swapper"
+    },
+    {
+     "url": "https://www.universal-robots.com/news-and-media/news-center/universal-robots-powers-new-mixed-case-palletizing-and-piece-picking-solutions-at-modex-2022/"
+    },
+    {
+     "url": "https://nomagic.ai/in-pursuit-of-the-perfect-gripper-four-essential-learnings/"
+    },
+    {
+     "url": "https://covariant.ai/insights/how-ai-powered-robots-solve-apparel-picking-challenges/"
+    },
+    {
+     "url": "https://www.therobotreport.com/abb-releases-robotic-item-picker-for-various-applications/"
+    },
+    {
+     "url": "https://www.amazon.science/latest-news/pinch-grasping-robot-handles-items-with-precision"
+    },
+    {
+     "url": "https://www.therobotreport.com/amazon-testing-pinch-grasping-robots-for-e-commerce-fulfillment/"
+    },
+    {
+     "url": "https://www.aboutamazon.com/news/operations/amazon-vulcan-robot-pick-stow-touch"
+    }
+   ]
+  },
+  {
+   "id": "WH-02",
+   "domain": "manufacturing",
+   "setting": "warehouse",
+   "title": "Two-piece shoebox picking",
+   "subtasks": [
+    {
+     "verb": "grasp",
+     "object": "the shoebox base and lid together",
+     "note": "The lid is loose, so a top suction pick lifts only the lid."
+    },
+    {
+     "verb": "transfer",
+     "object": "the closed box without the lid sliding off",
+     "note": "Accelerations matter."
+    },
+    {
+     "verb": "place",
+     "object": "the box into the sorter pocket",
+     "note": "The start pose may be vertical or horizontal."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Long-stroke parallel jaw gripper with tall flat pads"
+    ]
+   },
+   "why": "Squeezing the box from two sides across the lid seam holds base and lid together, while suction on the top lifts only the lid. Two-piece boxes have long defeated standard vacuum and mechanical grippers.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 5,
+   "sources": [
+    {
+     "url": "https://nomagic.ai/news/nomagic-launches-the-shoebox-picker-the-first-physical-ai-solution/"
+    },
+    {
+     "url": "https://corporate.zalando.com/en/technology/zalando-install-50-ai-powered-nomagic-robots-its-european-fulfilment-centres"
+    },
+    {
+     "url": "https://nomagic.ai/news/nomagics-shoebox-picker-wins-piece-picking-robotics-innovation-of-the-year/"
+    }
+   ]
+  },
+  {
+   "id": "WH-03",
+   "domain": "manufacturing",
+   "setting": "warehouse",
+   "title": "Mixed-case depalletising",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "the top-layer case from a mixed pallet",
+     "note": "Sizes are unknown, with shrink wrap and shifted stacks."
+    },
+    {
+     "verb": "transfer",
+     "object": "the case without it peeling off",
+     "note": "Tall light cases peel off a vacuum tool under acceleration."
+    },
+    {
+     "verb": "place",
+     "object": "the case on the outbound conveyor",
+     "note": "Business rules set the orientation."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Area vacuum gripper"
+    ]
+   },
+   "why": "Vacuum touches only the top face, so it works on any stack pattern and is the most common depalletising tool. Add side clamps only when tall, light cases peel off under acceleration.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 5,
+   "sources": [
+    {
+     "url": "https://mujin-corp.com/applications/depalletizing"
+    },
+    {
+     "url": "https://www.universal-robots.com/news-and-media/news-center/universal-robots-powers-new-mixed-case-palletizing-and-piece-picking-solutions-at-modex-2022/"
+    },
+    {
+     "url": "https://bostondynamics.com/products/stretch/"
+    },
+    {
+     "url": "https://bostondynamics.com/wp-content/uploads/2023/07/stretch_brochure_manifest.pdf"
+    },
+    {
+     "url": "https://www.bls.gov/iag/tgs/iag493.htm"
+    },
+    {
+     "url": "https://www.bls.gov/iif/"
+    },
+    {
+     "url": "https://www.packagingstrategies.com/ext/resources/FDP/Home/Files/PDF/036c5Robotic_Tooling_Selections.pdf"
+    }
+   ]
+  },
+  {
+   "id": "WH-04",
+   "domain": "manufacturing",
+   "setting": "warehouse",
+   "title": "Palletising cases and bags",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "case from the infeed conveyor",
+     "note": "Items can be sealed corrugate, trays or bags."
+    },
+    {
+     "verb": "place",
+     "object": "case at its pattern position",
+     "note": "Gaps and squareness matter for stability."
+    },
+    {
+     "verb": "place",
+     "object": "tier sheet between layers",
+     "note": "The sheet is thin and flat, so the same vacuum tool lifts it."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Vacuum area gripper"
+    ]
+   },
+   "why": "For sealed cases a vacuum tool is enough and also lifts tier sheets. Change tool by product: forks for bags and open trays, clamps for pails, and a combined vacuum and clamp head only for mixed-product cells.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://www.universal-robots.com/blog/how-different-grippers-can-help-with-your-palletization-needs/"
+    },
+    {
+     "url": "https://www.packagingstrategies.com/ext/resources/FDP/Home/Files/PDF/036c5Robotic_Tooling_Selections.pdf"
+    },
+    {
+     "url": "https://cortiva.tr/en/resources/articles/selecting-a-palletizing-gripper"
+    }
+   ]
+  },
+  {
+   "id": "WH-05",
+   "domain": "manufacturing",
+   "setting": "warehouse",
+   "title": "Trailer and container unloading of floor-loaded cartons",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "carton from the wall face",
+     "note": "Cartons near the ceiling must be gripped from the front."
+    },
+    {
+     "verb": "place",
+     "object": "carton on the conveyor",
+     "note": ""
+    },
+    {
+     "verb": "recover",
+     "object": "fallen cartons on the floor",
+     "note": "Deployed systems handle this."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Vacuum area gripper"
+    ]
+   },
+   "why": "Deployed production systems use suction alone. It grips the exposed front or top face, which is all a wall of cartons offers.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://www.picklerobot.com/products/truck-unloading"
+    },
+    {
+     "url": "https://www.picklerobot.com/technology"
+    },
+    {
+     "url": "https://www.ttnews.com/articles/ups-robots-unload-trucks"
+    },
+    {
+     "url": "https://bostondynamics.com/products/stretch/"
+    }
+   ]
+  },
+  {
+   "id": "WH-06",
+   "domain": "manufacturing",
+   "setting": "warehouse",
+   "title": "E-commerce packing: erect box, place items, close box",
+   "subtasks": [
+    {
+     "verb": "erect",
+     "object": "carton from a flat blank",
+     "note": "Open the tube, then fold and lock the bottom flaps against a fixture."
+    },
+    {
+     "verb": "place",
+     "object": "order items into the box",
+     "note": "The same vacuum tool picks the items."
+    },
+    {
+     "verb": "close",
+     "object": "top flaps",
+     "note": "A standard tape sealer then seals the box."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Multi-cup suction gripper, individual cup control"
+    ]
+   },
+   "why": "One vacuum gripper does all three steps in a collaborative robot cell, folding flaps against fixed guides. At high volume a dedicated machine handles the boxes and the robot only places items.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://www.vaskon.com/uploads/files/Cobot-case-erector.pdf?v=1741083820"
+    },
+    {
+     "url": "https://crx.fanucamerica.com/cobot-devices/casemagiq-universal-case-forming-eoat"
+    },
+    {
+     "url": "https://www.universal-robots.com/news-and-media/news-center/universal-robots-to-debut-new-cobot-assisted-palletizers-and-box-erectors-at-pack-expo-2018-in-chicago/"
+    },
+    {
+     "url": "https://vention.io/designs/fanuc-box-erector-hardware-kit-no-software-288117"
+    },
+    {
+     "url": "https://sparcktechnologies.com/solutions/cvp-everest/"
+    },
+    {
+     "url": "https://www.materialhandling247.com/product/sparck_technologies_cvp_everest_automated_packaging_solution"
+    },
+    {
+     "url": "https://www.osaro.com/solutions"
+    }
+   ]
+  },
+  {
+   "id": "WH-07",
+   "domain": "manufacturing",
+   "setting": "warehouse",
+   "title": "Returns processing: unpack, identify, sort",
+   "subtasks": [
+    {
+     "verb": "extract",
+     "object": "item from the returned mailer",
+     "note": "Opening the bag needs deformable handling, so leave it to a person or a dual-arm station."
+    },
+    {
+     "verb": "scan",
+     "object": "item barcode and condition",
+     "note": "Use a scan tunnel or present the item to a scanner."
+    },
+    {
+     "verb": "sort",
+     "object": "item to a destination bin",
+     "note": ""
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Multi-cup suction gripper, individual cup control"
+    ]
+   },
+   "why": "Once the item is out of the mailer, the job is pick, scan and sort, using the same suction tool as piece picking and a fixed scan tunnel. Opening mailers needs two arms and is outside a single-tool cell.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": "h1_tote",
+    "match": "related"
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://sereact.ai/product/returns-handling"
+    },
+    {
+     "url": "https://supplychaindigital.com/operations/ceva-and-zalando-use-ai-robots-for-fashion-returns"
+    },
+    {
+     "url": "https://scg-robotics.s3.us-east-1.amazonaws.com/sfi/rb247_sfi_022724.pdf"
+    }
+   ]
+  },
+  {
+   "id": "WH-08",
+   "domain": "manufacturing",
+   "setting": "warehouse",
+   "title": "Parcel singulation, induction and scanning",
+   "subtasks": [
+    {
+     "verb": "singulate",
+     "object": "one parcel from a bulk pile",
+     "note": "Avoid double picks."
+    },
+    {
+     "verb": "place",
+     "object": "parcel on the induction conveyor",
+     "note": "A six-sided tunnel downstream does the scanning."
+    },
+    {
+     "verb": "divert",
+     "object": "non-conveyable parcels to an exception path",
+     "note": ""
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Multi-cup suction gripper, individual cup control"
+    ]
+   },
+   "why": "Deployed systems use multi-cup suction with control of each cup, so one tool holds a small mailer or a large box. Scanning belongs to a fixed tunnel, not the tool.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://www.plusonerobotics.com/inductone"
+    },
+    {
+     "url": "https://www.ambirobotics.com/ambisort-b-series/"
+    }
+   ]
+  },
+  {
+   "id": "WH-09",
+   "domain": "manufacturing",
+   "setting": "warehouse",
+   "title": "Print-and-apply labelling of cases and pallets",
+   "subtasks": [
+    {
+     "verb": "take",
+     "object": "printed label from the peel plate",
+     "note": "A vacuum pad holds the label."
+    },
+    {
+     "verb": "apply",
+     "object": "label to the case or pallet face",
+     "note": "The labelling standard asks for 400 to 800 mm above the pallet base, at least 50 mm from a vertical edge, ideally on two sides."
+    },
+    {
+     "verb": "verify",
+     "object": "barcode by reading it back",
+     "note": "A scanner sits on the tool."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Label tamp pad with vacuum"
+    ]
+   },
+   "why": "The printer stays fixed and the robot carries only a light vacuum pad and scanner. Nothing else is needed.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 2,
+   "sources": [
+    {
+     "url": "https://www.universal-robots.com/marketplace/products/01tP4000008FtagIAC/SR-3000010/files/?fileName=coding-4pl-en.pdf"
+    },
+    {
+     "url": "https://www.rea-jet.com/en/products/labeling-technology/rea-label-robot-labeler"
+    },
+    {
+     "url": "https://www.e80group.com/en/robotic-solutions"
+    },
+    {
+     "url": "https://exa.ai/library/legal/patent/lvf2tsjm71t"
+    },
+    {
+     "url": "https://www.gs1.org/standards/gs1-logistic-label-guideline/current-standard"
+    }
+   ]
+  },
+  {
+   "id": "WH-10",
+   "domain": "manufacturing",
+   "setting": "warehouse",
+   "title": "Case-to-tote decanting",
+   "subtasks": [
+    {
+     "verb": "open",
+     "object": "supplier case",
+     "note": "This is usually done by a fixed case-opening machine."
+    },
+    {
+     "verb": "transfer",
+     "object": "inner packs into storage tote",
+     "note": ""
+    },
+    {
+     "verb": "dispose",
+     "object": "empty case",
+     "note": ""
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Multi-cup suction gripper"
+    ]
+   },
+   "why": "The cutting stays in a fixed opener, so the robot only lifts inner packs, which suction does best. A knife on the robot would add a tool change per case for no gain.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://www.fanucamerica.com/press-releases/replenishment-solution-for-fulfillment-automation"
+    }
+   ]
+  },
+  {
+   "id": "WH-11",
+   "domain": "manufacturing",
+   "setting": "warehouse",
+   "title": "Stowing items into fabric pod cubbies",
+   "subtasks": [
+    {
+     "verb": "pull back",
+     "object": "elastic retaining band",
+     "note": "One deployed system uses a second arm with a hook."
+    },
+    {
+     "verb": "push aside",
+     "object": "items already in the cubby",
+     "note": "A force-limited spatula blade does this."
+    },
+    {
+     "verb": "insert",
+     "object": "new item into the gap",
+     "note": "Paddles with built-in belts slide it in."
+    }
+   ],
+   "setup": {
+    "kind": "two_tool_head",
+    "tools": [
+     "Paddle gripper with belts",
+     "Hook",
+     "Wrist force-torque sensor"
+    ]
+   },
+   "why": "This follows one deployed system: the stow tool combines plates, belts and a spatula, and a second arm holds the band. Use it only for front-access cubbies, as open-top totes need none of it.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://www.amazon.science/blog/how-amazons-vulcan-robots-use-touch-to-plan-and-execute-motions"
+    },
+    {
+     "url": "https://www.aboutamazon.com/news/operations/amazon-vulcan-robot-pick-stow-touch"
+    },
+    {
+     "url": "https://www.amazon.science/publications/vulcan-pick-a-robotic-system-for-picking-targeted-objects-from-fabric-pods"
+    }
+   ]
+  },
+  {
+   "id": "RT-01",
+   "domain": "manufacturing",
+   "setting": "retail",
+   "title": "Beverage cooler restocking from behind the shelf",
+   "subtasks": [
+    {
+     "verb": "grasp",
+     "object": "bottle or can from stock case",
+     "note": "This covers cans of all sizes and PET bottles up to 2 L."
+    },
+    {
+     "verb": "transfer",
+     "object": "drink along the cooler",
+     "note": "The arm is mounted on a rail."
+    },
+    {
+     "verb": "place",
+     "object": "drink into the right lane",
+     "note": "The robot picks the lane by what is running short."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Parallel jaw gripper"
+    ]
+   },
+   "why": "One simple gripper covers every can and PET bottle in the cooler. One deployed robot uses a clip-like hand, and no second tool is needed.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 5,
+   "sources": [
+    {
+     "url": "https://apnews.com/article/technology-japan-tokyo-376b88f6503461497d94df46cc9c5d8c"
+    },
+    {
+     "url": "https://tx-inc.com/en/blog/2022/08/10/11737/"
+    },
+    {
+     "url": "https://tx-inc.com/en/technology/"
+    }
+   ]
+  },
+  {
+   "id": "RT-02",
+   "domain": "manufacturing",
+   "setting": "retail",
+   "title": "Grocery shelf restocking and facing for boxes and cans",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "product from tightly packed shipping case",
+     "note": "Use side grasps on boxes and cans."
+    },
+    {
+     "verb": "place",
+     "object": "product in a tight row on the shelf",
+     "note": "Humans leave gaps of about 3 mm."
+    },
+    {
+     "verb": "face",
+     "object": "row to the shelf front",
+     "note": "This is a non-prehensile push."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Parallel jaw gripper with slim fingers"
+    ]
+   },
+   "why": "Slim parallel fingers grasp boxes and cans, and the closed fingers or palm push rows forward. A research system using one reached over 98% object-level success, with spacing, not tool type, the gap to humans.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://japanfoodnews.com/153503/2026/01/21/distribution-and-food-service/retail/cvs/"
+    },
+    {
+     "url": "https://arxiv.org/html/2509.11740v2"
+    },
+    {
+     "url": "https://zenodo.org/records/17472863"
+    },
+    {
+     "url": "https://www.rockingrobots.com/humanoid-robots-learn-to-restock-supermarket-shelves-in-denmark/"
+    }
+   ]
+  },
+  {
+   "id": "RT-03",
+   "domain": "manufacturing",
+   "setting": "retail",
+   "title": "Online grocery picking and bagging",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "grocery item from storage tote",
+     "note": "Items vary widely in weight, shape and fragility."
+    },
+    {
+     "verb": "pack",
+     "object": "item densely into customer bag",
+     "note": "Order and density matter."
+    },
+    {
+     "verb": "route",
+     "object": "items the tool cannot handle to a person",
+     "note": "Watermelons are one example."
+    }
+   ],
+   "setup": {
+    "kind": "tool_change",
+    "tools": [
+     "Suction cup",
+     "Parallel jaw gripper"
+    ]
+   },
+   "why": "One operator reports a small cup packs about 40% of its groceries and expects more only by adding a parallel gripper, soft attachments and a bottle tool. Tool change pays off because each extra tool unlocks a large volume class.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://www.theverge.com/robot/719880/ocado-online-grocery-automation-krogers-luton-ogrp-robot-grid"
+    },
+    {
+     "url": "https://www.ocadogroup.com/newsroom/news/kroger-rolls-out-new-technology-enhancements-with-ocado-group"
+    }
+   ]
+  },
+  {
+   "id": "RT-04",
+   "domain": "manufacturing",
+   "setting": "retail",
+   "title": "Garment handling: pick, hang, fold and bag",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "polybagged or loose garment from a bin",
+     "note": "Use suction for polybags and a pinch grip for loose cloth."
+    },
+    {
+     "verb": "hang or fold",
+     "object": "garment",
+     "note": "The garment is deformable and outside rigid-body scope."
+    },
+    {
+     "verb": "bag",
+     "object": "folded garment",
+     "note": "The garment is deformable."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Suction cup"
+    ]
+   },
+   "why": "In logistics most apparel is polybagged and picked by suction. Loose garments need a pinch gripper and cloth simulation, and hanging and folding are outside rigid-body scope.",
+   "sim": {
+    "feasibility": "out_of_scope",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 1,
+   "sources": [
+    {
+     "url": "https://covariant.ai/insights/how-ai-powered-robots-solve-apparel-picking-challenges/"
+    },
+    {
+     "url": "https://covariant.ai/insights/why-is-picking-apparel-hard-for-most-robots/"
+    },
+    {
+     "url": "https://righthandrobotics.com/products"
+    },
+    {
+     "url": "https://www.sewbo.com/"
+    },
+    {
+     "url": "https://doi.org/10.1109/icra48891.2023.10161398"
+    },
+    {
+     "url": "https://doi.org/10.1146/annurev-control-022723-033252"
+    }
+   ]
+  },
+  {
+   "id": "MF-01",
+   "domain": "manufacturing",
+   "setting": "manufacturing",
+   "title": "Kitting parts into trays",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "a part from a bin or shelf box",
+     "note": "Parts include bolts, brackets, caps and bearings."
+    },
+    {
+     "verb": "orient",
+     "object": "the part for its tray nest",
+     "note": "Orientation decides whether the part can be grasped."
+    },
+    {
+     "verb": "place",
+     "object": "the part into the tray nest",
+     "note": "The kit sequence can be chosen to group parts by tool."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Parallel jaw gripper"
+    ]
+   },
+   "why": "A two-finger gripper grasped more part types, though vacuum was faster where both worked in one published test. Use a tool change only if flat, light parts dominate, and sequence the kit to change tools once.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://inria.hal.science/hal-03630862/document"
+    },
+    {
+     "url": "https://arxiv.org/pdf/2003.02427v1.pdf"
+    },
+    {
+     "url": "https://www.pickit3d.com/en/media-hub/case-study-pick-it-with-collaborative-robot-performing-a-kitting-task"
+    }
+   ]
+  },
+  {
+   "id": "MF-02",
+   "domain": "manufacturing",
+   "setting": "manufacturing",
+   "title": "CNC machine tending: door, vise or chuck, load and unload",
+   "subtasks": [
+    {
+     "verb": "open",
+     "object": "machine door",
+     "note": "The door is often automatic, but the arm can push or pull it."
+    },
+    {
+     "verb": "swap",
+     "object": "finished part for raw blank in vise or chuck",
+     "note": "Unload and then load in one visit."
+    },
+    {
+     "verb": "close",
+     "object": "door and start cycle",
+     "note": "This is done with an I/O signal."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Dual parallel jaw gripper"
+    ]
+   },
+   "why": "A dual gripper unloads and loads in one visit, and one supplier reports a cycle cut from 27 s to 15 s. The same jaws push or pull the door, and the machine works its own vise or chuck.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": "h4_cnc",
+    "match": "same"
+   },
+   "demo_score": 5,
+   "sources": [
+    {
+     "url": "https://onrobot.com/us/node/107"
+    },
+    {
+     "url": "https://industrialmachinerydigest.com/robotics-automation/assembly/onrobot-dual-gripper-takes-on-machine-tending-duties-delivers-productivity-boost-cost-savings-for-metalworking-sme"
+    },
+    {
+     "url": "https://www.mmsonline.com/articles/shop-doubles-production-capacity-with-robotic-machine-tending"
+    },
+    {
+     "url": "https://www.automate.org/robotics/case-studies/cnc-machine-tending-with-fanuc-robodrill"
+    }
+   ]
+  },
+  {
+   "id": "MF-03",
+   "domain": "manufacturing",
+   "setting": "manufacturing",
+   "title": "Screw driving in assembly",
+   "subtasks": [
+    {
+     "verb": "place",
+     "object": "the cover or part onto the base in the fixture",
+     "note": "Skip this step if operators load the fixtures."
+    },
+    {
+     "verb": "pick",
+     "object": "a screw from the feeder",
+     "note": "The tool holds the screw on the bit."
+    },
+    {
+     "verb": "drive",
+     "object": "the screw to torque",
+     "note": "Repeat for each hole."
+    }
+   ],
+   "setup": {
+    "kind": "two_tool_head",
+    "tools": [
+     "Powered screwdriver",
+     "Parallel jaw gripper"
+    ]
+   },
+   "why": "If people load the fixture, the screwdriver alone is enough. If the robot also places the part, each cycle alternates place and drive, so a compact gripper beside the driver beats a tool change per part.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://onrobot.com/en/products/onrobot-screwdriver"
+    },
+    {
+     "url": "https://www.assemblymag.com/articles/98243-robots-assemble-toolsfor-robots"
+    },
+    {
+     "url": "https://www.visumatic.com/case-studies/robot-screwdriver-clip-inserter-machine-provides-next-level-quality-control/"
+    },
+    {
+     "url": "https://arxiv.org/pdf/2003.02427v1.pdf"
+    }
+   ]
+  },
+  {
+   "id": "MF-04",
+   "domain": "manufacturing",
+   "setting": "manufacturing",
+   "title": "Snap-fit clip insertion",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "a clip from the feeder",
+     "note": ""
+    },
+    {
+     "verb": "align",
+     "object": "the clip over its tower or hole",
+     "note": ""
+    },
+    {
+     "verb": "push",
+     "object": "the clip until it snaps",
+     "note": "Force rises then drops at the snap."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Feeder-fed clip inserter"
+    ]
+   },
+   "why": "At volume, a feeder-fed inserter avoids picking each clip. For low volume or several clip types, a parallel jaw with part-shaped fingers and a wrist force-torque sensor to detect the snap is more flexible.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://www.visumatic.com/automatic-screwdriving-systems/robotic/cobot-screwdrivers/cobot-clip-inserter/"
+    },
+    {
+     "url": "https://en.schulz.st/projects/connect-intelligently-and-quickly/"
+    },
+    {
+     "url": "https://accu-techusa.com/wp-content/uploads/2023/02/ConMetCaseStudy.pdf"
+    }
+   ]
+  },
+  {
+   "id": "MF-05",
+   "domain": "manufacturing",
+   "setting": "manufacturing",
+   "title": "Press-fit of bushings and bearings",
+   "subtasks": [
+    {
+     "verb": "load",
+     "object": "the housing into the press nest",
+     "note": ""
+    },
+    {
+     "verb": "load",
+     "object": "the bushing or bearing onto the press tooling",
+     "note": "Orientation matters."
+    },
+    {
+     "verb": "unload",
+     "object": "the pressed assembly",
+     "note": "The press monitors force and travel."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Dual parallel jaw gripper"
+    ]
+   },
+   "why": "Integrators let a servo press make the fit and use the robot to load it, with a dual gripper carrying housing and bushing together. The robot presses only light fits itself, using a parallel jaw and force-guided search.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://ahaus.com/case-study/knuckle-assembly-cell/"
+    },
+    {
+     "url": "https://esellc.net/portfolio-posts/bushing-press-with-bushing-orientation-robot/"
+    },
+    {
+     "url": "https://jendamark.io/case-study/from-push-to-precision-automating-axle-assembly/"
+    },
+    {
+     "url": "https://arxiv.org/html/2002.02580v1"
+    }
+   ]
+  },
+  {
+   "id": "MF-06",
+   "domain": "manufacturing",
+   "setting": "manufacturing",
+   "title": "Cable connector insertion for wire harnesses",
+   "subtasks": [
+    {
+     "verb": "grasp",
+     "object": "the connector housing at its grip ribs",
+     "note": "The hanging cable pulls on the connector."
+    },
+    {
+     "verb": "insert",
+     "object": "the connector into the socket with a force-guided search",
+     "note": "Position noise of plus or minus 2 mm is typical."
+    },
+    {
+     "verb": "pull-test",
+     "object": "the connector to confirm the latch",
+     "note": ""
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Parallel jaw gripper with form-fit fingers",
+     "Wrist force-torque sensor"
+    ]
+   },
+   "why": "Form-fit fingers on a standard parallel gripper hold the connector rigidly, and the wrist force-torque sensor handles the search and latch check. A tool change is needed only when the next step uses a different fastener, such as a clip gun.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://arxiv.org/html/2503.09409"
+    },
+    {
+     "url": "https://www.leitungssatz-hub.de/en/robotics-challenge/robotics-challenge-2025/results-of-the-robotics-challenge/"
+    },
+    {
+     "url": "https://doi.org/10.1109/lra.2026.3665078"
+    }
+   ]
+  },
+  {
+   "id": "MF-07",
+   "domain": "manufacturing",
+   "setting": "manufacturing",
+   "title": "Deburring machined or cast parts",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "part from a fixture or conveyor",
+     "note": ""
+    },
+    {
+     "verb": "present",
+     "object": "part edges to a compliant spindle along a path",
+     "note": "Keep the pressure constant."
+    },
+    {
+     "verb": "place",
+     "object": "part on the outfeed",
+     "note": ""
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Parallel jaw gripper with part-shaped jaws"
+    ]
+   },
+   "why": "For parts the arm can lift, integrators fix the compliant spindle and move the part, so a smaller arm can work with a bigger spindle. Mount the spindle on the robot only for parts too big to carry.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 2,
+   "sources": [
+    {
+     "url": "https://www.ati-ia.com/products/deburr/deburring_ModelDetails.aspx?id=RS-340&type=RC"
+    },
+    {
+     "url": "https://www.mmsonline.com/articles/concept-prove-outs-prove-their-worth-in-robotic-finishing"
+    },
+    {
+     "url": "https://roboticsandautomationnews.com/2023/06/05/choosing-a-robotic-spindle-for-deburring/67611/"
+    }
+   ]
+  },
+  {
+   "id": "MF-08",
+   "domain": "manufacturing",
+   "setting": "manufacturing",
+   "title": "Sanding and polishing surfaces",
+   "subtasks": [
+    {
+     "verb": "scan",
+     "object": "part surface",
+     "note": "Use a 3D camera."
+    },
+    {
+     "verb": "sand",
+     "object": "surface at constant contact force along a coverage path",
+     "note": ""
+    },
+    {
+     "verb": "change",
+     "object": "abrasive disc",
+     "note": "Use a station, not a second tool."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Orbital sander on an active compliant flange"
+    ]
+   },
+   "why": "The active flange holds contact force while the arm moves fast. One published test found it beat arm-based force control on quick orientation changes. Discs change at a station, so one tool is enough.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 2,
+   "sources": [
+    {
+     "url": "https://www.ferrobotics.com/app/uploads/2025/03/FerRobotics_ACF-K-Datasheet-2025-EN-web.pdf"
+    },
+    {
+     "url": "https://www.ferrobotics.com/en/marlan-solid-surface-robotic-sanding-active-contact-flange-kit-acf-k-cobot-end-effector-composite-application/"
+    },
+    {
+     "url": "https://www.prnewswire.com/news-releases/the-worlds-first-dual-arm-autonomous-robotic-sanding-cell-301981057.html"
+    },
+    {
+     "url": "https://www.mmsonline.com/articles/addressing-manufacturing-challenges-with-automation"
+    },
+    {
+     "url": "https://ms.copernicus.org/articles/13/361/2022/"
+    }
+   ]
+  },
+  {
+   "id": "MF-09",
+   "domain": "manufacturing",
+   "setting": "manufacturing",
+   "title": "Quality inspection with part flipping",
+   "subtasks": [
+    {
+     "verb": "present",
+     "object": "face A of the part to the camera",
+     "note": ""
+    },
+    {
+     "verb": "flip",
+     "object": "part by regripping",
+     "note": "Use a flip station, a hand-off or an in-hand move."
+    },
+    {
+     "verb": "sort",
+     "object": "part to the OK or NG bin",
+     "note": ""
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Parallel jaw gripper"
+    ]
+   },
+   "why": "One gripper and a passive V-nest do the job: set the part down and regrip it from the other side. One deployed system used a suction cup for flat machined parts. No tool change is needed within one part family.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://www.iskrapro.si/project/automated-sorting-and-inspection-station-for-machined-components/"
+    },
+    {
+     "url": "https://www.unitxlabs.com/case-studies/mobile-phone-mid-frame-inspection/"
+    },
+    {
+     "url": "https://www.automate.org/vision/case-studies/flexible-plastic-mold-inspection-system-wins-new-business-for-component-supplier"
+    },
+    {
+     "url": "https://tupl.com/wp-content/uploads/2025/06/brochure_vision-for-manufacturing.pdf"
+    }
+   ]
+  },
+  {
+   "id": "MF-10",
+   "domain": "manufacturing",
+   "setting": "manufacturing",
+   "title": "Injection moulding part removal and degating",
+   "subtasks": [
+    {
+     "verb": "remove",
+     "object": "part and runner from the open mould",
+     "note": "Use vacuum on the part and pliers on the runner."
+    },
+    {
+     "verb": "degate",
+     "object": "part from the runner",
+     "note": "Use a fixed nipper station or a knife on the tool."
+    },
+    {
+     "verb": "place",
+     "object": "part on the conveyor and runner in the granulator",
+     "note": ""
+    }
+   ],
+   "setup": {
+    "kind": "two_tool_head",
+    "tools": [
+     "Vacuum cups, multiple",
+     "Sprue gripper"
+    ]
+   },
+   "why": "Cups for the part and pliers for the runner on one frame clear the mould in one stroke. Cutting at a fixed nipper station avoids adding knife mass inside the mould.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://www.piab.com/en-us/robot-end-of-arm-tooling-eoat-components/plastic-injection-moulding/sprue-part-grippers"
+    },
+    {
+     "url": "https://eoat.net/wp-content/uploads/EOAT%20Catalog_10-19_PRINT_.pdf"
+    },
+    {
+     "url": "https://www.ppe.com/EOAT/files/basic-html/page5.html"
+    },
+    {
+     "url": "https://www.universal-robots.com/case-stories/midgard-inc/"
+    },
+    {
+     "url": "https://www.ptonline.com/articles/cobots-bring-custom-injection-molder-greater-flexibility"
+    },
+    {
+     "url": "https://www.universal-robots.com/case-stories/dynamic-group/"
+    }
+   ]
+  },
+  {
+   "id": "MF-11",
+   "domain": "manufacturing",
+   "setting": "manufacturing",
+   "title": "Sorting laser-cut parts from the skeleton",
+   "subtasks": [
+    {
+     "verb": "lift",
+     "object": "cut part out of the skeleton",
+     "note": "A small wiggle may be needed to free micro-joints."
+    },
+    {
+     "verb": "stack",
+     "object": "part on its pallet by part number",
+     "note": ""
+    },
+    {
+     "verb": "remove",
+     "object": "skeleton",
+     "note": "A fork system often does this, not the robot."
+    }
+   ],
+   "setup": {
+    "kind": "tool_change",
+    "tools": [
+     "Magnetic gripper",
+     "Vacuum gripper, multiple cups"
+    ]
+   },
+   "why": "Magnets grip thick steel best, while aluminium and stainless need vacuum. Mixed-material shops change tools by job. A steel-only shop needs only the magnet.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://www.astes4.ch/astes4-sortpro/"
+    },
+    {
+     "url": "https://bystronic.com/int/en/la/sorting-system-bysort"
+    },
+    {
+     "url": "https://www.trumpf.com/en_US/products/machines-systems/automation/automation-for-2d-laser-cutting-machines/liftmaster/"
+    },
+    {
+     "url": "https://www.thefabricator.com/thefabricator/article/lasercutting/automated-part-sorting-for-laser-cutting-gets-flexible"
+    }
+   ]
+  },
+  {
+   "id": "MF-12",
+   "domain": "manufacturing",
+   "setting": "manufacturing",
+   "title": "Press brake tending",
+   "subtasks": [
+    {
+     "verb": "load",
+     "object": "blank from the stack and square it",
+     "note": "Check for double sheets and use a centring table."
+    },
+    {
+     "verb": "hold",
+     "object": "blank against the backgauge through the bend",
+     "note": "Follow the flange as it rises."
+    },
+    {
+     "verb": "regrip",
+     "object": "part between bends and stack it",
+     "note": "Use a regrip station."
+    }
+   ],
+   "setup": {
+    "kind": "two_tool_head",
+    "tools": [
+     "Vacuum gripper, multiple cups",
+     "Parallel jaw gripper with pivoting jaws"
+    ]
+   },
+   "why": "Vacuum takes blanks off the stack and jaws hold the edge as the flange swings up. Production machines combine both in one gripper with a fixed regrip station. Add a tool changer only for very different part families.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://www.trumpf.com/en_US/products/machines-systems/automation/automation-for-bending-machines/flex-cell/"
+    },
+    {
+     "url": "https://bystronic.com/usa/en-us/ba/automatic-sheet-metal-bending-machine-bending-cell"
+    },
+    {
+     "url": "https://cdn.amada.eu/fileadmin/Repository/Products/Brochures/HG_Rm_E070-EU01en_LD.pdf"
+    },
+    {
+     "url": "https://www.mwes.com/resources/recent-projects/robotic-press-brake-tending/"
+    }
+   ]
+  },
+  {
+   "id": "MF-13",
+   "domain": "manufacturing",
+   "setting": "manufacturing",
+   "title": "Battery module cell stacking",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "one or a row of cells from the tray",
+     "note": "Cells may be prismatic, cylindrical or pouch."
+    },
+    {
+     "verb": "stack",
+     "object": "cells into the module fixture",
+     "note": "Alternate the polarity and add spacers."
+    },
+    {
+     "verb": "place",
+     "object": "end plates and compress the stack",
+     "note": ""
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Long-stroke parallel gripper"
+    ]
+   },
+   "why": "A high-force, long-stroke parallel gripper with in-place detection is standard for prismatic cells, and it also places spacers and end plates. For densely packed round cells, use a magnetic top pick instead.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://cobotglobal.com/jodell/en/solution-battery.html"
+    },
+    {
+     "url": "https://osai-as.com/custom-equipment/automated-sorting-and-stacking-solution/"
+    },
+    {
+     "url": "https://schunk.com/dk/en/press/safely-handling-battery-cells/23936"
+    },
+    {
+     "url": "https://www.bright-ai.com/en/product.php?lm=79"
+    },
+    {
+     "url": "https://www.schmalz.com/en-us/solutions/industries-and-applications/battery"
+    }
+   ]
+  },
+  {
+   "id": "MF-14",
+   "domain": "manufacturing",
+   "setting": "manufacturing",
+   "title": "PCB test fixture loading and sorting",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "PCB or panel from the magazine or tray",
+     "note": "Grip by the edge and keep it ESD-safe."
+    },
+    {
+     "verb": "load",
+     "object": "board onto the fixture pins and close the lid",
+     "note": ""
+    },
+    {
+     "verb": "sort",
+     "object": "tested board to the pass or fail magazine",
+     "note": ""
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Long-stroke parallel gripper, edge fingers"
+    ]
+   },
+   "why": "Wide-stroke edge fingers cover many board sizes without a change, which is why one manufacturer chose this gripper. The gripper can also push the lid closed.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://robotiq.com/hubfs/Case%20Study-Sennheiser.docx.pdf"
+    },
+    {
+     "url": "https://robotics.omron.com/case-studies/automated-circuit-board-testing-omron-hanover-displays/"
+    },
+    {
+     "url": "https://www.pi4.de/product-wb8.html"
+    },
+    {
+     "url": "https://www.scanfil.com/newsroom/scanfil-wutha-enhances-electronics-manufacturing-automation-with-automated-test-cell"
+    }
+   ]
+  },
+  {
+   "id": "MF-15",
+   "domain": "manufacturing",
+   "setting": "manufacturing",
+   "title": "Through-hole and odd-form component insertion",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "component by its body or leads",
+     "note": ""
+    },
+    {
+     "verb": "insert",
+     "object": "leads through the board holes",
+     "note": "Tolerance is under a millimetre."
+    },
+    {
+     "verb": "clinch",
+     "object": "leads under the board",
+     "note": "A machine does this under the board."
+    }
+   ],
+   "setup": {
+    "kind": "tool_change",
+    "tools": [
+     "Lead chuck",
+     "Parallel gripper",
+     "Suction cup"
+    ]
+   },
+   "why": "Odd-form parts differ too much for one gripper, so dedicated machines change heads by component class. Group insertions by tool to keep changes few.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 2,
+   "sources": [
+    {
+     "url": "https://connect.na.panasonic.com/smart-factory/electronics-assembly/pth-of-eol/npm-vf-odd-form-component-insertion"
+    },
+    {
+     "url": "https://doi.org/10.1109/iccma59762.2023.10375039"
+    },
+    {
+     "url": "https://epp.industrie.de/allgemein/solutions-against-all-odds/"
+    }
+   ]
+  },
+  {
+   "id": "MF-16",
+   "domain": "manufacturing",
+   "setting": "manufacturing",
+   "title": "Bottle capping with screw caps",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "cap",
+     "note": ""
+    },
+    {
+     "verb": "place",
+     "object": "cap on the bottle neck",
+     "note": "Find the thread start."
+    },
+    {
+     "verb": "twist",
+     "object": "cap to torque",
+     "note": ""
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Parallel gripper with cap-shaped jaws"
+    ]
+   },
+   "why": "A gripper that holds the cap, plus wrist rotation with a torque limit, is enough. The arm's own torque sensing sets the tightness.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://www.universal-robots.com/case-stories/marka/"
+    }
+   ]
+  },
+  {
+   "id": "facility-doors-drawers",
+   "domain": "lab_food_service",
+   "setting": "facility",
+   "title": "Open doors and drawers",
+   "subtasks": [
+    {
+     "verb": "grasp",
+     "object": "handle, lever, knob or pull",
+     "note": ""
+    },
+    {
+     "verb": "turn",
+     "object": "handle to unlatch",
+     "note": "Turn or press as the latch needs."
+    },
+    {
+     "verb": "swing",
+     "object": "door or drawer",
+     "note": "Swing the door or slide the drawer."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Parallel gripper with high-friction pads"
+    ]
+   },
+   "why": "One parallel gripper handles levers, knobs and drawer pulls, and one legged robot opens doors with a built-in single-axis gripper. A hook is cheaper and more forgiving if the job is only drawers and pull handles.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 5,
+   "sources": [
+    {
+     "url": "https://bostondynamics.com/products/spot/arm/"
+    },
+    {
+     "url": "https://support.bostondynamics.com/s/article/spot-arm-anatomy"
+    },
+    {
+     "url": "https://spectrum.ieee.org/boston-dynamics-spot-30"
+    },
+    {
+     "url": "https://github.com/hello-robot/stretch_tool_share"
+    },
+    {
+     "url": "https://www.therobotreport.com/diligent-robotics-raises-seed-funding-launches-moxi-robot/"
+    }
+   ]
+  },
+  {
+   "id": "kit-dish-rack-loading",
+   "domain": "lab_food_service",
+   "setting": "kitchen",
+   "title": "Load dish racks in a commercial dish room",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "plate, bowl or cup from the bus tub or stack",
+     "note": ""
+    },
+    {
+     "verb": "insert",
+     "object": "ware upright into a peg rack",
+     "note": ""
+    },
+    {
+     "verb": "push",
+     "object": "loaded rack into the dish machine",
+     "note": ""
+    }
+   ],
+   "setup": {
+    "kind": "tool_change",
+    "tools": [
+     "Parallel gripper with quick-change fingers",
+     "Rim fingers for plates",
+     "Cup fingers",
+     "Magnet fingers for cutlery"
+    ]
+   },
+   "why": "One deployed system settled on one gripper body with swappable fingers, since greasy plates, cups on their side and cutlery bunches each need different fingers. Fingers are cheap wear parts, and a fixed set would miss cutlery.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://www.therobotreport.com/armstrong-robotics-creating-general-purpose-kitchen-robots-starting-dishwashing/"
+    },
+    {
+     "url": "https://www.cnbc.com/2019/06/18/robotic-dishwasher-for-restaurants-taking-dirty-work-out-of-kitchen.html"
+    },
+    {
+     "url": "https://spectrum.ieee.org/dishcraft-robotics-takes-over-dishwashing-from-humans"
+    },
+    {
+     "url": "https://www.wsj.com/economy/jobs/restaurants-are-finding-it-harder-than-ever-to-hire-someone-to-wash-the-dishes-18406c48"
+    }
+   ]
+  },
+  {
+   "id": "hospitality-room-delivery",
+   "domain": "lab_food_service",
+   "setting": "hospitality",
+   "title": "Deliver amenities to a hotel room by lift and door",
+   "subtasks": [
+    {
+     "verb": "press",
+     "object": "lift call and floor buttons",
+     "note": ""
+    },
+    {
+     "verb": "ride",
+     "object": "lift to the right floor",
+     "note": "Exit at the right floor."
+    },
+    {
+     "verb": "knock",
+     "object": "guest door",
+     "note": "Present the item to the guest."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Compliant fingertip button pusher with card holder"
+    ]
+   },
+   "why": "Every contact is a press or a tap, and the guest takes the item from a drawer. A rigid finger with a compliant tip presses buttons, knocks and taps a card, so no gripper is needed, as in one deployed system.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": "h7_hotel",
+    "match": "same"
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://www.robotis.com/en/product/ecosystem-ingaemi.php"
+    },
+    {
+     "url": "https://xtech.nikkei.com/atcl/nxt/mag/rob/18/00004/00117/"
+    },
+    {
+     "url": "https://www.taisei-bm.co.jp/topics/gaemi-2/"
+    },
+    {
+     "url": "https://www.taisei-bm.co.jp/topics/gaemi/"
+    },
+    {
+     "url": "https://skift.com/2023/06/29/new-hotel-tech-room-service-robots-and-holograms/"
+    }
+   ]
+  },
+  {
+   "id": "lab-microplate-transfer",
+   "domain": "lab_food_service",
+   "setting": "lab",
+   "title": "Move microplates between instruments",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "plate from liquid-handler deck",
+     "note": ""
+    },
+    {
+     "verb": "remove",
+     "object": "lid to a lid nest",
+     "note": ""
+    },
+    {
+     "verb": "place",
+     "object": "plate into reader or incubator nest",
+     "note": "Seat it in the right orientation."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Servo parallel gripper with plate paddles"
+    ]
+   },
+   "why": "Two force-controlled paddles grip the plate skirt and self-centre on the standard footprint, so one tool handles plates, lids and tip racks. Suction would need a second cup set to de-lid and cannot seal on foil-sealed or lidless plates.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 5,
+   "sources": [
+    {
+     "url": "https://www.preciseflexrobots.com/lab-automation-applicable-products/"
+    },
+    {
+     "url": "https://docs.opentrons.com/flex/system-description/gripper/"
+    },
+    {
+     "url": "https://opentrons.com/products/opentrons-flex-gripper-gen1"
+    },
+    {
+     "url": "https://hudsonlabautomation.com/products/automated-microplate-handlers/platecrane-ex-robotic-arm-microplate-handler/"
+    }
+   ]
+  },
+  {
+   "id": "ag-egg-handling",
+   "domain": "lab_food_service",
+   "setting": "agriculture",
+   "title": "Transfer and pack eggs",
+   "subtasks": [
+    {
+     "verb": "lift",
+     "object": "a full row or tray of eggs",
+     "note": ""
+    },
+    {
+     "verb": "set",
+     "object": "eggs into hatcher baskets or cartons",
+     "note": ""
+    },
+    {
+     "verb": "restack",
+     "object": "empty trays",
+     "note": "Destack and restack them."
+    }
+   ],
+   "setup": {
+    "kind": "two_tool_head",
+    "tools": [
+     "Suction cup array at egg pitch",
+     "Tray clamp"
+    ]
+   },
+   "why": "A cup array lifts a whole tray of eggs without squeezing the shells. A tray clamp on the same head lets one robot also handle trays. Drop the clamp if trays move on conveyors.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 5,
+   "sources": [
+    {
+     "url": "https://www.ecat-id.com/en/products/egg-processing-room/egg-transfer"
+    },
+    {
+     "url": "https://exa.ai/library/legal/patent/9mfpgd9hkmb"
+    },
+    {
+     "url": "https://doi.org/10.18687/laccei2023.1.1.834"
+    }
+   ]
+  },
+  {
+   "id": "facility-switchgear-racking",
+   "domain": "lab_food_service",
+   "setting": "facility",
+   "title": "Trip and rack out a switchgear circuit breaker",
+   "subtasks": [
+    {
+     "verb": "press",
+     "object": "trip button",
+     "note": "This opens the breaker."
+    },
+    {
+     "verb": "insert",
+     "object": "racking socket onto the drive",
+     "note": ""
+    },
+    {
+     "verb": "turn",
+     "object": "drive to disconnect",
+     "note": "Turn until the breaker reaches the disconnected position."
+    }
+   ],
+   "setup": {
+    "kind": "tool_change",
+    "tools": [
+     "Parallel gripper for trip button and tool placing",
+     "Motorised racking socket drive"
+    ]
+   },
+   "why": "Racking takes dozens of turns at real torque, which an arm wrist should not do. The gripper presses the trip and places a motorised socket that does the turning. A dedicated remote racking device is cheaper when no mobile robot is needed.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://bostondynamics.com/case-studies/opg-automating-circuit-breaker-tripping-and-racking/"
+    },
+    {
+     "url": "https://cbsarcsafe.com/products/remote-racking-solutions/"
+    },
+    {
+     "url": "https://switchgearsafety.com/product/roborack/"
+    },
+    {
+     "url": "https://ulctechnologies.com/technologies/breaker-racking-robot/"
+    },
+    {
+     "url": "https://www.eaton.com/us/en-us/products/medium-voltage-power-distribution-control-systems/switchgear/integral-motorized-remote-racking-for-metal-clad-switchgear.html"
+    }
+   ]
+  },
+  {
+   "id": "retail-cooler-restock-facing",
+   "domain": "lab_food_service",
+   "setting": "retail",
+   "title": "Restock and face beverage coolers",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "bottle or can from back stock",
+     "note": ""
+    },
+    {
+     "verb": "place",
+     "object": "item into the correct shelf lane",
+     "note": ""
+    },
+    {
+     "verb": "push",
+     "object": "lane forward",
+     "note": "This faces the lane."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Parallel gripper with concave bottle and can fingers"
+    ]
+   },
+   "why": "Bottles and cans are rigid cylinders in fixed lanes. One gripper picks them and, when closed, pushes lanes forward to face them, and one deployed system uses a single hand for every beverage shape.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 5,
+   "sources": [
+    {
+     "url": "https://tx-inc.com/en/blog/2022/08/10/11712/"
+    },
+    {
+     "url": "https://apnews.com/article/technology-japan-tokyo-376b88f6503461497d94df46cc9c5d8c"
+    },
+    {
+     "url": "https://blogs.nvidia.com/blog/telexistence-convenience-store-robotics/"
+    }
+   ]
+  },
+  {
+   "id": "hosp-supply-restock",
+   "domain": "lab_food_service",
+   "setting": "hospital",
+   "title": "Restock hospital supplies",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "items from central-store bins into a tote",
+     "note": ""
+    },
+    {
+     "verb": "carry",
+     "object": "tote to the unit",
+     "note": ""
+    },
+    {
+     "verb": "place",
+     "object": "items into bins or drawers",
+     "note": ""
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Adaptive two-finger gripper, 85 mm stroke class"
+    ]
+   },
+   "why": "Supplies mix boxes, bottles and soft pouches. Adaptive fingers conform to all three and can also pull drawer handles, as in one deployed hospital robot.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://www.therobotreport.com/diligent-robotics-raises-seed-funding-launches-moxi-robot/"
+    },
+    {
+     "url": "https://www.diligentrobots.com/moxi"
+    },
+    {
+     "url": "https://aethon.com/hospital-robots-healthcare/"
+    },
+    {
+     "url": "https://www.therobotreport.com/diligent-robotics-hits-1m-picks-with-moxi-robot-in-healthcare-settings/"
+    },
+    {
+     "url": "https://www.therobotreport.com/serve-robotics-acquires-diligent-robotics/"
+    }
+   ]
+  },
+  {
+   "id": "household-dishwasher-loading",
+   "domain": "lab_food_service",
+   "setting": "household",
+   "title": "Load a dishwasher",
+   "subtasks": [
+    {
+     "verb": "open",
+     "object": "door and rack",
+     "note": "Open the door and pull out the rack."
+    },
+    {
+     "verb": "place",
+     "object": "each dish in the tines",
+     "note": ""
+    },
+    {
+     "verb": "close",
+     "object": "rack and door",
+     "note": "Push the rack in and close the door."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Adaptive two-finger gripper, wide stroke, rubber pads"
+    ]
+   },
+   "why": "One adaptive gripper takes plates by the rim, bowls and glasses by the body, and the rack by its front edge. Learned policies already stack bowls with a parallel jaw, and hands are not needed for a tidy counter.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 5,
+   "sources": [
+    {
+     "url": "https://www.figure.ai/news/helix-loads-the-dishwasher"
+    },
+    {
+     "url": "https://news.housebots.com/news/figure-02-just-loaded-the-dishwasher"
+    },
+    {
+     "url": "https://arxiv.org/html/2410.24164v1"
+    }
+   ]
+  },
+  {
+   "id": "ag-strawberry-harvest",
+   "domain": "lab_food_service",
+   "setting": "agriculture",
+   "title": "Harvest strawberries by cutting and gripping the stem",
+   "subtasks": [
+    {
+     "verb": "isolate",
+     "object": "ripe berry from its cluster",
+     "note": ""
+    },
+    {
+     "verb": "grip and cut",
+     "object": "peduncle",
+     "note": ""
+    },
+    {
+     "verb": "place",
+     "object": "berry into a punnet",
+     "note": ""
+    }
+   ],
+   "setup": {
+    "kind": "two_tool_head",
+    "tools": [
+     "Pinch jaw",
+     "Blade on the same actuator, cut-and-hold head"
+    ]
+   },
+   "why": "Gripping and cutting the stem in one closing stroke never squeezes the fruit and needs one actuator. In published lab tests, a 10 N stem grip held a 50 g berry under fast motion.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 5,
+   "sources": [
+    {
+     "url": "https://doi.org/10.1109/access.2022.3190863"
+    },
+    {
+     "url": "https://advanced.farm/technology/strawberry-harvester/"
+    },
+    {
+     "url": "https://ar5iv.labs.arxiv.org/html/2207.12552"
+    },
+    {
+     "url": "https://www.mdpi.com/2076-0825/14/2/42"
+    },
+    {
+     "url": "https://doi.org/10.48550/arxiv.1804.09771"
+    },
+    {
+     "url": "https://ageconsearch.umn.edu/record/339707/files/Delbridge.pdf"
+    }
+   ]
+  },
+  {
+   "id": "lab-tube-decap-recap",
+   "domain": "lab_food_service",
+   "setting": "lab",
+   "title": "Decap and recap sample tubes",
+   "subtasks": [
+    {
+     "verb": "hold",
+     "object": "tube upright in a rack or clamp",
+     "note": ""
+    },
+    {
+     "verb": "unscrew",
+     "object": "cap",
+     "note": "Unscrew the cap and lift it."
+    },
+    {
+     "verb": "screw",
+     "object": "cap back on",
+     "note": "Tighten to a set torque."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Rotary parallel gripper with V-groove cap jaws"
+    ]
+   },
+   "why": "Decapping is a twist with the tube held still, so a rack or clamp holds the tube and one gripper that grips and spins endlessly twists, lifts and replaces the cap. For full standard racks a dedicated multi-way decapper is better than any arm.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://www.hamiltoncompany.com/capping-decapping/labelite-decapper"
+    },
+    {
+     "url": "https://micronic.com/cappers-decappers/"
+    },
+    {
+     "url": "https://clpmag.com/lab-essentials/lab-automation/azenta-launches-automated-tube-recapping-instrument/"
+    },
+    {
+     "url": "https://en.dh-robotics.com/product/rgi"
+    },
+    {
+     "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC13073645/"
+    }
+   ]
+  },
+  {
+   "id": "pharm-pack-picking",
+   "domain": "lab_food_service",
+   "setting": "pharmacy",
+   "title": "Store and pick medicine packs",
+   "subtasks": [
+    {
+     "verb": "scan",
+     "object": "incoming pack from the input belt",
+     "note": ""
+    },
+    {
+     "verb": "store",
+     "object": "pack in a shelf slot",
+     "note": ""
+    },
+    {
+     "verb": "pick",
+     "object": "prescription packs",
+     "note": "Drop them into the output chute."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Parallel jaw with long flat fingers",
+     "Pusher plate"
+    ]
+   },
+   "why": "Packs are rigid boxes stored tightly, so thin flat fingers slide in beside a pack and a pusher ejects it. Suction works on an exposed face but handles only one face per pick.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://www.bd.com/content/dam/bd-assets/bd-com/ga-assets/ko-kr/images/product-brand/medication-management-solutions/rowa/images/bd-rowa-vmax-en.pdf"
+    },
+    {
+     "url": "https://rowa.de/en/products/store-pick/bd-rowa-vmax/"
+    },
+    {
+     "url": "https://jerryfahrni.com/2011/08/cool-pharmacy-technologyrowa-vmax/"
+    },
+    {
+     "url": "https://www.swisslog-healthcare.com/-/media/swisslog-healthcare/documents/products-and-services/pharmacy-automation/evotec/201026_slhc_evotec_en_digital.pdf"
+    },
+    {
+     "url": "https://www.swisslog-healthcare.com/en-us/products/pharmacy-automation/boxpicker-automated-pharmacy-storage-system"
+    }
+   ]
+  },
+  {
+   "id": "ag-apple-harvest",
+   "domain": "lab_food_service",
+   "setting": "agriculture",
+   "title": "Harvest tree fruit such as apples",
+   "subtasks": [
+    {
+     "verb": "attach",
+     "object": "to the apple",
+     "note": ""
+    },
+    {
+     "verb": "detach",
+     "object": "apple by twist and pull",
+     "note": ""
+    },
+    {
+     "verb": "convey",
+     "object": "apple into the bin",
+     "note": "Convey or drop it into the bin."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Soft bellows suction cup with vacuum"
+    ]
+   },
+   "why": "Most leading apple picking systems use suction, as it attaches despite position error and keeps fingers out of the canopy. Detachment is a wrist twist and pull.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 5,
+   "sources": [
+    {
+     "url": "https://rv-times.com/2024/01/02/developing-a-sense-of-touch-robotic-hand-field-tested-for-apple-harvest-2/"
+    },
+    {
+     "url": "https://capitalpress.com/2020/11/18/quest-for-robotic-apple-pickers-nearing-fruition/"
+    },
+    {
+     "url": "https://www.tevel-tech.com/"
+    },
+    {
+     "url": "https://ominthenews.com/boosting-fruit-picking-productivity-tevels-flying-robots/"
+    },
+    {
+     "url": "https://doi.org/10.1109/access.2022.3190863"
+    }
+   ]
+  },
+  {
+   "id": "facility-valve-rounds",
+   "domain": "lab_food_service",
+   "setting": "facility",
+   "title": "Turn valves during plant operator rounds",
+   "subtasks": [
+    {
+     "verb": "grasp",
+     "object": "lever or handwheel rim",
+     "note": ""
+    },
+    {
+     "verb": "rotate",
+     "object": "valve to target position",
+     "note": "A quarter turn or several turns."
+    },
+    {
+     "verb": "verify",
+     "object": "valve position indicator",
+     "note": ""
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Parallel gripper with high-friction jaws",
+     "High-torque wrist"
+    ]
+   },
+   "why": "Deployed plant robots turn valves with their standard gripper, provided the wrist delivers the breakaway torque. A dedicated handwheel driver only pays off for stiff multi-turn wheels.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://www.taurob.com/operator/"
+    },
+    {
+     "url": "https://d3cjkvgbik1jtv.cloudfront.net/translations/spot-5_1/spot-arm-user-manual-en.pdf"
+    },
+    {
+     "url": "https://solutions.mhi.com/case-studies/explosion-proof-patrol-robot-step-toward-autonomous-platform/"
+    },
+    {
+     "url": "https://www.marinetechnologynews.com/news/robotics-offshore-robotic-workers-612677"
+    },
+    {
+     "url": "https://doi.org/10.1109/roma66616.2025.11155452"
+    }
+   ]
+  },
+  {
+   "id": "ag-pot-spacing",
+   "domain": "lab_food_service",
+   "setting": "agriculture",
+   "title": "Space potted plants in a greenhouse or nursery",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "pot from the cluster",
+     "note": ""
+    },
+    {
+     "verb": "carry",
+     "object": "pot to the next pattern point",
+     "note": ""
+    },
+    {
+     "verb": "set down",
+     "object": "pot at the planned spacing",
+     "note": ""
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Wide-stroke two-jaw clamp gripper for pot rim or body"
+    ]
+   },
+   "why": "Pots are rigid cylinders in a known size range, so one clamp handles them, while suction fails on ribbed, dusty pots. For more throughput, repeat the same gripper on a multi-pot head.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://hnr.k-state.edu/horticulture-storylines/careers-and-technology/documents/robotics/HV_100_Robot_Tech_Sheet.pdf"
+    },
+    {
+     "url": "https://www.roboticstomorrow.com/article/2014/09/harvest-automation-robots-reduce-production-costs-and-increase-capacity/4606/"
+    },
+    {
+     "url": "https://www.greenhousegrower.com/technology/harvest-automation-robot-helps-you-move-plants-without-people/"
+    },
+    {
+     "url": "https://www.ai-systems.ca/bigtop-autonomous-mobile-robot/"
+    },
+    {
+     "url": "https://instar-robotics.com/?lang=en&page_id=1128"
+    }
+   ]
+  },
+  {
+   "id": "facility-trash-bin-emptying",
+   "domain": "lab_food_service",
+   "setting": "facility",
+   "title": "Empty trash bins",
+   "subtasks": [
+    {
+     "verb": "grip",
+     "object": "bin or cart",
+     "note": ""
+    },
+    {
+     "verb": "lift and tip",
+     "object": "bin into the cart or truck hopper",
+     "note": ""
+    },
+    {
+     "verb": "set back",
+     "object": "bin in place",
+     "note": ""
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Wide-stroke clamp gripper for the bin body"
+    ]
+   },
+   "why": "Tipping a rigid bin is a clamp, lift and rotate, as side-loader arms already do for standard carts. Indoors the same clamp works if bins are standardised. Replacing liners needs cloth handling and stays manual.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://www.trucksite.com/inventory/category/garbage-trucks/automated-side-loaders"
+    },
+    {
+     "url": "https://labrietrucks.com/side-loaders"
+    },
+    {
+     "url": "https://www.popsci.com/technology/somatic-bathroom-robot/"
+    },
+    {
+     "url": "https://mcneilusgarbagetrucks.com/autonomous-refuse-collection-harr-e"
+    }
+   ]
+  },
+  {
+   "id": "pack-bakery-pick-place",
+   "domain": "lab_food_service",
+   "setting": "food_packaging",
+   "title": "Pick and place baked goods",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "item from the belt",
+     "note": ""
+    },
+    {
+     "verb": "place",
+     "object": "item into tray or clamshell",
+     "note": ""
+    },
+    {
+     "verb": "stack",
+     "object": "items into a slug for wrapping",
+     "note": ""
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Food-grade soft fingers"
+    ]
+   },
+   "why": "Buns and pastries are soft, crumbly and porous, so suction leaks and pulls crumbs, while soft fingers cradle them. For flat, sealed items such as cookies, use a vacuum cup instead. Pick one tool per product family.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://www.packworld.com/secondary-packaging/robotics/article/22933495/unique-gripper-shines-in-robotic-cookie-multi-pack-automation-system"
+    },
+    {
+     "url": "https://www.schmalz.com/en/career-company/latest/news/grip-where-it-gets-tricky-delicious-rolls-with-a-system"
+    },
+    {
+     "url": "https://rbtx.com/en-US/solutions/pick-place-of-chocolate-bars-inside-a-packaging-machine-with-2-axis-delta-robot"
+    },
+    {
+     "url": "https://robotplus.es/wp-content/uploads/2021/10/mGrip.pdf"
+    },
+    {
+     "url": "https://niverplastna.com/successful-cases/robot-pick-and-place-packaging-line-for-bakery-products"
+    }
+   ]
+  },
+  {
+   "id": "kit-fry-station",
+   "domain": "lab_food_service",
+   "setting": "kitchen",
+   "title": "Run a fry station",
+   "subtasks": [
+    {
+     "verb": "pick and fill",
+     "object": "empty basket at the dispenser",
+     "note": "Grip the basket by its handle."
+    },
+    {
+     "verb": "lower and lift",
+     "object": "basket in the fryer well",
+     "note": "Shake the basket after lifting."
+    },
+    {
+     "verb": "dump",
+     "object": "food into the holding station",
+     "note": "Hang the basket back afterwards."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Parallel gripper with handle-shaped jaws"
+    ]
+   },
+   "why": "Every step moves one rigid basket by its handle, and filling and dumping use dispensers and tilting. A handle-matched jaw is the cheapest secure grip near hot oil.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://www.misorobotics.com/products"
+    },
+    {
+     "url": "https://www.qsrweb.com/press-releases/miso-launches-the-newest-flippy-the-fry-station-robot-built-from-millions-of-baskets-of-real-world-data/"
+    },
+    {
+     "url": "https://www.therobotreport.com/white-castle-installing-flippy-2-frying-robots-100-locations/"
+    },
+    {
+     "url": "https://www.latimes.com/business/story/2024-10-30/robots-can-now-make-your-fries-and-guacamole-the-future-of-fast-food"
+    }
+   ]
+  },
+  {
+   "id": "household-table-clearing",
+   "domain": "lab_food_service",
+   "setting": "household",
+   "title": "Clear a table",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "dishes, cups and cutlery",
+     "note": ""
+    },
+    {
+     "verb": "place",
+     "object": "items into the bussing bin",
+     "note": ""
+    },
+    {
+     "verb": "throw",
+     "object": "trash into the garbage bin",
+     "note": ""
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Parallel gripper"
+    ]
+   },
+   "why": "Items are rigid and sit on a flat table. The best published table-bussing results use a parallel jaw.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://www.pi.website/blog/pi0"
+    },
+    {
+     "url": "https://arxiv.org/html/2410.24164v1"
+    }
+   ]
+  },
+  {
+   "id": "pack-produce-pick-place",
+   "domain": "lab_food_service",
+   "setting": "food_packaging",
+   "title": "Pack produce into trays",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "fruit from the conveyor",
+     "note": ""
+    },
+    {
+     "verb": "orient",
+     "object": "fruit stem and colour up",
+     "note": ""
+    },
+    {
+     "verb": "place",
+     "object": "fruit into a tray cup",
+     "note": "Avoid bruising."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Soft bellows suction cup"
+    ]
+   },
+   "why": "Apples, tomatoes and citrus have sealable skins, and a bellows cup tolerates position error while the wrist turns the fruit stem up. Switch to soft fingers for fuzzy or irregular produce such as kiwi, peppers or bunches.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://www.futurefarming.com/crop-solutions/harvest-storage/robotics-plus-robotic-apple-packers-to-go-global/"
+    },
+    {
+     "url": "https://www.stuff.co.nz/business/farming/agribusiness/90536635/robotic-apple-packing-developed-by-nz-company-robotics-plus-ready-to-go-offshore"
+    },
+    {
+     "url": "https://ijabe.org/index.php/ijabe/article/view/7947"
+    },
+    {
+     "url": "https://robotplus.es/wp-content/uploads/2021/10/mGrip.pdf"
+    },
+    {
+     "url": "https://www.schmalz.com/en/career-company/latest/news/portfolio-expanded-schmalz-takes-over-finger-gripper-from-soft-robotics-inc"
+    }
+   ]
+  },
+  {
+   "id": "lab-tip-rack-loading",
+   "domain": "lab_food_service",
+   "setting": "lab",
+   "title": "Load pipette-tip racks onto a liquid handler",
+   "subtasks": [
+    {
+     "verb": "remove",
+     "object": "empty tip rack from deck",
+     "note": ""
+    },
+    {
+     "verb": "place",
+     "object": "full tip rack in its deck slot",
+     "note": ""
+    },
+    {
+     "verb": "press",
+     "object": "tips onto pipette channels",
+     "note": "The pipette head does this, not the gripper."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Servo parallel gripper with plate paddles"
+    ]
+   },
+   "why": "Tip racks share the standard plate footprint, so the same plate gripper moves them with no extra tool. The pipette head makes the tip press fit itself, so the gripper only handles racks.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://opentrons.com/robots/flex"
+    },
+    {
+     "url": "https://docs.opentrons.com/flex/system-description/gripper/"
+    },
+    {
+     "url": "https://www.integra-biosciences.com/united-states/en/griptips/AUTO-rack-GRIPTIPS-for-benchtop-platforms"
+    },
+    {
+     "url": "https://labautomation.io/t/diy-bulk-pipette-loading-tool/4320"
+    },
+    {
+     "url": "https://www.reddit.com/r/labrats/comments/1ituume/pipette_tip_loader_robot/"
+    }
+   ]
+  },
+  {
+   "id": "lab-sample-sorting",
+   "domain": "lab_food_service",
+   "setting": "lab",
+   "title": "Sort sample tubes into racks",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "tube from input rack",
+     "note": ""
+    },
+    {
+     "verb": "rotate",
+     "object": "tube at the barcode reader",
+     "note": ""
+    },
+    {
+     "verb": "place",
+     "object": "tube in destination rack slot",
+     "note": ""
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Narrow parallel gripper, long V-groove tube fingers"
+    ]
+   },
+   "why": "Tubes are rigid cylinders in a few sizes in dense racks. Narrow fingers reach between neighbours and wrist rotation spins the tube for the barcode read, while suction fails on decapped and push-cap tubes.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://www.motoman.com/en-us/applications/clinical-lab"
+    },
+    {
+     "url": "https://www.brookslabautomation.com/pathfinder-450s/"
+    },
+    {
+     "url": "https://www.sarstedt.com/en/US/preanalytical-workflow/laboratory-automation/high-speed-sorter"
+    },
+    {
+     "url": "https://www.universal-robots.com/case-stories/gentofte-hospital/"
+    },
+    {
+     "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC13073645/"
+    }
+   ]
+  },
+  {
+   "id": "ag-seedling-transplant",
+   "domain": "lab_food_service",
+   "setting": "agriculture",
+   "title": "Transplant seedlings from plug trays",
+   "subtasks": [
+    {
+     "verb": "loosen",
+     "object": "the plug",
+     "note": "Pusher pins push it up from below."
+    },
+    {
+     "verb": "grip",
+     "object": "and lift the plug",
+     "note": ""
+    },
+    {
+     "verb": "set",
+     "object": "plug in destination cell or pot",
+     "note": ""
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Four-finger plug gripper",
+     "Pusher pin fixture"
+    ]
+   },
+   "why": "Production transplanters grip the root plug after pins push it up. In one published test a two-finger gripper beat a needle gripper, 95% against 81.75%, as needles shatter loose plugs, so use fingers for loose-plug crops.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://tta-iso.com/equipment/FlexPlanter%20S"
+    },
+    {
+     "url": "https://www.growertalks.com/Article/?articleid=21883"
+    },
+    {
+     "url": "https://doi.org/10.3390/agriengineering3030043"
+    },
+    {
+     "url": "https://www.mdpi.com/2073-4395/12/7/1487"
+    }
+   ]
+  },
+  {
+   "id": "facility-toilet-cleaning",
+   "domain": "lab_food_service",
+   "setting": "facility",
+   "title": "Clean commercial restrooms",
+   "subtasks": [
+    {
+     "verb": "open",
+     "object": "stall door and seat or lid",
+     "note": ""
+    },
+    {
+     "verb": "spray",
+     "object": "disinfectant on fixtures",
+     "note": "Scrub as well if needed."
+    },
+    {
+     "verb": "clean",
+     "object": "floor and trash",
+     "note": "Vacuum or dry the floor and pick up trash."
+    }
+   ],
+   "setup": {
+    "kind": "tool_change",
+    "tools": [
+     "Parallel gripper for doors, seats and trash",
+     "Spray wand"
+    ]
+   },
+   "why": "Lids and doors need a grip and disinfection is a spray. One deployed touchless spray system avoids brushes but does not scrub under the rim, so add a brush only if inspections demand it.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://getsomatic.com/"
+    },
+    {
+     "url": "https://newatlas.com/robotics/toilet-cleaning-robot-somatic/"
+    },
+    {
+     "url": "https://www.popsci.com/technology/somatic-bathroom-robot/"
+    },
+    {
+     "url": "https://techcrunch.com/2020/03/04/this-bathroom-cleaning-robot-is-trained-in-vr-to-clean-up-after-you/"
+    }
+   ]
+  },
+  {
+   "id": "facility-elevator-buttons",
+   "domain": "lab_food_service",
+   "setting": "facility",
+   "title": "Press lift buttons and building controls",
+   "subtasks": [
+    {
+     "verb": "locate",
+     "object": "the button or reader",
+     "note": ""
+    },
+    {
+     "verb": "press",
+     "object": "the button or badge",
+     "note": "Tap the badge on the reader."
+    },
+    {
+     "verb": "confirm",
+     "object": "light, sound or door response",
+     "note": ""
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Compliant button-pusher tip"
+    ]
+   },
+   "why": "Buttons need a precise press with limited force, not a grasp. Research prototypes show even a simple arm with a pusher tip does the job.",
+   "sim": {
+    "feasibility": "rigid",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://www.robotis.com/en/product/ecosystem-ingaemi.php"
+    },
+    {
+     "url": "https://doi.org/10.5302/j.icros.2025.25.8001"
+    },
+    {
+     "url": "https://xtech.nikkei.com/atcl/nxt/mag/rob/18/00004/00117/"
+    },
+    {
+     "url": "https://github.com/hello-robot/stretch_tool_share"
+    }
+   ]
+  },
+  {
+   "id": "kit-drink-making",
+   "domain": "lab_food_service",
+   "setting": "kitchen",
+   "title": "Make coffee and drinks",
+   "subtasks": [
+    {
+     "verb": "place",
+     "object": "cup under the dispenser",
+     "note": ""
+    },
+    {
+     "verb": "operate",
+     "object": "the machine",
+     "note": "This covers the portafilter, levers and buttons."
+    },
+    {
+     "verb": "hand off",
+     "object": "the finished drink",
+     "note": "Pour it or pass it over."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Parallel gripper, concave cup fingers"
+    ]
+   },
+   "why": "The liquids stay inside the machines, and the arm only moves cups, a portafilter or a pitcher and presses levers. One parallel gripper does all of this, and a hand only pays off for latte-art pours.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 4,
+   "sources": [
+    {
+     "url": "https://www.forbes.com/sites/aarontilley/2017/01/30/cafe-x-robot-cafe-baristas-thiel/"
+    },
+    {
+     "url": "https://www.cnbc.com/2018/05/08/this-25000-robot-wants-to-put-your-starbucks-barista-out-of-business.html"
+    },
+    {
+     "url": "https://richtechrobotics.com/solutions/adam"
+    },
+    {
+     "url": "https://marketplace.microsoft.com/en-us/product/richtechroboticsinc1753924896025.d434c938-bf2a-4e20-9b95-1f8f83ff7105"
+    },
+    {
+     "url": "https://artly.coffee/blogs/artly-blog/artly-presents-natural-robotic-hand-upgrade-for-barista-bot-at-nvidia-gtc-2025"
+    }
+   ]
+  },
+  {
+   "id": "hosp-instrument-tray-assembly",
+   "domain": "lab_food_service",
+   "setting": "hospital",
+   "title": "Sort surgical instruments into sterilisation trays",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "instrument from the cleaned pile",
+     "note": ""
+    },
+    {
+     "verb": "identify",
+     "object": "instrument and tray position",
+     "note": ""
+    },
+    {
+     "verb": "place",
+     "object": "instrument into a tray holder",
+     "note": ""
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Electromagnetic gripper, two magnet pads"
+    ]
+   },
+   "why": "Instruments are thin, hinged, shiny and tangled. A magnet grips any ferromagnetic instrument without precise finger placement, as one research cell chose, though non-magnetic instruments would likely need fingers.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://arxiv.org/html/2602.01679v1"
+    },
+    {
+     "url": "https://www.gibotech.dk/en/hospitals/central-sterile-supply-department"
+    },
+    {
+     "url": "https://www.hfmmagazine.com/articles/724-robot-offers-an-assist-to-sterile-processing-department"
+    }
+   ]
+  },
+  {
+   "id": "pharm-blister-unit-dose",
+   "domain": "lab_food_service",
+   "setting": "pharmacy",
+   "title": "Handle blister cards and unit doses",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "blister card or single tablet",
+     "note": ""
+    },
+    {
+     "verb": "stack",
+     "object": "cards or counted tablets",
+     "note": ""
+    },
+    {
+     "verb": "place",
+     "object": "items into carton or unit-dose bag",
+     "note": ""
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Vacuum cup array, food and drug grade silicone cups"
+    ]
+   },
+   "why": "The flat foil side of a blister seals well, and thin cards slip between fingers. An array picks one card or a stack, and one deployed system uses a single small cup for single tablets.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://fluidpowerjournal.com/automation-in-manufacturing-vacuum-pick-place-technology/"
+    },
+    {
+     "url": "https://tekpakautomation.com/robotic-pick-and-place-packaging-systems/"
+    },
+    {
+     "url": "https://www.packworld.com/secondary-packaging/robotics/article/22866401/pharmaceutical-industry-enlists-packaging-robotics"
+    },
+    {
+     "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8239267/"
+    },
+    {
+     "url": "https://www.pharmacytimes.com/view/2005-06-9633"
+    }
+   ]
+  },
+  {
+   "id": "facility-window-cleaning",
+   "domain": "lab_food_service",
+   "setting": "facility",
+   "title": "Clean high-rise windows",
+   "subtasks": [
+    {
+     "verb": "wet and scrub",
+     "object": "a pane",
+     "note": ""
+    },
+    {
+     "verb": "dry",
+     "object": "pane with squeegee or brush",
+     "note": ""
+    },
+    {
+     "verb": "lower",
+     "object": "platform to the next band",
+     "note": ""
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Force-controlled brush or squeegee head"
+    ]
+   },
+   "why": "The job is constant-pressure wiping over flat glass, so a force-controlled brush head is the whole effector, as one deployed system shows. Grippers add nothing.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://www.kuka.com/en-us/industries/solutions-database/2022/03/skyline-robotics-fassadenreinigung-roboter"
+    },
+    {
+     "url": "https://www.skylinerobotics.com/meet-ozmo"
+    },
+    {
+     "url": "https://corporate.alimakgroup.com/en/alimak-group-invests-in-robotics-technology-for-building-maintenance/"
+    }
+   ]
+  },
+  {
+   "id": "kit-tray-assembly",
+   "domain": "lab_food_service",
+   "setting": "kitchen",
+   "title": "Assemble meal trays on a production line",
+   "subtasks": [
+    {
+     "verb": "scoop",
+     "object": "a portion from a hotel pan",
+     "note": ""
+    },
+    {
+     "verb": "deposit",
+     "object": "portion into a moving tray compartment",
+     "note": ""
+    },
+    {
+     "verb": "pick",
+     "object": "discrete pieces into the tray",
+     "note": "Pieces include patties and other items."
+    }
+   ],
+   "setup": {
+    "kind": "tool_change",
+    "tools": [
+     "Volumetric scoop set",
+     "Piece-pick attachment, tongs or soft fingers"
+    ]
+   },
+   "why": "Portions are bulk materials, so the effector is a scoop sized per ingredient and portion, and discrete items need a grasping attachment. A leading supplier changes utensils per run rather than using one universal hand.",
+   "sim": {
+    "feasibility": "out_of_scope",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://www.chefrobotics.ai/solutions/chef-ai-enabled-system"
+    },
+    {
+     "url": "https://www.automationworld.com/process/robotics/article/55131189/amys-kitchen-boosts-yields-and-production-with-chef-robotics"
+    },
+    {
+     "url": "https://www.chefrobotics.ai/post/introducing-piece-picking-automating-individual-food-items-from-unstructured-totes"
+    },
+    {
+     "url": "https://www.pymnts.com/news/artificial-intelligence/2026/robot-arms-finally-crack-the-meal-assembly-line/"
+    },
+    {
+     "url": "https://www.swiss-ep.com/projects/make-and-pack"
+    }
+   ]
+  },
+  {
+   "id": "lab-petri-dish-streaking",
+   "domain": "lab_food_service",
+   "setting": "lab",
+   "title": "Plate and streak microbiology specimens on Petri dishes",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "agar dish from stack and lift lid",
+     "note": ""
+    },
+    {
+     "verb": "streak",
+     "object": "specimen across the agar",
+     "note": "Uses a loop."
+    },
+    {
+     "verb": "close",
+     "object": "dish, then label and stack it",
+     "note": ""
+    }
+   ],
+   "setup": {
+    "kind": "tool_change",
+    "tools": [
+     "Parallel gripper for dish base and lid",
+     "Inoculation loop holder"
+    ]
+   },
+   "why": "Dish and lid moves are ordinary rigid picks, while streaking is a light, controlled-contact path that needs a loop. One deployed system uses two robots, but a single arm can switch tools.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC2668317/"
+    },
+    {
+     "url": "https://www.copanusa.com/laboratory-automation/microbiology-laboratory-automation-ai/wasplab/"
+    },
+    {
+     "url": "https://www.dwscientific.com/lab-automation/walk-away-specimen-processor"
+    }
+   ]
+  },
+  {
+   "id": "pharm-iv-vial-handling",
+   "domain": "lab_food_service",
+   "setting": "pharmacy",
+   "title": "Handle vials and syringes for IV compounding",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "vial and set it in a holder or on a scale",
+     "note": ""
+    },
+    {
+     "verb": "draw",
+     "object": "dose through the septum",
+     "note": "This is a fluid step."
+    },
+    {
+     "verb": "cap",
+     "object": "syringe or inject into the bag",
+     "note": ""
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Parallel gripper, stepped V-fingers for vials and syringes"
+    ]
+   },
+   "why": "The arm only moves rigid containers between fixed stations, and the plunger, needle and scale are stations, not hand tools. One stepped finger set likely holds both vial necks and syringe barrels.",
+   "sim": {
+    "feasibility": "approximation",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 3,
+   "sources": [
+    {
+     "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5402647/"
+    },
+    {
+     "url": "https://newsroom.clevelandclinic.org/2026/10/02/cleveland-clinic-weston-hospital-hires-first-in-florida-chemo-compounding-robot"
+    },
+    {
+     "url": "https://connect.ashp.org/blogs/leigh-miley/2025/05/14/exploring-the-current-state-of-robotic-sterile-com"
+    }
+   ]
+  },
+  {
+   "id": "pack-raw-protein",
+   "domain": "lab_food_service",
+   "setting": "food_packaging",
+   "title": "Place raw protein into thermoformed trays",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "a piece from the belt",
+     "note": ""
+    },
+    {
+     "verb": "lay",
+     "object": "the piece flat into a tray pocket",
+     "note": ""
+    },
+    {
+     "verb": "repeat",
+     "object": "at line speed",
+     "note": "The work runs under washdown hygiene."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Food-grade soft fingers, IP69K washdown rated"
+    ]
+   },
+   "why": "Raw meat is wet and limp, so suction leaks and rigid jaws tear it. Soft fingers rated for IP69K washdown meet the hygiene rules and are what deployed lines use.",
+   "sim": {
+    "feasibility": "out_of_scope",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 2,
+   "sources": [
+    {
+     "url": "https://web.archive.org/web/20240223062639/https://www.softroboticsinc.com/resource/overcoming-the-challenges-with-primary-handling-of-raw-protein/"
+    },
+    {
+     "url": "https://www.prnewswire.com/news-releases/soft-robotics-expands-mgrip-modular-gripping-system-with-new-features-301267117.html"
+    },
+    {
+     "url": "https://www.jlsautomation.com/talon"
+    }
+   ]
+  },
+  {
+   "id": "hospitality-laundry-towel-feed",
+   "domain": "lab_food_service",
+   "setting": "hospitality",
+   "title": "Feed towels into a folding machine in a commercial laundry",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "one towel from the pile by a seam",
+     "note": ""
+    },
+    {
+     "verb": "find",
+     "object": "two corners",
+     "note": "Grip both corners once found."
+    },
+    {
+     "verb": "spread",
+     "object": "the towel into the folder",
+     "note": "Spread it flat, then feed it in."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Pinch gripper, one per arm on two arms",
+     "Rail spreader clamps"
+    ]
+   },
+   "why": "Narrow pinch jaws grip cloth at a seam or corner. Spreading needs two separate grip points, which one deployed cell gets from rail clamps, with no suction or hand.",
+   "sim": {
+    "feasibility": "out_of_scope",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 2,
+   "sources": [
+    {
+     "url": "https://www.sewts.com/automation-solutions/sewts-velum"
+    },
+    {
+     "url": "https://www.fanuc.eu/uk-en/case-studies/fanuc-robots-wash-away-inefficiency"
+    },
+    {
+     "url": "https://ifr.org/case-studies/intelligent-robots-for-commercial-laundries"
+    },
+    {
+     "url": "https://inwatec.dk/sectors/"
+    }
+   ]
+  },
+  {
+   "id": "ag-milking-attach",
+   "domain": "lab_food_service",
+   "setting": "agriculture",
+   "title": "Attach milking cups to a cow",
+   "subtasks": [
+    {
+     "verb": "locate",
+     "object": "the teats",
+     "note": "Clean each teat once located."
+    },
+    {
+     "verb": "attach",
+     "object": "four teat cups",
+     "note": ""
+    },
+    {
+     "verb": "detach",
+     "object": "the cups",
+     "note": "Spray the teats after removal."
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Purpose-built teat cup carrier head"
+    ]
+   },
+   "why": "Milking robots carry the cups on the arm and attach them directly. A generic gripper picking cups one by one would be slower and drop cups when a cow kicks.",
+   "sim": {
+    "feasibility": "out_of_scope",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 2,
+   "sources": [
+    {
+     "url": "https://www.lely.com/solutions/milking/astronaut/teat-detection-system-2-plus/"
+    },
+    {
+     "url": "https://www.lely.com/gb/solutions/milking/astronaut/"
+    },
+    {
+     "url": "https://patents.google.com/patent/US20240008439A1/en"
+    }
+   ]
+  },
+  {
+   "id": "household-laundry-folding",
+   "domain": "lab_food_service",
+   "setting": "household",
+   "title": "Fold laundry",
+   "subtasks": [
+    {
+     "verb": "pick",
+     "object": "one garment from the pile",
+     "note": ""
+    },
+    {
+     "verb": "spread",
+     "object": "the garment flat by its corners",
+     "note": ""
+    },
+    {
+     "verb": "fold",
+     "object": "and stack the garment",
+     "note": ""
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Parallel pinch gripper, one per arm on two arms"
+    ]
+   },
+   "why": "Folding needs two separate grip points and fast regrasping. Two arms with narrow pinch jaws match published systems, though this choice is an estimate.",
+   "sim": {
+    "feasibility": "out_of_scope",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 2,
+   "sources": [
+    {
+     "url": "https://www.pi.website/blog/pi0"
+    },
+    {
+     "url": "https://www.cnet.com/home/kitchen-and-household/laundry-folding-robot-laundroid-folds-under-20m-worth-of-pressure/"
+    },
+    {
+     "url": "https://en.wikipedia.org/wiki/FoldiMate"
+    }
+   ]
+  },
+  {
+   "id": "retail-shelf-scanning",
+   "domain": "lab_food_service",
+   "setting": "retail",
+   "title": "Scan shelves for out-of-stocks and price errors",
+   "subtasks": [
+    {
+     "verb": "drive",
+     "object": "the aisle",
+     "note": ""
+    },
+    {
+     "verb": "image",
+     "object": "every shelf face",
+     "note": ""
+    },
+    {
+     "verb": "flag",
+     "object": "gaps, misplaced items and price errors",
+     "note": ""
+    }
+   ],
+   "setup": {
+    "kind": "single",
+    "tools": [
+     "Camera mast, no end effector"
+    ]
+   },
+   "why": "Shelf scanning is perception only, so there is no end effector to choose. Telling the user this is itself a useful answer.",
+   "sim": {
+    "feasibility": "out_of_scope",
+    "hero": null,
+    "match": null
+   },
+   "demo_score": 1,
+   "sources": [
+    {
+     "url": "https://www.simberobotics.com/store-intelligence/tally"
+    },
+    {
+     "url": "https://www.prnewswire.com/news-releases/simbes-tally-inventory-robot-deployed-in-harmons-stores-following-pilot-success-302593253.html"
+    },
+    {
+     "url": "https://www.latimes.com/business/story/2026-10-15/ai-robots-are-roaming-la-grocery-store-aisles-shoppers-workers-are-worried"
+    }
+   ]
+  }
+ ],
+ "rules": [
+  {
+   "id": "R01_single_effector_default",
+   "title": "Single effector on a 6-axis arm by default",
+   "text": "Always rank first the best single-effector setup on a 6-axis arm with no tool changer. Pick something more complex only if the baseline fails a step outright or the complex setup clearly beats its completion rate for each added effector, and always show the baseline beside it.",
+   "sources": [
+    {
+     "url": "https://olympustechnologies.co.uk/end-of-arm-tooling-quick-change-tool-changers/"
+    },
+    {
+     "url": "https://www.gripshape.com/resources/introduction-to-designing-robot-gripper-finger-tooling"
+    },
+    {
+     "url": "https://nomagic.ai/in-pursuit-of-the-perfect-gripper-four-essential-learnings/"
+    },
+    {
+     "url": "https://blog.robotiq.com/bid/72420/choosing-the-right-robot-gripper-for-your-parts"
+    }
+   ]
+  },
+  {
+   "id": "R02_six_dof_wrist_for_orientation_steps",
+   "title": "Six-axis wrist for steps that need tilt",
+   "text": "When a step opens hinged parts or doors, pours, flips, approaches from the side or below, or processes a non-horizontal surface, compare all effectors on the same 6-axis arm. On a 4-axis top-down wrist, mark the step kinematics-limited and do not rank effectors on it.",
+   "sources": [
+    {
+     "url": "https://learn.rbtx.com/knowledge-resource/scara-robots/"
+    },
+    {
+     "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC10710733/"
+    },
+    {
+     "url": "https://arxiv.org/html/2402.17767v1"
+    },
+    {
+     "url": "https://www.universal-robots.com/media/1807465/ur5e_e-series_datasheets_web.pdf"
+    },
+    {
+     "url": "https://www.fanucamerica.com/products/robot/lr-mate-200id"
+    },
+    {
+     "url": "https://franka.de/hubfs/Product%20Manual%20Franka%20Research%203_R02210_1.0_EN.pdf"
+    }
+   ]
+  },
+  {
+   "id": "R03_articulated_objects_use_existing_gripper",
+   "title": "Use the existing gripper for lids and doors",
+   "text": "For opening lids, drawers or doors and for pressing, use the gripper already chosen. Move the tool along the hinge arc or push with closed fingers or a held hook or pusher. Soft arms and dexterous hands qualify only if every rigid option fails on a 6-axis arm.",
+   "sources": [
+    {
+     "url": "https://arxiv.org/html/2402.17767v1"
+    },
+    {
+     "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC10710733/"
+    },
+    {
+     "url": "https://arxiv.org/abs/2512.11080"
+    }
+   ]
+  },
+  {
+   "id": "R04_parallel_jaw_first_for_rigid",
+   "title": "Parallel gripper first for rigid parts",
+   "text": "When a rigid part fits the gripper stroke and its weight under acceleration stays within grip capacity, pick a two-finger parallel or adaptive gripper with form-fit fingertips. Choose pneumatic for a fixed part family with air supply, electric when stroke or force must change.",
+   "sources": [
+    {
+     "url": "https://festoblog.com/pdf/white-paper/FESTO_WP_Grippers.pdf"
+    },
+    {
+     "url": "https://blog.robotiq.com/how-to-choose-a-parallel-gripper-for-my-robot"
+    },
+    {
+     "url": "https://robotiq.com/products/adaptive-grippers"
+    },
+    {
+     "url": "https://schunk.com/us/en/gripping-systems/parallel-gripper/pgn-plus-p/pgn-plus-p-100-2/p/000000000000318545"
+    }
+   ]
+  },
+  {
+   "id": "R05_process_steps_need_process_tools",
+   "title": "Process steps need dedicated process tools",
+   "text": "For screwing, nut running, dispensing, painting, sanding, deburring or cutting, require a flange-mounted tool of that kind. A gripper holding a hand tool is allowed only for light, low-torque work and is flagged as improvised.",
+   "sources": [
+    {
+     "url": "https://onrobot.com/storage/datasheets/screwdriver/datasheet_screwdriver_v1.7_en.pdf"
+    },
+    {
+     "url": "https://onrobot.com/storage/datasheets/sander/datasheet_sander_v1.5_en.pdf"
+    },
+    {
+     "url": "https://www.universal-robots.com/manuals/EN/PDF/Shared/guide-hightorque_online/740-949-00_High%20Torque%20Screwdriving_User_Manual_en_Global.pdf"
+    },
+    {
+     "url": "https://www.atlascopco.com/en-us/itba/expert-hub/articles/ltr-powerhead-high-torque-small-combat"
+    },
+    {
+     "url": "https://learn.rbtx.com/knowledge-resource/controlling-your-bead-in-dispensing/"
+    },
+    {
+     "url": "https://www.visualcomponents.com/blog/painting-robot-simulation-how-olp-ensures-technical-feasibility-before-production/"
+    },
+    {
+     "url": "https://olympustechnologies.co.uk/end-of-arm-tooling-quick-change-tool-changers/"
+    }
+   ]
+  },
+  {
+   "id": "R06_vacuum_for_flat_sealed_faces",
+   "title": "Suction for smooth, flat, sealed faces",
+   "text": "When a part has a smooth, non-porous flat face large enough for the cups and vacuum force covers the load with a safety factor, pick suction cups. Use flat cups for side loads and stiffness, bellows cups for height variation, curves, cardboard and bags.",
+   "sources": [
+    {
+     "url": "https://www.schmalz.com/en/support/know-how/vacuum-knowledge/the-vacuum-system-and-its-components/system-design-calculation-example/theoretical-holding-force-of-a-suction-cup"
+    },
+    {
+     "url": "https://www.schmalz.com/en/support/know-how/vacuum-knowledge/the-vacuum-system-and-its-components/vacuum-suction-cups/design-of-the-suction-cup"
+    },
+    {
+     "url": "https://www.schmalz.com/en/support/know-how/glossary/vacuum-gripper"
+    },
+    {
+     "url": "https://goldberg.berkeley.edu/pubs/Ambidextrous-Grasping-Science-Robotics-Jan-2019.pdf"
+    },
+    {
+     "url": "https://arxiv.org/abs/1601.05484"
+    },
+    {
+     "url": "https://www.assemblymag.com/articles/100502-best-practices-for-robotic-bin-picking"
+    },
+    {
+     "url": "https://onrobot.com/storage/datasheets/vgc10/datasheet_vgc10_v1.7_en.pdf"
+    }
+   ]
+  },
+  {
+   "id": "R07_tool_changer_only_when_kinds_differ",
+   "title": "Tool changer only when tool kinds differ",
+   "text": "Add an automatic tool changer only when effectors differ in kind or utilities, or cannot share one head within payload, and change time still fits the cycle. Cost each change in seconds plus changer mass. Use manual changers only for batch changeover, never within a cycle.",
+   "sources": [
+    {
+     "url": "https://olympustechnologies.co.uk/end-of-arm-tooling-quick-change-tool-changers/"
+    },
+    {
+     "url": "https://bridges.monash.edu/articles/model/3D_printed_robot_tool_changer/34699410"
+    },
+    {
+     "url": "https://amdmachines.com/blog/complete-guide-to-robot-tool-changers/"
+    },
+    {
+     "url": "https://onrobot.com/storage/datasheets/quick-changers/datasheet_quick_changers_v2.0_en.pdf"
+    },
+    {
+     "url": "https://ati.novanta.com/product/qc-11/"
+    },
+    {
+     "url": "https://www.universal-robots.com/news-and-media/news-center/universal-robots-certifies-ati-s-new-automated-tool-changer/"
+    }
+   ]
+  },
+  {
+   "id": "R08_dual_head_for_every_cycle_pairs",
+   "title": "Dual head when two effectors work every cycle",
+   "text": "When two effectors are used in every cycle and their combined mass with the part fits the payload without interference, pick a dual gripper or multi-function head. Switch by turning the wrist, for example unloading and loading a machine in one visit.",
+   "sources": [
+    {
+     "url": "https://www.universal-robots.com/blog/common-robotic-machine-tending-applications/"
+    },
+    {
+     "url": "https://onrobot.com/us/node/107"
+    },
+    {
+     "url": "https://industrialmachinerydigest.com/robotics-automation/assembly/onrobot-dual-gripper-takes-on-machine-tending-duties-delivers-productivity-boost-cost-savings-for-metalworking-sme"
+    },
+    {
+     "url": "https://www.yaskawa.si/use-cases/applications/application/machine-tending_a10886"
+    },
+    {
+     "url": "https://olympustechnologies.co.uk/end-of-arm-tooling-quick-change-tool-changers/"
+    },
+    {
+     "url": "https://onrobot.com/en/products/dual-quick-changer"
+    }
+   ]
+  },
+  {
+   "id": "R09_soft_only_in_niche",
+   "title": "Soft grippers only for delicate, light items",
+   "text": "Soft arms and grippers qualify only for fragile, food or irregular parts of low mass, with no step needing precise placement or applied force such as inserting, screwing, pressing or opening. Otherwise rank them below every rigid option.",
+   "sources": [
+    {
+     "url": "https://onrobot.com/en/products/soft-gripper"
+    },
+    {
+     "url": "https://content2.smcetech.com/pdf/mGrip_Sales_Sheet.pdf"
+    }
+   ]
+  },
+  {
+   "id": "R10_dexterous_hand_last_resort",
+   "title": "Dexterous hand as a last resort",
+   "text": "A dexterous hand qualifies only when a step needs in-hand reorientation or use of a human tool that a gripper, wrist and fixture cannot manage. Apply the largest complexity penalty and show its high price band.",
+   "sources": [
+    {
+     "url": "https://www.roboticscenter.ai/blog/best-robot-hands-dexterous-2025"
+    },
+    {
+     "url": "https://www.bbc.com/news/articles/cg7y45kxvp9o"
+    }
+   ]
+  },
+  {
+   "id": "R11_compliance_for_insertion",
+   "title": "Compliance for tight insertions",
+   "text": "When insertion clearance is smaller than the expected position error, use chamfers with passive remote-centre compliance centred near the tip, or a force-torque guarded search. Do not use a softer gripper in place of compliance.",
+   "sources": [
+    {
+     "url": "https://www.ati-ia.com/products/compliance/Compensator_product_desc.aspx"
+    },
+    {
+     "url": "https://ocw.mit.edu/courses/2-875-mechanical-assembly-and-its-role-in-product-development-fall-2004/6abbc6934125042e12e9d153f87f9278_cls3_rgd_prt_mn4.pdf"
+    },
+    {
+     "url": "https://arxiv.org/pdf/2205.03532"
+    },
+    {
+     "url": "https://www.universal-robots.com/media/1807465/ur5e_e-series_datasheets_web.pdf"
+    }
+   ]
+  },
+  {
+   "id": "R12_payload_and_moment_budget",
+   "title": "Payload and moment budget",
+   "text": "Always check that tool, changer and part mass together stay within the arm payload with a dynamic margin. Also check the static moment of the heaviest tool on the changer.",
+   "sources": [
+    {
+     "url": "https://www.automate.org/glossary/end-of-arm-tooling"
+    },
+    {
+     "url": "https://robodk.com/blog/tool-changers-with-robodk/"
+    }
+   ]
+  },
+  {
+   "id": "R13_porous_needs_flow_or_needles",
+   "title": "Porous faces need high flow or needles",
+   "text": "For porous faces such as uncoated corrugated cardboard, textile, foam or felt, pick a foam area gripper with a high-flow generator, a needle gripper or fingers. Do not use a small cup on a low-flow integrated pump. For cardboard, use low vacuum and high flow.",
+   "sources": [
+    {
+     "url": "https://onrobot.com/storage/datasheets/vgc10/datasheet_vgc10_v1.7_en.pdf"
+    },
+    {
+     "url": "https://blog.unchainedrobotics.de/en/vacuum-gripper-misgrips-after-carton-change"
+    },
+    {
+     "url": "https://www.schmalz.com/en/products/automation-743270/other-gripping-technologies-746237/needle-grippers-306131"
+    },
+    {
+     "url": "https://www.schmalz.com/en-us/products/automation-743270/vacuum-grippers-746238/gripping-systems-and-end-of-arm-tooling-eoat-746240/vacuum-area-gripping-system-fxp-fmp-306396"
+    }
+   ]
+  },
+  {
+   "id": "R14_magnet_for_ferrous_flat",
+   "title": "Magnetic gripper for flat ferrous parts",
+   "text": "For ferrous parts with a flat face at or above the tool's minimum thickness, pick a magnetic gripper. Derate perpendicular loads to about 28% and cylinders to about 41% of the flat rating, and note that any coating or air gap cuts force sharply.",
+   "sources": [
+    {
+     "url": "https://onrobot.com/storage/datasheets/mg10/datasheet_mg10_v1.5_en.pdf"
+    },
+    {
+     "url": "https://magswitch.com/blogs/magswitch/disrupting-industrial-automation-magswitch-technology-magnetic-grippers"
+    }
+   ]
+  },
+  {
+   "id": "R15_reaction_torque_limit",
+   "title": "Keep screw reaction torque off the wrist",
+   "text": "When a screw or nut step exceeds the tool's torque, or reaches 25 N m on a cobot, use a torque reaction arm or a low-reaction tool so the wrist carries no reaction. Screwdriver-class tools stop at about 5 N m.",
+   "sources": [
+    {
+     "url": "https://www.universal-robots.com/manuals/EN/PDF/Shared/guide-hightorque_online/740-949-00_High%20Torque%20Screwdriving_User_Manual_en_Global.pdf"
+    },
+    {
+     "url": "https://www.atlascopco.com/en-us/itba/expert-hub/articles/ltr-powerhead-high-torque-small-combat"
+    },
+    {
+     "url": "https://www.universal-robots.com/articles/ur/robot-care-maintenance/max-joint-torques-cb3-and-e-series/"
+    },
+    {
+     "url": "https://onrobot.com/storage/datasheets/screwdriver/datasheet_screwdriver_v1.7_en.pdf"
+    }
+   ]
+  },
+  {
+   "id": "R16_fingers_before_changers",
+   "title": "Change fingers before changing tools",
+   "text": "When every handling step needs the same gripper kind but part families differ in size or shape, pick multi-part fingertips, an adaptive gripper or automatic finger exchange before a full tool changer. This saves cycle time and cell space.",
+   "sources": [
+    {
+     "url": "https://blog.robotiq.com/bid/72420/choosing-the-right-robot-gripper-for-your-parts"
+    },
+    {
+     "url": "https://www.imao.com/en/products/tsume-changer-en.html"
+    },
+    {
+     "url": "https://www.gripshape.com/resources/introduction-to-designing-robot-gripper-finger-tooling"
+    }
+   ]
+  },
+  {
+   "id": "R17_gripper_held_passive_tools",
+   "title": "Let the gripper hold passive tools",
+   "text": "When a hook, push, press, scrape or wipe step occurs in a task served by a two-finger gripper, let the gripper pick a passive tool from a holder. No tool changer or extra powered effector is needed.",
+   "sources": [
+    {
+     "url": "https://arxiv.org/abs/2512.11080"
+    }
+   ]
+  },
+  {
+   "id": "R18_pneumatic_vs_electric",
+   "title": "Pneumatic or electric gripper",
+   "text": "Pick pneumatic when the cell has air, the part family is fixed and the rate is high, for speed, force per gram and cost. Pick electric for high mix, no air or force-sensitive parts, for programmable stroke, speed and force with feedback.",
+   "sources": [
+    {
+     "url": "https://festoblog.com/pdf/white-paper/FESTO_WP_Grippers.pdf"
+    },
+    {
+     "url": "https://blog.robotiq.com/how-to-choose-a-parallel-gripper-for-my-robot"
+    },
+    {
+     "url": "https://www.emicorp.com/eoat-grippers"
+    }
+   ]
+  },
+  {
+   "id": "R19_stroke_and_jaw_style",
+   "title": "Size the stroke and choose the jaw style",
+   "text": "Choose a stroke just above the largest grasp width, since pneumatic jaws travel the full stroke. Use angular jaws when they must swing clear of the part or machine, and three-jaw centric grippers for round parts.",
+   "sources": [
+    {
+     "url": "https://blog.robotiq.com/how-to-choose-a-parallel-gripper-for-my-robot"
+    },
+    {
+     "url": "https://festoblog.com/pdf/white-paper/FESTO_WP_Grippers.pdf"
+    },
+    {
+     "url": "https://www.automate.org/robotics/industry-insights/get-a-grip-choosing-a-gripper-for-your-robotic-application"
+    },
+    {
+     "url": "https://www.emicorp.com/eoat-grippers"
+    }
+   ]
+  },
+  {
+   "id": "R20_suction_first_in_clutter",
+   "title": "Suction first in bins and clutter",
+   "text": "When picking from a bin or clutter and items show flat faces, try suction first with fingers as the fallback. Use a hybrid head if both are needed every cycle, as in rule R08.",
+   "sources": [
+    {
+     "url": "https://www.assemblymag.com/articles/100502-best-practices-for-robotic-bin-picking"
+    },
+    {
+     "url": "https://goldberg.berkeley.edu/pubs/Ambidextrous-Grasping-Science-Robotics-Jan-2019.pdf"
+    },
+    {
+     "url": "https://arxiv.org/abs/1601.05484"
+    }
+   ]
+  },
+  {
+   "id": "R21_process_scoring",
+   "title": "Score process steps by their outcome",
+   "text": "Score paint, dispense, sand, deburr, screw and insert steps by outcome: coverage and film thickness, path error and steady tool speed, even removal depth, seating at target torque without cross-thread, insert depth under a force limit. Label them approximation tier.",
+   "sources": [
+    {
+     "url": "https://www.visualcomponents.com/blog/painting-robot-simulation-how-olp-ensures-technical-feasibility-before-production/"
+    },
+    {
+     "url": "http://hdl.handle.net/1773/43417"
+    },
+    {
+     "url": "https://learn.rbtx.com/knowledge-resource/controlling-your-bead-in-dispensing/"
+    },
+    {
+     "url": "https://onrobot.com/storage/datasheets/screwdriver/datasheet_screwdriver_v1.7_en.pdf"
+    }
+   ]
+  },
+  {
+   "id": "R22_approximation_needs_margin",
+   "title": "Approximation-tier winners need a larger margin",
+   "text": "When the top setup wins with a soft, suction or process-model effector, show the best rigid-tier setup beside it. Recommend the approximation-tier setup only if it wins by more than the simplicity margin.",
+   "sources": []
+  },
+  {
+   "id": "R23_utilities_force_separation",
+   "title": "Separate tools with clashing utilities",
+   "text": "When two tools need incompatible utilities, such as weld power and gas with vacuum, or paint lines with an electric gripper, or together exceed payload, put them on a tool changer or on separate robots rather than one combined head.",
+   "sources": [
+    {
+     "url": "https://olympustechnologies.co.uk/end-of-arm-tooling-quick-change-tool-changers/"
+    }
+   ]
+  }
+ ]
+}

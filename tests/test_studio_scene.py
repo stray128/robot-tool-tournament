@@ -94,7 +94,7 @@ def test_wrist_roll_is_continuous_torque_limited_and_shared(spec: TaskSpec, task
             assert int(m.jnt_limited[j.id]) == 0 and int(j.type[0]) == mujoco.mjtJoint.mjJNT_HINGE
             assert int(m.actuator_ctrllimited[a.id]) == 0
             assert list(a.forcerange) == [-STUDIO_WRIST.roll_torque_nm, STUDIO_WRIST.roll_torque_nm]
-            assert list(scene.ids.wrist_actuators) == [0, 1, 2, 3, 4]
+            assert list(scene.ids.wrist_actuators) == [0, 1, 2, 3, 4, 5]  # x, y, z, yaw, roll, pitch
             sigs.append(wrist_signature(m))
             assert fairness_sha(scene) == fairness_sha(build_studio_scene(setup, spec, tool, task=task))
     assert all(s == sigs[0] for s in sigs), "every candidate must get the same wrist"
@@ -168,7 +168,7 @@ def test_multi_head_scene_with_two_existing_effectors(spec: TaskSpec, task: Any)
         assert stack > 0.05  # bracket, hub, arms and two adapters
         assert scene.tool_mass_kg == pytest.approx(active.build.mass + idle.build.mass + stack, rel=1e-9)
         assert len(scene.ids.effector_actuators) == len(active.build.actuators)
-        assert m.nu == 5 + sum(len(h.build.actuators) for h in scene.heads)
+        assert m.nu == 6 + sum(len(h.build.actuators) for h in scene.heads)
     # which head is active changes the names and the presentation, never the bracket
     a, b = scenes
     assert a.tool_mass_kg == pytest.approx(b.tool_mass_kg, rel=1e-12)

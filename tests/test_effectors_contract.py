@@ -594,7 +594,7 @@ def test_an_unbuildable_jaw_scores_invalid_build(task: Any, block: Any) -> None:
 #: sha256 of each frozen contract file. Only the contract owner updates these (docs/EFFECTORS.md 11.6).
 CONTRACT_FILES: dict[str, str] = {
     "__init__.py": "5136c825b4542174e4d2ef3de9e27f62e09426005142bb914c04136e931bf226",
-    "types.py": "5c5099336f082506e1ce07e44bb965e22eebf79d5f31cd9687965e0601d191ba",
+    "types.py": "2281e0de232e376346fe29f01be65669af99a2b14cc2aaab23cce5e829245258",
     "registry.py": "9415e10df8a443a1a4ad55f360764103ec745073e3563cdad025c6940782d58f",
     "scene.py": "d6a35fb47d220ea740b23ad79066dee46a23b5f0ee518b51acee9773e36b49f9",
     "runner.py": "420b01ab7a556384fa1f68cbb049d666d8535b1532c2fdeec2f2e422f1c73639",

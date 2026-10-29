@@ -11,9 +11,14 @@
   ``command(t, phase, closure, ...)`` with the controller's closure profile (0 open, 1 closed),
   so a gripper closes, a cup switches its vacuum only while sealed, and a soft arm pulls its
   cable, exactly as in the v1 layer.
-* **Wrist poses.** The palm's yaw and the roll turn about the same vertical axis, so a tool
-  point ``p`` (wrist frame, roll 0) is at ``palm + Rz(yaw + roll) p``. Controllers change the
-  heading with the yaw and turn objects with the roll (capped at the roll speed limit).
+* **Wrist poses.** Every controller commands the six wrist servos (x, y, z, yaw, roll, pitch;
+  :func:`wrist_target`, :func:`start_pose`). A tool point ``p`` (wrist frame, pitch and roll 0)
+  is at ``palm + Rz(yaw) Rx(pitch) Rz(roll) p`` (:func:`rtt.studio.scene.wrist_rotation`), which
+  is ``palm + Rz(yaw + roll) p`` with the tool straight down (pitch 0). Controllers change the
+  heading with the yaw and turn objects with the roll (capped at the roll speed limit). The tool
+  stays straight down except where the tilt matters (a lid's lip pinched from the front, a push
+  from the front, :mod:`.hook_pull` and :mod:`.push`); a step that starts tilted turns back to
+  straight down in its first move, within the pitch speed cap (:meth:`Path.to`).
 * **Perception.** Objects are located only through :meth:`StepContext.observe_site` (the true
   site plus the object's hidden aim offset); a controller reads its own wrist (proprioception)
   and the tool's contact forces (a wrist force sensor): force feedback within a step is allowed
@@ -21,13 +26,22 @@
   every candidate.
 * **Schedules.** A controller records the moments its predicate needs (engaged, released...)
   in a :class:`Schedule` keyed by the step's context (:func:`schedule`).
+* **Reach.** Every controller checks its planned palm poses against the palm's travel
+  (+-350 mm, :data:`rtt.sim.scene.PALM_XY_LIMIT`, less :data:`REACH_MARGIN`; a lid's pinch or hook
+  less :data:`~.hook_pull.PINCH_REACH_MARGIN`) before it commits (:func:`reach_problem`): a step
+  whose target lies outside is not attempted and fails ``out_of_reach`` with where the palm would
+  have to go and a plain reason (:func:`hold_out_of_reach`, :func:`out_of_reach_verdict`).
+* **Letting go.** A controller sets a part down before it lets go of it: the part's lowest point
+  at most :data:`RELEASE_HEIGHT_MAX_MM` above what it comes to rest on (the picks lower it until
+  the wrist feels the support take it, :func:`wrist_load`). A lid is carried to its stop, not
+  dropped onto it (:mod:`.push`, :mod:`.hook_pull`).
 """
 
 from __future__ import annotations
 
 import math
 import weakref
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Final, Literal
 
@@ -37,8 +51,11 @@ import numpy as np
 from rtt.effectors.registry import get_family
 from rtt.effectors.scene import MOUNT_Z
 from rtt.sim.controller import Phase, min_jerk
-from rtt.studio.plan import V1SceneView, _V1Ids
-from rtt.studio.types import TemplateKind
+from rtt.sim.scene import PALM_XY_LIMIT
+from rtt.studio.plan import PrimitiveCommand, StepPlan, StepVerdict, V1SceneView, _V1Ids
+from rtt.studio.scene import rot_z, world_tcp, wrist_rotation
+from rtt.studio.templates import thread_info
+from rtt.studio.types import SLIDE_KINDS, THREAD_KINDS, TemplateKind
 
 if TYPE_CHECKING:
     from rtt.studio.plan import StepContext
@@ -47,28 +64,49 @@ if TYPE_CHECKING:
 __all__ = [
     "BUDGET_S",
     "PRESHAPE_CLOSURES",
+    "REACH_MARGIN",
+    "RELEASE_HEIGHT_MAX_MM",
+    "TURN_MARGIN",
     "Contact",
     "Guarded",
     "Path",
     "Schedule",
     "Tool",
     "angle_about",
+    "box_corners",
     "contacts",
     "criterion_bounds",
     "footprint",
     "force_allowed",
     "force_goal",
+    "geom_boxes",
     "heading_for_axis",
+    "held_closure",
+    "hold_out_of_reach",
+    "idle_command",
+    "idle_run",
+    "in_reach",
     "observed_state",
     "obstacle_top",
+    "offset",
+    "out_of_reach_verdict",
     "panel_angle",
     "panel_normal",
+    "preshape_closure",
+    "reach_problem",
     "rot_z",
     "rotate",
     "schedule",
+    "scheduled",
+    "start_pose",
     "tool_geoms",
     "tool_of",
     "tool_point_world",
+    "top_within",
+    "touching",
+    "turn_time",
+    "wrist_frame",
+    "wrist_load",
     "wrist_target",
 ]
 
@@ -89,11 +127,15 @@ FORCE_HOLD_S: Final = 0.03
 TRANSIT_SPEED: Final = 0.40  # m/s peak of a min-jerk free-space move [assumed]
 CALIBRATION_Z: Final = 0.75  # m above the table: the head alone, clear of every object
 Mechanism = Literal["fingers", "suction", "soft_arm"]
-
-
-def rot_z(angle: float) -> np.ndarray:
-    c, s = math.cos(angle), math.sin(angle)
-    return np.array([[c, -s, 0.0], [s, c, 0.0], [0.0, 0.0, 1.0]])
+#: Pitch and roll moves a controller plans take this much longer than the speed caps allow [assumed].
+TURN_MARGIN: Final = 1.1
+#: A part is let go with its lowest point at most this far (mm) above what it comes to rest on [assumed].
+RELEASE_HEIGHT_MAX_MM: Final = 20.0
+#: m a plan keeps every palm pose inside the palm's travel: the 2 mm hidden aim error with room to
+#: spare [assumed]. A lid's pinch or hook keeps :data:`~.hook_pull.PINCH_REACH_MARGIN` (12 mm: the
+#: pinch's 10 mm yield along the tilted tool on top of the aim error). The panel rail's reach
+#: envelope (+-182.5 mm at any yaw) is sized on this one.
+REACH_MARGIN: Final = 0.005
 
 
 # --------------------------------------------------------------------------- tools
@@ -110,12 +152,19 @@ class Footprint:
         default_factory=lambda: np.zeros((0, 6))
     )  # (m, 6): lo xyz, hi xyz of every geom
 
-    def hook(self, band: float = 0.015) -> tuple[np.ndarray, float, float, float]:
+    def hook(
+        self, band: float = 0.015, flange: tuple[float, float, float] | None = None
+    ) -> tuple[np.ndarray, float, float, float]:
         """The tool's best sideways hook: the horizontal wrist-frame direction ``d`` in which the
         geoms lying wholly within ``band`` of the tip reach furthest beyond the rest of the tool,
         how far they reach beyond it (m; 0 for a straight tool), how far they reach from the axis,
         and the top of that protrusion (wrist z). A soft arm's horizontal arm is such a hook; so
-        would be any L-shaped finger."""
+        would be any L-shaped finger.
+
+        ``flange``: ``(face z, radius, throat)`` (m) counts the flange as part of the tool when its
+        face is less than ``throat`` above the protrusion (nothing fits between them), so a plate
+        flush under the flange is no hook (the search's capability check,
+        :func:`rtt.studio.search.measured_hook_mm`); ``None`` (the hook pull) leaves it out."""
         best = (np.array([1.0, 0.0, 0.0]), 0.0, 0.0, self.tip_z)
         if not len(self.solids):
             return best
@@ -131,18 +180,25 @@ class Footprint:
             ys = np.where(d[1] >= 0, boxes[:, 4], boxes[:, 1])
             return float(np.max(xs * d[0] + ys * d[1]))
 
+        def beyond(near: float, d: np.ndarray) -> np.ndarray:
+            return low[
+                (
+                    np.where(d[0] >= 0, low[:, 3], low[:, 0]) * d[0]
+                    + np.where(d[1] >= 0, low[:, 4], low[:, 1]) * d[1]
+                )
+                > near
+            ]
+
         for k in range(72):
             a = 2.0 * math.pi * k / 72
             d = np.array([math.cos(a), math.sin(a), 0.0])
             far, near = reach(low, d), reach(body, d)
+            if flange is not None:
+                out = beyond(near, d)
+                if len(out) and flange[0] - float(out[:, 5].max()) < flange[2]:
+                    near = max(near, flange[1])
             if far - near > best[1] + 1e-6:
-                out = low[
-                    (
-                        np.where(d[0] >= 0, low[:, 3], low[:, 0]) * d[0]
-                        + np.where(d[1] >= 0, low[:, 4], low[:, 1]) * d[1]
-                    )
-                    > near
-                ]
+                out = beyond(near, d)
                 best = (d, far - near, far, float(out[:, 5].max()) if len(out) else self.tip_z)
         return best
 
@@ -271,12 +327,39 @@ class Tool:
         feature ``width`` m across by ``clearance`` m on each side (0: fully open). Fingers only."""
         if self.mechanism != "fingers":
             return 0.0
-        best = 0.0
-        for c in PRESHAPE_CLOSURES:
-            ap = self.footprint(c).aperture()
-            if ap is not None and ap >= width + 2.0 * clearance:
-                best = c
-        return best
+        return preshape_closure(self.footprint, width, clearance)
+
+
+def preshape_closure(
+    footprint_at: Callable[[float], Footprint], width: float, clearance: float = PRESHAPE_CLEARANCE
+) -> float:
+    """:meth:`Tool.preshape` from a head's calibrated footprints (``footprint_at(closure)``)."""
+    best = 0.0
+    for c in PRESHAPE_CLOSURES:
+        ap = footprint_at(c).aperture()
+        if ap is not None and ap >= width + 2.0 * clearance:
+            best = c
+    return best
+
+
+_CORNER_SIGNS: Final = np.array([[i, j, k] for i in (0, 1) for j in (0, 1) for k in (0, 1)], dtype=bool)
+
+
+def box_corners(boxes: np.ndarray) -> np.ndarray:
+    """``(m, 8, 3)`` corners of ``(m, 6)`` boxes (lo xyz, hi xyz)."""
+    b = np.asarray(boxes, dtype=np.float64).reshape(-1, 6)
+    return np.where(_CORNER_SIGNS[None, :, :], b[:, None, 3:], b[:, None, :3])
+
+
+def geom_boxes(model: mujoco.MjModel, data: mujoco.MjData, geoms: Sequence[int] | np.ndarray) -> np.ndarray:
+    """``(k, 6)`` world boxes (lo xyz, hi xyz) of ``geoms`` now, seen as :func:`obstacle_top` sees
+    heights."""
+    out = np.zeros((len(geoms), 6))
+    for i, g in enumerate(np.asarray(geoms, dtype=np.int64)):
+        c = data.geom_xpos[g] + data.geom_xmat[g].reshape(3, 3) @ model.geom_aabb[g][:3]
+        ext = np.abs(data.geom_xmat[g].reshape(3, 3)) @ model.geom_aabb[g][3:]
+        out[i, :3], out[i, 3:] = c - ext, c + ext
+    return out
 
 
 def tool_of(ctx: StepContext, body: int | None = None) -> Tool:
@@ -368,18 +451,132 @@ def footprint(scene: StudioScene, closure: float) -> Footprint:
 # --------------------------------------------------------------------------- wrist poses and paths
 
 
-def wrist_target(point: np.ndarray, tool_point: np.ndarray, yaw: float, roll: float) -> np.ndarray:
-    """The five wrist targets that put ``tool_point`` (wrist frame, roll 0) at world ``point``."""
-    palm = np.asarray(point, dtype=np.float64) - rot_z(yaw + roll) @ np.asarray(tool_point, dtype=np.float64)
-    return np.array([palm[0], palm[1], palm[2], yaw, roll])
+def wrist_target(
+    point: np.ndarray, tool_point: np.ndarray, yaw: float, roll: float, pitch: float = 0.0
+) -> np.ndarray:
+    """The six wrist targets (x, y, z, yaw, roll, pitch) that put ``tool_point`` (wrist frame,
+    pitch and roll 0) at world ``point``; ``pitch`` 0 is the tool straight down."""
+    r = wrist_rotation(yaw, roll, pitch)
+    palm = np.asarray(point, dtype=np.float64) - r @ np.asarray(tool_point, dtype=np.float64)
+    return np.array([palm[0], palm[1], palm[2], yaw, roll, pitch])
+
+
+def start_pose(ctx: StepContext) -> np.ndarray:
+    """The six wrist targets when the step starts: :attr:`StepContext.wrist_start` (five) and
+    :attr:`StepContext.wrist_pitch_start`."""
+    return np.append(np.asarray(ctx.wrist_start, dtype=np.float64)[:5], float(ctx.wrist_pitch_start))
+
+
+def in_reach(*poses: np.ndarray, margin: float = REACH_MARGIN) -> bool:
+    """Whether the wrist reaches every pose: its x and y within the palm's travel
+    (:data:`rtt.sim.scene.PALM_XY_LIMIT`) less ``margin``. A tilted tool puts the palm its own
+    length out from where it works, so a tilted approach checks it before it commits."""
+    return all(max(abs(float(p[0])), abs(float(p[1]))) <= PALM_XY_LIMIT - margin for p in poses)
+
+
+# --------------------------------------------------------------------------- out of reach
+
+
+def reach_problem(*poses: np.ndarray, margin: float = REACH_MARGIN) -> dict[str, float] | None:
+    """Where the palm would have to go (mm) for the first of ``poses`` outside its travel less
+    ``margin`` (:func:`in_reach`), the travel and the margin; ``None`` when it reaches every one.
+    Every primitive checks its planned poses with it (Studio v2): a step whose target the palm
+    cannot reach is not attempted (:func:`hold_out_of_reach`)."""
+    for pose in poses:
+        if not in_reach(pose, margin=margin):
+            return {
+                "reach_x_mm": 1000.0 * float(pose[0]),
+                "reach_y_mm": 1000.0 * float(pose[1]),
+                "palm_limit_mm": 1000.0 * PALM_XY_LIMIT,
+                "reach_margin_mm": 1000.0 * margin,
+            }
+    return None
+
+
+def hold_out_of_reach(
+    ctx: StepContext, start: np.ndarray, far: Mapping[str, float], what: str = "its target"
+) -> StepPlan:
+    """The plan of a step whose target is out of reach (``far``: :func:`reach_problem`): hold still
+    0.2 s, the tool as it was (:func:`idle_command`; the plan's ``run`` is ``{"idle": start,
+    "closure": ...}``); its predicate fails it ``out_of_reach`` (:func:`out_of_reach_verdict`).
+    ``what``: the move that would take the palm out, in words, for the step's plain reason."""
+    sch = schedule(ctx)
+    sch.engaged = sch.released = sch.reg = math.nan  # nothing is attempted
+    sch.hold = (math.nan, math.nan)
+    sch.values.update(far)
+    sch.values["out_of_reach"] = 1.0
+    sch.values["reach_what"] = what  # type: ignore[assignment]
+    note = (
+        f"out of reach: the palm would go to x {far['reach_x_mm']:.0f}, y {far['reach_y_mm']:.0f} mm; "
+        f"it reaches +-{far['palm_limit_mm']:.0f} mm"
+    )
+    return StepPlan(duration_s=0.2, values={"run": idle_run(ctx, start), "schedule": sch}, note=note)
+
+
+def held_closure(ctx: StepContext) -> float:
+    """The tool's closure when the step starts: 1 when the previous step ends holding this step's
+    object (``hold_after``: the same tool, closed on it), else 0 (open)."""
+    steps = ctx.task_spec.steps
+    i = next(k for k, s in enumerate(steps) if s.id == ctx.step.id)
+    return 1.0 if i > 0 and steps[i - 1].hold_after else 0.0
+
+
+def idle_run(ctx: StepContext, start: np.ndarray) -> dict[str, Any]:
+    """The ``run`` of a step that is not tried: hold the wrist at ``start``, the tool as it was."""
+    return {"idle": start.copy(), "closure": held_closure(ctx)}
+
+
+def idle_command(
+    t: float, ctx: StepContext, run: Mapping[str, Any], model: mujoco.MjModel, data: mujoco.MjData
+) -> PrimitiveCommand:
+    """One tick of a step that is not tried (:func:`idle_run`): the wrist holds still and the tool
+    keeps its closure, so a part the previous step holds stays held (open otherwise)."""
+    closure = float(run["closure"])
+    phase = Phase.HOLD if closure > 0.0 else Phase.DESCEND
+    return PrimitiveCommand(run["idle"], schedule(ctx).tool.controls(t, closure, model, data, phase))
+
+
+def out_of_reach_verdict(ctx: StepContext, acc: Mapping[str, float]) -> StepVerdict | None:
+    """``out_of_reach`` for a step planned by :func:`hold_out_of_reach`, with where the palm would
+    have to go (``reach_x_mm``, ``reach_y_mm``), its travel (``palm_limit_mm``) and a plain
+    reason; else ``None``."""
+    sch = scheduled(ctx)
+    if sch is None or not sch.values.get("out_of_reach"):
+        return None
+    v = sch.values
+    keys = ("reach_x_mm", "reach_y_mm", "palm_limit_mm")
+    margin = float(v.get("reach_margin_mm", 1000.0 * REACH_MARGIN))
+    reason = (
+        f"Out of reach: {v.get('reach_what', 'its target')} would take the palm to x "
+        f"{v['reach_x_mm']:.0f} mm, y {v['reach_y_mm']:.0f} mm, past its +-{v['palm_limit_mm']:.0f} mm "
+        f"travel less {margin:.0f} mm; the step was not attempted"
+    )
+    return StepVerdict(False, "out_of_reach", {**acc, **{k: float(v[k]) for k in keys}}, (reason,))
+
+
+def offset(x: float = 0.0, y: float = 0.0, z: float = 0.0) -> np.ndarray:
+    """A change of the six wrist targets that moves the wrist by ``(x, y, z)`` m and turns nothing."""
+    return np.array([x, y, z, 0.0, 0.0, 0.0])
+
+
+def turn_time(angle: float, speed_dps: float) -> float:
+    """The duration of a min-jerk turn by ``angle`` rad whose peak speed stays under ``speed_dps``
+    by :data:`TURN_MARGIN` (0 for no turn)."""
+    return TURN_MARGIN * 1.875 * abs(float(angle)) / math.radians(speed_dps)
 
 
 def tool_point_world(scene: StudioScene, data: mujoco.MjData, tool_point: np.ndarray) -> np.ndarray:
-    """Where ``tool_point`` (wrist frame, roll 0) is now (proprioception: the wrist's own joints)."""
+    """Where ``tool_point`` (wrist frame, pitch and roll 0) is now (proprioception: the wrist's own
+    joints, :func:`rtt.studio.scene.world_tcp`)."""
+    return world_tcp(scene, data, tool_point)
+
+
+def wrist_frame(scene: StudioScene, data: mujoco.MjData) -> np.ndarray:
+    """The tool's orientation now (world from wrist frame), from the wrist's own joints."""
     q = data.qpos
-    x, y, z, yaw = (float(q[a]) for a in scene.ids.palm_qpos)
-    roll = float(q[scene.ids.roll_qpos])
-    return np.array([x, y, z]) + rot_z(yaw + roll) @ np.asarray(tool_point, dtype=np.float64)
+    return wrist_rotation(
+        float(q[scene.ids.palm_qpos[3]]), float(q[scene.ids.roll_qpos]), float(q[scene.ids.pitch_qpos])
+    )
 
 
 def heading_for_axis(direction: np.ndarray, yaw_offset: float, current: float) -> float:
@@ -397,14 +594,17 @@ def move_time(a: np.ndarray, b: np.ndarray, speed: float = TRANSIT_SPEED, floor:
 
 @dataclass
 class Path:
-    """Min-jerk waypoints of the five wrist targets; :meth:`at` interpolates."""
+    """Min-jerk waypoints of the six wrist targets; :meth:`at` interpolates. ``pitch_dps``: the
+    scene's pitch speed cap (``scene.wrist.pitch_speed_dps``), which bounds every pitch move."""
 
     times: list[float] = field(default_factory=lambda: [0.0])
     poses: list[np.ndarray] = field(default_factory=list)
+    pitch_dps: float = math.nan  # set by :meth:`start`; a pitch move without it is refused
 
     @classmethod
-    def start(cls, pose: np.ndarray) -> Path:
-        return cls([0.0], [np.asarray(pose, dtype=np.float64).copy()])
+    def start(cls, pose: np.ndarray, pitch_dps: float) -> Path:
+        """A path from ``pose`` on a wrist whose pitch moves at most ``pitch_dps``."""
+        return cls([0.0], [np.asarray(pose, dtype=np.float64).copy()], float(pitch_dps))
 
     @property
     def end(self) -> float:
@@ -415,9 +615,16 @@ class Path:
         return self.poses[-1].copy()
 
     def to(self, pose: np.ndarray, duration: float | None = None) -> float:
-        """Append a waypoint reached ``duration`` s later (default: :func:`move_time`); returns its time."""
+        """Append a waypoint reached ``duration`` s later (default: :func:`move_time`); returns its
+        time. A move that changes the pitch lasts at least its :func:`turn_time` at the scene's
+        pitch speed cap (a step that starts tilted turns back to straight down within it)."""
         pose = np.asarray(pose, dtype=np.float64).copy()
         d = move_time(self.poses[-1], pose) if duration is None else float(duration)
+        dp = float(pose[5] - self.poses[-1][5])
+        if dp:
+            if not math.isfinite(self.pitch_dps):
+                raise ValueError("a path that turns the pitch needs the scene's pitch cap (Path.start)")
+            d = max(d, turn_time(dp, self.pitch_dps))
         self.times.append(self.times[-1] + max(1e-3, d))
         self.poses.append(pose)
         return self.times[-1]
@@ -491,6 +698,30 @@ def obstacle_top(model: mujoco.MjModel, data: mujoco.MjData, geoms: Sequence[int
     return top
 
 
+def top_within(
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+    geoms: Sequence[int] | np.ndarray,
+    centre: np.ndarray,
+    radius: float,
+    below: float = math.inf,
+) -> float:
+    """The highest point now of the ``geoms`` whose world AABB overlaps the horizontal disc of
+    ``radius`` m about ``centre`` (x, y) and whose top is below ``below`` (m); ``-inf`` for none.
+    Seen as :func:`obstacle_top` sees heights (what a part set down there would land on)."""
+    top = -math.inf
+    cx, cy = float(centre[0]), float(centre[1])
+    for g in np.asarray(geoms, dtype=np.int64):
+        c = data.geom_xpos[g] + data.geom_xmat[g].reshape(3, 3) @ model.geom_aabb[g][:3]
+        ext = np.abs(data.geom_xmat[g].reshape(3, 3)) @ model.geom_aabb[g][3:]
+        dx = max(0.0, abs(cx - float(c[0])) - float(ext[0]))
+        dy = max(0.0, abs(cy - float(c[1])) - float(ext[1]))
+        z = float(c[2] + ext[2])
+        if math.hypot(dx, dy) < radius and z < below:
+            top = max(top, z)
+    return top
+
+
 def safe_palm_z(
     ctx: StepContext, model: mujoco.MjModel, data: mujoco.MjData, tool: Tool, carried: float = 0.0
 ) -> float:
@@ -511,7 +742,10 @@ def tool_geoms(scene: StudioScene) -> np.ndarray:
         return hit[1]
     model = scene.model
     wrist = np.flatnonzero(
-        np.isin(model.geom_bodyid, [scene.ids.palm_body, scene.ids.roll_body, scene.ids.flange_body])
+        np.isin(
+            model.geom_bodyid,
+            [scene.ids.palm_body, scene.ids.pitch_body, scene.ids.roll_body, scene.ids.flange_body],
+        )
         & ((model.geom_contype != 0) | (model.geom_conaffinity != 0))
     )
     out = np.union1d(scene.ids.effector_geoms, wrist).astype(np.int64)
@@ -576,6 +810,35 @@ def contacts(
     return Contact(net, normal, depth, int(idx.size), frozenset(bodies))
 
 
+def touching(model: mujoco.MjModel, data: mujoco.MjData, a: np.ndarray, b: np.ndarray) -> bool:
+    """Whether any geom of ``a`` is in active contact with any geom of ``b`` now (no forces read)."""
+    n = int(data.ncon)
+    if not n or not len(a) or not len(b):
+        return False
+    g = data.contact.geom[:n]
+    live = data.contact.efc_address[:n] >= 0
+    in_a0, in_a1 = np.isin(g[:, 0], a), np.isin(g[:, 1], a)
+    in_b0, in_b1 = np.isin(g[:, 0], b), np.isin(g[:, 1], b)
+    return bool(np.any(live & ((in_a0 & in_b1) | (in_b0 & in_a1))))
+
+
+#: every colliding geom that is not the tool's, per scene (weakly keyed: a scene's mask dies with it)
+_OTHERS: weakref.WeakKeyDictionary[StudioScene, np.ndarray] = weakref.WeakKeyDictionary()
+
+
+def wrist_load(scene: StudioScene, model: mujoco.MjModel, data: mujoco.MjData) -> Contact:
+    """The tool's contacts with everything that is not the tool (objects, the table): what a force
+    sensor at the wrist reads of the world (:attr:`Contact.net` is the force the tool applies to
+    it). A carried part's weight, and its support taking that weight, show up here."""
+    others = _OTHERS.get(scene)
+    if others is None:
+        live = np.flatnonzero((model.geom_contype != 0) | (model.geom_conaffinity != 0))
+        others = np.setdiff1d(live, tool_geoms(scene)).astype(np.int64)
+        others.flags.writeable = False
+        _OTHERS[scene] = others
+    return contacts(model, data, tool_geoms(scene), others)
+
+
 # --------------------------------------------------------------------------- objects and criteria
 
 
@@ -617,9 +880,10 @@ def observed_state(ctx: StepContext, data: mujoco.MjData) -> dict[str, float]:
     kind, info = ctx.obj.kind, ctx.obj.handles.info
     if kind is TemplateKind.HINGED_LID:
         return {"angle_deg": math.degrees(panel_angle(ctx, data))}
-    if kind is TemplateKind.DRAWER:
+    if kind in SLIDE_KINDS:  # a drawer, or a door sliding sideways (its moving site is ``door``)
         pull = np.array([info["pull_x"], info["pull_y"], 0.0])
-        rel = ctx.observe_site(data, "drawer") - ctx.observe_site(data, "front")
+        moving = "drawer" if kind is TemplateKind.DRAWER else "door"
+        rel = ctx.observe_site(data, moving) - ctx.observe_site(data, "front")
         return {"travel_mm": 1000.0 * (float(pull @ rel) - info["front_gap_m"])}
     if kind is TemplateKind.QUARTER_TURN_LATCH:
         a = angle_about(ctx.observe_site(data, "head"), ctx.observe_site(data, "mark")) - _yaw_of(ctx)
@@ -627,7 +891,8 @@ def observed_state(ctx: StepContext, data: mujoco.MjData) -> dict[str, float]:
     if kind is TemplateKind.HANDWHEEL_VALVE:
         a = angle_about(ctx.observe_site(data, "wheel"), ctx.observe_site(data, "spoke0")) - _yaw_of(ctx)
         return {"angle_deg": math.degrees(math.remainder(a - math.pi + 0.05, 2.0 * math.pi) + math.pi - 0.05)}
-    if kind is TemplateKind.THREADED_JOINT:
+    if kind in THREAD_KINDS:  # a threaded joint, or a panel's clamp (:func:`thread_info`)
+        info = thread_info(ctx.obj)
         depth = float(
             ctx.observe_site(data, "seat")[2] + info["length_m"] - ctx.observe_site(data, "member")[2]
         )
@@ -728,6 +993,15 @@ class Schedule:
 
 
 _SCHEDULES: weakref.WeakKeyDictionary[Any, Schedule] = weakref.WeakKeyDictionary()
+
+
+def scheduled(ctx: Any) -> Schedule | None:
+    """The step's :class:`Schedule` if its controller made one, without creating it (``None`` for a
+    context that has none, such as a bare namespace a predicate is unit-tested with)."""
+    try:
+        return _SCHEDULES.get(ctx)
+    except TypeError:  # it cannot be weakly referenced, so it was never given a schedule
+        return None
 
 
 def schedule(ctx: StepContext) -> Schedule:

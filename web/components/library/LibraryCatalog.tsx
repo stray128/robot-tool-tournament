@@ -16,19 +16,29 @@ import {
   type SimStatus,
 } from "@/lib/library";
 
+import { FamilyIcon } from "@/components/story/FamilyIcon";
+
 import { CapabilityTag, EntrantBadge, SimStatusBadge } from "./Badges";
 
-const FIELD = "border border-rule-strong bg-paper px-2 py-1.5 text-ink";
+/** The family drawing that fits a library item's kind. */
+function kindFamily(kind: string): string {
+  if (kind.includes("suction")) return "Suction cup";
+  if (kind.includes("hand")) return "Multi-finger hand";
+  if (kind.includes("finger") || kind.includes("jaw")) return "Parallel jaw";
+  return "Industrial gripper";
+}
+
+const FIELD = "rounded-md border border-rule-strong bg-surface px-2 py-1.5 text-ink";
 
 function Card({ card, notes }: { card: LibraryCard; notes: Record<string, string> }) {
   return (
     <li className="min-w-0">
       <article
-        className="relative flex h-full flex-col border border-rule-strong bg-paper p-4 transition-colors hover:border-ink"
+        className="panel relative flex h-full flex-col p-4 transition-colors hover:border-accent/60"
         data-library-card={card.key}
         aria-label={card.display_name}
       >
-        <p className="text-xs uppercase tracking-wide text-ink-3">{card.kind_title}</p>
+        <p className="flex items-center gap-2 text-sm text-ink-3"><FamilyIcon family={kindFamily(card.kind)} className="size-5 text-accent" />{card.kind_title}</p>
         <h3 className="heading mt-1 text-lg text-ink">
           <Link
             href={`/library/${card.key}/`}
@@ -113,7 +123,7 @@ export default function LibraryCatalog({
         role="search"
         aria-label="Search the library"
         onSubmit={(e) => e.preventDefault()}
-        className="grid gap-4 border border-rule-strong bg-paper p-4"
+        className="panel grid gap-4 p-4"
       >
         <label className="grid gap-1 text-sm">
           <span className="text-xs text-ink-3">Search</span>
@@ -141,7 +151,7 @@ export default function LibraryCatalog({
                   aria-pressed={on}
                   title={c.note}
                   onClick={() => toggle(c.tag)}
-                  className={`border px-2 py-0.5 text-sm ${on ? "border-ink bg-ink text-paper" : "border-rule-strong text-ink-2 hover:border-ink hover:text-ink"}`}
+                  className={`rounded-full border px-2.5 py-0.5 text-sm ${on ? "border-accent bg-accent text-accent-ink" : "border-rule-strong text-ink-2 hover:border-ink hover:text-ink"}`}
                 >
                   {c.tag}
                 </button>
@@ -220,7 +230,7 @@ export default function LibraryCatalog({
           ))}
         </ul>
       ) : (
-        <p className="mt-4 border border-dashed border-rule-strong p-4 text-ink-2">No item matches these filters.</p>
+        <p className="mt-4 rounded-lg border border-dashed border-rule-strong p-4 text-ink-2">No item matches these filters.</p>
       )}
     </div>
   );

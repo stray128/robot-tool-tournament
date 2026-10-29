@@ -1,235 +1,77 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { ProductModeBanner } from "@/components/effectors/ProductModeBanner";
-import { PageHeader } from "@/components/PageHeader";
-import { BuildPackView } from "@/components/studio/BuildPackView";
-import { FinalistsTable, stopsText } from "@/components/studio/FinalistsTable";
-import { NoWinnerBlock, RecommendationCard } from "@/components/studio/Outcome";
-import { PlanView } from "@/components/studio/PlanView";
-import { ProvenanceView } from "@/components/studio/ProvenanceView";
-import { ScreenView } from "@/components/studio/ScreenView";
-import {
-  failureText,
-  finalistsWithBaseline,
-  type FinalistRow,
-  humanize,
-  type HeroPage,
-  massText,
-  type Plan,
-  runsText,
-  stepTitle,
-} from "@/components/studio/schema";
-import { SessionView } from "@/components/studio/SessionView";
-import StudioLanes from "@/components/studio/StudioLanes";
-import SuccessMatrix from "@/components/studio/SuccessMatrix";
-import { Facts, Section, TierBadge } from "@/components/studio/ui";
-import { TitleBlock } from "@/components/TitleBlock";
+import { StoryPage, type StoryHeldout } from "@/components/story/StoryPage";
+import { type HeroPage } from "@/components/studio/schema";
+import { buildStory, focusOf } from "@/components/studio/story";
 
-import { getStudioHero, getStudioHeroIds, getStudioSession } from "../data";
+import { V1_NOTE } from "../../evidence/notes";
+import { getStudioHero, getStudioHeroIds, getStudioIndex, getStudioSession, legacyHeroRoutes } from "../data";
+import { heldoutFor } from "../heldout";
 
 export const dynamicParams = false;
 
+/**
+ * One story page per hero the Studio's data index lists, whatever their number, plus a redirect
+ * for each published v1 route the index no longer lists (a renamed or left-out hero).
+ */
 export function generateStaticParams() {
-  return getStudioHeroIds().map((hero) => ({ hero }));
+  return [...getStudioHeroIds(), ...legacyHeroRoutes().map((r) => r.hero)].map((hero) => ({ hero }));
 }
 
 type Params = { params: Promise<{ hero: string }> };
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
-  const page = getStudioHero((await params).hero);
-  return page ? { title: `Studio: ${page.title}`, description: `Product mode: ${page.headline}` } : {};
+  const hero = (await params).hero;
+  const page = getStudioHero(hero);
+  if (page) return { title: `${page.title}: worked example`, description: `Product mode. ${buildStory(page).answer}` };
+  const moved = legacyHeroRoutes().find((r) => r.hero === hero);
+  return moved ? { title: "Worked example moved", description: "This worked example moved.", robots: { index: false } } : {};
 }
 
-const COUNT_LABELS: Record<string, string> = {
-  single: "Single tools",
-  tool_change: "Tool-change sequences",
-  multi_head: "Two-tool heads scored",
-  multi_head_geometry_searched: "Two-tool head layouts searched",
-};
-
-function BaselineCard({ row, plan }: { row: FinalistRow; plan: Plan }) {
-  return (
-    <article className="border border-rule-strong bg-paper-2/40 p-4" aria-label="Best single off-the-shelf tool" data-best-single>
-      <p className="text-xs font-semibold uppercase tracking-wide text-ink-2">Best single off-the-shelf tool</p>
-      <h3 className="heading mt-1 text-xl text-ink">{row.label}</h3>
-      <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-ink-2">
-        {row.tool_details[0]?.family_title ? <span>{row.tool_details[0].family_title}</span> : null}
-        <TierBadge tier={row.fidelity} />
-      </p>
-      <Facts
-        className="mt-3"
-        items={[
-          ["Completes the task", runsText(row.completed_runs, row.n_runs)],
-          ["Weakest step", row.weakest_step ? stepTitle(plan, row.weakest_step.step_id) : "n/a"],
-          ["Mass", massText(row.complexity.total_mass_kg)],
-        ]}
-      />
-      {stopsText(row, plan).length ? (
-        <ul className="mt-3 grid gap-0.5 text-sm text-ink-2">
-          {stopsText(row, plan).map((s) => (
-            <li key={s}>Stops at {s}</li>
-          ))}
-        </ul>
-      ) : null}
-      {Object.keys(row.failure_modes).length ? <p className="mt-2 text-xs text-ink-3">Failures over every run: {failureText(row.failure_modes, ["not_reached"])}</p> : null}
-      <p className="mt-3 text-xs text-ink-3">
-        The baseline every answer is measured against: the off-the-shelf single tool that did best on the same conditions and seeds.
-      </p>
-    </article>
-  );
-}
-
-const TOC: [string, string][] = [
-  ["answer", "Answer"],
-  ["replays", "Replays"],
-  ["plan", "Plan"],
-  ["candidates", "Candidates"],
-  ["matrix", "Success matrix"],
-  ["combinations", "Combinations"],
-  ["finalists", "Finalists"],
-  ["build-pack", "Build pack"],
-  ["session", "Session"],
-  ["provenance", "Provenance"],
-];
-
-export default async function StudioHeroPage({ params }: Params) {
-  const page: HeroPage | undefined = getStudioHero((await params).hero);
-  if (!page) notFound();
-  const session = getStudioSession(page);
-  const finalists = finalistsWithBaseline(page);
-  const steps = page.plan.steps.map((s) => ({ id: s.id, title: stepTitle(page.plan, s.id), primitive_title: s.primitive_title }));
-  const toc = TOC.filter(([id]) => id !== "session" || session);
-
+/** An old route: a static redirect (meta refresh and a link), so links to it keep working. */
+function Moved({ to, title }: { to: string; title: string | null }) {
   return (
     <>
-      <p className="pt-8 text-sm">
-        <Link href="/studio/" className="link">
-          Studio
-        </Link>
-      </p>
-      <ProductModeBanner />
-      <PageHeader
-        title={page.title}
-        lede={
-          <>
-            <p className="num text-xs uppercase tracking-wide text-ink-3">{page.setting}</p>
-            <blockquote className="mt-1 border-l-2 border-rule-strong pl-3 text-ink-2" data-use-case>
-              {page.use_case}
-            </blockquote>
-          </>
-        }
-      >
-        <p className="prose-measure text-lg text-ink" data-headline>
-          {page.headline}
+      <meta httpEquiv="refresh" content={`0; url=${to}`} />
+      <section className="pt-16" data-moved>
+        <h1 className="display text-[2.2rem] text-ink">This worked example moved</h1>
+        <p className="mt-4 text-ink-2">
+          {title ? `It is now "${title}". ` : "It is no longer one of the recorded examples. "}
+          <a className="link" href={to}>
+            {title ? "Open it" : "See the worked examples"}
+          </a>
+          .
         </p>
-        <nav aria-label="On this page" className="mt-4">
-          <ul className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
-            {toc.map(([id, name]) => (
-              <li key={id}>
-                <a href={`#${id}`} className="link">
-                  {name}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      </PageHeader>
-
-      <Section id="answer" title={page.recommendation ? "The recommendation" : "No recommendation"}>
-        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-          {page.recommendation ? (
-            <RecommendationCard rec={page.recommendation} plan={page.plan} bestSingle={page.best_single} />
-          ) : page.no_winner ? (
-            <NoWinnerBlock noWinner={page.no_winner} plan={page.plan} />
-          ) : null}
-          {page.best_single ? <BaselineCard row={page.best_single} plan={page.plan} /> : null}
-        </div>
-      </Section>
-
-      <Section
-        id="replays"
-        title="Side by side"
-        lede={
-          page.lanes.length ? (
-            <p>
-              {page.recommendation ? "The recommended setup" : "The closest setup"} and the best single off-the-shelf tool on the same condition, on one
-              clock. Each lane re-ran a scored run with recording on; its trajectory hash matches the report. A tool change or head switch is a
-              fixed time, not simulated: the replay holds the last pose through it, then cuts to the next tool.
-            </p>
-          ) : null
-        }
-      >
-        {page.lanes.length ? (
-          <StudioLanes lanes={page.lanes} plan={{ steps: page.plan.steps }} />
-        ) : (
-          <p className="border border-dashed border-rule-strong p-3 text-sm text-ink-3" data-no-lanes>
-            The replays of this use case have not been exported yet.
-          </p>
-        )}
-      </Section>
-
-      <Section id="plan" title="The plan" lede={<p>The frozen plan the search ran on, read only. Every step is checked against the simulator&apos;s primitives and object templates.</p>}>
-        <PlanView plan={page.plan} />
-      </Section>
-
-      <Section id="candidates" title="Candidates" lede={<p>Every tool the Studio can simulate, screened step by step on the same conditions and seeds.</p>}>
-        <ScreenView screen={page.screen} plan={page.plan} />
-      </Section>
-
-      <Section
-        id="matrix"
-        title="Success matrix"
-        lede={<p>Each candidate screened on at least one step, against every step of the plan. The candidates pruned from every step are only in the list above.</p>}
-      >
-        <SuccessMatrix matrix={page.matrix} steps={steps} />
-      </Section>
-
-      <Section id="combinations" title="Combinations" lede={<p>Setups built from the screen, before the finalists ran the whole task.</p>}>
-        <Facts items={Object.entries(page.combinations.counts).map(([k, v]) => [COUNT_LABELS[k] ?? humanize(k), String(v)] as [string, string])} />
-        {page.combinations.rejected.length ? (
-          <details className="mt-3">
-            <summary className="cursor-pointer text-sm text-ink-2">Rejected two-tool heads ({page.combinations.rejected.length})</summary>
-            <ul className="mt-2 grid gap-1.5 text-sm text-ink-2">
-              {page.combinations.rejected.map((r, i) => (
-                <li key={`${i}-${r.reason}`}>
-                  <span className="text-ink">{r.label || "A two-tool head"}</span>: {r.reason}
-                </li>
-              ))}
-            </ul>
-          </details>
-        ) : null}
-      </Section>
-
-      <Section
-        id="finalists"
-        title="Finalists against the best single"
-        lede={
-          <p>
-            Every finalist ran the whole task on the {page.provenance.conditions.length} conditions, in ranking order: completion, then the weakest
-            step, the median cycle time with changes, then simplicity.
-          </p>
-        }
-      >
-        <FinalistsTable rows={finalists} plan={page.plan} baselineId={page.best_single?.setup_id ?? null} />
-      </Section>
-
-      <Section id="build-pack" title="Build pack">
-        <BuildPackView pack={page.build_pack} note={page.build_pack_note} />
-      </Section>
-
-      {page.session && session ? (
-        <Section id="session" title="The recorded session" lede={<p>The Grasp Engineer&apos;s recorded run of this use case, read only.</p>}>
-          <SessionView block={page.session} session={session} />
-        </Section>
-      ) : null}
-
-      <Section id="provenance" title="Provenance and caveats">
-        <ProvenanceView page={page} />
-      </Section>
-
-      <TitleBlock title={`Studio: ${page.title}`} drawing={`/studio/${page.hero}`} sheet="Product mode" />
+      </section>
     </>
   );
+}
+
+/** The held-out benchmark's arms when they are the setups this page shows (v1 heroes only). */
+function heldoutOf(page: HeroPage): StoryHeldout | null {
+  const focus = focusOf(page);
+  if (!focus || focus.role !== "recommended" || !page.best_single) return null;
+  const h = heldoutFor(page.case_id, focus.setup_id, page.best_single.setup_id);
+  if (!h) return null;
+  const note = V1_NOTE.byHero[page.case_id];
+  return {
+    n_conditions: h.n_conditions,
+    p: h.p,
+    recommended: { n: h.recommended.n, completed: h.recommended.completed },
+    best_single: { n: h.best_single.n, completed: h.best_single.completed, steps: h.best_single.steps },
+    note: note ? { date: V1_NOTE.date, text: note } : null,
+  };
+}
+
+export default async function StudioStoryPage({ params }: Params) {
+  const hero = (await params).hero;
+  const page = getStudioHero(hero);
+  if (!page) {
+    const moved = legacyHeroRoutes().find((r) => r.hero === hero);
+    if (moved) return <Moved to={moved.to} title={moved.title} />;
+    notFound();
+  }
+  const others = getStudioIndex()?.heroes.filter((h) => h.hero !== page.hero) ?? [];
+  return <StoryPage page={page} session={getStudioSession(page)} held={heldoutOf(page)} others={others} />;
 }

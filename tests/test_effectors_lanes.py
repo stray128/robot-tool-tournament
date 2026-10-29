@@ -226,6 +226,9 @@ def test_export_web_writes_labelled_pages_and_lanes(tmp_path: Path, block: Any) 
         f["label"] == PRODUCT_MODE_LABEL for f in page["families"]
     )
     assert page["fairness"]["identical"] and page["caveats"]["common"]
+    # the process tools are Studio tools: no card on a per-part page and no entry in the index
+    families = {f["family"] for f in page["families"]} | {f["family"] for f in index["families"]}
+    assert "process_tool" not in families and "suction" in families
     lanes = page["lanes"]
     assert len(lanes) == 1 and lanes[0]["roles"][0] == "recommended"
     lane = lanes[0]

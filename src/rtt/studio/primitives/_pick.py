@@ -9,12 +9,26 @@ shared closure ramp (:meth:`GraspPrimitive.command` through a
 :class:`~rtt.studio.plan.V1SceneView`): fingers close, a cup's vacuum switches on only while
 sealed, a soft arm pulls its cable. Then:
 
-* with a ``target`` bin: carry the part over the bin (its bottom 20 mm above the bin's rim),
-  lower it until its bottom is 12 mm above the bin floor, or until it lands on something there
-  (a guarded move: it stops when the tool pushes the part down by more than 5 N), open over
-  0.5 s, wait 0.4 s, retract;
-* without a target and without ``hold_after``: put it back where it was, open, retract;
+* with a ``target`` bin: carry the part over the bin (its bottom 20 mm above the bin's rim) and
+  **set it down** on the bin floor, or on whatever is already in the bin under it (seen as the
+  transit height is seen, :func:`~._common.top_within`); open over 0.5 s, wait 0.4 s, retract;
+* without a target and without ``hold_after``: set it back down where it was, open, retract;
 * with ``hold_after``: the step ends holding it (the next step uses the same tool).
+
+**Setting down** (:class:`SetDown`): the part is lowered (peak :data:`LOWER_SPEED`) until its
+bottom is :data:`SET_DOWN_FROM` above the support as planned, then slowly
+(:data:`SET_DOWN_SPEED`) on toward :data:`SET_DOWN_PAST` below it, both guarded on the wrist's
+force sensor (:func:`~._common.wrist_load`): the descent stops advancing once the load the tool
+carries has dropped by :data:`SET_DOWN_N` from what it carried when the descent began, that is
+once the support has taken the part (a part that hangs lower than planned lands early and stops
+there). Only then does the tool open: the part is let go resting on its support, never above it
+by more than :data:`~._common.RELEASE_HEIGHT_MAX_MM` (a cup's lip, which presses the part away
+from the cup while the vacuum holds it, reads as a load like any other).
+
+**Out of reach** (Studio v2): a pick whose grasp, or whose set-down in its target bin, would put
+the palm outside its travel (:func:`~._common.reach_problem`, +-350 mm less 5 mm) is not
+attempted: it holds still 0.2 s and fails ``out_of_reach``, with where the palm would have to go
+and a plain reason.
 
 The pick's mechanism is the tool's: a step's primitive names the intended mechanism and sets the
 fidelity tier, and physics decides whether this tool achieves it.
@@ -50,15 +64,26 @@ from rtt.studio.plan import (
     criteria_verdict,
 )
 from rtt.studio.primitives._common import (
+    RELEASE_HEIGHT_MAX_MM,
+    TRANSIT_SPEED,
     Guarded,
     Path,
     contacts,
+    hold_out_of_reach,
+    idle_command,
     move_time,
+    offset,
+    out_of_reach_verdict,
+    reach_problem,
     safe_palm_z,
     schedule,
+    start_pose,
     tool_geoms,
     tool_of,
+    top_within,
+    touching,
     transit,
+    wrist_load,
     wrist_target,
 )
 from rtt.studio.types import PrimitiveKind, TemplateKind
@@ -66,13 +91,61 @@ from rtt.studio.types import PrimitiveKind, TemplateKind
 if TYPE_CHECKING:
     from rtt.parts.types import PartSpec
 
-__all__ = ["PickController", "PickPredicate", "pick_body", "pick_geometry"]
+__all__ = ["PickController", "PickPredicate", "SetDown", "pick_body", "pick_geometry"]
 
 RELEASE_S = 0.5
 RELEASE_WAIT_S = 0.4
 RETRACT = 0.08  # m
 BIN_RIM_CLEARANCE = 0.020
-BIN_DROP = 0.012
+LOWER_SPEED = TRANSIT_SPEED  # m/s peak while a carried part is lowered toward its support
+SET_DOWN_FROM = 0.015  # m above the support (as planned) where the slow descent starts [assumed]
+SET_DOWN_PAST = 0.005  # m below it the slow descent aims, so it always meets it [assumed]
+SET_DOWN_SPEED = 0.016  # m/s mean of the slow descent (peak 1.875 x) [assumed]
+SET_DOWN_N = 3.0  # N: the support has the part once the wrist's load has changed by this [assumed]
+
+
+@dataclass
+class SetDown:
+    """Lowering a carried part onto its support (module docstring): ``lower`` to above it, then
+    ``slow`` on toward below it (built where ``lower`` stopped), both guarded on the change of the
+    wrist's vertical load from ``baseline`` (read when the descent begins)."""
+
+    lower: Guarded
+    past: np.ndarray  # the slow descent's goal (six wrist targets)
+    slow_s: float
+    slow: Guarded | None = None
+    baseline: float = math.nan
+
+    @property
+    def t0(self) -> float:
+        return self.lower.t0
+
+    @property
+    def end(self) -> float:
+        return self.lower.end + self.slow_s
+
+    def finished(self, t: float) -> bool:
+        """Whether the descent is over at ``t`` (its whole planned time: a guard that held it back
+        for a moment lets it go on once the load is off again, so a heavy part is not let go early)."""
+        return t >= self.end
+
+    def at(self, t: float, load_z: float) -> np.ndarray:
+        """The wrist targets at ``t`` with the tool now applying ``load_z`` (N, up) to the world."""
+        if math.isnan(self.baseline):
+            self.baseline = load_z
+        pressing = self.baseline - load_z  # the support's share of the part
+        if t <= self.lower.end:
+            return self.lower.at(t, pressing)
+        if self.slow is None:
+            here = self.lower.at(self.lower.end, math.inf)
+            self.slow = Guarded(here, self.past, self.lower.end, self.slow_s, force=SET_DOWN_N)
+        return self.slow.at(min(t, self.end), pressing)
+
+    def final(self) -> np.ndarray:
+        """Where the descent stopped (or will stop): the wrist targets the release holds."""
+        if self.slow is not None:
+            return self.slow.at(self.slow.end, math.inf)
+        return self.lower.at(self.lower.end, math.inf)
 
 
 def pick_body(ctx: StepContext) -> int:
@@ -130,7 +203,7 @@ class PickController:
         pplan = tool.primitive.plan(
             part, Placement(float(site[0]), float(site[1]), yaw_obj), task, ctx.head.build
         )
-        start = np.asarray(ctx.wrist_start, dtype=np.float64)
+        start = start_pose(ctx)
         roll = float(start[4])
         heading = yaw_obj + pplan.yaw_offset
         heading = heading + 2.0 * math.pi * round((start[3] + roll - heading) / (2.0 * math.pi))
@@ -141,12 +214,15 @@ class PickController:
         xy = site[:2]
         grasp = wrist_target(np.array([xy[0], xy[1], base_z + tip]), tool.tip, yaw, roll)
         approach = wrist_target(np.array([xy[0], xy[1], base_z + approach_tip]), tool.tip, yaw, roll)
-        path = Path.start(start)
+        far = reach_problem(grasp)  # the approach, the lift and a put-back share its x and y
+        if far is not None:
+            return hold_out_of_reach(ctx, start, far, "the pick")
+        path = Path.start(start, ctx.scene.wrist.pitch_speed_dps)
         transit(path, approach, max(approach[2], safe_palm_z(ctx, model, data, tool)))
         path.hold(c.settle_time)
         t_close = path.to(grasp, c.descend_time)
         t_lift = path.hold(c.close_time + c.squeeze_time)
-        lifted = grasp + np.array([0.0, 0.0, float(step.params["lift_mm"]) / 1000.0, 0.0, 0.0])
+        lifted = grasp + offset(z=float(step.params["lift_mm"]) / 1000.0)
         t_hold = path.to(lifted, c.lift_time)
         t_hold_end = path.hold(float(step.params["hold_s"]))
         sch.reg = t_close + c.close_time + task.registration.settle_time
@@ -154,6 +230,7 @@ class PickController:
         sch.engaged = t_lift
         t_release = math.nan
         carried = tip + 0.005  # the object hangs this far below the tool tip
+        support, support_on = math.nan, ""  # where the part is set down (its bottom, m), and on what
         if ctx.target is not None:
             tinfo = ctx.target.handles.info
             floor = ctx.observe_site(data, "bin", ctx.target.name)
@@ -163,21 +240,49 @@ class PickController:
             safe = max(over_z, safe_palm_z(ctx, model, data, tool, carried), lifted[2])
             above = wrist_target(np.array([floor[0], floor[1], 0.0]), tool.tip, yaw, roll)
             above[2] = safe
+            far = reach_problem(above)  # the set-down and the retract share its x and y
+            if far is not None:
+                label = ctx.task_spec.object(ctx.target.name).label.lower()
+                return hold_out_of_reach(ctx, start, far, f"setting the part down in the {label}")
             transit(path, above, safe)
-            down = above.copy()
-            down[2] = float(floor[2]) + BIN_DROP + tip - float(tool.tip[2])
-            lower_t = max(0.6, move_time(above, down))
-            sch.values["guard"] = Guarded(above.copy(), down.copy(), path.end, lower_t)  # type: ignore[assignment]
-            t_release = path.to(down, lower_t)
+            # the bin floor, or the top of whatever already lies in the bin under the part
+            reach = 0.5 * math.hypot(*part.size[:2])
+            support, support_on = float(floor[2]), "the floor of the bin"
+            for name, o in ctx.scene.objects.items():
+                if name in (ctx.obj.name, ctx.target.name):
+                    continue
+                top = top_within(model, data, o.geom_ids, floor[:2], reach, rim)
+                if top > support:
+                    support, support_on = (
+                        top,
+                        f"the top of the {ctx.task_spec.object(name).label.lower()} in the bin",
+                    )
         elif not step.hold_after:
-            down = grasp + np.array([0.0, 0.0, 0.002, 0.0, 0.0])
-            t_release = path.to(down, c.lift_time)
-        if not math.isnan(t_release):
+            support, support_on = base_z, "where it was picked from"  # back where it was
+        if not math.isnan(support):
+            start_down = path.last
+            near = start_down.copy()
+            near[2] = support + SET_DOWN_FROM + tip - float(tool.tip[2])
+            near[2] = min(near[2], start_down[2])
+            past = near.copy()
+            past[2] = support - SET_DOWN_PAST + tip - float(tool.tip[2])
+            lower_t = max(0.4, move_time(start_down, near, LOWER_SPEED))
+            slow_t = (SET_DOWN_FROM + SET_DOWN_PAST) / SET_DOWN_SPEED
+            sch.values["guard"] = SetDown(  # type: ignore[assignment]
+                Guarded(start_down.copy(), near.copy(), path.end, lower_t, force=SET_DOWN_N), past, slow_t
+            )
+            path.to(near, lower_t)
+            t_release = path.to(past, slow_t)  # at the latest: it lets go once the support has it
             path.hold(RELEASE_S + RELEASE_WAIT_S)
-            up = path.last + np.array([0.0, 0.0, RETRACT, 0.0, 0.0])
+            up = path.last + offset(z=RETRACT)
             path.to(up, 0.6)
             sch.released = t_release
-        sch.values.update(t_close=t_close, t_lift=t_lift, t_release=t_release, close_time=c.close_time)
+            # the part's bottom is this far below its observed handle site (it is seen there when
+            # the set-down ends, wherever the grasp let it slide)
+            sch.values.update(support=support, site_above_bottom=float(site[2]) - base_z)
+            sch.values["support_on"] = support_on  # type: ignore[assignment]
+        # the release moment is decided when the part is down (command); nan until then
+        sch.values.update(t_close=t_close, t_lift=t_lift, t_release=math.nan, close_time=c.close_time)
         sch.values["lift_threshold_mm"] = max(10.0, 0.5 * float(step.params["lift_mm"]))
         return StepPlan(
             duration_s=path.end + 0.1,
@@ -189,7 +294,18 @@ class PickController:
         self, t: float, ctx: StepContext, plan: StepPlan, model: mujoco.MjModel, data: mujoco.MjData
     ) -> PrimitiveCommand:
         sch = plan.values["schedule"]
+        run = plan.values.get("run")
+        if run is not None and "idle" in run:  # out of reach: hold still, the tool as it was
+            return idle_command(t, ctx, run, model, data)
         v = sch.values
+        guard = v.get("guard")
+        if (
+            isinstance(guard, SetDown)
+            and guard.finished(t)
+            and math.isnan(v["t_release"])
+            and "held_high_mm" not in v
+        ):  # the set-down is over: decide before this tick's controls (the release, as planned, at its end)
+            self._decide_release(guard.end, ctx, model, data)
         t_close, t_rel = v["t_close"], v["t_release"]
         closure = min(max((t - t_close) / v["close_time"], 0.0), 1.0)
         if not math.isnan(t_rel) and t >= t_rel:
@@ -201,19 +317,34 @@ class PickController:
         else:
             phase = Phase.HOLD
         u = sch.tool.controls(t, closure, model, data, phase)
-        guard = v.get("guard")
-        if isinstance(guard, Guarded) and t >= guard.t0:
-            # lowering into the bin stops when the carried part lands on something (the tool
-            # starts pushing it down); the release and the retract follow from there
-            if t <= guard.end:
-                con = contacts(model, data, tool_geoms(ctx.scene), ctx.obj.geom_ids)
-                wrist = guard.at(t, -float(con.net[2]))
-            else:
-                wrist = guard.at(guard.end, 1e9)
-                up = min_jerk(min(1.0, max(0.0, (t - guard.end - RELEASE_S - RELEASE_WAIT_S) / 0.6)))
-                wrist = wrist + np.array([0.0, 0.0, RETRACT * up, 0.0, 0.0])
+        if isinstance(guard, SetDown) and t >= guard.t0:
+            # setting the part down stops when its support takes it (the wrist's load drops); then
+            # it is let go only if it rests at most RELEASE_HEIGHT_MAX_MM above where it was to be
+            # set down (the tool on a bin's rim holds it high: letting go would drop it)
+            if not guard.finished(t):
+                return PrimitiveCommand(guard.at(t, float(wrist_load(ctx.scene, model, data).net[2])), u)
+            wrist = guard.final()
+            if not math.isnan(v["t_release"]):
+                up = min_jerk(min(1.0, max(0.0, (t - v["t_release"] - RELEASE_S - RELEASE_WAIT_S) / 0.6)))
+                wrist = wrist + offset(z=RETRACT * up)
             return PrimitiveCommand(wrist, u)
         return PrimitiveCommand(plan.values["path"].at(t), u)
+
+    @staticmethod
+    def _decide_release(t: float, ctx: StepContext, model: mujoco.MjModel, data: mujoco.MjData) -> None:
+        """At the end of the set-down: let go at ``t`` (its end), or not at all when the part (seen at
+        its handle site, as the plan saw it) is more than :data:`~._common.RELEASE_HEIGHT_MAX_MM`
+        above its support as planned; the predicate then fails the step and says why."""
+        sch = schedule(ctx)
+        v = sch.values
+        bottom = float(ctx.observe_site(data, ctx.step.handle)[2]) - v["site_above_bottom"]
+        high = 1000.0 * (bottom - v["support"])
+        if high <= RELEASE_HEIGHT_MAX_MM:
+            v["t_release"] = t
+            sch.released = t
+            return
+        v["held_high_mm"] = high
+        sch.released = math.nan
 
 
 def _tilt_deg(r0: np.ndarray, r1: np.ndarray) -> float:
@@ -232,6 +363,12 @@ class PickPredicate:
     ) -> None:
         sch = schedule(ctx)
         v = sch.values
+        if v.get("out_of_reach"):  # not attempted (out_of_reach_verdict): the object as it lies
+            con = contacts(model, data, tool_geoms(ctx.scene), ctx.obj.geom_ids)
+            acc.update(ctx.object_state(model, data))
+            acc["force_n"] = max(acc.get("force_n", 0.0), con.normal)
+            acc["penetration_mm"] = max(acc.get("penetration_mm", 0.0), 1000.0 * con.depth)
+            return
         body = pick_body(ctx)
         z = float(data.xpos[body][2])
         rot = data.xmat[body].reshape(3, 3).copy()
@@ -264,6 +401,14 @@ class PickPredicate:
             acc["dropped"] = 1.0
         acc["tilt_deg"] = _tilt_deg(r0, rot)
         acc["in_target"] = self._in_target(ctx, data, body, con.n)
+        if "held_high_mm" in v:  # not let go: how high, and what holds it up (the verdict's caveat)
+            acc["held_high_mm"] = float(v["held_high_mm"])
+            tgt = ctx.target
+            if tgt is not None and "held_on" not in acc:
+                if touching(model, data, ctx.obj.geom_ids, tgt.geom_ids):
+                    acc["held_on"] = 1.0
+                elif touching(model, data, tool_geoms(ctx.scene), tgt.geom_ids):
+                    acc["held_on"] = 2.0
 
     def _in_target(self, ctx: StepContext, data: mujoco.MjData, body: int, touching: int) -> float:
         tgt = ctx.target
@@ -278,10 +423,25 @@ class PickPredicate:
         return float(inside and height_ok)
 
     def verdict(self, ctx: StepContext, acc: Mapping[str, float]) -> StepVerdict:
-        q = {k: float(v) for k, v in acc.items() if k != "dropped"}
+        far = out_of_reach_verdict(ctx, acc)
+        if far is not None:
+            return far
+        q = {k: float(v) for k, v in acc.items() if k not in ("dropped", "held_on")}
         q.setdefault("hold_s", 0.0)
         q.setdefault("in_target", 0.0)
         out = criteria_verdict(ctx.step, q)
         if not out.success and out.failure_mode == "criterion_not_met" and acc.get("dropped"):
             return StepVerdict(False, "dropped", {**q, "dropped": 1.0})
+        high = acc.get("held_high_mm")
+        if high is not None and out.failure_mode not in ("physics_invalid", "physics_unreliable"):
+            # the part could not be set down: the step did not do its job, whatever it measured
+            # the support as planned (read only here: a refused release always has a schedule)
+            where = str(schedule(ctx).values.get("support_on", "where it was to be set down"))
+            held_on = {1.0: " (it rests on the bin's walls)", 2.0: " (the tool rests on the bin's walls)"}
+            note = (
+                f"The part stopped {high:.0f} mm above {where}{held_on.get(acc.get('held_on', 0.0), '')}; "
+                "it was not let go, since releasing it would drop it"
+            )
+            failure = out.failure_mode or "criterion_not_met"
+            return StepVerdict(False, failure, out.quantities, (*out.caveats, note))
         return out

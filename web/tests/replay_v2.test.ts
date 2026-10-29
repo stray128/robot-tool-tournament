@@ -226,8 +226,13 @@ describe("TS reader and JSON schema agree", () => {
   it("every top-level property of the schema is accepted, and nothing else", () => {
     const allowed = Object.keys(SCHEMA.properties).sort();
     const sample = Object.keys(sampleHeader());
-    // the sample uses every optional key except `static`
-    expect([...sample, "static"].sort()).toEqual(allowed);
+    // The sample uses every optional key except `static` and the Studio lane keys, which the
+    // lanes the Python exporter wrote carry (tests/fixtures/studio_lanes, studio_lanes.test.ts).
+    const laneKeys = ["t", "cuts", "quantised"];
+    expect([...sample, "static", ...laneKeys].sort()).toEqual(allowed);
+    const lane = JSON.parse(readFileSync(path.join(__dirname, "fixtures", "studio_lanes", "recommended.json"), "utf8"));
+    for (const key of laneKeys) expect(Object.keys(lane), key).toContain(key);
+    expect(parseReplayHeaderV2(lane).cuts.length).toBeGreaterThan(0);
   });
 
   it("asset roles and overlay channels are the schema's enums", async () => {

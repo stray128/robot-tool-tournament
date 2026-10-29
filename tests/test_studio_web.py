@@ -12,7 +12,6 @@ import hashlib
 import importlib.util
 import itertools
 import json
-import math
 import sys
 import zipfile
 from pathlib import Path
@@ -23,12 +22,11 @@ import pytest
 
 from rtt.effectors.types import PRODUCT_MODE_LABEL
 from rtt.library.brands import find_library_brands
-from rtt.sim.replay import check_header, read_replay, write_replay
 from rtt.studio import replay as sr
 from rtt.studio.buildpack import setup_from_dict, task_from_dict
 from rtt.studio.episode import StudioCondition, StudioJob, run_task_jobs
 from rtt.studio.search import candidate_of, run_task_tournament
-from rtt.studio.types import ObjectInstance, ObjectPose, Step, SuccessCriterion, TaskSpec
+from rtt.studio.types import HeadMount, ObjectInstance, ObjectPose, Setup, Step, SuccessCriterion, TaskSpec
 from studio_fixtures import cup, gripper, two_press_task
 
 REPO = Path(__file__).resolve().parents[1]
@@ -76,7 +74,9 @@ def _finalist(report: dict[str, Any], kind: str) -> dict[str, Any]:
     return found[0]
 
 
-def _record(report: dict[str, Any], finalist: dict[str, Any], i: int = 0) -> sr.Recording:
+def _record(
+    report: dict[str, Any], finalist: dict[str, Any], i: int = 0, fps: int = sr.RECORD_FPS
+) -> sr.Recording:
     spec = task_from_dict(report["task"])
     cond = report["conditions"][i]
     c = StudioCondition(
@@ -88,7 +88,22 @@ def _record(report: dict[str, Any], finalist: dict[str, Any], i: int = 0) -> sr.
         spec,
         c,
         expected_traj_sha=run["traj_sha"],
+        fps=fps,
         controllers="reference",
+    )
+
+
+def _record_kind(report: dict[str, Any], kind: str, fps: int = sr.RECORD_FPS) -> sr.Recording:
+    """A recording of a ``single`` or ``tool_change`` finalist of the tournament, or of a
+    ``multi_head`` setup (a head switch) of the same task, which the tournament does not field."""
+    if kind != "multi_head":
+        return _record(report, _finalist(report, kind), fps=fps)
+    setup = Setup.multi_head(
+        [(gripper(), HeadMount(-45.0, 70.0)), (cup(), HeadMount(45.0, 70.0))],
+        {"press_carton": 0, "press_flat": 1},
+    )
+    return sr.record_run(
+        setup, two_press_task(), StudioCondition("nominal", 0), fps=fps, controllers="reference"
     )
 
 
@@ -147,7 +162,7 @@ def test_a_tool_change_lane_parks_the_idle_tool_on_the_stand_and_writes_a_valid_
     store = sr.staging_store(tmp_path / "raw")
     replay, used, fps = sr.build_lane(rec, store, hero="t1", lane="recommended", code_version="0123456789ab")
     h = replay.header
-    assert fps in sr.FPS_LADDER and h["fps"] == fps
+    assert fps == sr.RECORD_FPS == h["fps"] == 100  # the nominal rate the keys were taken from
     assert h["provenance"]["product_mode"] is True and h["meta"]["label"] == PRODUCT_MODE_LABEL
     assert h["meta"]["design_id"] == f["setup"]["setup_id"] and h["meta"]["traj_sha"] == rec.result.traj_sha
     assert "created_utc" not in h["provenance"]  # a re-export is byte for byte the same
@@ -157,14 +172,15 @@ def test_a_tool_change_lane_parks_the_idle_tool_on_the_stand_and_writes_a_valid_
     assert segs[0]["change"] == "none" and any(s["change"] == "tool_change" for s in segs)
     for s0, s1 in itertools.pairwise(segs):
         assert s1["start_s"] == pytest.approx(s0["end_s"] + s1["change_s"], abs=1e-3)
-    assert not check_header(h, replay.frames)
+    assert not sr.check_lane_header(h, replay.frames)
     stem = tmp_path / "lane"
-    write_replay(replay, stem)
-    back = read_replay(stem)
-    assert back.n_frames == h["n_frames"] == math.floor(rec.result.cycle_time_s * fps + 1e-6) + 1
+    sr.write_lane(replay, stem)
+    back = sr.read_lane(stem)
+    assert back.n_frames == h["n_frames"] == len(h["t"]) < len(rec.frames)  # keyframes, not every sample
+    assert h["t"][-1] == pytest.approx(rec.times[-1], abs=1e-6)
     # the first tool rests on the stand while the second works (the stand is behind the table)
     second = next(s for s in segs if s["tool"] != segs[0]["tool"])
-    k = round((second["start_s"] + 0.5) * fps)
+    k = int(np.searchsorted(h["t"], second["start_s"] + 0.5))
     names = [b["name"] for b in h["bodies"]]
     first_tool = [i for i, n in enumerate(names) if n.startswith(f"finger_t{segs[0]['tool']}_")]
     assert first_tool and all(abs(back.frames[k, i, 1] - sr.STAND_Y_M) < 0.2 for i in first_tool)
@@ -181,6 +197,291 @@ def test_a_tool_change_lane_parks_the_idle_tool_on_the_stand_and_writes_a_valid_
     )
     assert used2 == used and json.dumps(again.header) == raw
     assert np.array_equal(again.frames, replay.frames)
+
+
+# --------------------------------------------------------------------------- keyframes and cuts
+
+
+def _vertex_error_m(drawn: np.ndarray, truth: np.ndarray, verts: np.ndarray) -> float:
+    """Worst displacement of ``verts`` (body frame) between two world poses (7,)."""
+    a = verts @ sr._rot(drawn[3:]).T + drawn[:3]
+    b = verts @ sr._rot(truth[3:]).T + truth[:3]
+    return float(np.max(np.linalg.norm(a - b, axis=1)))
+
+
+def test_the_recorder_samples_at_100_hz_and_at_every_contact_change(report: dict[str, Any]) -> None:
+    assert sr.RECORD_FPS == 100
+    rec = _record(report, _finalist(report, "single"))
+    assert rec.fps == 100
+    times = np.asarray(rec.times)
+    assert np.all(np.diff(times) > 0)
+    # a frame within one control tick (2 ms) after every 10 ms frame time ...
+    grid = np.arange(0.0, times[-1], 0.01)
+    after = np.searchsorted(times, grid - 1e-9)
+    assert np.all(times[after] - grid < 0.0021)
+    # ... and one at the very tick every contact starts or stops: an impact lands between frame times
+    assert rec.contact_log
+    assert all(np.min(np.abs(times - when)) < 1e-9 for when, *_ in rec.contact_log)
+    assert len(times) > len(grid)
+
+
+def test_select_keys_keeps_the_kinks_and_drops_the_straight_runs() -> None:
+    n = 501
+    t = np.arange(n) / 100.0
+    x = np.interp(t, [0, 2, 3, 5], [0.0, 1.0, 1.0, 0.0])  # out, rest, back: kinks at 2 s and 3 s
+    track = np.zeros((n, 1, 7))
+    track[:, 0, 0] = x
+    track[:, 0, 6] = 1.0
+    keys = sr.select_keys(t, np.zeros(n, dtype=int), track, tol_m=1e-3)
+    assert keys.tolist() == [0, 200, 300, 500]
+
+
+def test_select_keys_bounds_the_error_keeps_forced_frames_and_never_spans_a_segment() -> None:
+    n = 600
+    t = np.arange(n) / 100.0
+    w = 1.3  # a body going round a circle while turning: the error of a straight chord is large
+    track = np.zeros((n, 2, 7))
+    track[:, 0, 0] = 0.2 * np.cos(w * t)
+    track[:, 0, 1] = 0.2 * np.sin(w * t)
+    track[:, 0, 5] = np.sin(w * t / 2)
+    track[:, 0, 6] = np.cos(w * t / 2)
+    track[:, 1, 6] = 1.0
+    track[:, 1, 2] = 0.3  # a body that never moves needs no frames of its own
+    scene = (np.arange(n) >= 300).astype(int)
+    pts = [np.array([[0.1, 0.0, 0.0], [0.0, 0.1, 0.0]]), np.zeros((1, 3))]
+    keys = sr.select_keys(t, scene, track, points=pts, forced=[137], tol_m=1e-3)
+    assert {0, 137, 299, 300, n - 1} <= set(keys.tolist())
+    assert len(keys) < n // 4
+    # an interpolation that follows the rules of the player stays within tolerance at every sample
+    drawn = sr.sample_lane(track[keys].astype(np.float32), t[keys], [int(np.searchsorted(keys, 300))], t)
+    for s in range(n):
+        assert _vertex_error_m(drawn[s, 0], track[s, 0], pts[0]) <= 1e-3 + 1e-6
+    # a looser tolerance keeps fewer frames
+    assert len(sr.select_keys(t, scene, track, points=pts, forced=[137], tol_m=5e-3)) < len(keys)
+
+
+def test_sample_lane_holds_a_pose_across_a_cut_and_interpolates_inside_a_segment() -> None:
+    frames = np.zeros((4, 1, 7), np.float32)
+    frames[:, 0, 6] = 1.0
+    frames[:, 0, 0] = [0.0, 1.0, 10.0, 10.0]
+    t = np.array([0.0, 1.0, 5.0, 6.0])
+    got = sr.sample_lane(frames, t, [2], np.array([0.5, 1.0, 3.0, 4.999, 5.0, 5.5, 9.0, -1.0]))
+    assert got[:, 0, 0].tolist() == pytest.approx([0.5, 1.0, 1.0, 1.0, 10.0, 10.0, 10.0, 0.0])
+    # the shortest way round: two key rotations on either side of a half turn do not spin the long way
+    q = np.zeros((2, 1, 7), np.float32)
+    q[0, 0, 3:] = [0.0, 0.0, np.sin(0.1), np.cos(0.1)]
+    q[1, 0, 3:] = -np.array([0.0, 0.0, np.sin(-0.1), np.cos(-0.1)])  # the same rotation, other sign
+    mid = sr.sample_lane(q, np.array([0.0, 1.0]), [], np.array([0.5]))[0, 0, 3:]
+    assert abs(mid[2]) < 0.1 and abs(abs(mid[3]) - 1.0) < 0.01
+
+
+def test_a_quantised_lane_writes_the_words_it_was_measured_with(
+    report: dict[str, Any], tmp_path: Path
+) -> None:
+
+    rec = _record(report, _finalist(report, "single"))
+    store = sr.staging_store(tmp_path / "raw")
+    roomy = sr.build_lane(rec, store, hero="t1", lane="recommended", code_version="0123456789ab")[0]
+    lane = sr.build_lane(
+        rec,
+        store,
+        hero="t1",
+        lane="recommended",
+        code_version="0123456789ab",
+        budget=sr.lane_bytes(roomy) - 1,
+    )[0]
+    assert lane.header["quantised"] is True and lane.words is not None
+    assert "quat_encoding" not in lane.header and "qi" not in lane.header
+    assert lane.words.shape == (lane.n_frames, lane.header["n_bodies"], 7)  # px py pz qa qb qc qi
+    assert np.array_equal(sr.dequantise_poses(lane.words), lane.frames)
+    sr.write_lane(lane, tmp_path / "recommended")
+    on_disk = np.frombuffer((tmp_path / "recommended.bin").read_bytes(), dtype="<i2")
+    assert np.array_equal(on_disk.reshape(lane.words.shape), lane.words)
+    header = json.loads((tmp_path / "recommended.json").read_text(encoding="utf-8"))
+    assert not sr.check_lane_header(header)
+
+
+def test_contact_times_settle_chatter_into_onsets_and_releases() -> None:
+    log = [
+        (1.00, True, "a", "b"),
+        (1.01, False, "a", "b"),  # a flicker of the same pair: one contact
+        (1.02, True, "a", "b"),
+        (2.00, False, "a", "b"),
+        (3.00, True, "c", "d"),  # a blip shorter than the hold: no contact
+        (3.01, False, "c", "d"),
+        (4.00, True, "e", "world"),  # still touching at the end of the run: an onset only
+    ]
+    assert sr.contact_times(log) == pytest.approx([1.0, 2.0, 4.0])
+    assert sr.contact_times(log, hold_s=0.0) == pytest.approx(sorted({t for t, *_ in log}))
+
+
+@pytest.mark.parametrize("kind", ["tool_change", "multi_head"])
+def test_a_key_lands_exactly_on_each_segment_start(report: dict[str, Any], tmp_path: Path, kind: str) -> None:
+    rec = _record_kind(report, kind)
+    replay, _, _ = sr.build_lane(
+        rec, sr.staging_store(tmp_path / "raw"), hero="t1", lane="recommended", code_version="0123456789ab"
+    )
+    h = replay.header
+    segs = h["meta"]["segments"]
+    assert len(segs) >= 2 and len(h["cuts"]) == len(segs) - 1
+    scene_starts = [i for i in range(1, len(rec.times)) if rec.scene_of_frame[i] != rec.scene_of_frame[i - 1]]
+    assert len(scene_starts) == len(h["cuts"])
+    for c, s, first in zip(h["cuts"], segs[1:], scene_starts, strict=True):
+        assert h["t"][c] == pytest.approx(s["start_s"], abs=1e-3)  # a frame exactly at the segment's start
+        assert h["t"][c] == pytest.approx(rec.times[first], abs=1e-6)
+        assert h["t"][c - 1] == pytest.approx(
+            rec.times[first - 1], abs=1e-6
+        )  # the last frame of the one before
+    assert h["t"][0] == 0.0 and h["cuts"] == sorted(h["cuts"]) and 0 not in h["cuts"]
+    # at a cut the previous segment's tool and the next segment's tool are one frame apart in the
+    # list and the player holds the first until the second: poses differ across it, never blend
+    assert not sr.check_lane_header(h, replay.frames)
+
+
+def test_keys_keep_every_body_within_1_mm_of_the_sim(report: dict[str, Any], tmp_path: Path) -> None:
+    """The lane's interpolation at 60 Hz against the simulation at every 2 ms control tick: the
+    farthest vertex of every drawn body, tool change and head switch included."""
+    for kind in ("single", "tool_change", "multi_head"):
+        rec = _record_kind(report, kind)
+        replay, _, _ = sr.build_lane(
+            rec, sr.staging_store(tmp_path / kind), hero="t1", lane="recommended", code_version="0123456789ab"
+        )
+        dense = _record_kind(report, kind, fps=500)  # the simulation itself: every control tick
+        keys = sr._key_order(rec.bodies)
+        tracks = sr._parked_tracks(rec, keys, range(len(rec.frames)))
+        groups, static = sr._groups(tracks, keys, rec.bodies)
+        truth = sr._parked_tracks(dense, keys, range(len(dense.frames)))
+        h = replay.header
+        t_dense = np.asarray(dense.times)
+        verts = {k: sr.mesh_of_geoms(rec.bodies[k].geoms).vertices for k in keys}
+        cut_times = [(h["t"][c - 1], h["t"][c]) for c in h["cuts"]]
+        tau = np.arange(0.0, h["t"][-1], 1 / 60.0)
+        tau = np.asarray(
+            [x for x in tau if not any(a <= x < b for a, b in cut_times)]
+        )  # nothing simulated there
+        reps = sr.sample_lane(replay.frames, np.asarray(h["t"]), h["cuts"], tau)
+        owner = {m: gi for gi, g in enumerate(groups) for m in g.members}
+        worst = 0.0
+        for i, x in enumerate(tau):
+            j = int(np.clip(np.searchsorted(t_dense, x, side="right") - 1, 0, len(t_dense) - 2))
+            a = (x - t_dense[j]) / (t_dense[j + 1] - t_dense[j])
+            for b, key in enumerate(keys):
+                if b not in owner and b not in static:
+                    continue
+                tr = sr.sample_lane(truth[j : j + 2, b : b + 1], np.array([0.0, 1.0]), [], np.array([a]))[
+                    0, 0
+                ]
+                if b in static:
+                    drawn = tracks[0, b]
+                else:
+                    g = groups[owner[b]]
+                    pos, rot = sr._relative(tracks[0, g.rep], tracks[0, b])
+                    drawn = sr._compose(reps[i, owner[b]].astype(np.float64), pos, rot)
+                worst = max(worst, _vertex_error_m(drawn, tr, verts[key]))
+        assert worst <= 1e-3, f"{kind}: the farthest vertex is {1000 * worst:.3f} mm from the simulation"
+        assert h["meta"]["keyframes"]["max_error_vs_recording_mm"] <= 1.0
+
+
+def test_contact_onset_and_release_get_a_frame(report: dict[str, Any], tmp_path: Path) -> None:
+    f = _finalist(report, "single")
+    rec = _record(report, f)
+    assert rec.contact_log, "the presses touch their objects"
+    settled = sr.contact_times(rec.contact_log)
+    assert settled
+    replay, _, _ = sr.build_lane(
+        rec, sr.staging_store(tmp_path / "raw"), hero="t1", lane="recommended", code_version="0123456789ab"
+    )
+    t = np.asarray(replay.header["t"])
+    for when in settled:
+        assert np.min(np.abs(t - when)) <= 0.012, f"no frame near the contact event at {when:.3f} s"
+
+
+def test_a_lane_is_quantised_before_its_keys_are_decimated(report: dict[str, Any], tmp_path: Path) -> None:
+    f = _finalist(report, "tool_change")
+    rec = _record(report, f)
+    store = sr.staging_store(tmp_path / "raw")  # a recording remembers the assets it made in its store
+
+    def lane(budget: int) -> sr.LaneReplay:
+        return sr.build_lane(
+            rec,
+            store,
+            hero="t1",
+            lane="recommended",
+            code_version="0123456789ab",
+            budget=budget,
+        )[0]
+
+    roomy = lane(10_000_000)
+    assert roomy.header.get("quantised", False) is False and roomy.header["dtype"] == "float32"
+    assert roomy.header["meta"]["keyframes"]["tolerance_mm"] == 1.0
+    size_f = sr.lane_bytes(roomy)
+    squeezed = lane(size_f - 1)
+    assert squeezed.header["quantised"] is True and squeezed.header["dtype"] == "int16"
+    assert squeezed.header["pose_fields"] == ["px", "py", "pz", "qa", "qb", "qc", "qi"]
+    assert roomy.n_frames <= squeezed.n_frames <= 1.1 * roomy.n_frames  # no frame was dropped for it
+    assert squeezed.header["meta"]["keyframes"]["tolerance_mm"] == 1.0
+    size_q = sr.lane_bytes(squeezed)
+    n_b = squeezed.header["n_bodies"]
+    assert size_q <= size_f - 1
+    assert squeezed.n_frames * n_b * 14 <= 0.5 * roomy.n_frames * n_b * 28 * 1.1  # 14 bytes a pose, not 28
+    assert squeezed.header["meta"]["keyframes"]["max_error_vs_recording_mm"] <= 1.0
+    # only when int16 poses do not fit either is the tolerance relaxed
+    tight = lane(size_q - 1)
+    assert tight.header["quantised"] is True and tight.n_frames < squeezed.n_frames
+    assert tight.header["meta"]["keyframes"]["tolerance_mm"] > 1.0
+    assert (
+        tight.header["meta"]["keyframes"]["max_error_vs_recording_mm"]
+        <= tight.header["meta"]["keyframes"]["tolerance_mm"]
+    )
+    assert sr.lane_bytes(tight) <= size_q - 1
+    # the file the writer makes is the size the budget counted
+    sr.write_lane(squeezed, tmp_path / "recommended")  # the stem is the lane id, as the export names it
+    served = (tmp_path / "recommended.json").stat().st_size + (tmp_path / "recommended.bin").stat().st_size
+    assert served == sr.lane_bytes(squeezed)
+    back = sr.read_lane(tmp_path / "recommended")
+    assert np.array_equal(back.frames, squeezed.frames)  # what was measured is what a player reads
+    with pytest.raises(sr.ReplayMismatchError, match="does not fit"):
+        lane(2_000)
+
+
+def test_check_lane_catches_a_page_entry_that_disagrees_with_its_replay(ex: Any) -> None:
+    header = {"n_frames": 3, "fps": 100, "t": [0.0, 1.0, 5.0], "cuts": [2]}
+    doc = {
+        "bytes": 1000,
+        "n_frames": 3,
+        "fps": 100,
+        "duration_s": 5.0,
+        "segments": [{"start_s": 0.0}, {"start_s": 5.0}],
+    }
+    assert ex.check_lane(doc, header, "x") == []
+    assert ex.check_lane(dict(doc, bytes=sr.LANE_BUDGET_BYTES + 1), header, "x")
+    assert ex.check_lane(dict(doc, duration_s=4.0), header, "x")
+    assert ex.check_lane(dict(doc, n_frames=4), header, "x")
+    assert ex.check_lane(dict(doc, segments=[{"start_s": 0.0}, {"start_s": 4.0}]), header, "x")
+    assert ex.check_lane(dict(doc, segments=[{"start_s": 0.0}]), header, "x")  # a cut without a change
+    assert (
+        ex.check_lane({k: v for k, v in doc.items() if k != "duration_s"}, {"n_frames": 3, "fps": 100}, "x")
+        == []
+    )
+
+
+def test_exported_lanes_describe_their_keyframed_replays(
+    report: dict[str, Any], ex: Any, tmp_path: Path
+) -> None:
+    lanes = sr.export_lanes(
+        "t1", report, sr.staging_store(tmp_path / "raw"), code_version="0123456789ab", log=lambda _: None
+    )
+    assert lanes
+    for built in lanes:
+        h, d = built.replay.header, built.doc
+        assert d["n_frames"] == h["n_frames"] == len(h["t"]) and d["fps"] == sr.RECORD_FPS == h["fps"]
+        assert d["duration_s"] == pytest.approx(h["t"][-1], abs=1e-3)
+        assert (
+            d["quantised"] is h["quantised"]
+            and d["max_error_vs_recording_mm"] == h["meta"]["keyframes"]["max_error_vs_recording_mm"]
+        )
+        d["bytes"] = sr.lane_bytes(built.replay)
+        assert ex.check_lane(d, h, f"t1/{built.stem}") == []
 
 
 def test_body_meshes_are_the_same_on_every_call() -> None:
@@ -379,7 +680,7 @@ def test_published_pages_are_labelled_brand_free_and_consistent(ex: Any) -> None
             assert page["no_winner"]["closest"]
 
 
-def test_published_lanes_match_their_replays_and_assets() -> None:
+def test_published_lanes_match_their_replays_and_assets(ex: Any) -> None:
     _, pages = _published()
     manifest = json.loads((ASSETS / "manifest.json").read_text(encoding="utf-8"))["assets"]
     for page in pages:
@@ -390,14 +691,22 @@ def test_published_lanes_match_their_replays_and_assets() -> None:
         for lane in page["lanes"]:
             stem = DATA / lane["replay"]
             header = json.loads(stem.with_suffix(".json").read_text(encoding="utf-8"))
-            assert not check_header(header)
+            assert not sr.check_lane_header(header)
             assert header["provenance"]["product_mode"] is True
             assert header["meta"]["design_id"] == lane["setup_id"]
             assert header["meta"]["traj_sha"] == lane["traj_sha"]
             assert header["fps"] == lane["fps"] and header["n_frames"] == lane["n_frames"]
             served = stem.with_suffix(".json").stat().st_size + stem.with_suffix(".bin").stat().st_size
             assert served == lane["bytes"] <= sr.LANE_BUDGET_BYTES
-            assert stem.with_suffix(".bin").stat().st_size == header["n_frames"] * header["n_bodies"] * 28
+            words = 7 * 2 if header.get("quantised") else 7 * 4  # int16 x 7, or float32 x 7, per pose
+            assert stem.with_suffix(".bin").stat().st_size == header["n_frames"] * header["n_bodies"] * words
+            if "t" in header:  # a keyframed lane: the page entry agrees with it, with a frame at each cut
+                assert not ex.check_lane(lane, header, lane["replay"])
+                assert (
+                    len(header["t"]) == header["n_frames"]
+                    and header["meta"]["keyframes"]["max_error_vs_recording_mm"]
+                    <= header["meta"]["keyframes"]["tolerance_mm"]
+                )
             total = 0
             for aid, entry in header["assets"].items():
                 glb = ASSETS / f"{aid}.glb"
@@ -444,3 +753,70 @@ def test_a_summary_cut_at_the_cap_is_shown_up_to_its_last_sentence(ex: Any) -> N
     cut = ("A sentence that ends. " * 30)[: ex.SUMMARY_CAP_CHARS - 4] + " Verify on ha"
     assert ex.trim_capped(cut).endswith("ends.") and len(ex.trim_capped(cut)) < len(cut)
     assert ex.trim_capped("Short and whole.") == "Short and whole."
+
+
+def test_the_export_serves_the_v2_heroes_from_the_v2_recording(ex: Any) -> None:
+    """Each hero is named by its case id, and its plan comes from the Studio v2 recording, where it is
+    valid; the published pages are only those heroes (a v1 route the site redirects has no page)."""
+    from rtt.studio.engineer.gate import RECORDED_GATE
+
+    rows = {
+        r["case_id"]: r
+        for r in json.loads((RECORDED_GATE / "manifest.json").read_text(encoding="utf-8"))["cases"]
+    }
+    assert ex.HEROES and all(hero == case_id for hero, case_id in ex.HEROES)
+    for _, case_id in ex.HEROES:
+        assert rows[case_id]["status"] == "valid"
+        assert ex.load_case(case_id)["task_id"] == rows[case_id]["task_id"]
+    if STUDIO.is_dir():
+        assert ex.stale_heroes(DATA) == []
+        index = json.loads((STUDIO / "index.json").read_text(encoding="utf-8"))
+        assert [h["hero"] for h in index["heroes"]] == [
+            h for h, _ in ex.HEROES if (STUDIO / f"{h}.json").is_file()
+        ]
+
+
+def test_a_hero_no_longer_listed_is_stale(ex: Any, tmp_path: Path) -> None:
+    studio = tmp_path / "studio"
+    studio.mkdir()
+    for name in ("index.json", "h1.json", "h3.json", f"{ex.HEROES[0][0]}.json"):
+        (studio / name).write_text("{}", encoding="utf-8")
+    assert ex.stale_heroes(tmp_path) == ["h1", "h3"]
+    assert ex.stale_heroes(tmp_path / "nowhere") == []
+
+
+def test_a_partial_export_keeps_the_assets_of_the_heroes_it_leaves(ex: Any, tmp_path: Path) -> None:
+    """A partial export (``--heroes`` a subset) keeps the other heroes' pages, so it keeps the GLBs
+    their published lanes draw: only a Studio asset no published lane draws any more is pruned. It
+    used to prune every Studio asset the exported heroes did not serve, the other heroes' too."""
+    import hashlib
+
+    from rtt.studio.replay import STUDIO_LABEL_PREFIXES, publish_assets
+
+    data, assets = tmp_path / "data", tmp_path / "assets"
+    kept, served_hero = ex.HEROES[0][0], ex.HEROES[-1][0]
+    (data / "studio" / "replays" / kept).mkdir(parents=True)
+    (data / "studio" / f"{kept}.json").write_text(
+        json.dumps({"lanes": [{"replay": f"studio/replays/{kept}/recommended"}]}), encoding="utf-8"
+    )
+    blobs = {name: name.encode() * 8 for name in ("kept", "orphan", "new")}
+    ids = {name: hashlib.sha256(b).hexdigest()[:16] for name, b in blobs.items()}
+    (data / "studio" / "replays" / kept / "recommended.json").write_text(
+        json.dumps({"assets": {ids["kept"]: {}}}), encoding="utf-8"
+    )
+    keep = ex.kept_assets(data, [h for h, _ in ex.HEROES if h != served_hero])
+    assert keep == {ids["kept"]}
+    label = {"label": f"{STUDIO_LABEL_PREFIXES[0]}x"}
+    assets.mkdir()
+    for name in ("kept", "orphan"):
+        (assets / f"{ids[name]}.glb").write_bytes(blobs[name])
+    (assets / "manifest.json").write_text(
+        json.dumps({"assets": {ids["kept"]: label, ids["orphan"]: label}}), encoding="utf-8"
+    )
+    publish_assets({ids["new"]: (blobs["new"], label)}, assets, keep=keep)
+    left = json.loads((assets / "manifest.json").read_text(encoding="utf-8"))["assets"]
+    assert sorted(left) == sorted([ids["kept"], ids["new"]])
+    assert sorted(p.stem for p in assets.glob("*.glb")) == sorted([ids["kept"], ids["new"]])
+    (data / "studio" / "replays" / kept / "recommended.json").unlink()
+    with pytest.raises(ex.ExportError, match="has no header"):
+        ex.kept_assets(data, [kept])

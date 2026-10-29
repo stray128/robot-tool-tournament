@@ -5,10 +5,10 @@ import { TIER_LABELS, TIER_NOTES, type Tier } from "./schema";
 /** A step's or a tool's fidelity tier (docs/STUDIO.md 6): word and shape, never colour alone. */
 export function TierBadge({ tier }: { tier: Tier }) {
   const tone =
-    tier === "rigid" ? "border-ink-3 text-ink-2" : tier === "approximation" ? "border-pending text-pending" : "border-dashed border-fail text-fail";
+    tier === "rigid" ? "border-rule-strong text-ink-2" : tier === "approximation" ? "border-pending/70 bg-pending-soft text-pending" : "border-dashed border-fail text-fail";
   return (
     <span
-      className={`num inline-flex shrink-0 items-center gap-1 border px-1.5 py-px text-[0.6875rem] uppercase tracking-wide ${tone}`}
+      className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-px text-xs ${tone}`}
       title={TIER_NOTES[tier]}
       data-fidelity={tier}
     >
@@ -29,8 +29,8 @@ export function TierBadge({ tier }: { tier: Tier }) {
 /** "verify on hardware", next to every approximation-tier result. */
 export function VerifyMark() {
   return (
-    <span className="num inline-flex items-center border border-pending px-1.5 py-px text-[0.6875rem] uppercase tracking-wide text-pending" data-verify>
-      verify on hardware
+    <span className="inline-flex items-center rounded-full border border-pending/70 px-2 py-px text-xs text-pending" data-verify>
+      Verify on hardware
     </span>
   );
 }
@@ -60,9 +60,9 @@ export function Section({ id, title, lede, children }: { id: string; title: stri
 /** Labelled facts as a wrapping strip of cells. */
 export function Facts({ items, className = "" }: { items: [string, ReactNode][]; className?: string }) {
   return (
-    <dl className={`flex flex-wrap gap-px border border-rule bg-rule text-sm ${className}`}>
+    <dl className={`flex flex-wrap gap-px overflow-hidden rounded-lg border border-rule bg-rule text-sm ${className}`}>
       {items.map(([k, v]) => (
-        <div key={k} className="min-w-[8.5rem] flex-1 bg-paper px-2.5 py-1.5">
+        <div key={k} className="min-w-[8.5rem] flex-1 bg-surface px-2.5 py-1.5">
           <dt className="text-xs text-ink-3">{k}</dt>
           <dd className="num text-ink">{v}</dd>
         </div>

@@ -20,22 +20,69 @@ Objects: ``hinged_lid`` (lid or door) and ``drawer``; handle ``handle`` (the tem
    (min-jerk, so the peak is 1.875 x the mean). A door's heading turns with the door. Goal: the
    criterion on ``angle_deg`` or ``travel_mm`` plus a margin (8 deg, 15 mm). A lid that has to
    stay open is pulled past vertical (at least 95 deg) when its stop allows, because gravity
-   closes it below vertical. A ``force_n`` at_least is a goal on top of the motion's: the pull
-   goes on to it (:func:`_pull_on`) before it lets go.
-5. **Release and retract**: open over 0.5 s, rise 60 mm, settle 0.3 s.
+   closes it below vertical; one with an at_most alone is taken all the way shut (let go above
+   its stop, a lid falls onto it). A ``force_n`` at_least is a goal on top of the motion's: the
+   pull goes on to it (:func:`_pull_on`) before it lets go.
+5. **Release and retract**: open over 0.5 s, draw back 40 mm off the face (less where the palm
+   meets its travel), rise 60 mm, settle 0.3 s.
 
-**A lid's lip** (a horizontal panel with nothing to grip) is hooked instead: the tool's sideways
-hook from its calibration (``Footprint.hook``: the geoms near the tip that reach furthest beyond
-the rest of the tool, a soft arm's horizontal arm) is turned toward the hinge, lowered outside
-the free edge (stood off :data:`HOOK_STANDOFF`, plus whatever of the tool reaches further than
-the hook), moved in under it, guarded, by the hook's depth less :data:`HOOK_MARGIN` (at most the
-lip less 2 mm and :data:`HOOK_MAX`), raised onto the underside, and carried along the arc with the
-fingers open. A tool without a hook reaches nothing under the lip and fails honestly. Every
-guarded move stops on contact with any object in the scene, not only the step's.
+**A lid's lip** (a horizontal panel with nothing to grip) is pinched or hooked.
+
+* **Pinch** (mode ``"pinch"``, wrist pitch): a two-finger gripper (:func:`two_finger`: a parallel
+  or part-shaped jaw, a catalog gripper with two fingers, a designed hand with two) whose open
+  fingers clear the lip by :data:`PINCH_CLEARANCE` a side and close tighter than it
+  (:func:`lip_pinch_fits`) tilts its wrist:
+  the yaw sets the pitch axis along the hinge, the pitch (:data:`PINCH_PITCH`, 90 deg) points the
+  tool along the lid toward the hinge with its closing axis across the lid's thickness, the roll
+  goes to the nearest half turn. Pre-shaped as closed as still clears the lip, it stands
+  :data:`PINCH_STANDOFF` out from the free edge at the lip's height and moves in from the front,
+  guarded, until the finger tips are the lip less :data:`PINCH_TIP_MARGIN` (at most
+  :data:`PINCH_TIP_MAX`) under the overhang. It pinches the lip and carries it along the arc with
+  the pitch at 90 deg less the lid's angle (no faster than the pitch cap allows, so a fast pull
+  on a small lid slows down; a start within :data:`PITCH_CLAMP` past the range is clamped to
+  it), so the grip turns with the lid; a pull on to a ``force_n`` goal goes on along the arc with
+  the pitch held at the goal's, so the pitch never leaves the arc from the start to the goal (the
+  arc the search's swept-volume check covers). While pinched, the
+  wrist yields along the tool axis to the force the tool puts on the lid there
+  (:data:`PINCH_COMPLY`, at most :data:`PINCH_COMPLY_MAX`; force feedback through the wrist
+  command). At the goal it lets go, draws back off the lip along the tool axis
+  (:data:`PINCH_RETRACT` past the free edge), rises and turns the pitch back to straight down, all
+  within the pitch and roll speed caps. A carry that closes a lid (an at_most goal, or a push
+  carrying a lid shut, :mod:`.push`) advances only while the tool meets nothing but the lid over
+  :data:`~._common.GUARD_FORCE_N` and pushes the lid under the step's limit, lets go once it is
+  shut or held back for :data:`CARRY_BLOCKED_S`, and rises clear of everything before it turns
+  back (the tool then lies along the lid). Any pinch is taken only when the palm stays within its
+  travel, less :data:`PINCH_REACH_MARGIN`, along its whole path (:func:`pinch_reach`: open past
+  vertical or shut, the palm sits the tool's length beyond the free edge) and its plan fits a step;
+  otherwise the hook, and the plan's note says why. A goal the pitch cannot follow within +-90 deg, or a
+  tilted approach that would put the palm past its travel (:func:`~._common.in_reach`: the palm
+  sits the tool's length out from the lip), falls back to the hook.
+* **Hook** (mode ``"hook"``, any other tool, a hand with more fingers, a hook gripper and a
+  tentacle included): the tool's sideways hook from its calibration
+  (``Footprint.hook``: the geoms near the tip that reach furthest beyond the rest of the tool, a
+  soft arm's horizontal arm) is turned toward the hinge, lowered outside the free edge (stood off
+  :data:`HOOK_STANDOFF`, plus whatever of the tool reaches further than the hook), moved in under
+  it, guarded, by the hook's depth less :data:`HOOK_MARGIN` (at most the lip less 2 mm and
+  :data:`HOOK_MAX`), raised onto the underside, and carried along the arc with the fingers open. A
+  tool without a hook reaches nothing under the lip and fails honestly.
+
+Every guarded move stops on contact with any object in the scene, not only the step's.
+
+**Out of reach** (Studio v2): before it commits, a grip checks its engagement, its whole pull (every
+2 deg of an arc) and a pull on to a ``force_n`` at_least goal against the palm's travel
+(:func:`~._common.reach_problem`, +-350 mm less 5 mm), and a hook the same from under the lip
+(less :data:`PINCH_REACH_MARGIN`, the pinch's, on the same lip). The retreat after the pull (the
+grip's :data:`RETRACT_OUT` off the face, the hook's draw back out from under the lip) is never a
+reason to refuse a step: it stops at the palm's travel less the same margin
+(:func:`_retreat_within`), then the tool rises. The free move to a standoff is not checked: a palm
+held at its travel's end short of it still meets the feature from its side. A tool without a hook lifts nothing,
+so its pull on to a force goal runs along the lid's whole arc and past its stop: the hook of the
+240 mm lid at y = 150 mm commanded the palm to 368.7 mm for 865 ticks. Such a step holds still
+0.2 s and fails ``out_of_reach`` with where the palm would have to go and a plain reason.
 
 **Predicate** (:class:`HookPullPredicate`): ``angle_deg`` or ``travel_mm`` (the template state
 when the step ends, after the release), ``slip_mm`` (the largest displacement of the handle
-relative to the tool, in the tool's frame (the panel's for a hooked lip), from the end of the
+relative to the tool, in the tool's frame (the panel's for a pinched or hooked lip), from the end of the
 engagement to the release, counted while the tool touches the object or the object lags more
 than 1 deg or 2 mm behind where the tool is taking it: a lid that falls open ahead of the hook
 past vertical has not slipped), ``force_n`` (peak net force of the tool on the object),
@@ -53,7 +100,9 @@ from typing import Any
 import mujoco
 import numpy as np
 
+from rtt.effectors.types import EffectorFamily, EffectorSpec
 from rtt.sim.controller import Phase, min_jerk
+from rtt.sim.scene import PALM_XY_LIMIT
 from rtt.studio.plan import (
     PrimitiveCommand,
     StepContext,
@@ -65,6 +114,10 @@ from rtt.studio.plan import (
 from rtt.studio.primitives._common import (
     BUDGET_S,
     FORCE_HOLD_S,
+    GUARD_FORCE_N,
+    PRESHAPE_CLEARANCE,
+    REACH_MARGIN,
+    TURN_MARGIN,
     Guarded,
     Path,
     Tool,
@@ -73,23 +126,51 @@ from rtt.studio.primitives._common import (
     force_allowed,
     force_goal,
     heading_for_axis,
+    hold_out_of_reach,
+    idle_command,
+    in_reach,
+    move_time,
     observed_state,
+    offset,
+    out_of_reach_verdict,
     panel_angle,
     panel_normal,
     press_reach,
+    reach_problem,
     rot_z,
     rotate,
     safe_palm_z,
     schedule,
+    start_pose,
     tool_geoms,
     tool_of,
     tool_point_world,
     transit,
+    turn_time,
+    wrist_frame,
+    wrist_load,
     wrist_target,
 )
-from rtt.studio.types import PrimitiveKind, TemplateKind
+from rtt.studio.scene import wrist_rotation
+from rtt.studio.types import MAX_STEP_S, SLIDE_KINDS, PrimitiveKind, TemplateKind
 
-__all__ = ["HookPullController", "HookPullPredicate"]
+__all__ = [
+    "PINCH_REACH_MARGIN",
+    "HookPullController",
+    "HookPullPredicate",
+    "Motion",
+    "command_pinch",
+    "lip_pinch_fits",
+    "panel_goal",
+    "pinch_depth",
+    "pinch_fits",
+    "pinch_pitches",
+    "pinch_reach",
+    "pinch_yaw",
+    "plan_pinch",
+    "pull_on_extent",
+    "two_finger",
+]
 
 ANGLE_MARGIN = math.radians(8.0)
 TRAVEL_MARGIN = 0.015
@@ -106,6 +187,24 @@ HOOK_MAX = 0.040  # m: the deepest a hook goes under a lip
 SLIP_FAIL_MM = 10.0
 PULL_N = 30.0  # N, the pull limit while pulling on to a force goal [assumed]
 SLIP_TOUCH_N = 0.3  # N of tool-object contact that counts as touching the feature
+# a lid's lip pinched from the front with the wrist tilted (module docstring)
+PINCH_PITCH = math.radians(90.0)  # the tool horizontal, its closing axis along the panel normal
+PINCH_CLEARANCE = PRESHAPE_CLEARANCE  # m each side of the lip when the fingers are pre-shaped
+PINCH_TIP_MARGIN = 0.004  # m: the finger tips stop this far short of the lip's full depth [assumed]
+PINCH_TIP_MAX = 0.025  # m: the deepest the finger tips go in under a lip [assumed]
+PINCH_STANDOFF = 0.020  # m: the tips stand this far out from the free edge before going in [assumed]
+PINCH_RETRACT = 0.020  # m: drawn back off the lip past the free edge before rising [assumed]
+#: m/(N s): while pinched, the wrist yields along the tool axis (in the lid's plane, toward the
+#: hinge) to the force the tool puts on the lid there; a time constant of about 0.1 s against the
+#: 2000 N/m xy servo [assumed]
+PINCH_COMPLY = 0.005
+PINCH_COMPLY_MAX = 0.010  # m: the most it yields [assumed]
+PITCH_CLAMP = math.radians(2.0)  # a pinch's start this far past the pitch range is clamped to it
+CARRY_BLOCKED_S = 0.3  # s: a lid carried shut that is held back this long is let go there [assumed]
+PINCH_AIM_ERROR = 0.002  # m: how far off its observed sites a lid may be (the hidden placement error)
+#: m kept inside the palm's travel on a pinch's path: the wrist's yield along the tool axis and the
+#: aim error, so neither takes it past its travel
+PINCH_REACH_MARGIN = PINCH_COMPLY_MAX + PINCH_AIM_ERROR
 
 
 def _object_yaw(ctx: StepContext) -> float:
@@ -113,7 +212,7 @@ def _object_yaw(ctx: StepContext) -> float:
 
 
 @dataclass(frozen=True)
-class _Motion:
+class Motion:
     """The object's motion: a hinge (axis through ``point``) or a slide (along ``axis``)."""
 
     hinged: bool
@@ -129,24 +228,14 @@ class _Motion:
         return p + s * self.axis
 
 
-def _motion(ctx: StepContext, model: mujoco.MjModel, data: mujoco.MjData) -> _Motion:
+def _motion(ctx: StepContext, model: mujoco.MjModel, data: mujoco.MjData) -> Motion:
     obj, info = ctx.obj, ctx.obj.handles.info
     state = observed_state(ctx, data)
     if obj.kind is TemplateKind.HINGED_LID:
         axis = np.array([info["axis_x"], info["axis_y"], info["axis_z"]])
         current = math.radians(state["angle_deg"])
-        lo, hi = criterion_bounds(ctx, "angle_deg")
-        top = info["max_angle_rad"] - math.radians(2.0)
-        if lo is not None:
-            goal = math.radians(lo) + ANGLE_MARGIN
-            if info["orientation"] == 0.0 and info["max_angle_rad"] > LID_STAY_OPEN + math.radians(2.0):
-                goal = max(goal, LID_STAY_OPEN)  # a lid stays open only past vertical
-            goal = min(goal, top)
-        elif hi is not None:
-            goal = max(0.0, math.radians(hi) - ANGLE_MARGIN)
-        else:
-            goal = min(top, math.radians(90.0))
-        return _Motion(True, ctx.observe_site(data, "hinge"), axis, current, goal)
+        goal = panel_goal(info, *criterion_bounds(ctx, "angle_deg"))
+        return Motion(True, ctx.observe_site(data, "hinge"), axis, current, goal)
     axis = np.array([info["pull_x"], info["pull_y"], 0.0])
     current = state["travel_mm"] / 1000.0
     lo, hi = criterion_bounds(ctx, "travel_mm")
@@ -156,32 +245,42 @@ def _motion(ctx: StepContext, model: mujoco.MjModel, data: mujoco.MjData) -> _Mo
         goal = max(0.0, hi / 1000.0 - TRAVEL_MARGIN)
     else:
         goal = 0.8 * info["travel_m"]
-    return _Motion(False, ctx.observe_site(data, "front"), axis, current, goal)
+    return Motion(False, ctx.observe_site(data, "front"), axis, current, goal)
 
 
-def _pull_on(ctx: StepContext, motion: _Motion, delta: float, radius: float, speed: float) -> dict[str, Any]:
+def panel_goal(info: Mapping[str, float], lo: float | None, hi: float | None) -> float:
+    """The angle (rad) a pull takes a lid or a door to, from the step's ``angle_deg`` bounds (deg):
+    an at_least plus :data:`ANGLE_MARGIN` (a lid past vertical, :data:`LID_STAY_OPEN`, when its stop
+    allows), an at_most less it (a lid all the way shut: let go above its stop, it would fall onto
+    it), else 90 deg; within 2 deg of the stop."""
+    top = info["max_angle_rad"] - math.radians(2.0)
+    if lo is not None:
+        goal = math.radians(lo) + ANGLE_MARGIN
+        if info["orientation"] == 0.0 and info["max_angle_rad"] > LID_STAY_OPEN + math.radians(2.0):
+            goal = max(goal, LID_STAY_OPEN)  # a lid stays open only past vertical
+        return min(goal, top)
+    if hi is not None:
+        return 0.0 if info["orientation"] == 0.0 else max(0.0, math.radians(hi) - ANGLE_MARGIN)
+    return min(top, math.radians(90.0))
+
+
+def _pull_on(
+    ctx: StepContext, motion: Motion, delta: float, radius: float, speed: float, max_rate: float = math.inf
+) -> dict[str, Any]:
     """Pulling on to a ``force_n`` at_least, a goal on top of the motion's: once the pull has
     reached its goal, it goes on along the motion (toward the object's end, and into it by
     :func:`~._common.press_reach` of the pull limit, unless the step bounds the motion on both
     sides) while the measured force is under the pull limit, until the force has been over the
     goal for :data:`~._common.FORCE_HOLD_S`, within the equal budget ``force_press`` plus that
-    travel."""
+    travel. ``max_rate``: the most the motion may advance per second (a pinch: the pitch cap)."""
     goal = force_goal(ctx)
     if goal is None:
         return {"force_goal": None, "ext_t": 0.0}
-    info = ctx.obj.handles.info
-    q = "angle_deg" if motion.hinged else "travel_mm"
-    lo, hi = criterion_bounds(ctx, q)
     scale = radius if motion.hinged else 1.0
     sense = 1.0 if delta >= 0.0 else -1.0
-    end = (info["max_angle_rad"] if motion.hinged else info["travel_m"]) if sense > 0 else 0.0
     limit = force_allowed(ctx, PULL_N)
-    cap = (
-        0.0
-        if (lo is not None and hi is not None)
-        else max(0.0, sense * (end - motion.goal)) + press_reach(ctx, limit) / scale
-    )
-    rate = speed / scale
+    cap = pull_on_extent(ctx, ctx.obj.handles.info, motion.hinged, motion.goal, delta, radius)
+    rate = min(speed / scale, max_rate)
     return {
         "force_goal": goal,
         "force_held": 0.0,
@@ -192,6 +291,67 @@ def _pull_on(ctx: StepContext, motion: _Motion, delta: float, radius: float, spe
         "ext_sense": sense,
         "ext_t": 1.3 * cap / rate + BUDGET_S["force_press"],
     }
+
+
+def pull_on_extent(
+    view: Any, info: Mapping[str, float], hinged: bool, goal: float, delta: float, radius: float
+) -> float:
+    """How far past its goal a pull on to a ``force_n`` at_least may go (rad on a hinge, m on a
+    slide; 0 without one, :func:`_pull_on`): to the object's end and into it by the pull limit
+    over the servo's stiffness. ``view``: the step's context, or anything with its ``step`` and
+    ``task`` (the search, which has no context)."""
+    if force_goal(view) is None:
+        return 0.0
+    lo, hi = criterion_bounds(view, "angle_deg" if hinged else "travel_mm")
+    if lo is not None and hi is not None:
+        return 0.0
+    sense = 1.0 if delta >= 0.0 else -1.0
+    end = (info["max_angle_rad"] if hinged else info["travel_m"]) if sense > 0 else 0.0
+    scale = radius if hinged else 1.0
+    return max(0.0, sense * (end - goal)) + press_reach(view, force_allowed(view, PULL_N)) / scale
+
+
+def pinch_reach(
+    point: np.ndarray,
+    t_dir: np.ndarray,
+    depth: float,
+    tip_drop: float,
+    tool_point: np.ndarray,
+    hinge: np.ndarray,
+    axis: np.ndarray,
+    yaw: float,
+    roll: float,
+    sense: float,
+    pitch0: float,
+    pitch_bounds: tuple[float, float],
+    arc: float,
+) -> str | None:
+    """Why a lid pinch's palm would leave its travel (:func:`~._common.in_reach`), or ``None``.
+    Checked: the standoff and the engaged pose at ``point`` (the free edge or a bar, world, at the
+    lid's angle now), and with ``path`` every 2 deg of the carry by ``arc`` (rad about the hinge
+    ``axis``, signed; a pull on past the goal included) with the pitch following the lid within
+    ``pitch_bounds``, and the draw-back off the lid at the end, each within the palm's travel less
+    :data:`PINCH_REACH_MARGIN`. ``tool_point``: the TCP in the wrist frame (pitch and roll 0),
+    ``t_dir``: the tool axis at ``pitch0``. The controller and the search's tilted poses both call
+    it, so they agree on which carries are taken (a lid opened past vertical, or carried shut,
+    puts the palm the tool's length beyond the free edge)."""
+    r0 = wrist_rotation(yaw, roll, pitch0)
+    tcp0 = point + (depth - tip_drop) * t_dir
+    palms = [point - (PINCH_STANDOFF + tip_drop) * t_dir - r0 @ tool_point, tcp0 - r0 @ tool_point]
+    n = max(2, math.ceil(abs(math.degrees(arc)) / 2.0) + 1)
+    r = r0
+    for s in np.linspace(0.0, arc, n):
+        pitch = min(pitch_bounds[1], max(pitch_bounds[0], pitch0 + sense * float(s)))
+        r = wrist_rotation(yaw, roll, pitch)
+        palms.append(hinge + rotate(tcp0 - hinge, axis, float(s)) - r @ tool_point)
+    palms.append(palms[-1] + (depth + PINCH_RETRACT) * (r @ np.array([0.0, 0.0, 1.0])))
+    if in_reach(*palms, margin=PINCH_REACH_MARGIN):
+        return None
+    worst = max(max(abs(float(p[0])), abs(float(p[1]))) for p in palms)
+    return (
+        f"the carry would take the palm to {1000 * worst:.0f} mm from the table centre, past its "
+        f"{1000 * PALM_XY_LIMIT:.0f} mm travel less {1000 * PINCH_REACH_MARGIN:.0f} mm"
+    )
 
 
 def _pull_on_step(
@@ -217,7 +377,7 @@ def _pull_on_step(
 def _face_out(ctx: StepContext, data: mujoco.MjData) -> np.ndarray:
     """Unit direction away from the face the feature stands on, from the observed panel angle."""
     obj, info = ctx.obj, ctx.obj.handles.info
-    if obj.kind is TemplateKind.DRAWER:
+    if obj.kind in SLIDE_KINDS:  # a drawer, or a sliding door (its fin handle is a lip)
         return (
             np.array([0.0, 0.0, 1.0])
             if info["handle"] == 2.0
@@ -238,7 +398,7 @@ def _closing_axis(ctx: StepContext, angle: float) -> np.ndarray:
     info = ctx.obj.handles.info
     yaw = _object_yaw(ctx)
     ex, ey = rot_z(yaw)[:, 0], rot_z(yaw)[:, 1]
-    if ctx.obj.kind is TemplateKind.DRAWER:
+    if ctx.obj.kind in SLIDE_KINDS:
         return ex if info["handle"] == 1.0 else ey  # knob: across the neck
     if info["orientation"] == 1.0:
         axis = np.array([info["axis_x"], info["axis_y"], info["axis_z"]])
@@ -246,7 +406,7 @@ def _closing_axis(ctx: StepContext, angle: float) -> np.ndarray:
     return ey
 
 
-def _outward(ctx: StepContext, data: mujoco.MjData, handle: np.ndarray, motion: _Motion) -> np.ndarray:
+def _outward(ctx: StepContext, data: mujoco.MjData, handle: np.ndarray, motion: Motion) -> np.ndarray:
     """Horizontal unit direction from the object toward the tool's side of the feature."""
     if not motion.hinged:
         return motion.axis.copy()
@@ -257,6 +417,42 @@ def _outward(ctx: StepContext, data: mujoco.MjData, handle: np.ndarray, motion: 
     radial[2] = 0.0
     n = float(np.linalg.norm(radial))
     return radial / n if n > 1e-9 else np.array([1.0, 0.0, 0.0])
+
+
+def _carried(motion: Motion, point: np.ndarray, s0: float, s1: float) -> list[tuple[float, np.ndarray]]:
+    """Where ``point`` (world, attached to the object) goes as the motion progresses from ``s0`` to
+    ``s1``: every 2 deg on a hinge (as :func:`pinch_reach` samples a carry), both ends on a slide."""
+    n = max(2, math.ceil(abs(math.degrees(s1 - s0)) / 2.0) + 1) if motion.hinged else 2
+    return [(float(s), motion.carry(point, float(s))) for s in np.linspace(s0, s1, n)]
+
+
+def _out_of_reach(
+    ctx: StepContext, start: np.ndarray, moves: tuple[tuple[str, list[np.ndarray]], ...], margin: float
+) -> StepPlan | None:
+    """The out-of-reach plan (:func:`~._common.hold_out_of_reach`) of the first of ``moves`` (what
+    it is, in words, and its palm poses) that would take the palm outside its travel less
+    ``margin``; ``None`` when the palm reaches them all."""
+    for what, poses in moves:
+        far = reach_problem(*poses, margin=margin)
+        if far is not None:
+            return hold_out_of_reach(ctx, start, far, what)
+    return None
+
+
+def _retreat_within(pose: np.ndarray, direction: np.ndarray, full: float, margin: float) -> float:
+    """How far (m, at most ``full``) the palm draws back from ``pose`` along ``direction`` (world;
+    its x and y count) and stays within its travel less ``margin``: ``full`` when it stays inside
+    all the way, else where it meets that bound (0 when it is there already). A retreat is never a
+    reason to refuse a step (module docstring)."""
+    lim = PALM_XY_LIMIT - margin
+    room = full
+    for i in (0, 1):
+        u, p = float(direction[i]), float(pose[i])
+        if u > 1e-12:
+            room = min(room, (lim - p) / u)
+        elif u < -1e-12:
+            room = min(room, (-lim - p) / u)
+    return max(0.0, room)
 
 
 @dataclass(frozen=True)
@@ -271,11 +467,19 @@ class HookPullController:
         sch.tool = tool
         motion = _motion(ctx, model, data)
         handle = ctx.observe_site(data, "handle")
-        start = np.asarray(ctx.wrist_start, dtype=np.float64)
+        start = start_pose(ctx)
         roll = float(start[4])
         info = ctx.obj.handles.info
         if motion.hinged and info["orientation"] == 0.0 and info["feature"] == 0.0:
-            return self._plan_hook(ctx, model, data, tool, motion, handle, start)
+            why: list[str] = []
+            if pinch_fits(ctx, tool):
+                plan = self._plan_pinch(ctx, model, data, tool, motion, handle, start, why=why)
+                if plan is not None:
+                    return plan
+            hook = self._plan_hook(ctx, model, data, tool, motion, handle, start)
+            if not why:
+                return hook
+            return StepPlan(hook.duration_s, hook.values, f"{hook.note}; not pinched: {why[0]}")
         heading = heading_for_axis(
             _closing_axis(ctx, motion.current), _yaw_offset(ctx, tool), float(start[3] + roll)
         )
@@ -283,8 +487,8 @@ class HookPullController:
         pre = tool.preshape(ctx.obj.handles.info["grip_m"])
         engage = wrist_target(handle, tool.tcp, yaw, roll)
         out = _outward(ctx, data, handle, motion)
-        path = Path.start(start)
-        lift = np.array([0.0, 0.0, 0.08, 0.0, 0.0])
+        path = Path.start(start, ctx.scene.wrist.pitch_speed_dps)
+        lift = offset(z=0.08)
         safe = safe_palm_z(ctx, model, data, tool)
         if step.params["approach"] == "front":
             stand = engage.copy()
@@ -303,6 +507,31 @@ class HookPullController:
         speed = float(step.params["speed_mm_s"]) / 1000.0
         pull_t = max(0.5, 1.875 * length / speed)
         on = _pull_on(ctx, motion, delta, radius, speed)
+        # the grip, the pull and the pull on within the palm's travel (the free move to the standoff is
+        # not checked: a palm held at its travel's end short of it still meets the handle from its
+        # side); the retreat off the handle stops at the travel instead (_retreat_within)
+        ext = on["ext_sense"] * on["ext_cap"] if on["force_goal"] is not None else 0.0
+        point = engage[:3] + rot_z(yaw + roll) @ tool.tcp  # the TCP the pull carries
+
+        def at(s: float, p: np.ndarray) -> np.ndarray:
+            return wrist_target(
+                p, tool.tcp, yaw + (s * float(motion.axis[2]) if motion.hinged else 0.0), roll
+            )
+
+        pulled = [at(u, p) for u, p in _carried(motion, point, 0.0, delta)]
+        pulled_on = [at(u, p) for u, p in _carried(motion, point, delta, delta + ext)] if ext else []
+        out_end = _face_out(ctx, data)
+        if motion.hinged:
+            out_end = rotate(out_end, motion.axis, delta + ext)
+        moves = (
+            ("the grip", [engage]),
+            ("the pull", pulled),
+            ("the pull on to the force goal", pulled_on),
+        )
+        refused = _out_of_reach(ctx, start, moves, REACH_MARGIN)
+        if refused is not None:
+            return refused
+        retreat = _retreat_within((pulled_on or pulled)[-1], out_end, RETRACT_OUT, REACH_MARGIN)
         t_release = t_pull + pull_t + on["ext_t"]
         t_end = t_release + RELEASE_S + 0.4 + 0.6 + 0.3 + BUDGET_S["hook_slack"]
         sch.engaged = t_pull
@@ -317,6 +546,7 @@ class HookPullController:
             "pull_t": pull_t,
             "yaw": yaw,
             "roll": roll,
+            "retreat": retreat,  # m off the face after the release (RETRACT_OUT, or less at the travel)
             "engaged": None,  # the commanded TCP point when the pull starts
             "last": None,
             **on,
@@ -333,9 +563,13 @@ class HookPullController:
         sch = plan.values["schedule"]
         run = plan.values["run"]
         tool = sch.tool
+        if "idle" in run:  # out of reach: hold still, the tool as it was
+            return idle_command(t, ctx, run, model, data)
         v = sch.values
         if run.get("mode") == "hook":
             return self._command_hook(t, ctx, run, model, data)
+        if run.get("mode") == "pinch":
+            return self._command_pinch(t, ctx, run, model, data)
         guard: Guarded = run["guard"]
         if t < guard.t0:
             wrist = run["path"].at(t)
@@ -346,7 +580,7 @@ class HookPullController:
             if run["engaged"] is None:
                 run["engaged"] = guard.at(guard.end, 1e9)
             base = run["engaged"]
-            motion: _Motion = run["motion"]
+            motion: Motion = run["motion"]
             s = run["delta"] * min_jerk((t - run["t_pull"]) / run["pull_t"])
             if run["force_goal"] is not None:
                 s += run["ext_sense"] * run["ext"]
@@ -365,8 +599,8 @@ class HookPullController:
                 run["out"] = _face_out(ctx, data)
             back = min_jerk(min(1.0, max(0.0, (t - v["t_release"] - RELEASE_S) / 0.4)))
             up = min_jerk(min(1.0, max(0.0, (t - v["t_release"] - RELEASE_S - 0.4) / 0.6)))
-            shift = RETRACT_OUT * back * run["out"] + np.array([0.0, 0.0, RETRACT * up])
-            wrist = last + np.concatenate([shift, [0.0, 0.0]])
+            shift = run["retreat"] * back * run["out"] + np.array([0.0, 0.0, RETRACT * up])
+            wrist = last + offset(*shift)
         pre = v["pre"]
         closure = pre + (1.0 - pre) * min(max((t - v["t_close"]) / 1.0, 0.0), 1.0)
         if t >= v["t_release"]:  # open back to the pre-shape only, so no finger shoves the panel
@@ -382,7 +616,7 @@ class HookPullController:
         model: mujoco.MjModel,
         data: mujoco.MjData,
         tool: Tool,
-        motion: _Motion,
+        motion: Motion,
         handle: np.ndarray,
         start: np.ndarray,
     ) -> StepPlan:
@@ -408,8 +642,8 @@ class HookPullController:
         down = np.array([0.0, 0.0, -HOOK_GAP])
         engaged = wrist_target(underside + insert * u_in + down, tip, yaw, roll)
         pre = wrist_target(underside - standoff * u_in + down, tip, yaw, roll)
-        path = Path.start(start)
-        above = pre + np.array([0.0, 0.0, 0.08, 0.0, 0.0])
+        path = Path.start(start, ctx.scene.wrist.pitch_speed_dps)
+        above = pre + offset(z=0.08)
         transit(path, above, max(above[2], safe_palm_z(ctx, model, data, tool)))
         path.to(pre, 0.8)
         guard = Guarded(path.last, engaged, path.end, 1.0 + BUDGET_S["engage_slack"])
@@ -421,6 +655,26 @@ class HookPullController:
         speed = float(step.params["speed_mm_s"]) / 1000.0
         pull_t = max(0.5, 1.875 * abs(delta) * radius / speed)
         on = _pull_on(ctx, motion, delta, radius, speed)
+        # the hook keeps the pinch's margin under the lid, the pull on to a force goal included (a hook
+        # that lifts nothing is carried along the lid's whole arc and on past its stop); the free move
+        # to its standoff is not checked, and drawing it back out stops at the travel instead
+        ext = on["ext_sense"] * on["ext_cap"] if on["force_goal"] is not None else 0.0
+        point = engaged[:3] + rot_z(yaw + roll) @ contact  # the hook point the lift carries
+        lifted = [wrist_target(p, contact, yaw, roll) for _, p in _carried(motion, point, 0.0, delta)]
+        lifted_on = (
+            [wrist_target(p, contact, yaw, roll) for _, p in _carried(motion, point, delta, delta + ext)]
+            if ext
+            else []
+        )
+        moves = (
+            ("the hook", [engaged]),
+            ("the hook's lift", lifted),
+            ("the hook's pull on to the force goal", lifted_on),
+        )
+        refused = _out_of_reach(ctx, start, moves, PINCH_REACH_MARGIN)
+        if refused is not None:
+            return refused
+        draw_back = _retreat_within((lifted_on or lifted)[-1], -u_in, insert + standoff, PINCH_REACH_MARGIN)
         t_release = t_pull + pull_t + on["ext_t"]
         t_end = t_release + 0.6 + 0.6 + 0.3 + BUDGET_S["hook_slack"]
         sch.engaged = t_pull
@@ -443,6 +697,7 @@ class HookPullController:
             "u_in": u_in,
             "insert": insert,
             "standoff": standoff,
+            "draw_back": draw_back,  # m back out from under the lid (insert + standoff, or less at the travel)
             "seated": None,
             "last": None,
             **on,
@@ -458,7 +713,7 @@ class HookPullController:
     ) -> PrimitiveCommand:
         tool: Tool = schedule(ctx).tool
         guard: Guarded = run["guard"]
-        lift = np.array([0.0, 0.0, HOOK_GAP + HOOK_PRELOAD, 0.0, 0.0])
+        lift = offset(z=HOOK_GAP + HOOK_PRELOAD)
         if t < guard.t0:
             wrist = run["path"].at(t)
         elif t < run["t_seat"]:
@@ -470,7 +725,7 @@ class HookPullController:
             if run["seated"] is None:
                 run["seated"] = guard.at(guard.end, 1e9) + lift
             base = run["seated"]
-            motion: _Motion = run["motion"]
+            motion: Motion = run["motion"]
             s = run["delta"] * min_jerk((t - run["t_pull"]) / run["pull_t"])
             if run["force_goal"] is not None:
                 s += run["ext_sense"] * run["ext"]
@@ -486,11 +741,348 @@ class HookPullController:
             last = run["last"] if run["last"] is not None else guard.at(guard.end, 1e9)
             back = min_jerk(min(1.0, max(0.0, (t - run["t_release"]) / 0.6)))
             up = min_jerk(min(1.0, max(0.0, (t - run["t_release"] - 0.6) / 0.6)))
-            shift = -(run["insert"] + run["standoff"]) * back * run["u_in"] + np.array(
-                [0.0, 0.0, RETRACT * up]
-            )
-            wrist = last + np.concatenate([shift, [0.0, 0.0]])
+            shift = -run["draw_back"] * back * run["u_in"] + np.array([0.0, 0.0, RETRACT * up])
+            wrist = last + offset(*shift)
         return PrimitiveCommand(wrist, tool.controls(t, 0.0, model, data, Phase.SETTLE))
+
+    # ------------------------------------------------------------------ pinching a lid's lip, tilted
+
+    def _plan_pinch(
+        self,
+        ctx: StepContext,
+        model: mujoco.MjModel,
+        data: mujoco.MjData,
+        tool: Tool,
+        motion: Motion,
+        handle: np.ndarray,
+        start: np.ndarray,
+        *,
+        u_in: np.ndarray | None = None,
+        depth: float | None = None,
+        speed: float | None = None,
+        limit: float | None = None,
+        grip: float | None = None,
+        why: list[str] | None = None,
+    ) -> StepPlan | None:
+        """A two-finger tool tilts and pinches the lip from the front (module docstring); ``None``
+        when the pitch cannot follow the lid to its goal within its range, the palm would leave its
+        travel anywhere on the carry (:func:`pinch_reach`), or the plan would not fit a step
+        (:data:`~rtt.studio.types.MAX_STEP_S`); the hook then, and the reason appended to ``why``.
+        A push that closes a lid uses it too (:mod:`.push`): ``u_in`` (horizontal, from the closed
+        lid's free edge toward its hinge), ``depth`` (how far the tips go in), ``speed`` (of the
+        carry, m/s), ``limit`` (the force on the lid that stops a closing carry) and ``grip``
+        (what the fingers close on, m: the lid's thickness, or a bar) are then its own."""
+        step, info = ctx.step, ctx.obj.handles.info
+        sch = schedule(ctx)
+        wrist = ctx.scene.wrist
+        why = [] if why is None else why
+        yaw_now, roll_now, pitch_now = float(start[3]), float(start[4]), float(start[5])
+        if u_in is None:
+            u_in = -_outward(ctx, data, handle, motion)  # horizontal, from the free edge toward the hinge
+        yaw, sense = pinch_yaw(u_in, motion.axis, yaw_now)
+        roll = math.pi * round(roll_now / math.pi)  # the closing axis on the panel normal
+        lim = math.radians(wrist.pitch_range_deg)
+        pitch0, pitch_end = pinch_pitches(sense, motion.current, motion.goal, lim)
+        if not (abs(pitch0) <= lim and abs(pitch_end) <= lim):
+            why.append("the wrist's pitch cannot follow the lid over that arc")
+            return None
+        t_dir = wrist_rotation(yaw, roll, pitch0) @ np.array([0.0, 0.0, -1.0])  # the tool axis
+        d_tip = pinch_depth(info["feature_m"]) if depth is None else float(depth)
+        tcp = tool.tcp
+        engaged = wrist_target(handle + (d_tip - tool.tip_drop) * t_dir, tcp, yaw, roll, pitch0)
+        pre = wrist_target(handle - (PINCH_STANDOFF + tool.tip_drop) * t_dir, tcp, yaw, roll, pitch0)
+        delta = motion.goal - motion.current
+        radius = float(np.linalg.norm(np.cross(motion.axis, handle - motion.point)))
+        if speed is None:
+            speed = float(step.params["speed_mm_s"]) / 1000.0
+        on = _pull_on(ctx, motion, delta, radius, speed, math.radians(wrist.pitch_speed_dps) / TURN_MARGIN)
+        ext = on["ext_sense"] * on["ext_cap"] if on["force_goal"] is not None else 0.0
+        # the pitch stays within the arc from the start to the goal, the arc the search checks: a
+        # pull on to a force goal goes on along the lid's arc with the pitch held at the goal's
+        lo_p, hi_p = sorted((max(-lim, min(lim, pitch0)), max(-lim, min(lim, pitch_end))))
+        out = pinch_reach(
+            handle, t_dir, d_tip, tool.tip_drop, tcp, motion.point, motion.axis, yaw, roll, sense, pitch0,
+            (lo_p, hi_p), delta + ext,
+        )  # fmt: skip
+        if out is not None:
+            why.append(out)  # the palm would sit the tool's length out from the lid, past its travel
+            return None
+        path = Path.start(start, ctx.scene.wrist.pitch_speed_dps)
+        safe = safe_palm_z(ctx, model, data, tool)
+        if start[2] < safe - 1e-4:
+            up = start.copy()
+            up[2] = safe
+            path.to(up)
+        above = pre.copy()
+        above[2] = max(safe, pre[2])
+        t_turn = max(
+            turn_time(pitch0 - pitch_now, wrist.pitch_speed_dps),
+            turn_time(roll - roll_now, wrist.roll_speed_max_deg_s),
+        )
+        path.to(above, max(0.4 + 0.3 * abs(yaw - yaw_now), t_turn, move_time(path.last, above)))
+        path.to(pre, max(0.8, move_time(path.last, pre)))
+        guard = Guarded(path.last, engaged, path.end, 1.0 + BUDGET_S["engage_slack"])
+        pre_close = tool.preshape(info["thickness_m"] if grip is None else float(grip), PINCH_CLEARANCE)
+        t_close = guard.end
+        t_pull = t_close + 1.0 + 0.3
+        # the pitch turns with the lid: the carry is no faster than the pitch cap allows
+        pull_t = max(0.5, 1.875 * abs(delta) * radius / speed, turn_time(delta, wrist.pitch_speed_dps))
+        t_release = t_pull + pull_t + on["ext_t"]
+        t_back = max(
+            0.6,
+            turn_time(max(abs(lo_p), abs(hi_p)) if delta < 0.0 else abs(pitch_end), wrist.pitch_speed_dps),
+        )
+        closing = delta < 0.0
+        rise = RETRACT
+        rise_t = 0.0
+        if closing:
+            # a lid carried shut leaves the tool lying along it: it rises until the tool hanging
+            # straight down clears every object before it turns back (its tip swings down by the
+            # tool's length as it turns); the lid is lower once shut, so this bounds the rise
+            goal_tcp = motion.carry(handle + (d_tip - tool.tip_drop) * t_dir, delta)
+            palm_goal = wrist_target(goal_tcp, tcp, yaw, roll, pitch_end)
+            rise = max(RETRACT, safe - float(palm_goal[2]))
+            rise_t = max(0.6, move_time(np.zeros(3), np.array([0.0, 0.0, rise])))
+        t_end = t_release + RELEASE_S + 0.5 + rise_t + t_back + 0.3 + BUDGET_S["hook_slack"]
+        if t_end > MAX_STEP_S:
+            why.append(f"the carry would take {t_end:.0f} s, past the {MAX_STEP_S:g} s a step may last")
+            return None
+        sch.engaged = t_pull
+        sch.released = t_release
+        sch.values.update(
+            t_close=t_close, t_release=t_release, pre=pre_close, sense=math.copysign(1.0, delta)
+        )
+        sch.values["slip_point"] = tcp.tolist()  # type: ignore[assignment]
+        run = {
+            "mode": "pinch",
+            "path": path,
+            "guard": guard,
+            "motion": motion,
+            "delta": delta,
+            "t_close": t_close,
+            "t_pull": t_pull,
+            "pull_t": pull_t,
+            "t_release": t_release,
+            "t_back": t_back,
+            "yaw": yaw,
+            "roll": roll,
+            "pitch0": pitch0,
+            "pitch_lim": lim,
+            "pitch_lo": lo_p,
+            "pitch_hi": hi_p,
+            "pitch_dps": wrist.pitch_speed_dps,
+            "sense": sense,
+            "d_tip": d_tip,
+            "engaged": None,
+            "last": None,
+            "ax_off": 0.0,
+            "closing": closing,
+            "carry_u": 0.0,
+            "carry_t": math.nan,
+            "blocked_s": 0.0,
+            "limit": force_allowed(ctx, PULL_N) if limit is None else float(limit),
+            "rise": rise,
+            "rise_t": rise_t,
+            **on,
+        }
+        return StepPlan(
+            duration_s=t_end,
+            values={"run": run, "schedule": sch},
+            note=(
+                f"hook pull: tilt {math.degrees(pitch0):.0f} deg and pinch the lip "
+                f"{1000 * d_tip:.0f} mm deep, arc by {delta:.3f}"
+            ),
+        )
+
+    def _command_pinch(
+        self, t: float, ctx: StepContext, run: dict[str, Any], model: mujoco.MjModel, data: mujoco.MjData
+    ) -> PrimitiveCommand:
+        sch = schedule(ctx)
+        tool: Tool = sch.tool
+        v = sch.values
+        guard: Guarded = run["guard"]
+        if t < guard.t0:
+            wrist = run["path"].at(t)
+        elif t < run["t_pull"]:
+            pressing = contacts(model, data, tool_geoms(ctx.scene), ctx.scene.ids.object_geoms).normal
+            wrist = guard.at(min(t, guard.end), pressing) if t <= guard.end else guard.at(guard.end, 1e9)
+        elif t < run["t_release"]:
+            if run["engaged"] is None:
+                run["engaged"] = guard.at(guard.end, 1e9)
+            base = run["engaged"]
+            motion: Motion = run["motion"]
+            s = run["delta"] * min_jerk((t - run["t_pull"]) / run["pull_t"])
+            if run["force_goal"] is not None:
+                s += run["ext_sense"] * run["ext"]
+                if _pull_on_step(t, ctx, run, model, data, run["t_pull"] + run["pull_t"]):
+                    run["t_release"] = t  # every goal met: let go now
+                    sch.released = t
+                    v["t_release"] = t
+            if run["closing"]:
+                s = run["delta"] * min_jerk(self._closing_progress(t, ctx, run, model, data))
+            point = base[:3] + wrist_rotation(run["yaw"], run["roll"], run["pitch0"]) @ tool.tcp
+            v["progress"] = motion.current + s  # where the tool is taking the lid
+            # the grip turns with the lid, within the arc from the start to the goal
+            pitch = min(run["pitch_hi"], max(run["pitch_lo"], run["pitch0"] + run["sense"] * s))
+            wrist = wrist_target(motion.carry(point, s), tool.tcp, run["yaw"], run["roll"], pitch)
+            run["last"] = wrist
+        else:  # open, draw back off the lip along the tool axis, then rise and turn back straight down
+            last = run["last"] if run["last"] is not None else guard.at(guard.end, 1e9)
+            if run.get("t_back_now") is None:  # the turn back from where the pitch is, within the cap
+                run["t_back_now"] = max(0.6, turn_time(float(last[5]), run["pitch_dps"]))
+            t_r = run["t_release"]
+            back_dir = wrist_rotation(run["yaw"], run["roll"], float(last[5])) @ np.array([0.0, 0.0, 1.0])
+            back = min_jerk(min(1.0, max(0.0, (t - t_r - RELEASE_S) / 0.5)))
+            if run["closing"]:  # rise clear first, then turn back (the tip swings down as it turns)
+                if run.get("rise_now") is None:
+                    safe = safe_palm_z(ctx, model, data, tool)
+                    run["rise_now"] = min(run["rise"], max(RETRACT, safe - float(last[2])))
+                rise = run["rise_now"] * min_jerk(
+                    min(1.0, max(0.0, (t - t_r - RELEASE_S - 0.5) / run["rise_t"]))
+                )
+                turn = min_jerk(
+                    min(1.0, max(0.0, (t - t_r - RELEASE_S - 0.5 - run["rise_t"]) / run["t_back_now"]))
+                )
+            else:
+                turn = min_jerk(min(1.0, max(0.0, (t - t_r - RELEASE_S - 0.5) / run["t_back_now"])))
+                rise = RETRACT * turn
+            wrist = last + offset(
+                *((run["d_tip"] + PINCH_RETRACT) * back * back_dir + np.array([0.0, 0.0, rise]))
+            )
+            wrist[5] = float(last[5]) * (1.0 - turn)
+        closure = v["pre"] + (1.0 - v["pre"]) * min(max((t - run["t_close"]) / 1.0, 0.0), 1.0)
+        if t >= run["t_release"]:  # open back to the pre-shape only
+            closure = v["pre"] + (1.0 - v["pre"]) * max(0.0, 1.0 - (t - run["t_release"]) / RELEASE_S)
+        if run["t_close"] <= t < run["t_release"]:  # yield along the tool axis (force feedback)
+            axis = wrist_rotation(run["yaw"], run["roll"], float(wrist[5])) @ np.array([0.0, 0.0, -1.0])
+            push = float(contacts(model, data, tool_geoms(ctx.scene), ctx.obj.geom_ids).net @ axis)
+            dt = ctx.task.controller.control_period
+            run["ax_off"] = float(
+                np.clip(run["ax_off"] - PINCH_COMPLY * push * dt, -PINCH_COMPLY_MAX, PINCH_COMPLY_MAX)
+            )
+        if run["ax_off"] and t >= run["t_close"]:
+            axis = wrist_rotation(run["yaw"], run["roll"], float(wrist[5])) @ np.array([0.0, 0.0, -1.0])
+            wrist = wrist + offset(*(run["ax_off"] * axis))
+        phase = Phase.HOLD if t >= run["t_close"] else Phase.DESCEND
+        return PrimitiveCommand(wrist, tool.controls(t, closure, model, data, phase))
+
+    @staticmethod
+    def _closing_progress(
+        t: float, ctx: StepContext, run: dict[str, Any], model: mujoco.MjModel, data: mujoco.MjData
+    ) -> float:
+        """How far along its arc (0 to 1) a lid being carried shut is now: the carry advances on its
+        clock while the tool meets nothing but the lid harder than :data:`~._common.GUARD_FORCE_N`
+        and pushes the lid with less than the step's limit (force feedback through the wrist). A
+        carry held back for :data:`CARRY_BLOCKED_S` (the lid on its stop, a finger on a rim) lets
+        go there."""
+        dt = t - run["carry_t"] if not math.isnan(run["carry_t"]) else 0.0
+        run["carry_t"] = t
+        everything = wrist_load(ctx.scene, model, data)
+        lid = contacts(model, data, tool_geoms(ctx.scene), ctx.obj.geom_ids)
+        others = max(0.0, everything.normal - lid.normal)
+        if others <= GUARD_FORCE_N and float(np.linalg.norm(lid.net)) <= run["limit"]:
+            run["carry_u"] = min(1.0, run["carry_u"] + dt / run["pull_t"])
+            run["blocked_s"] = 0.0
+        else:
+            run["blocked_s"] += dt
+        if run["carry_u"] >= 1.0 or run["blocked_s"] >= CARRY_BLOCKED_S:
+            sch = schedule(ctx)
+            run["t_release"] = t  # the lid is shut (or as far as it goes): let go now
+            sch.released = t
+            sch.values["t_release"] = t
+        return float(run["carry_u"])
+
+
+def plan_pinch(
+    ctx: StepContext,
+    model: mujoco.MjModel,
+    data: mujoco.MjData,
+    tool: Tool,
+    motion: Motion,
+    point: np.ndarray,
+    start: np.ndarray,
+    **kw: Any,
+) -> StepPlan | None:
+    """The lid pinch of this module (its docstring) as a plan of its own: a lid's ``motion`` from
+    its angle now to its goal, pinched at ``point`` (world); :meth:`HookPullController._plan_pinch`
+    has the keywords. A push carries a lid shut with it (:mod:`.push`); its plan's ``run`` is
+    driven by :func:`command_pinch`."""
+    return HookPullController()._plan_pinch(ctx, model, data, tool, motion, point, start, **kw)
+
+
+def command_pinch(
+    t: float, ctx: StepContext, run: dict[str, Any], model: mujoco.MjModel, data: mujoco.MjData
+) -> PrimitiveCommand:
+    """One control tick of a :func:`plan_pinch` plan (``plan.values["run"]``)."""
+    return HookPullController()._command_pinch(t, ctx, run, model, data)
+
+
+def lip_pinch_fits(open_aperture: float | None, shut_aperture: float | None, thickness: float) -> bool:
+    """Whether a two-finger tool pinches a lid's lip ``thickness`` m thick: its open fingers clear
+    the lip by :data:`PINCH_CLEARANCE` a side and they close tighter than it (apertures in m along
+    the closing axis, ``None`` for a tool without a pair of opposed tips)."""
+    return (
+        open_aperture is not None
+        and shut_aperture is not None
+        and open_aperture >= thickness + 2.0 * PINCH_CLEARANCE
+        and shut_aperture < thickness
+    )
+
+
+def pinch_yaw(u_in: np.ndarray, hinge_axis: np.ndarray, yaw_now: float) -> tuple[float, float]:
+    """The wrist yaw of a lip pinch, the equivalent nearest ``yaw_now``: it sets the pitch axis (the
+    palm's x) along the hinge, so at :data:`PINCH_PITCH` the tool points along the horizontal
+    ``u_in`` (from the free edge toward the hinge); and the sense (+-1) of the pitch per radian of
+    the lid's opening about ``hinge_axis``."""
+    yaw = math.atan2(-float(u_in[0]), float(u_in[1]))  # Rz(yaw) e_y = u_in
+    yaw += 2.0 * math.pi * round((yaw_now - yaw) / (2.0 * math.pi))
+    sense = math.copysign(1.0, float(np.asarray(hinge_axis) @ rot_z(yaw)[:, 0]))
+    return yaw, sense
+
+
+def pinch_depth(lip: float) -> float:
+    """How far (m) the finger tips go in under a lip ``lip`` m deep: the lip less
+    :data:`PINCH_TIP_MARGIN`, within 4 mm and :data:`PINCH_TIP_MAX`."""
+    return float(np.clip(lip - PINCH_TIP_MARGIN, 0.004, PINCH_TIP_MAX))
+
+
+def pinch_pitches(sense: float, current: float, goal: float, lim: float = math.inf) -> tuple[float, float]:
+    """The pitch of a lip pinch when the lid is at ``current`` and at ``goal`` (rad): 90 deg less
+    the lid's angle (with the sense of :func:`pinch_yaw`). A start within :data:`PITCH_CLAMP` past
+    the pitch range ``lim`` (a lid observed a hair below closed) is clamped to it."""
+    pitch0 = PINCH_PITCH + sense * current
+    if lim < abs(pitch0) <= lim + PITCH_CLAMP:
+        pitch0 = math.copysign(lim, pitch0)
+    return pitch0, PINCH_PITCH + sense * goal
+
+
+def two_finger(spec: EffectorSpec) -> bool:
+    """Whether a tool is a two-finger gripper, the tools that pinch a lid's lip: a parallel or a
+    part-shaped jaw; a catalog gripper with two fingers (parallel, angular or adaptive: its
+    ``n_fingers`` when it has one, else a ``gripper-2f-`` or ``gripper-angular-jaw`` model); a
+    designed fingered hand with two fingers. Hands with more fingers, hook grippers, single-point
+    tools, tentacles, soft arms and cups are not (they hook the lip)."""
+    if spec.family is EffectorFamily.PARALLEL_JAW:
+        return True
+    if spec.family is EffectorFamily.CATALOG_GRIPPER:
+        n = spec.params.get("n_fingers")
+        if n is not None:
+            return int(n) == 2
+        return spec.model.startswith(("gripper-2f-", "gripper-angular-jaw"))
+    if spec.family is EffectorFamily.DESIGNED and spec.recipe is not None:
+        return spec.recipe.kind == "fingered_hand" and spec.recipe.params.get("n_fingers") == 2
+    return False
+
+
+def pinch_fits(ctx: StepContext, tool: Tool) -> bool:
+    """:func:`lip_pinch_fits` for the step's tool (a :func:`two_finger` gripper only) and lid."""
+    if not two_finger(ctx.head.spec):
+        return False
+    return lip_pinch_fits(
+        tool.footprint(0.0).aperture(),
+        tool.footprint(1.0).aperture(),
+        float(ctx.obj.handles.info["thickness_m"]),
+    )
 
 
 def _yaw_offset(ctx: StepContext, tool: Tool) -> float:
@@ -529,9 +1121,7 @@ class HookPullPredicate:
                     tool_point_world(ctx.scene, data, np.asarray(point)) - data.site_xpos[site]
                 )
             else:
-                q = data.qpos
-                heading = float(q[ctx.scene.ids.palm_qpos[3]] + q[ctx.scene.ids.roll_qpos])
-                rel = rot_z(heading).T @ (
+                rel = wrist_frame(ctx.scene, data).T @ (
                     data.site_xpos[site] - tool_point_world(ctx.scene, data, sch.tool.tcp)
                 )
             ref = sch.values.get("rel0")
@@ -556,6 +1146,9 @@ class HookPullPredicate:
         return v.get("sense", 1.0) * (progress - now) > tol
 
     def verdict(self, ctx: StepContext, acc: Mapping[str, float]) -> StepVerdict:
+        far = out_of_reach_verdict(ctx, acc)
+        if far is not None:
+            return far
         out = criteria_verdict(ctx.step, acc)
         if (
             not out.success

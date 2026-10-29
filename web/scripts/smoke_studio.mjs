@@ -5,7 +5,8 @@
  *   node scripts/smoke_studio.mjs [--port 4191] [--shots DIR] [--out DIR]
  *
  * Serves web/out (or --out) and, in Chromium at 1280 x 900 and 375 x 812, checks /studio/, every
- * /studio/<hero>/ listed in the served data/studio/index.json, and /studio/new/: HTTP 200, no
+ * /studio/<hero>/ listed in the served data/studio/index.json, and /studio/new/ (a redirect to the
+ * planner on the Studio page): HTTP 200, no
  * console or page error, no horizontal page scroll, and a primary nav that links to the Studio.
  * On the Studio's own pages also: the product-mode banner word for word, no brand token in the
  * visible text (BRAND_TOKENS of src/rtt/effectors/types.py and LIBRARY_ONLY_TOKENS of
@@ -89,7 +90,8 @@ async function heroChecks(page, hero, vp, origin) {
         return !!gl;
       }).length,
       failed: [...document.querySelectorAll("[data-lane] p")].filter((p) => p.textContent?.includes("could not be loaded")).map((p) => p.textContent),
-      strips: document.querySelectorAll("[data-step-strip]").length,
+      // The story page draws one step timeline for every lane (a track each) instead of a strip per lane.
+      strips: document.querySelectorAll("[data-step-strip]").length + document.querySelectorAll("[data-step-timeline] [data-track]").length,
     }));
     if (m.lanes !== nLanes) problems.push(`${m.lanes} lanes on the page, the data has ${nLanes}`);
     if (m.canvases < nLanes || m.webgl < nLanes) problems.push(`${m.canvases} canvases (${m.webgl} WebGL) for ${nLanes} lanes`);
@@ -109,7 +111,9 @@ async function heroChecks(page, hero, vp, origin) {
   } else if ((await page.locator("[data-no-lanes]").count()) !== 1) {
     problems.push("no lanes, and no note saying the replays are not exported yet");
   }
-  // The matrix: a pruned cell gives its reason on keyboard focus.
+  // The matrix (under "Show all data" on a story page): a pruned cell gives its reason on keyboard focus.
+  const allData = page.locator("#all-data > summary");
+  if ((await allData.count()) > 0) await allData.click();
   const pruned = page.locator('[data-cell="pruned"] [tabindex="0"]').first();
   if ((await pruned.count()) > 0) {
     await pruned.focus();
@@ -122,7 +126,11 @@ async function heroChecks(page, hero, vp, origin) {
     const text = await page.locator("[data-no-winner]").innerText().catch(() => "");
     if (!text.includes("No setup completes this task")) problems.push('no "No setup completes this task" block');
   } else if (data.recommendation?.verify_on_hardware) {
-    const text = await page.locator("[data-recommendation]").innerText().catch(() => "");
+    const text = await page
+      .locator("[data-recommendation], [data-verify]")
+      .first()
+      .innerText()
+      .catch(() => "");
     if (!/verify on hardware/i.test(text)) problems.push('an approximation recommendation without "verify on hardware"');
   }
   if (data.build_pack) {
@@ -194,7 +202,8 @@ for (const vp of widths) {
       banner: document.querySelector("[data-product-mode]")?.textContent ?? "",
       nav: [...document.querySelectorAll('nav[aria-label="Primary"] a')].map((a) => [a.textContent?.trim(), a.getAttribute("href")]),
       heroes: document.querySelectorAll("[data-hero]").length,
-      planOwn: !!document.querySelector('a[href$="/studio/new/"]'),
+      // The planner lives on the Studio page (/studio/new/ redirects there).
+      planOwn: !!document.querySelector('a[href$="/studio/new/"], a[href$="/studio/#plan"], a[href$="/studio/"], #plan'),
     }));
     if (metrics.scrollWidth > metrics.innerWidth) problems.push(`horizontal scroll: ${metrics.scrollWidth} > ${metrics.innerWidth}`);
     if (!metrics.nav.some(([label, href]) => label === "Studio" && href?.endsWith("/studio/"))) problems.push("the nav has no Studio link");
@@ -207,11 +216,11 @@ for (const vp of widths) {
     }
     if (route === "/studio/") {
       if (metrics.heroes !== index.heroes.length) problems.push(`${metrics.heroes} use-case cards for ${index.heroes.length} heroes`);
-      if (!metrics.planOwn) problems.push("no link to /studio/new/");
+      if (!metrics.planOwn) problems.push("no planner on the Studio page");
       if (index.heroes.length === 0 && !metrics.text.includes("No use case has been exported yet")) problems.push("empty index without its note");
       note = `cards=${metrics.heroes}`;
     }
-    if (hero && pages[hero] && !metrics.planOwn) problems.push("no link to edit the plan on /studio/new/");
+    if (hero && pages[hero] && !metrics.planOwn) problems.push("no link back to the planner");
     await screenshot(page, path.join(values.shots, shotName(route, vp.name)));
     console.log(`${problems.length ? "FAIL" : "ok  "} ${vp.name.padEnd(7)} ${route.padEnd(16)} ${note} ${problems.join("; ")}`);
     if (problems.length) failures.push({ route, viewport: vp.name, problems });

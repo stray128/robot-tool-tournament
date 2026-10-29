@@ -1,9 +1,16 @@
 """The ``twist`` primitive: grip or engage the object and turn the wrist roll under a resistive torque.
 
 Objects: ``quarter_turn_latch`` (``head``), ``threaded_joint`` (``member``), ``handwheel_valve``
-(``wheel``). Working senses (the templates): a latch and a valve open counter-clockwise seen from
-above, a thread tightens clockwise; ``direction`` is the step's, so a step that turns against the
-object's sense meets its stop and stalls.
+(``wheel``), and ``panel_rail`` (``member``: its clamp, a threaded member read through
+:func:`~rtt.studio.templates.thread_info` and turned like a threaded joint's). Working senses (the
+templates): a latch and a valve open counter-clockwise seen from above, a thread tightens
+clockwise; ``direction`` is the step's, so a step that turns against the object's sense meets its
+stop and stalls.
+
+**Out of reach** (:func:`~._common.reach_problem`, Studio v2): a target whose engagement pose puts
+the palm outside its travel (+-350 mm, :data:`rtt.sim.scene.PALM_XY_LIMIT`, less 5 mm) is not
+attempted: the step holds still briefly and fails ``out_of_reach``, reporting where the palm would
+have to go (``reach_x_mm``, ``reach_y_mm``) and its limit (``palm_limit_mm``), not a slip or a jam.
 
 **Controller** (:class:`TwistController`):
 
@@ -93,10 +100,16 @@ from rtt.studio.primitives._common import (
     contacts,
     criterion_bounds,
     heading_for_axis,
+    hold_out_of_reach,
+    idle_command,
     observed_state,
+    offset,
+    out_of_reach_verdict,
+    reach_problem,
     rot_z,
     safe_palm_z,
     schedule,
+    start_pose,
     tool_geoms,
     tool_of,
     torque_limit,
@@ -104,15 +117,29 @@ from rtt.studio.primitives._common import (
     unwrap,
     wrist_target,
 )
-from rtt.studio.types import PrimitiveKind, TemplateKind
+from rtt.studio.templates import member_body, thread_info
+from rtt.studio.types import THREAD_KINDS, PrimitiveKind, TemplateKind
 
-__all__ = ["TwistController", "TwistPredicate", "spoke_heading"]
+__all__ = [
+    "TwistController",
+    "TwistPredicate",
+    "axis_site",
+    "spoke_heading",
+]
 
 AXIS_SITE = {
     TemplateKind.QUARTER_TURN_LATCH: ("head", "mark", 1.0),
     TemplateKind.THREADED_JOINT: ("member", "flat", -1.0),
     TemplateKind.HANDWHEEL_VALVE: ("wheel", "spoke0", 1.0),
 }
+
+
+def axis_site(kind: TemplateKind) -> tuple[str, str, float]:
+    """The axis site, the rotation mark and the working sense of a twistable kind (a panel's clamp
+    is a threaded member: its sites and sense are a threaded joint's)."""
+    return AXIS_SITE[TemplateKind.THREADED_JOINT if kind in THREAD_KINDS else kind]
+
+
 GOAL_MARGIN = math.radians(3.0)
 STALL_S = 0.3
 RUNAWAY = math.radians(90.0)
@@ -128,7 +155,7 @@ RELEASE_LIFT = 0.003  # m: the wrist lifts this much while the fingers open
 
 
 def _observed_angle(ctx: StepContext, data: mujoco.MjData) -> float:
-    axis, mark, _ = AXIS_SITE[ctx.obj.kind]
+    axis, mark, _ = axis_site(ctx.obj.kind)
     return angle_about(ctx.observe_site(data, axis), ctx.observe_site(data, mark))
 
 
@@ -205,15 +232,15 @@ class TwistController:
 
     def plan(self, ctx: StepContext, model: mujoco.MjModel, data: mujoco.MjData) -> StepPlan:
         step, obj = ctx.step, ctx.obj
-        info = obj.handles.info
-        tool = tool_of(ctx, obj.body_ids[-1])
+        info = thread_info(obj)
+        tool = tool_of(ctx, member_body(obj))
         sch = schedule(ctx)
         sch.tool = tool
-        axis_name, _, w = AXIS_SITE[obj.kind]
+        axis_name, _, w = axis_site(obj.kind)
         axis_pt = ctx.observe_site(data, axis_name)
         mark_angle = _observed_angle(ctx, data)
         sign = 1.0 if step.params["direction"] == "ccw" else -1.0
-        start = np.asarray(ctx.wrist_start, dtype=np.float64)
+        start = start_pose(ctx)
         roll = float(start[4])
         current = float(start[3] + roll)
         mode, heading, pre, tip_z, free = self._engagement(
@@ -230,8 +257,11 @@ class TwistController:
         else:
             low = tool.tip
         engage = wrist_target(point, low, yaw, roll)
-        path = Path.start(start)
-        above = engage + np.array([0.0, 0.0, 0.06, 0.0, 0.0])
+        far = reach_problem(engage)
+        if far is not None:
+            return hold_out_of_reach(ctx, start, far, "the engagement")
+        path = Path.start(start, ctx.scene.wrist.pitch_speed_dps)
+        above = engage + offset(z=0.06)
         transit(path, above, max(above[2], safe_palm_z(ctx, model, data, tool)))
         guard = Guarded(path.last, engage, path.end, 1.0 + BUDGET_S["engage_slack"])
         t_close = guard.end
@@ -266,10 +296,8 @@ class TwistController:
             "stall": 0.0,
             "done_at": None,
             "base": None,
-            "feed": obj.kind is TemplateKind.THREADED_JOINT,
-            "depth0": observed_state(ctx, data)["depth_mm"] / 1000.0
-            if obj.kind is TemplateKind.THREADED_JOINT
-            else 0.0,
+            "feed": obj.kind in THREAD_KINDS,
+            "depth0": observed_state(ctx, data)["depth_mm"] / 1000.0 if obj.kind in THREAD_KINDS else 0.0,
             "pitch": info.get("pitch_m", 0.0),
             "hold": step.hold_after,
             # spoke engagement: after the turn the fingers turn back by their free play, to the
@@ -321,7 +349,7 @@ class TwistController:
             tip = info["base_z"] + 0.002
             head = heading_for_axis(across, 0.0, current)
             return "grip", head, tool.preshape(width), tip, 0.0
-        if kind is TemplateKind.THREADED_JOINT:
+        if kind in THREAD_KINDS:
             width = 2.0 * info["flat_m"]
             tip = float(axis_pt[2]) - info["length_m"] + 0.003
             head = heading_for_axis(u, 0.0, current)
@@ -361,7 +389,7 @@ class TwistController:
             if not along and hi is not None:
                 goal = max(goal or 0.0, now - hi * scale)
         lo, _ = criterion_bounds(ctx, "depth_mm")
-        if kind is TemplateKind.THREADED_JOINT and lo is not None and along:
+        if kind in THREAD_KINDS and lo is not None and along:
             need = (lo / 1000.0 - max(info["lead_m"], state["depth_mm"] / 1000.0)) / info["pitch_m"]
             goal = max(goal or 0.0, 2.0 * math.pi * need)
         if kind is TemplateKind.QUARTER_TURN_LATCH:
@@ -390,6 +418,8 @@ class TwistController:
         sch = plan.values["schedule"]
         run = plan.values["run"]
         tool: Tool = sch.tool
+        if "idle" in run:  # out of reach: hold still, the tool as it was
+            return idle_command(t, ctx, run, model, data)
         v = sch.values
         guard: Guarded = run["guard"]
         pre = v["pre"]
@@ -408,7 +438,7 @@ class TwistController:
             ):
                 dt = ctx.task.controller.control_period
                 run["z_relief"] = min(Z_RELIEF_MAX, run["z_relief"] + Z_RELIEF_SPEED * dt)
-            wrist = wrist + np.array([0.0, 0.0, run["z_relief"], 0.0, 0.0])
+            wrist = wrist + offset(z=run["z_relief"])
         closure = pre
         if mode != "spokes":
             closure = pre + (1.0 - pre) * min(max((t - v["t_close"]) / 1.0, 0.0), 1.0)
@@ -423,7 +453,7 @@ class TwistController:
             # then retract
             lift = RELEASE_LIFT * min_jerk(min(1.0, (t - release) / RELEASE_S))
             up = min_jerk(min(1.0, max(0.0, (t - release - RELEASE_S) / 0.6)))
-            wrist = wrist + np.array([0.0, 0.0, lift + (RETRACT - RELEASE_LIFT) * up, 0.0, 0.0])
+            wrist = wrist + offset(z=lift + (RETRACT - RELEASE_LIFT) * up)
         phase = Phase.HOLD if t >= v["t_close"] else Phase.DESCEND
         return PrimitiveCommand(wrist, tool.controls(t, closure, model, data, phase))
 
@@ -553,6 +583,9 @@ class TwistPredicate:
             v["unmoved"] = max(v.get("unmoved", 0.0), math.degrees(abs(heading - v["h0"])))
 
     def verdict(self, ctx: StepContext, acc: Mapping[str, float]) -> StepVerdict:
+        far = out_of_reach_verdict(ctx, acc)
+        if far is not None:
+            return far
         v = schedule(ctx).values
         acc = dict(acc)
         if not v.get("moving"):

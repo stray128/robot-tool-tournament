@@ -136,6 +136,7 @@ class EffectorFamily(enum.StrEnum):
     SOFT_ARM = "soft_arm"  # octopus-style tentacle: spring-jointed segments + cable (approximation)
     SUCTION = "suction"  # suction cup: compliant lip + seal-gated adhesion (approximation)
     DESIGNED = "designed"  # our own morphologies from MorphologyRecipe (Nemotron or random)
+    PROCESS_TOOL = "process_tool"  # nut runner, tamper: a process, not a grasp (approximation)
 
 
 #: ``rtt.effectors.<family value>``: the module that registers a family when imported.
@@ -160,6 +161,7 @@ FAMILY_FIDELITY: Final[Mapping[EffectorFamily, Fidelity]] = MappingProxyType(
         EffectorFamily.SOFT_ARM: Fidelity.APPROXIMATION,
         EffectorFamily.SUCTION: Fidelity.APPROXIMATION,
         EffectorFamily.DESIGNED: Fidelity.RIGID,
+        EffectorFamily.PROCESS_TOOL: Fidelity.APPROXIMATION,
     }
 )
 
@@ -173,6 +175,7 @@ class EntrantGroup(enum.StrEnum):
     SUCTION = "suction"  # cup presets
     DESIGNED = "designed"  # recipes proposed by Nemotron, whatever generator builds them
     RANDOM = "random"  # recipes drawn at random from the same space, the designed group's control
+    PROCESS = "process"  # nut runner and tamper presets: Studio candidates, never in the per-part tournament
 
 
 class Requirement(enum.StrEnum):
@@ -547,6 +550,7 @@ def group_of(origin: str, family: EffectorFamily) -> EntrantGroup:
         EffectorFamily.SOFT_ARM: EntrantGroup.SOFT_ARM,
         EffectorFamily.SUCTION: EntrantGroup.SUCTION,
         EffectorFamily.DESIGNED: EntrantGroup.DESIGNED,
+        EffectorFamily.PROCESS_TOOL: EntrantGroup.PROCESS,
     }[family]
 
 

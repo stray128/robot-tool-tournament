@@ -4,25 +4,18 @@ import { useEffect, useState } from "react";
 
 type Theme = "light" | "dark";
 
-function effectiveTheme(): Theme {
-  const set = document.documentElement.dataset.theme;
-  if (set === "light" || set === "dark") return set;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+/** The site is dark first; a saved choice of "light" switches it. */
+function currentTheme(): Theme {
+  return document.documentElement.dataset.theme === "light" ? "light" : "dark";
 }
 
-/** Switches between the light (drafting film) and dark (blueprint) themes; remembers the choice. */
+/** Switches between the dark (graphite) and light (drafting white) themes; remembers the choice. */
 export function ThemeToggle() {
   const [theme, setTheme] = useState<Theme | null>(null);
 
-  useEffect(() => {
-    setTheme(effectiveTheme());
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = () => setTheme(effectiveTheme());
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
+  useEffect(() => setTheme(currentTheme()), []);
 
-  const next: Theme = theme === "dark" ? "light" : "dark";
+  const next: Theme = theme === "light" ? "dark" : "light";
 
   return (
     <button
@@ -36,14 +29,14 @@ export function ThemeToggle() {
         }
         setTheme(next);
       }}
-      className="ml-auto inline-flex items-center gap-2 border border-rule px-2.5 py-1 text-sm text-ink-2 hover:border-rule-strong hover:text-ink sm:ml-0"
-      aria-label={theme ? `Switch to ${next} theme` : "Switch theme"}
+      className="inline-flex size-9 shrink-0 items-center justify-center rounded-md border border-rule-strong text-ink-2 hover:bg-paper-2 hover:text-ink"
+      aria-label={theme ? `Switch to the ${next} theme` : "Switch theme"}
+      title={theme ? `Switch to the ${next} theme` : "Switch theme"}
     >
       <svg viewBox="0 0 16 16" className="size-4" aria-hidden="true">
         <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth="1.5" />
         <path d="M8 2a6 6 0 0 1 0 12z" fill="currentColor" />
       </svg>
-      <span>{theme ? (next === "dark" ? "Dark" : "Light") : "Theme"}</span>
     </button>
   );
 }

@@ -3,53 +3,43 @@
  "version": 1,
  "label": "Product mode: not part of the pre-registered experiment",
  "contract": "rtt-effectors/2",
- "code_version": "67c08249edc8",
+ "code_version": "c09b3ed916d1",
  "heroes": [
   {
-   "hero": "h1",
+   "hero": "h1_tote",
    "case_id": "h1_tote",
    "title": "Returns tote",
    "setting": "warehouse",
-   "use_case": "Warehouse returns: a plastic tote on the packing bench has a hinged lid. Open the lid, put a small rigid carton (about 120 x 80 x 60 mm, 300 g) and a flat shrink-wrapped pack (about 150 x 100 x 20 mm, 150 g) from the bench into the tote, then close the lid.",
-   "page": "studio/h1.json",
-   "task_id": "e4586f3612e11b0eb490349c52a109bec75f43fdb0bcf9f1d91127f9e01a4ad5",
+   "use_case": "Warehouse returns: a plastic tote (300 x 200 mm, 120 mm tall) stands on the packing bench with its hinged lid shut; the lid overhangs the tote by a 15 mm lip all round. Open the lid, put a small rigid carton (about 120 x 80 x 60 mm, 300 g) and a flat shrink-wrapped pack (about 150 x 100 x 20 mm, 150 g) from the bench into the tote, then close the lid.",
+   "page": "studio/h1_tote.json",
+   "task_id": "351218d6c47d46bba1e14ecb4cf230c592618cbe28e9bf1d8be29cb88085e4f8",
    "n_steps": 4,
-   "n_candidates": 52,
+   "n_candidates": 56,
    "outcome": "recommended",
-   "headline": "A two-tool head completes the task in 8 of 8 runs; the best single off-the-shelf tool in 0 of 8 runs.",
+   "headline": "A single tool completes the task in 8 of 8 runs.",
    "recommended": {
-    "setup_id": "72c634ec4fa356473388d98dc594a1287959d4df49c9961941abf9e50964ab56",
-    "kind": "multi_head",
-    "kind_title": "Two-tool head",
-    "label": "Two-tool head: Soft arm + Suction cup",
+    "setup_id": "d136ab4824c1bad26b5ac84b7a481c14bedee5790c495f0eb8c1c9369bb11a57",
+    "kind": "single",
+    "kind_title": "Single tool",
+    "label": "Industrial servo parallel gripper, 110 mm stroke",
     "tools": [
      {
       "index": 0,
-      "effector_id": "e754a0d67325f2100c98c2f9af46bb60c49421f256a2026895fb59bcf82e547d",
-      "display_name": "Soft arm, 12 segments, 140 mm",
-      "family": "soft_arm",
-      "family_title": "Soft arm",
-      "fidelity": "approximation",
+      "effector_id": "f2ea72dff094ac3680a7b59e05a96a2e9bc4d8191c7bfee56d30f1755987dff2",
+      "display_name": "Industrial servo parallel gripper, 110 mm stroke",
+      "family": "catalog_gripper",
+      "family_title": "Industrial gripper",
+      "fidelity": "rigid",
       "off_the_shelf": true,
-      "caveat": "Soft arm (approximation, octopus-inspired): a chain of rigid tapered capsule segments on spring-damper hinges, curled by a cable (a spatial tendon through sites) with a tension limit of at most 50 N. It bends in one plane (horizontal) and is rigid out of it; its segments do not collide with each other; a rigid post carries its root beside the part and the arm pulls the part against it, so the post takes part of the grip. Not modelled: continuum mechanics, material non-linearity, suckers, hydrostatic stiffening. Segment count sets how smooth the wrap is."
-     },
-     {
-      "index": 1,
-      "effector_id": "a5d7b1667b4f0d6582a36df49b9e600eeedc31f54dc883ddf7803fe113091f1d",
-      "display_name": "Suction cup, 40 mm bellows",
-      "family": "suction",
-      "family_title": "Suction cup",
-      "fidelity": "approximation",
-      "off_the_shelf": true,
-      "caveat": "Suction cup (approximation): a compliant lip of rigid segments on a bellows spring with a limited tilt; the seal is a geometric test (every lip segment touching the face, part material under 13 rays inside the lip) gating a MuJoCo adhesion actuator capped at vacuum x lip area (at most 60 kPa). The lip must touch the face: no pull across a gap. Not modelled: air flow, leak rate, porosity, vacuum build-up time (the vacuum follows the shared close ramp and is cut the control tick the seal is lost), lip material hysteresis, peel dynamics beyond the contact distribution. The lip's friction is the part's. Treat suction results as a screen, then verify on hardware."
+      "caveat": null
      }
     ],
     "completion_rate": 1.0,
     "completed_runs": 8,
     "n_runs": 8,
-    "fidelity": "approximation",
+    "fidelity": "rigid",
     "stops_at": null,
-    "cycle_time_s": 62.57
+    "cycle_time_s": 78.19
    },
    "best_single": {
     "setup_id": "d136ab4824c1bad26b5ac84b7a481c14bedee5790c495f0eb8c1c9369bb11a57",
@@ -59,47 +49,163 @@
     "tools": [
      "Industrial servo parallel gripper, 110 mm stroke"
     ],
-    "completion_rate": 0.0,
-    "completed_runs": 0,
+    "completion_rate": 1.0,
+    "completed_runs": 8,
     "n_runs": 8,
     "fidelity": "rigid",
-    "stops_at": "open_lid",
-    "cycle_time_s": null
+    "stops_at": null,
+    "cycle_time_s": 78.19
    },
    "closest": null
   },
   {
-   "hero": "h2",
-   "case_id": "h2_coupling",
-   "title": "Pipe coupling",
+   "hero": "h5_solar",
+   "case_id": "h5_solar",
+   "title": "Solar panel install",
    "setting": "construction",
-   "use_case": "Pipe prefabrication: a threaded steel coupling (1 inch pipe size, about 40 mm across and 45 mm long) sits loosely on the threaded stub of a pipe spool that stands upright. Push it onto the thread start and turn it on until it is hand-tight (about 3 N m), never over 8 N m.",
-   "page": "studio/h2.json",
-   "task_id": "33599e99ac277cf20e73d6acd349b9422330a255b3fe5ea48c6442a26c3decd6",
-   "n_steps": 2,
-   "n_candidates": 49,
+   "use_case": "Solar panel installation: a solar module (1000 x 600 mm, 35 mm thick, 8 kg) waits on its stand beside the two mounting rails. Lift it onto the rails and set it down against the rail end stops (within 5 mm), then start the clamp nut (13 mm hex) at the middle of its long edge on its thread and tighten it to 6 N m.",
+   "page": "studio/h5_solar.json",
+   "task_id": "cfd24f6d1ed0eb6b47202ff99d6aacb9cbc029e0960a0e30d16370f63c5adbcd",
+   "n_steps": 3,
+   "n_candidates": 50,
    "outcome": "recommended",
-   "headline": "A two-tool head completes the task in 8 of 8 runs; the best single off-the-shelf tool in 0 of 8 runs.",
+   "headline": "A tool-change sequence completes the task in 7 of 8 runs.",
    "recommended": {
-    "setup_id": "48274cb2290cdf2e9ec0ba57d02a4a3d10e580eecbd471cfa4a455f4a327b7a0",
-    "kind": "multi_head",
-    "kind_title": "Two-tool head",
-    "label": "Two-tool head: Two-finger parallel + Two-finger linkage",
+    "setup_id": "808f2a6999b71ad1fc884d2910cf48611ee70f759622afc2f5f0e8515912f7fd",
+    "kind": "tool_change",
+    "kind_title": "Tool change",
+    "label": "Tool change: Vacuum area frame > Suction cup > Nut runner",
     "tools": [
      {
       "index": 0,
-      "effector_id": "79372f1ed2ab4e3a5467c38ed239aa0795a8df3e5ce6af900af10a5a3e252050",
-      "display_name": "Two-finger parallel gripper, fin-ray pads",
-      "family": "catalog_gripper",
-      "family_title": "Industrial gripper",
-      "fidelity": "rigid",
+      "effector_id": "530514a2ba01210b994060206aa74f49d498731eb80579282867d25195f8257a",
+      "display_name": "Vacuum area frame, 2 x 3 cups, 600 mm",
+      "family": "suction",
+      "family_title": "Vacuum area frame",
+      "fidelity": "approximation",
       "off_the_shelf": true,
-      "caveat": null
+      "studio_only": true,
+      "rating": "rated 8.47 kg on a smooth face (holding force over a 1.5 safety factor)",
+      "caveat": "Vacuum area frame (approximation): the cups of the suction cup model on a rigid frame, each with its own seal test and its own vacuum valve (a cup that does not seal stays off). The holding force is the sum of the sealed cups' caps; the payload is that force over a safety factor (1.5 smooth, 2.0 porous, 2.5 swivelling, all [assumed]) at 1 g. Only the smooth rating is a simulated claim: the porous and swivelling ratings are arithmetic on the same force, because no leak, porosity or swivel is simulated. Not modelled: a shared vacuum source and its flow, the leak of an unsealed cup into the others, the frame's flex, peel across a long face, foam or needle area grippers. Treat frame results as a screen, then verify on hardware."
      },
      {
       "index": 1,
-      "effector_id": "02405ccb8d6393b7ca149262b1d03aad7a153238ce0bc32ea1d3eacad7657d39",
-      "display_name": "Two-finger linkage gripper of a cobot arm",
+      "effector_id": "f0b6543ba012ad8f54c8860c61407708f1bdfaf1d1b395d00a64ada8e883d6de",
+      "display_name": "Suction cup, 10 mm bellows",
+      "family": "suction",
+      "family_title": "Suction cup",
+      "fidelity": "approximation",
+      "off_the_shelf": true,
+      "caveat": "Suction cup (approximation): a compliant lip of rigid segments on a bellows spring with a limited tilt; the seal is a geometric test (every lip segment touching the face, part material under 13 rays inside the lip) gating a MuJoCo adhesion actuator capped at vacuum x lip area (at most 60 kPa). The lip must touch the face: no pull across a gap. Not modelled: air flow, leak rate, porosity, vacuum build-up time (the vacuum follows the shared close ramp and is cut the control tick the seal is lost), lip material hysteresis, peel dynamics beyond the contact distribution. The lip's friction is the part's. Treat suction results as a screen, then verify on hardware."
+     },
+     {
+      "index": 2,
+      "effector_id": "722d18369aa469f5d390011a204ced8a74f3d3c3b4596e2fb4822b13597fb1d4",
+      "display_name": "Nut runner, 13 mm hex socket",
+      "family": "process_tool",
+      "family_title": "Process tool",
+      "fidelity": "approximation",
+      "off_the_shelf": true,
+      "studio_only": true,
+      "rating": "rated 6.7 N m (clutch cap 10 N m); members at least 12 mm tall",
+      "caveat": "Nut runner (approximation): a rigid hex socket with a guide funnel on a lateral float; it engages a hex member by shape. The Studio wrist's roll is its spindle [assumed], at the wrist's speed: a clutch limits the torque to its cap (10 N m, under the wrist's 15 N m) and lets go at the release. The socket's walls are stacked slices so the simulator's contacts are as stiff as steel (a solver artifact). Supported in the Studio: members at least 12 mm tall. Not modelled: a motor, a torque transducer, cross-threading, socket wear, a reaction arm. Simulated, verify on hardware."
+     }
+    ],
+    "completion_rate": 0.875,
+    "completed_runs": 7,
+    "n_runs": 8,
+    "fidelity": "approximation",
+    "stops_at": null,
+    "cycle_time_s": 62.44
+   },
+   "best_single": null,
+   "closest": null
+  },
+  {
+   "hero": "h6_tile",
+   "case_id": "h6_tile",
+   "title": "Floor tile setting",
+   "setting": "construction",
+   "use_case": "Floor tiling: a 300 x 300 mm porcelain floor tile (10 mm thick, 2.2 kg) goes on the fresh adhesive bed, where it sits about 2 mm proud of its finished height until it is pressed. Lay it on the bed, then tamp it down level: within 1 mm of its finished height and no more than 0.5 degrees out of level, pressing no harder than 60 N.",
+   "page": "studio/h6_tile.json",
+   "task_id": "f9553b22ce12fc141c274d5532f25c97083ff5cd41faa49fc1927d9487fbc5a3",
+   "n_steps": 2,
+   "n_candidates": 50,
+   "outcome": "recommended",
+   "headline": "A two-tool head completes the task in 8 of 8 runs.",
+   "recommended": {
+    "setup_id": "4adcc3231c74df612f82b2dbaba5f6dda3ab6ce38843e5a56d3752960e8519b0",
+    "kind": "multi_head",
+    "kind_title": "Two-tool head",
+    "label": "Two-tool head: Vacuum area frame + Tamper pad",
+    "tools": [
+     {
+      "index": 0,
+      "effector_id": "1a3dddd3d68cc0b6df6d003946cc16fb895f371d0001906c7ba2e72d729721ac",
+      "display_name": "Vacuum area frame, 2 x 2 cups, 300 mm",
+      "family": "suction",
+      "family_title": "Vacuum area frame",
+      "fidelity": "approximation",
+      "off_the_shelf": true,
+      "studio_only": true,
+      "rating": "rated 4.15 kg on a smooth face (holding force over a 1.5 safety factor)",
+      "caveat": "Vacuum area frame (approximation): the cups of the suction cup model on a rigid frame, each with its own seal test and its own vacuum valve (a cup that does not seal stays off). The holding force is the sum of the sealed cups' caps; the payload is that force over a safety factor (1.5 smooth, 2.0 porous, 2.5 swivelling, all [assumed]) at 1 g. Only the smooth rating is a simulated claim: the porous and swivelling ratings are arithmetic on the same force, because no leak, porosity or swivel is simulated. Not modelled: a shared vacuum source and its flow, the leak of an unsealed cup into the others, the frame's flex, peel across a long face, foam or needle area grippers. Treat frame results as a screen, then verify on hardware."
+     },
+     {
+      "index": 1,
+      "effector_id": "e678af7b9e64e5522adab03ac14717d9103435946e5778f8e578c1bc2c7bf710",
+      "display_name": "Tamper pad, 200 mm",
+      "family": "process_tool",
+      "family_title": "Process tool",
+      "fidelity": "approximation",
+      "off_the_shelf": true,
+      "studio_only": true,
+      "rating": "rated 40 N (the stage slips at 60 N)",
+      "caveat": "Tamper pad (approximation): a rigid, level 200 mm square pad on a spring stage that slips at 60 N, so the pad never presses harder than that within the stage's 60 mm of travel. Not modelled: pad deformation, vibration or impact compaction, mortar flow, the pad's edge catching a joint. Simulated, verify on hardware."
+     }
+    ],
+    "completion_rate": 1.0,
+    "completed_runs": 8,
+    "n_runs": 8,
+    "fidelity": "approximation",
+    "stops_at": null,
+    "cycle_time_s": 19.23
+   },
+   "best_single": null,
+   "closest": null
+  },
+  {
+   "hero": "h7_hotel",
+   "case_id": "h7_hotel",
+   "title": "Hotel delivery",
+   "setting": "hospitality",
+   "use_case": "Hotel delivery, on a bench mock-up: press the elevator call button on the wall (a 40 mm round button, about 5 N to press, its centre 150 mm up the wall, nothing standing in front of it), then open the room door beside it (a hinged door 300 mm wide and 400 mm tall with a pull handle, hinged on its left) and put the parcel (a 160 x 120 x 80 mm box, 500 g) from the bench into the delivery tray behind the door.",
+   "page": "studio/h7_hotel.json",
+   "task_id": "2a0bc4766d10e13a1e62cf0ea4443e4b25f527fd3c7552ed74352a751469d442",
+   "n_steps": 3,
+   "n_candidates": 53,
+   "outcome": "recommended",
+   "headline": "A two-tool head completes the task in 8 of 8 runs; the best single off-the-shelf tool in 0 of 8 runs.",
+   "recommended": {
+    "setup_id": "5f6656e247bdbdf47a8393404d31273e6f9bebff8f948f3b9f79848826be41aa",
+    "kind": "multi_head",
+    "kind_title": "Two-tool head",
+    "label": "Two-tool head: Suction cup + Angular-jaw gripper of",
+    "tools": [
+     {
+      "index": 0,
+      "effector_id": "e72e88518c0ebe7a74ec5db104b671180e9dbb5b51d0b11045814506657f31bf",
+      "display_name": "Suction cup, 25 mm bellows",
+      "family": "suction",
+      "family_title": "Suction cup",
+      "fidelity": "approximation",
+      "off_the_shelf": true,
+      "caveat": "Suction cup (approximation): a compliant lip of rigid segments on a bellows spring with a limited tilt; the seal is a geometric test (every lip segment touching the face, part material under 13 rays inside the lip) gating a MuJoCo adhesion actuator capped at vacuum x lip area (at most 60 kPa). The lip must touch the face: no pull across a gap. Not modelled: air flow, leak rate, porosity, vacuum build-up time (the vacuum follows the shared close ramp and is cut the control tick the seal is lost), lip material hysteresis, peel dynamics beyond the contact distribution. The lip's friction is the part's. Treat suction results as a screen, then verify on hardware."
+     },
+     {
+      "index": 1,
+      "effector_id": "7d8ca167a7b3a93e3461ebca357e274ec9c9ca4fa9c2f4e50daa4c0a5e027724",
+      "display_name": "Angular-jaw gripper of an open hobby arm",
       "family": "catalog_gripper",
       "family_title": "Industrial gripper",
       "fidelity": "rigid",
@@ -112,94 +218,21 @@
     "n_runs": 8,
     "fidelity": "approximation",
     "stops_at": null,
-    "cycle_time_s": 33.86
+    "cycle_time_s": 51.41
    },
    "best_single": {
-    "setup_id": "5367b08cfd9757334f9c396a60276bfa411aa86283cd970d44f8c87fcd63ba09",
+    "setup_id": "508890d063e61c7c80a1ee28df51c4e4c638f0256e07f278784c73f82656f495",
     "kind": "single",
     "kind_title": "Single tool",
-    "label": "Parallel jaw, stock blade: Pipe coupling",
+    "label": "Angular-jaw gripper of an open hobby arm",
     "tools": [
-     "Parallel jaw, stock blade: Pipe coupling"
+     "Angular-jaw gripper of an open hobby arm"
     ],
     "completion_rate": 0.0,
     "completed_runs": 0,
     "n_runs": 8,
-    "fidelity": "approximation",
-    "stops_at": "tighten_coupling",
-    "cycle_time_s": null
-   },
-   "closest": null
-  },
-  {
-   "hero": "h3",
-   "case_id": "h3_cabinet",
-   "title": "Equipment cabinet",
-   "setting": "maintenance",
-   "use_case": "Field maintenance on an equipment cabinet: turn the quarter-turn latch to unlock the door, swing the door open, turn the valve handwheel inside a quarter turn (90 degrees) to open it, then plug the 8 mm round test connector into the service port.",
-   "page": "studio/h3.json",
-   "task_id": "3297a111d7c61392e9a99a08d3a80a8e14c7046b80d277925ed3a78788ff651d",
-   "n_steps": 4,
-   "n_candidates": 52,
-   "outcome": "recommended",
-   "headline": "A tool-change sequence completes the task in 4 of 8 runs; the best single off-the-shelf tool in 0 of 8 runs.",
-   "recommended": {
-    "setup_id": "4a5ca67a8577219bf4f87501e90e8e532276f839b488a9b86dfc6a86a472700c",
-    "kind": "tool_change",
-    "kind_title": "Tool change",
-    "label": "Tool change: Two-finger > Force-controlled > Two-finger",
-    "tools": [
-     {
-      "index": 0,
-      "effector_id": "f7faa3ddd45fee96149330bbf1bc6cd179305044806e9f178ed0735f6f184b80",
-      "display_name": "Two-finger adaptive linkage gripper, 85 mm",
-      "family": "catalog_gripper",
-      "family_title": "Industrial gripper",
-      "fidelity": "rigid",
-      "off_the_shelf": true,
-      "caveat": null
-     },
-     {
-      "index": 1,
-      "effector_id": "6d286bacbd7431187a1a4bd5a48d194ea5e59399afb0a9e2227332f4fe006cf7",
-      "display_name": "Force-controlled parallel gripper, 48 mm stroke",
-      "family": "catalog_gripper",
-      "family_title": "Industrial gripper",
-      "fidelity": "rigid",
-      "off_the_shelf": true,
-      "caveat": null
-     },
-     {
-      "index": 2,
-      "effector_id": "9aff5d8ef53e119ab1943eef6d8ba55af4795f806c1a2e111b89c7c0444c770b",
-      "display_name": "Two-finger parallel cobot hand, 80 mm",
-      "family": "catalog_gripper",
-      "family_title": "Industrial gripper",
-      "fidelity": "rigid",
-      "off_the_shelf": true,
-      "caveat": null
-     }
-    ],
-    "completion_rate": 0.5,
-    "completed_runs": 4,
-    "n_runs": 8,
-    "fidelity": "approximation",
-    "stops_at": null,
-    "cycle_time_s": 71.72
-   },
-   "best_single": {
-    "setup_id": "69a55b715795559ec0d142e71384940c96f8d9b9cf2d33bd199a4f8a5c2257ba",
-    "kind": "single",
-    "kind_title": "Single tool",
-    "label": "Two-finger linkage gripper of a cobot arm",
-    "tools": [
-     "Two-finger linkage gripper of a cobot arm"
-    ],
-    "completion_rate": 0.0,
-    "completed_runs": 0,
-    "n_runs": 8,
-    "fidelity": "approximation",
-    "stops_at": "open_valve",
+    "fidelity": "rigid",
+    "stops_at": "press_button",
     "cycle_time_s": null
    },
    "closest": null

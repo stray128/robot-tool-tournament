@@ -1,0 +1,46 @@
+[
+ {
+  "effector_id": "722d18369aa469f5d390011a204ced8a74f3d3c3b4596e2fb4822b13597fb1d4",
+  "display_name": "Nut runner, 13 mm hex socket",
+  "family": "process_tool",
+  "model": "nut-runner-socket-13",
+  "fidelity": "approximation",
+  "studio_only": true,
+  "family_title": "Process tool",
+  "rating": "rated 6.7 N m (clutch cap 10 N m); members at least 12 mm tall",
+  "caveat": "Nut runner (approximation): a rigid hex socket with a guide funnel on a lateral float; it engages a hex member by shape. The Studio wrist's roll is its spindle [assumed], at the wrist's speed: a clutch limits the torque to its cap (10 N m, under the wrist's 15 N m) and lets go at the release. The socket's walls are stacked slices so the simulator's contacts are as stiff as steel (a solver artifact). Supported in the Studio: members at least 12 mm tall. Not modelled: a motor, a torque transducer, cross-threading, socket wear, a reaction arm. Simulated, verify on hardware."
+ },
+ {
+  "effector_id": "e678af7b9e64e5522adab03ac14717d9103435946e5778f8e578c1bc2c7bf710",
+  "display_name": "Tamper pad, 200 mm",
+  "family": "process_tool",
+  "model": "tamper-pad-200",
+  "fidelity": "approximation",
+  "studio_only": true,
+  "family_title": "Process tool",
+  "rating": "rated 40 N (the stage slips at 60 N)",
+  "caveat": "Tamper pad (approximation): a rigid, level 200 mm square pad on a spring stage that slips at 60 N, so the pad never presses harder than that within the stage's 60 mm of travel. Not modelled: pad deformation, vibration or impact compaction, mortar flow, the pad's edge catching a joint. Simulated, verify on hardware."
+ },
+ {
+  "effector_id": "1a3dddd3d68cc0b6df6d003946cc16fb895f371d0001906c7ba2e72d729721ac",
+  "display_name": "Vacuum area frame, 2 x 2 cups, 300 mm",
+  "family": "suction",
+  "model": "vacuum-frame-2x2-300",
+  "fidelity": "approximation",
+  "studio_only": true,
+  "family_title": "Vacuum area frame",
+  "rating": "rated 4.15 kg on a smooth face (holding force over a 1.5 safety factor)",
+  "caveat": "Vacuum area frame (approximation): the cups of the suction cup model on a rigid frame, each with its own seal test and its own vacuum valve (a cup that does not seal stays off). The holding force is the sum of the sealed cups' caps; the payload is that force over a safety factor (1.5 smooth, 2.0 porous, 2.5 swivelling, all [assumed]) at 1 g. Only the smooth rating is a simulated claim: the porous and swivelling ratings are arithmetic on the same force, because no leak, porosity or swivel is simulated. Not modelled: a shared vacuum source and its flow, the leak of an unsealed cup into the others, the frame's flex, peel across a long face, foam or needle area grippers. Treat frame results as a screen, then verify on hardware."
+ },
+ {
+  "effector_id": "530514a2ba01210b994060206aa74f49d498731eb80579282867d25195f8257a",
+  "display_name": "Vacuum area frame, 2 x 3 cups, 600 mm",
+  "family": "suction",
+  "model": "vacuum-frame-2x3-600",
+  "fidelity": "approximation",
+  "studio_only": true,
+  "family_title": "Vacuum area frame",
+  "rating": "rated 8.47 kg on a smooth face (holding force over a 1.5 safety factor)",
+  "caveat": "Vacuum area frame (approximation): the cups of the suction cup model on a rigid frame, each with its own seal test and its own vacuum valve (a cup that does not seal stays off). The holding force is the sum of the sealed cups' caps; the payload is that force over a safety factor (1.5 smooth, 2.0 porous, 2.5 swivelling, all [assumed]) at 1 g. Only the smooth rating is a simulated claim: the porous and swivelling ratings are arithmetic on the same force, because no leak, porosity or swivel is simulated. Not modelled: a shared vacuum source and its flow, the leak of an unsealed cup into the others, the frame's flex, peel across a long face, foam or needle area grippers. Treat frame results as a screen, then verify on hardware."
+ }
+]

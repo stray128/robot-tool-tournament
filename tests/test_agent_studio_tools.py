@@ -169,6 +169,13 @@ def plan(box: Toolbox, case_id: str = "h1_tote") -> dict[str, Any]:
     return ok(box.call("plan_task", {"text": hero_text(case_id)}))
 
 
+def plan_raw(box: Toolbox, case_id: str) -> dict[str, Any]:
+    """The tool's answer for a recorded case whatever its status (an invalid plan is an answer too)."""
+    out = box.call("plan_task", {"text": hero_text(case_id)})
+    assert out.ok, (out.code, out.error)
+    return out.result
+
+
 # --------------------------------------------------------------------------- schemas
 
 
@@ -250,7 +257,12 @@ def test_studio_caps_have_hard_ceilings() -> None:
 
 def test_recorded_hero_plans_are_free_and_need_no_passcode(tmp_path: Path) -> None:
     box = make_box(tmp_path, unlocked=False)
+    assert set(FROZEN_HERO_TASK_IDS) <= set(HERO_CASE_IDS)
     for case_id in HERO_CASE_IDS:
+        if case_id not in FROZEN_HERO_TASK_IDS:  # recorded as failed: served free, as recorded
+            failed = plan_raw(box, case_id)
+            assert failed["source"] == "recorded" and failed["status"] == "invalid" and failed["problems"]
+            continue
         result = plan(box, case_id)
         assert result["source"] == "recorded" and result["status"] == "valid"
         assert result["task_id"] == FROZEN_HERO_TASK_IDS[case_id]
@@ -262,8 +274,8 @@ def test_recorded_hero_plans_are_free_and_need_no_passcode(tmp_path: Path) -> No
         assert saved["plan"]["task_id"] == FROZEN_HERO_TASK_IDS[case_id]
         assert_clean(result, tmp_path)
     assert box.guard.snapshot()["spent_usd"] == 0 and box.guard.reserved_usd == 0
-    h3 = plan(box, "h3_cabinet")
-    assert h3["result"] == "valid_after_layout_fix" and h3["layout_moves"]
+    fixed = plan(box, "h7_hotel")  # the recorded v2 run fixed its layout after the repair
+    assert fixed["result"] == "valid_after_layout_fix" and fixed["layout_moves"]
     calls = [e for e in box.recorder.to_json()["events"] if e["type"] == "llm.call"]
     assert calls and all(e["role"] == "task_engineer" and e["cached"] and e["cost_usd"] == 0 for e in calls)
 
@@ -389,9 +401,24 @@ def test_only_a_valid_plan_of_this_session_runs(tmp_path: Path, report: dict[str
     fake = FakeTournament(report)
     box = make_box(tmp_path, tournament=fake)
     assert box.call("run_task_tournament", {"plan_id": "plan-000000000000"}).code == "not_found"
-    refused = plan(box, "u1_fold_shirt")
+    fold = {
+        "title": "Fold a shirt",
+        "description": "Fold a shirt.",
+        "objects": [],
+        "steps": [],
+        "assumptions": [],
+        "clarifications": [],
+        "unsupported": [
+            {"what": "Folding cloth", "reason": "Cloth is deformable.", "nearest_primitive": "grasp"}
+        ],
+        "refusal": "Cloth is deformable and is not simulated.",
+    }
+    shirts = make_box(
+        tmp_path / "shirts", unlocked=True, tournament=fake, transport=ScriptedStudioTransport(plan_args=fold)
+    )
+    refused = ok(shirts.call("plan_task", {"text": "Fold the T-shirt in thirds and put it in the box."}))
     assert refused["status"] == "refused" and refused["task_id"] is None and refused["unsupported"]
-    out = box.call("run_task_tournament", {"plan_id": refused["plan_id"]})
+    out = shirts.call("run_task_tournament", {"plan_id": refused["plan_id"]})
     assert out.code == "invalid_args" and "not valid" in out.error
     other = make_box(tmp_path / "other", tournament=fake, session_id="sess-00000000000f")
     theirs = plan(other)

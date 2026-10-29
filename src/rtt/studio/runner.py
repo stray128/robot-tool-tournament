@@ -195,11 +195,12 @@ def run_segments(
         home = home_pose(scene, task, state)
         data.qpos[scene.ids.palm_qpos] = home
         data.qpos[scene.ids.roll_qpos] = 0.0
+        data.qpos[scene.ids.pitch_qpos] = 0.0
         if state is not None:
             apply_world_state(scene, data, state)
         mujoco.mj_forward(model, data)
         ctrl = np.zeros(model.nu)
-        ctrl[:5] = [*home, 0.0]
+        ctrl[:6] = [*home, 0.0, 0.0]  # x, y, z, yaw, roll, pitch
         for h in scene.heads:
             if not h.active:
                 ctrl[[model.actuator(a).id for a in h.actuators]] = h.build.ctrl_open

@@ -99,29 +99,33 @@ export function PlacementCurve({
           ))}
         </ul>
       </figcaption>
-      <table className="sr-only">
-        <caption>Share of objects held at each placement error</caption>
-        <thead>
-          <tr>
-            <th scope="col">Error (mm)</th>
-            <th scope="col">Along x</th>
-            <th scope="col">Along y</th>
-          </tr>
-        </thead>
-        <tbody>
-          {xTicks.map((e) => {
-            const x = curves.x.find((p) => p.error_mm === e);
-            const y = curves.y.find((p) => p.error_mm === e);
-            return (
-              <tr key={e}>
-                <th scope="row">{e}</th>
-                <td>{x ? `${x.held} of ${x.total}` : "not tested"}</td>
-                <td>{y ? `${y.held} of ${y.total}` : "not tested"}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      {/* The text equivalent, for screen readers. A table ignores the 1 px width of sr-only and
+          would widen the page on phones, so a wrapper carries it. */}
+      <div className="sr-only">
+        <table>
+          <caption>Share of objects held at each placement error</caption>
+          <thead>
+            <tr>
+              <th scope="col">Error (mm)</th>
+              <th scope="col">Along x</th>
+              <th scope="col">Along y</th>
+            </tr>
+          </thead>
+          <tbody>
+            {xTicks.map((e) => {
+              const x = curves.x.find((p) => p.error_mm === e);
+              const y = curves.y.find((p) => p.error_mm === e);
+              return (
+                <tr key={e}>
+                  <th scope="row">{e}</th>
+                  <td>{x ? `${x.held} of ${x.total}` : "not tested"}</td>
+                  <td>{y ? `${y.held} of ${y.total}` : "not tested"}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </figure>
   );
 }

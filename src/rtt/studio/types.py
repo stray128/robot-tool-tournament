@@ -13,9 +13,16 @@ builder track can use it cheaply (MuJoCo is imported by :mod:`rtt.studio.scene`)
   bounded primitive params, :class:`StepConstraints`, :class:`SuccessCriterion` rows and
   order dependencies.
 * :class:`ObjectTemplate` and its registry (:func:`get_template`): the parametric object
-  kinds (hinged lid, drawer, latch, threaded joint, handwheel valve, port and plug, bin, part)
-  with their param spaces, handles, state quantities and fidelity tier. Physics builders for
-  each kind live in :mod:`rtt.studio.templates`.
+  kinds (hinged lid, drawer, latch, threaded joint, handwheel valve, port and plug, bin, part;
+  Studio v2 adds a panel on mounting rails, a tile on a mortar bed, a push button and a sliding
+  machine door) with their param spaces, handles, state quantities and fidelity tier. Physics
+  builders for each kind live in :mod:`rtt.studio.templates`.
+* **What the Task Engineer is offered** (:func:`planner_templates`, :func:`planner_kinds`,
+  :func:`planner_handles`, :func:`planner_quantities`, :func:`planner_params`): its prompt, tool
+  schema and web catalog are recorded and hashed, so a template, quantity or optional step param
+  added later runs in the Studio at once but reaches the Engineer only when it is taught it
+  (``planner=False``, or an optional param left out of :attr:`PrimitiveInfo.taught`, until then).
+  Studio v2 taught it the four job templates, their quantities and push's ``approach``.
 * :class:`Setup`: what gets recommended: ``single``, ``multi_head`` (two effectors on one
   bracket) or ``tool_change`` (an effector per step, a changeover time and a mass swap), and
   :meth:`Setup.segments`, the episodes a full task runs as.
@@ -39,7 +46,7 @@ import math
 import numbers
 import re
 import statistics
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Any, ClassVar, Final, Literal
@@ -61,6 +68,7 @@ from rtt.effectors.types import (
 __all__ = [
     "ALLOWED_LICENSES",
     "CONTRACT_VERSION",
+    "CRITERION_TOLERANCE",
     "MAX_OBJECTS",
     "MAX_STEPS",
     "MAX_STEP_S",
@@ -69,9 +77,11 @@ __all__ = [
     "PRIMITIVES",
     "PRODUCT_MODE_LABEL",
     "QUANTITIES",
+    "SLIDE_KINDS",
     "STEP_FAILURE_MODES",
     "STUDIO_WRIST",
     "TASK_PLAN_TOOL",
+    "THREAD_KINDS",
     "TOOL_CHANGE_S",
     "V1_CONTRACT",
     "BomLine",
@@ -108,6 +118,11 @@ __all__ = [
     "WristLimits",
     "buildpack_manifest_json_schema",
     "get_template",
+    "planner_handles",
+    "planner_kinds",
+    "planner_params",
+    "planner_quantities",
+    "planner_templates",
     "register_template",
     "submit_task_plan_tool",
     "task_plan_json_schema",
@@ -128,8 +143,9 @@ MAX_OBJECTS: Final = 8
 MAX_TOOLS: Final = 4
 #: Longest scripted step a controller may plan (s).
 MAX_STEP_S: Final = 30.0
-#: Changeover time of an automatic tool changer (s) [assumed], the same for every candidate.
-TOOL_CHANGE_S: Final = 6.0
+#: Changeover time of an automatic tool changer (s) [assumed: sources 5–10 s; one changer measured
+#: 7.33 s], the same for every candidate.
+TOOL_CHANGE_S: Final = 7.5
 #: Time for a multi-tool head to present its other tool (wrist re-orientation) (s) [assumed].
 PRESENT_S: Final = 1.5
 
@@ -203,6 +219,21 @@ class TemplateKind(enum.StrEnum):
     PORT_PLUG = "port_plug"
     BIN = "bin"
     PART = "part"
+    # Studio v2: the job templates (solar install, tile setting, call button, machine tending)
+    PANEL_RAIL = "panel_rail"
+    TILE_BED = "tile_bed"
+    SPRING_BUTTON = "spring_button"
+    SLIDING_DOOR = "sliding_door"
+
+
+#: Kinds the primitives drive along a straight slide (a drawer pulled out, a door slid sideways):
+#: the same pull, push and observed travel (``pull_x``/``pull_y``, ``travel_m``, ``handle``...).
+SLIDE_KINDS: Final[frozenset[TemplateKind]] = frozenset({TemplateKind.DRAWER, TemplateKind.SLIDING_DOOR})
+#: Kinds with a threaded member the twist and insert primitives turn and start (a threaded joint,
+#: the clamp of a panel on its rails): see :func:`rtt.studio.templates.thread_info`.
+THREAD_KINDS: Final[frozenset[TemplateKind]] = frozenset(
+    {TemplateKind.THREADED_JOINT, TemplateKind.PANEL_RAIL}
+)
 
 
 class SetupKind(enum.StrEnum):
@@ -263,10 +294,13 @@ class Quantity:
     low: float
     high: float
     description: str
+    planner: bool = True  # offered to the Task Engineer (module docstring)
 
 
-def _q(name: str, unit: str, low: float, high: float, description: str) -> tuple[str, Quantity]:
-    return name, Quantity(name, unit, low, high, description)
+def _q(
+    name: str, unit: str, low: float, high: float, description: str, *, planner: bool = True
+) -> tuple[str, Quantity]:
+    return name, Quantity(name, unit, low, high, description, planner)
 
 
 #: Every quantity a :class:`SuccessCriterion` may name. Template state quantities are read
@@ -282,7 +316,13 @@ QUANTITIES: Final[Mapping[str, Quantity]] = MappingProxyType(
                 1440.0,
                 "joint angle of the object from its start (lid, latch, valve)",
             ),
-            _q("travel_mm", "mm", -1000.0, 1000.0, "slide travel of the object from its start (drawer)"),
+            _q(
+                "travel_mm",
+                "mm",
+                -1000.0,
+                1000.0,
+                "slide travel of the object from its start (drawer, sliding door, button)",
+            ),
             _q("depth_mm", "mm", 0.0, 200.0, "insertion depth of a plug or threaded member in its seat"),
             _q("turns", "turn", -20.0, 20.0, "turns of a threaded member from its start"),
             _q("lift_mm", "mm", -50.0, 500.0, "rise of a part above where it started"),
@@ -295,9 +335,61 @@ QUANTITIES: Final[Mapping[str, Quantity]] = MappingProxyType(
             _q("lateral_force_n", "N", 0.0, 1000.0, "peak force across the insertion axis"),
             _q("torque_nm", "N m", 0.0, 100.0, "peak torque the wrist applied about the tool axis"),
             _q("jam", "flag", 0.0, 1.0, "1 when an insertion stalled short of its depth"),
-            _q("penetration_mm", "mm", 0.0, 100.0, "deepest tool-object penetration (physics validity)"),
+            # Since studio v2 the runner measures it over every contact pair but the designed ones,
+            # not only tool and object (docs/STUDIO.md 3.3); the wording says so since the v2
+            # re-record (it is part of the Task Engineer's tool schema, whose hash keys the recording).
+            _q(
+                "penetration_mm",
+                "mm",
+                0.0,
+                100.0,
+                "deepest penetration between any two bodies, designed contacts excepted (physics validity)",
+            ),
+            # Studio v2 job templates
+            _q("gap_mm", "mm", 0.0, 1000.0, "gap between a panel's edge and its rail stops"),
+            _q(
+                "clamp_torque_nm",
+                "N m",
+                0.0,
+                100.0,
+                "the highest torque a clamp reached as it was driven home (its rated torque once seated)",
+            ),
+            _q(
+                "height_err_mm",
+                "mm",
+                0.0,
+                1000.0,
+                "how far a tile's top stands from its finished level",
+            ),
+            _q(
+                "pressed",
+                "flag",
+                0.0,
+                1.0,
+                "1 once a button has been pressed past its actuation point",
+            ),
         ]
     )
+)
+
+#: Per quantity, the slack (in the quantity's unit) a success bound is met within: a value meets
+#: an ``at_least`` or an ``at_most`` when it misses it by no more than this. A bound that the
+#: physics itself sets is never hit to the last digit: the published H2 coupling pass read
+#: 3.9999936 mm against an "at most 4.0 mm" (the thread starts at 4.0 mm), and the same run after
+#: an unrelated physics change reads 4.0000012 mm. An exact comparison turns that rounding into a
+#: failure. The slack is small against the margins a task asks for, so it does not hide a real
+#: miss: a part 3 mm short of its depth still fails. Quantities without a row
+#: (``hold_s``, flags, slips, tilt, penetration) have no slack.
+CRITERION_TOLERANCE: Final[Mapping[str, float]] = MappingProxyType(
+    {
+        "depth_mm": 0.1,
+        "travel_mm": 0.5,
+        "lift_mm": 0.5,
+        "angle_deg": 0.5,
+        "turns": 0.01,
+        "torque_nm": 0.02,
+        "force_n": 0.2,
+    }
 )
 
 # --------------------------------------------------------------------------- primitives
@@ -314,6 +406,11 @@ class PrimitiveInfo:
     * ``quantities``: what the primitive's predicate observes besides the template state.
     * ``uses_roll``: drives the continuous wrist roll; ``may_hold``: may end holding its object.
     * ``status``: ``existing`` (a v1 grasp primitive, adapted by S2) or ``new`` (S2 builds it).
+    * ``optional``: params a step may leave out (each has a default). A step omits one set to its
+      default, so a step written before the param existed hashes as it did (its task id is
+      unchanged). ``taught`` names the ones offered to the Task Engineer (module docstring): its
+      schema lists them with the required params (:func:`planner_params`), and a step it writes
+      with one at its default still drops it.
     """
 
     kind: PrimitiveKind
@@ -328,12 +425,18 @@ class PrimitiveInfo:
     quantities: tuple[str, ...]
     uses_roll: bool = False
     may_hold: bool = False
+    optional: tuple[ParamSpec, ...] = ()
+    taught: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         unknown = [q for q in self.quantities if q not in QUANTITIES]
         if unknown:
             raise ValueError(f"{self.kind}: unknown quantities {unknown}")
-        params_json_schema(self.params)  # unique names
+        params_json_schema(self.params + self.optional)  # unique names
+        if any(p.default is None for p in self.optional):
+            raise ValueError(f"{self.kind}: an optional param needs its default")
+        if not set(self.taught) <= {p.name for p in self.optional}:
+            raise ValueError(f"{self.kind}: taught names only optional params")
 
 
 def _speed(name: str, unit: str, low: float, high: float, default: float, what: str) -> ParamSpec:
@@ -356,8 +459,14 @@ PRIMITIVES: Final[Mapping[PrimitiveKind, PrimitiveInfo]] = MappingProxyType(
             "existing",
             FidelityTier.RIGID,
             "",
-            (TemplateKind.PART, TemplateKind.PORT_PLUG, TemplateKind.THREADED_JOINT),
-            ("part", "plug", "member"),
+            (
+                TemplateKind.PART,
+                TemplateKind.PORT_PLUG,
+                TemplateKind.THREADED_JOINT,
+                TemplateKind.PANEL_RAIL,
+                TemplateKind.TILE_BED,
+            ),
+            ("part", "plug", "member", "panel"),
             (TemplateKind.BIN,),
             _LIFT,
             _PICK_QUANTITIES,
@@ -370,8 +479,8 @@ PRIMITIVES: Final[Mapping[PrimitiveKind, PrimitiveInfo]] = MappingProxyType(
             FidelityTier.APPROXIMATION,
             "Suction is an approximation: the seal is a geometric test gating a capped adhesion force; "
             "no air flow, leak rate or porosity.",
-            (TemplateKind.PART,),
-            ("part",),
+            (TemplateKind.PART, TemplateKind.PANEL_RAIL, TemplateKind.TILE_BED),
+            ("part", "panel"),
             (TemplateKind.BIN,),
             _LIFT,
             _PICK_QUANTITIES,
@@ -396,7 +505,7 @@ PRIMITIVES: Final[Mapping[PrimitiveKind, PrimitiveInfo]] = MappingProxyType(
             "new",
             FidelityTier.RIGID,
             "",
-            (TemplateKind.HINGED_LID, TemplateKind.DRAWER),
+            (TemplateKind.HINGED_LID, TemplateKind.DRAWER, TemplateKind.SLIDING_DOOR),
             ("handle",),
             (),
             (
@@ -417,7 +526,12 @@ PRIMITIVES: Final[Mapping[PrimitiveKind, PrimitiveInfo]] = MappingProxyType(
             "new",
             FidelityTier.RIGID,
             "",
-            (TemplateKind.QUARTER_TURN_LATCH, TemplateKind.THREADED_JOINT, TemplateKind.HANDWHEEL_VALVE),
+            (
+                TemplateKind.QUARTER_TURN_LATCH,
+                TemplateKind.THREADED_JOINT,
+                TemplateKind.HANDWHEEL_VALVE,
+                TemplateKind.PANEL_RAIL,
+            ),
             ("head", "member", "wheel"),
             (),
             (
@@ -440,7 +554,7 @@ PRIMITIVES: Final[Mapping[PrimitiveKind, PrimitiveInfo]] = MappingProxyType(
             "new",
             FidelityTier.RIGID,
             "",
-            (TemplateKind.PORT_PLUG, TemplateKind.THREADED_JOINT),
+            (TemplateKind.PORT_PLUG, TemplateKind.THREADED_JOINT, TemplateKind.PANEL_RAIL),
             ("plug", "member"),
             (),
             (
@@ -464,11 +578,30 @@ PRIMITIVES: Final[Mapping[PrimitiveKind, PrimitiveInfo]] = MappingProxyType(
             "new",
             FidelityTier.RIGID,
             "",
-            (TemplateKind.HINGED_LID, TemplateKind.DRAWER, TemplateKind.PART, TemplateKind.PORT_PLUG),
-            ("lid", "drawer", "part", "plug"),
+            (
+                TemplateKind.HINGED_LID,
+                TemplateKind.DRAWER,
+                TemplateKind.PART,
+                TemplateKind.PORT_PLUG,
+                TemplateKind.SLIDING_DOOR,
+                TemplateKind.TILE_BED,
+                TemplateKind.SPRING_BUTTON,
+            ),
+            ("lid", "drawer", "part", "plug", "door", "button"),
             (),
             (_speed("speed_mm_s", "mm/s", 1.0, 100.0, 20.0, "Push speed"),),
             ("force_n", "penetration_mm"),
+            optional=(
+                ParamSpec(
+                    "approach",
+                    "choice",
+                    "Where the tool comes from: top (straight down) or front (tilted square to an "
+                    "upright face)",
+                    choices=("top", "front"),
+                    default="top",
+                ),
+            ),
+            taught=("approach",),
         ),
     }
 )
@@ -486,6 +619,9 @@ class ObjectTemplate:
     * ``fidelity`` and ``caveat``: printed next to every result that touches it.
     * ``needs_ref``: instances name their geometry with :attr:`ObjectInstance.ref` (parts).
     * ``model``: one line on how it is simulated.
+    * ``planner``: offered to the Task Engineer (module docstring).
+    * ``check``: rules across params (plain sentences, empty when they hold), checked once every
+      param is within its bounds.
     """
 
     kind: TemplateKind
@@ -499,6 +635,8 @@ class ObjectTemplate:
     caveat: str = ""
     articulated: bool = True
     needs_ref: bool = False
+    planner: bool = True
+    check: Callable[[Mapping[str, Any]], list[str]] | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "kind", TemplateKind(self.kind))
@@ -519,13 +657,15 @@ class ObjectTemplate:
         return {p.name: p.default for p in self.params}
 
     def problems(self, params: Mapping[str, Any]) -> list[str]:
-        """Unknown, missing or out-of-bounds params."""
+        """Unknown, missing or out-of-bounds params, then the template's own rules (``check``)."""
         by_name = {p.name: p for p in self.params}
         out = [f"unknown param {k!r}" for k in params if k not in by_name]
         out += [f"missing param {k!r}" for k in by_name if k not in params]
         for k, v in params.items():
             if k in by_name:
                 out += by_name[k].problems(v)
+        if not out and self.check is not None:
+            out += self.check(params)
         return out
 
 
@@ -535,6 +675,30 @@ def _f(name: str, unit: str, low: float, high: float, default: float, what: str)
 
 def _c(name: str, choices: tuple[str, ...], default: str, what: str) -> ParamSpec:
     return ParamSpec(name, "choice", what, choices=choices, default=default)
+
+
+#: A tile's plausible density (kg/m^3): a light composite to a dense stone [assumed].
+TILE_DENSITY_KG_M3: Final = (800.0, 4000.0)
+
+
+def _tile_bed_check(p: Mapping[str, Any]) -> list[str]:
+    """A tile the bed carries unpressed (its weight under the bed's yield) and of a plausible mass."""
+    out = []
+    weight = float(p["mass_g"]) / 1000.0 * 9.81
+    if weight >= float(p["bed_yield_n"]):
+        out.append(
+            f"the tile weighs {weight:.1f} N, at or over the bed's {float(p['bed_yield_n']):g} N yield: "
+            "it would sink into the bed by itself; lower mass_g or raise bed_yield_n"
+        )
+    volume = (float(p["tile_mm"]) / 1000.0) ** 2 * float(p["thickness_mm"]) / 1000.0
+    lo, hi = TILE_DENSITY_KG_M3
+    density = float(p["mass_g"]) / 1000.0 / volume
+    if not lo <= density <= hi:
+        out.append(
+            f"a {float(p['tile_mm']):g} mm tile {float(p['thickness_mm']):g} mm thick of "
+            f"{float(p['mass_g']):g} g is {density:.0f} kg/m^3; a tile is {lo:g} to {hi:g} kg/m^3"
+        )
+    return out
 
 
 _BUILTIN_TEMPLATES: tuple[ObjectTemplate, ...] = (
@@ -688,6 +852,116 @@ _BUILTIN_TEMPLATES: tuple[ObjectTemplate, ...] = (
         articulated=False,
         needs_ref=True,
     ),
+    # ----------------------------------------------------------------- Studio v2: the job templates
+    ObjectTemplate(
+        TemplateKind.PANEL_RAIL,
+        "Panel on mounting rails",
+        "A large flat panel (a solar module) resting on two mounting rails against their end stops, "
+        "with a threaded clamp on a post beside its edge.",
+        "free rigid slab on two static rails with end stops; the clamp is a threaded member on a post "
+        "(revolute and prismatic joints coupled by a helical tendon, with a friction torque ramp)",
+        (
+            _f("length_mm", "mm", 300.0, 1200.0, 1000.0, "Panel length (along x)"),
+            _f("width_mm", "mm", 200.0, 800.0, 600.0, "Panel width (along y, the way the rails run)"),
+            _f("thickness_mm", "mm", 10.0, 60.0, 35.0, "Panel thickness"),
+            _f("mass_g", "g", 500.0, 25000.0, 8000.0, "Panel mass"),
+            _f(
+                "start_gap_mm",
+                "mm",
+                0.0,
+                30.0,
+                2.0,
+                "Gap between the panel's edge and the rail stops at the start",
+            ),
+            _f(
+                "clamp_torque_nm",
+                "N m",
+                0.5,
+                10.0,
+                6.0,
+                "Torque that seats the clamp (its thread's final torque)",
+            ),
+        ),
+        ("panel", "member"),
+        ("gap_mm", "clamp_torque_nm", "depth_mm", "turns", "angle_deg"),
+        FidelityTier.APPROXIMATION,
+        "The clamp is an approximation: a 13 mm hex modelled 15 mm tall so the simulated socket can seat "
+        "(a standard M8 nut is 6.8 mm tall), on a helical joint with a torque ramp; it does not press the "
+        "panel. The panel is a rigid slab.",
+    ),
+    ObjectTemplate(
+        TemplateKind.TILE_BED,
+        "Tile on a mortar bed",
+        "A square floor tile laid on a fresh mortar bed, standing proud of its finished level until it "
+        "is pressed in.",
+        "free rigid tile on a 3 x 3 grid of plastic bed cells (vertical slides that yield, harden and "
+        "keep their set)",
+        (
+            _f("tile_mm", "mm", 100.0, 600.0, 300.0, "Tile side (square)"),
+            _f("thickness_mm", "mm", 5.0, 30.0, 10.0, "Tile thickness"),
+            _f("mass_g", "g", 100.0, 20000.0, 2160.0, "Tile mass"),
+            _f("proud_mm", "mm", 0.5, 6.0, 2.0, "How far the laid tile stands above its finished level"),
+            _f("bed_yield_n", "N", 5.0, 200.0, 30.0, "Total force at which the fresh bed starts to give"),
+            _f(
+                "bed_hardening_n_mm", "N/mm", 1.0, 100.0, 15.0, "Extra force per mm the bed needs as it gives"
+            ),
+        ),
+        ("part",),
+        ("height_err_mm", "tilt_deg"),
+        FidelityTier.APPROXIMATION,
+        "The mortar bed is an approximation: nine plastic cells that yield and harden linearly and keep "
+        "their set; no flow, suction or curing. A screen, not a promise.",
+        check=_tile_bed_check,
+    ),
+    ObjectTemplate(
+        TemplateKind.SPRING_BUTTON,
+        "Push button",
+        "A round spring-return push button in a bezel, on a wall or on a desk console; a press past its "
+        "actuation point latches the call.",
+        "prismatic joint with a preloaded return spring and an end stop, and a latch that records a "
+        "press past the actuation point",
+        (
+            _c(
+                "mount",
+                ("wall", "desk"),
+                "wall",
+                "On a wall (it faces sideways) or a desk console (it faces up)",
+            ),
+            _f("diameter_mm", "mm", 10.0, 80.0, 40.0, "Button diameter"),
+            _f("travel_mm", "mm", 1.0, 10.0, 3.0, "Button travel to its stop"),
+            _f("actuation_force_n", "N", 0.5, 30.0, 4.0, "Force that presses it to its actuation point"),
+            _f("proud_mm", "mm", 0.0, 10.0, 1.0, "How far the button stands out of its bezel at rest"),
+            _f(
+                "height_mm",
+                "mm",
+                30.0,
+                300.0,
+                120.0,
+                "Wall: the button's centre above the table; desk: the console's height",
+            ),
+        ),
+        ("button",),
+        ("travel_mm", "pressed"),
+        FidelityTier.RIGID,
+    ),
+    ObjectTemplate(
+        TemplateKind.SLIDING_DOOR,
+        "Sliding machine door",
+        "A machine enclosure whose door slides sideways: a front leaf and a roof leaf over the loading "
+        "opening, moved by a fin handle on the roof.",
+        "prismatic joint with friction loss and end stops (a drawer's slide, turned sideways)",
+        (
+            _f("width_mm", "mm", 120.0, 400.0, 250.0, "Loading opening width, along the slide"),
+            _f("depth_mm", "mm", 150.0, 500.0, 300.0, "Machine depth, front to back"),
+            _f("height_mm", "mm", 120.0, 400.0, 250.0, "Machine height"),
+            _f("travel_mm", "mm", 50.0, 450.0, 260.0, "Door travel to the open stop"),
+            _f("pull_force_n", "N", 0.5, 60.0, 10.0, "Friction force that resists sliding"),
+            _f("handle_mm", "mm", 15.0, 60.0, 40.0, "Height of the fin handle above the roof"),
+        ),
+        ("door", "handle"),
+        ("travel_mm",),
+        FidelityTier.RIGID,
+    ),
 )
 
 _TEMPLATES: dict[TemplateKind, ObjectTemplate] = {t.kind: t for t in _BUILTIN_TEMPLATES}
@@ -700,6 +974,33 @@ def get_template(kind: TemplateKind | str) -> ObjectTemplate:
 def templates() -> tuple[ObjectTemplate, ...]:
     """Every registered template, in :class:`TemplateKind` order."""
     return tuple(_TEMPLATES[k] for k in TemplateKind if k in _TEMPLATES)
+
+
+def planner_templates() -> tuple[ObjectTemplate, ...]:
+    """The templates offered to the Task Engineer (module docstring), in :class:`TemplateKind` order."""
+    return tuple(t for t in templates() if t.planner)
+
+
+def planner_kinds(info: PrimitiveInfo) -> tuple[TemplateKind, ...]:
+    """The object kinds of ``info`` the Task Engineer is offered."""
+    return tuple(k for k in info.objects if get_template(k).planner)
+
+
+def planner_handles(info: PrimitiveInfo) -> tuple[str, ...]:
+    """The handles of ``info`` that some kind the Task Engineer is offered has."""
+    kinds = planner_kinds(info)
+    return tuple(h for h in info.handles if any(h in get_template(k).handles for k in kinds))
+
+
+def planner_params(info: PrimitiveInfo) -> tuple[ParamSpec, ...]:
+    """The step params of ``info`` the Task Engineer is offered: every required one, then the
+    optional ones it has been taught (:attr:`PrimitiveInfo.taught`)."""
+    return info.params + tuple(p for p in info.optional if p.name in info.taught)
+
+
+def planner_quantities() -> tuple[Quantity, ...]:
+    """The quantities offered to the Task Engineer, in :data:`QUANTITIES` order."""
+    return tuple(q for q in QUANTITIES.values() if q.planner)
 
 
 def register_template(template: ObjectTemplate, *, replace: bool = False) -> ObjectTemplate:
@@ -853,12 +1154,19 @@ class SuccessCriterion:
         object.__setattr__(self, "at_least", lo)
         object.__setattr__(self, "at_most", hi)
 
+    @property
+    def tolerance(self) -> float:
+        """The slack this criterion's bounds are met within (:data:`CRITERION_TOLERANCE`)."""
+        return CRITERION_TOLERANCE.get(self.quantity, 0.0)
+
     def passes(self, value: float | None) -> bool:
+        """Whether ``value`` meets the bounds, each within :attr:`tolerance`."""
         if value is None or not math.isfinite(value):
             return False
-        if self.at_least is not None and value < self.at_least:
+        tol = self.tolerance
+        if self.at_least is not None and value < self.at_least - tol:
             return False
-        return not (self.at_most is not None and value > self.at_most)
+        return not (self.at_most is not None and value > self.at_most + tol)
 
     def to_dict(self) -> dict[str, Any]:
         return {"quantity": self.quantity, "at_least": self.at_least, "at_most": self.at_most}
@@ -870,7 +1178,9 @@ class Step:
 
     * ``object``/``handle``: the object instance and which of its handles the tool addresses;
       ``target``: the destination bin of a pick, else ``None``.
-    * ``params``: one value per :attr:`PrimitiveInfo.params` row.
+    * ``params``: one value per :attr:`PrimitiveInfo.params` row, and any of its
+      :attr:`PrimitiveInfo.optional` rows (omitted when set to their default, so the step hashes
+      as one written without them).
     * ``after``: ids of steps that must finish first (all earlier in the list).
     * ``hold_after``: the step ends still holding its object, so the next step must use the
       same tool (no tool change or head switch while holding).
@@ -901,13 +1211,16 @@ class Step:
         if not isinstance(params, dict):
             raise TypeError("step params must be a mapping")
         by_name = {p.name: p for p in info.params}
-        problems = [f"unknown param {k!r}" for k in params if k not in by_name]
+        optional = {p.name: p for p in info.optional}
+        problems = [f"unknown param {k!r}" for k in params if k not in by_name and k not in optional]
         problems += [f"missing param {k!r}" for k in by_name if k not in params]
         for k, v in params.items():
-            if k in by_name:
-                problems += by_name[k].problems(v)
+            row = by_name.get(k) or optional.get(k)
+            if row is not None:
+                problems += row.problems(v)
         if problems:
             raise ValueError(f"step {self.id} ({self.primitive.value}): " + "; ".join(problems))
+        params = {k: v for k, v in params.items() if not (k in optional and v == optional[k].default)}
         object.__setattr__(self, "params", FrozenDict(params))
         success = tuple(self.success)
         if not 1 <= len(success) <= 4 or not all(isinstance(c, SuccessCriterion) for c in success):
@@ -1158,7 +1471,17 @@ class TaskSpec:
 
     def to_tool_args(self) -> dict[str, Any]:
         """The Task Engineer tool-call form (:func:`task_plan_json_schema`); round-trips through
-        :func:`task_spec_from_tool_args`."""
+        :func:`task_spec_from_tool_args`. A step lists every param the schema does, a taught
+        optional one at its default included (the step itself drops it, so its id is the same)."""
+        args = self._args()
+        for d, s in zip(args["steps"], self.steps, strict=True):
+            d["params"] = {**d["params"]}
+            for p in planner_params(s.info):
+                d["params"].setdefault(p.name, p.default)
+        return args
+
+    def _args(self) -> dict[str, Any]:
+        """The plan's fields as :meth:`to_dict` records them (each step's own params only)."""
         return {
             "title": self.title,
             "description": self.description,
@@ -1185,7 +1508,7 @@ class TaskSpec:
             "label": PRODUCT_MODE_LABEL,
             "task_id": self.task_id,
             "source": self.source,
-            **self.to_tool_args(),
+            **self._args(),
             "fidelity": {s.id: self.fidelity(s.id).value for s in self.steps},
         }
 
@@ -1249,8 +1572,10 @@ def _object_instance_schema(t: ObjectTemplate) -> dict[str, Any]:
 
 
 def _step_schema(info: PrimitiveInfo) -> dict[str, Any]:
-    quantities = sorted(set(info.quantities) | {q for t in info.objects for q in get_template(t).quantities})
-    handles = sorted(set(info.handles))
+    """One primitive's step branch, as offered to the Task Engineer (:func:`planner_kinds`)."""
+    kinds = planner_kinds(info)
+    quantities = sorted(set(info.quantities) | {q for t in kinds for q in get_template(t).quantities})
+    handles = sorted(set(planner_handles(info)))
     bounds = StepConstraints.BOUNDS
     constraints = _object(
         {
@@ -1284,7 +1609,7 @@ def _step_schema(info: PrimitiveInfo) -> dict[str, Any]:
                 else {"type": "null"}
             ),
             "description": _string(_TEXT_MAX["note"], "One plain sentence for the step list", min_len=1),
-            "params": params_json_schema(info.params),
+            "params": params_json_schema(planner_params(info)),
             "constraints": constraints,
             "success": {"type": "array", "items": criterion, "minItems": 1, "maxItems": 4},
             "after": {"type": "array", "items": slug, "maxItems": MAX_STEPS},
@@ -1304,7 +1629,8 @@ def task_plan_json_schema() -> dict[str, Any]:
     Every object is closed (``additionalProperties: false``) with every property required;
     every number and string is bounded; objects and steps are one ``anyOf`` branch per template
     kind and per primitive. Cross-references (step -> object, handle, quantities, order) are
-    checked by :class:`TaskSpec` after parsing.
+    checked by :class:`TaskSpec` after parsing. It offers what the Engineer has been taught
+    (:func:`planner_templates`; module docstring).
     """
     line = _string(_TEXT_MAX["line"], "", min_len=1)
     return _object(
@@ -1313,7 +1639,7 @@ def task_plan_json_schema() -> dict[str, Any]:
             "description": _string(_TEXT_MAX["description"], "The use case in two or three sentences"),
             "objects": {
                 "type": "array",
-                "items": {"anyOf": [_object_instance_schema(t) for t in templates()]},
+                "items": {"anyOf": [_object_instance_schema(t) for t in planner_templates()]},
                 "maxItems": MAX_OBJECTS,
             },
             "steps": {
@@ -1450,13 +1776,18 @@ def task_spec_from_tool_args(args: Mapping[str, Any], *, source: TaskSource = "n
 
 @dataclass(frozen=True)
 class WristLimits:
-    """The Studio wrist's continuous roll, the same for every candidate [assumed values].
+    """The Studio wrist's pitch and continuous roll, the same for every candidate [assumed values].
 
     The four core wrist servos (x, y, z, yaw) are the frozen ``task_v2`` ones, unchanged. The
-    roll is a continuous hinge about the tool axis (vertical when a tool is presented) between
-    the core wrist and the flange, driven by a position servo whose torque saturates at
-    ``roll_torque_nm`` (equal to the core yaw servo's 15 N m). Controllers may not move the roll
-    target faster than ``roll_speed_max_deg_s``.
+    **pitch** is a limited hinge about the palm's x axis through the wrist centre, after the yaw
+    and before the roll: at pitch 0 the tool points straight down, at +-``pitch_range_deg`` (90)
+    it is horizontal. A stiff position servo drives it (``pitch_kp``, so a held pitch barely
+    deflects under contact), its torque saturating at ``pitch_torque_nm`` (the core yaw servo's
+    15 N m). The **roll** is a continuous hinge about the tool axis (vertical when a tool is
+    presented at pitch 0) between the pitch stage and the flange, driven by a position servo whose
+    torque saturates at ``roll_torque_nm`` (equal to the core yaw servo's 15 N m). Controllers may
+    not move the roll target faster than ``roll_speed_max_deg_s``, nor the pitch target faster
+    than ``pitch_speed_dps`` or past +-``pitch_range_deg``.
     """
 
     roll_torque_nm: float = 15.0
@@ -1464,8 +1795,15 @@ class WristLimits:
     roll_kv: float = 1.0  # N m s / rad
     roll_armature: float = 0.001  # kg m^2
     roll_speed_max_deg_s: float = 180.0
-    rotor_mass_kg: float = 0.05  # roll stage between the core wrist and the flange
+    rotor_mass_kg: float = 0.05  # roll stage between the pitch stage and the flange
     flange_mass_kg: float = 0.10  # the flange body the tools mount on
+    pitch_range_deg: float = 90.0  # +- from straight down
+    pitch_kp: float = 500.0  # N m / rad: stiff, so a held pitch barely deflects under contact
+    pitch_kv: float = 5.0  # N m s / rad
+    pitch_torque_nm: float = 15.0  # the core yaw servo's
+    pitch_armature: float = 0.005  # kg m^2 (a geared joint's reflected rotor inertia)
+    pitch_speed_dps: float = 180.0  # deg/s, the cap on the pitch target's speed
+    pitch_mass_kg: float = 0.05  # pitch stage between the core wrist and the roll stage
 
     def __post_init__(self) -> None:
         for name in (
@@ -1476,6 +1814,13 @@ class WristLimits:
             "roll_speed_max_deg_s",
             "rotor_mass_kg",
             "flange_mass_kg",
+            "pitch_range_deg",
+            "pitch_kp",
+            "pitch_kv",
+            "pitch_torque_nm",
+            "pitch_armature",
+            "pitch_speed_dps",
+            "pitch_mass_kg",
         ):
             if _number(name, getattr(self, name)) <= 0:
                 raise ValueError(f"{name} must be positive")
@@ -1555,12 +1900,14 @@ class ToolChanger:
 
     ``changeover_s`` is paid at every change; ``stack_mm`` lowers every tool's mount plane; the
     master plate stays on the wrist and the tool plate travels with its tool (the mass swap).
-    Defaults [assumed] are a small pneumatic changer's; fairness requires every tool-change
-    candidate in one comparison to use the same changer.
+    Defaults [assumed] are a small pneumatic changer's: :data:`TOOL_CHANGE_S` (7.5 s [assumed]:
+    sources 5–10 s; one changer measured 7.33 s) and a 52 mm stack (master and tool plate
+    coupled) [assumed]. Fairness requires every tool-change candidate in one comparison to use
+    the same changer.
     """
 
     changeover_s: float = TOOL_CHANGE_S
-    stack_mm: float = 25.0
+    stack_mm: float = 52.0  # [assumed]
     master_mass_kg: float = 0.25
     tool_plate_mass_kg: float = 0.10
 
@@ -1791,10 +2138,11 @@ STEP_FAILURE_MODES: Final[tuple[str, ...]] = (
     "jam",  # an insertion stalled short of its depth
     "dropped",  # a held object was lost
     "physics_invalid",  # MuJoCo reset the state (bad acceleration)
-    "physics_unreliable",  # tool-object penetration above 1 mm while scoring
+    "physics_unreliable",  # penetration above 1 mm for more than 10 ms (any pair but designed ones)
     "invalid_build",  # the setup could not be built for this task
     "not_simulated",  # no physics for this primitive or template yet (never scored as a pass)
     "not_reached",  # an earlier step failed, so the task stopped
+    "out_of_reach",  # the step's target lies outside the palm's travel (Studio v2)
 )
 
 

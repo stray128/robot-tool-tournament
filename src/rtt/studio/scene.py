@@ -1,4 +1,4 @@
-"""The Studio scene: the core world and wrist, a continuous wrist roll, one setup's tools, the objects.
+"""The Studio scene: the core world and wrist, a wrist pitch and roll, one setup's tools, the objects.
 
 Everything outside the tools is built from the frozen simulator, as in the v1 effector scene
 (:mod:`rtt.effectors.scene`): the task's solver options, contact defaults, lights, table and floor
@@ -9,13 +9,22 @@ scenes are untouched; this is the Studio's own builder.
 Kinematic chain (names in :data:`WRIST_BODIES`)::
 
     world -> palm (slides x, y, z and the yaw hinge: frozen core wrist, 0.4 kg, no geometry)
+          -> wrist_pitch (limited hinge about the palm's x axis, STUDIO_WRIST limits)
           -> wrist_roll (continuous hinge about the tool axis, STUDIO_WRIST limits)
           -> wrist_flange (the 63 mm x 24 mm flange geom; the tools hang below it)
 
-* **Wrist roll.** A hinge about the palm's z axis through the wrist centre, unlimited
+* **Wrist pitch.** A hinge about the palm's x axis through the wrist centre, after the yaw and
+  before the roll, so the roll stays about the tool axis: limited to +-``pitch_range_deg``
+  (90 deg: straight down to horizontal either way), driven by a stiff position servo whose
+  torque saturates at ``STUDIO_WRIST.pitch_torque_nm``. A tool point ``p`` (wrist frame, pitch
+  and roll 0) is at ``palm + Rz(yaw) Rx(pitch) Rz(roll) p`` (:func:`world_tcp`).
+* **Wrist roll.** A hinge about the pitch stage's z axis through the wrist centre, unlimited
   (continuous), driven by a position servo whose torque saturates at
   ``STUDIO_WRIST.roll_torque_nm``; the control is unlimited so a target can wind several turns.
-  Every candidate gets the same roll (:mod:`rtt.studio.fairness` asserts it).
+  Every candidate gets the same pitch and roll (:mod:`rtt.studio.fairness` asserts it).
+* **Control vector.** The six wrist servos first, in :data:`WRIST_JOINTS` order (x, y, z, yaw,
+  roll, pitch: the roll keeps index 4 and the pitch is index 5), then every head's actuators in
+  head order, then the objects' passive actuators.
 * **single:** the family builds under the flange exactly as in the v1 scene (mount plane at
   wrist z = -12 mm, :data:`~rtt.effectors.scene.MOUNT_Z`), names ``eff_*``.
 * **tool_change:** the changer's master and tool plates (``eff_studio_changer``,
@@ -108,10 +117,14 @@ from rtt.studio.types import (
 )
 
 if TYPE_CHECKING:
+    from numpy.typing import ArrayLike
+
     from rtt.parts.types import PartSpec
 
 __all__ = [
     "FLANGE_BODY",
+    "PITCH_ACTUATOR",
+    "PITCH_JOINT",
     "ROLL_ACTUATOR",
     "ROLL_JOINT",
     "STUDIO_PREFIX",
@@ -124,15 +137,26 @@ __all__ = [
     "build_studio_scene",
     "idle_prefix",
     "present_quat",
+    "rot_x",
+    "rot_z",
+    "world_tcp",
+    "wrist_rotation",
 ]
 
 ROLL_JOINT: Final = "wrist_roll"
 ROLL_ACTUATOR: Final = "wrist_roll"
 ROLL_BODY: Final = "wrist_roll"
+#: The pitch hinge sits between the core wrist (after its yaw) and the roll, about the palm's x
+#: axis through the wrist centre, so the roll stays about the tool axis.
+PITCH_JOINT: Final = "wrist_pitch"
+PITCH_ACTUATOR: Final = "wrist_pitch"
+PITCH_BODY: Final = "wrist_pitch"
 FLANGE_BODY: Final = "wrist_flange"
-WRIST_BODIES: Final[tuple[str, ...]] = (BODY_PALM, ROLL_BODY, FLANGE_BODY)
-#: The control vector starts with these five servos, in this order.
-WRIST_JOINTS: Final[tuple[str, ...]] = (*PALM_JOINTS, ROLL_JOINT)
+#: The wrist bodies, in chain order.
+WRIST_BODIES: Final[tuple[str, ...]] = (BODY_PALM, PITCH_BODY, ROLL_BODY, FLANGE_BODY)
+#: The control vector starts with these six servos, in this order (the pitch last, so the roll
+#: keeps index 4).
+WRIST_JOINTS: Final[tuple[str, ...]] = (*PALM_JOINTS, ROLL_JOINT, PITCH_JOINT)
 #: Tool-stack elements the Studio itself adds (bracket, adapters, changer plates).
 STUDIO_PREFIX: Final = f"{NAME_PREFIX}studio_"
 _MOUNT = f"{STUDIO_PREFIX}mount"  # a multi-tool head's adapter body (one per head)
@@ -149,9 +173,7 @@ def idle_prefix(tool: int) -> str:
 
 
 def _rot_x(deg: float) -> np.ndarray:
-    a = math.radians(deg)
-    c, s = math.cos(a), math.sin(a)
-    return np.array([[1.0, 0.0, 0.0], [0.0, c, -s], [0.0, s, c]])
+    return rot_x(math.radians(deg))
 
 
 def _quat(r: np.ndarray) -> list[float]:
@@ -172,12 +194,12 @@ class HeadBuild:
     """One tool in the scene: its family build, names and where it sits.
 
     * ``build``: what the family returned (names without ``prefix``), with ``mass``, ``com``
-      and ``inertia6`` measured from this scene (wrist frame, roll 0).
+      and ``inertia6`` measured from this scene (wrist frame, pitch and roll 0).
     * ``prefix``: ``""`` for the active head (and every single or tool-change tool), else
       ``eff_h<k>_``; :meth:`name` prefixes a family name.
     * ``mount_body``: the body the family built under.
     * ``tcp_wrist``/``axis_wrist``: the grasp centre and the tool axis (pointing out of the
-      tool) in the wrist (palm) frame, at roll 0.
+      tool) in the wrist (palm) frame, at pitch and roll 0 (:func:`world_tcp` places it).
     """
 
     tool: int
@@ -202,12 +224,15 @@ class StudioSceneIds:
     """Indices into a compiled Studio scene."""
 
     palm_body: int
+    pitch_body: int
     roll_body: int
     flange_body: int
     palm_qpos: np.ndarray  # x, y, z, yaw
+    pitch_qpos: int
+    pitch_dof: int
     roll_qpos: int
     roll_dof: int
-    wrist_actuators: np.ndarray  # x, y, z, yaw, roll (always 0..4)
+    wrist_actuators: np.ndarray  # x, y, z, yaw, roll, pitch (always 0..5)
     effector_actuators: np.ndarray  # the active head's, in its build order
     idle_actuators: np.ndarray  # every idle head's
     object_actuators: np.ndarray  # the templates' passive actuators
@@ -260,7 +285,8 @@ def _cylinder_inertia(mass: float, radius: float, height: float) -> list[float]:
 def _add_studio_wrist(
     spec: mujoco.MjSpec, palm: mujoco.MjsBody, task: TaskV2, wrist: WristLimits, quat: list[float]
 ) -> mujoco.MjsBody:
-    """The core wrist without geometry, its four frozen servos, the roll stage and the flange."""
+    """The core wrist without geometry, its four frozen servos, the pitch and roll stages and the
+    flange (servo order: the four core servos, the roll, the pitch)."""
     g, phys = task.gripper, task.physics
     spec.delete(spec.geom(BODY_PALM))
     palm.explicitinertial = True
@@ -276,7 +302,21 @@ def _add_studio_wrist(
     _add_position_actuator(
         spec, "palm_yaw", "palm_yaw", g.yaw_kp, g.yaw_kv, g.yaw_torque, (-YAW_LIMIT, YAW_LIMIT)
     )
-    roll = palm.add_body(name=ROLL_BODY, gravcomp=1.0)
+    pitch = palm.add_body(name=PITCH_BODY, gravcomp=1.0)
+    pitch.explicitinertial = True
+    pitch.mass = wrist.pitch_mass_kg
+    pitch.ipos = [0.0, 0.0, 0.0]
+    pitch.inertia = _cylinder_inertia(wrist.pitch_mass_kg, 0.5 * FLANGE_RADIUS, 0.01)
+    lim = math.radians(wrist.pitch_range_deg)
+    pitch.add_joint(
+        name=PITCH_JOINT,
+        type=mujoco.mjtJoint.mjJNT_HINGE,
+        axis=[1.0, 0.0, 0.0],
+        range=[-lim, lim],
+        limited=mujoco.mjtLimited.mjLIMITED_TRUE,
+        armature=wrist.pitch_armature,
+    )
+    roll = pitch.add_body(name=ROLL_BODY, gravcomp=1.0)
     roll.explicitinertial = True
     roll.mass = wrist.rotor_mass_kg
     roll.ipos = [0.0, 0.0, 0.0]
@@ -293,6 +333,9 @@ def _add_studio_wrist(
     act.ctrllimited = mujoco.mjtLimited.mjLIMITED_FALSE
     act.forcelimited = mujoco.mjtLimited.mjLIMITED_TRUE
     act.forcerange = [-wrist.roll_torque_nm, wrist.roll_torque_nm]
+    _add_position_actuator(
+        spec, PITCH_ACTUATOR, PITCH_JOINT, wrist.pitch_kp, wrist.pitch_kv, wrist.pitch_torque_nm, (-lim, lim)
+    )
     flange = roll.add_body(name=FLANGE_BODY, quat=quat, gravcomp=1.0)
     flange.add_geom(
         name=FLANGE_GEOM,
@@ -302,6 +345,42 @@ def _add_studio_wrist(
         rgba=list(PALM_RGBA),
     )
     return flange
+
+
+def rot_z(angle: float) -> np.ndarray:
+    """The rotation by ``angle`` (rad) about the world's vertical."""
+    c, s = math.cos(angle), math.sin(angle)
+    return np.array([[c, -s, 0.0], [s, c, 0.0], [0.0, 0.0, 1.0]])
+
+
+def rot_x(angle: float) -> np.ndarray:
+    """The rotation by ``angle`` (rad) about x."""
+    c, s = math.cos(angle), math.sin(angle)
+    return np.array([[1.0, 0.0, 0.0], [0.0, c, -s], [0.0, s, c]])
+
+
+def wrist_rotation(yaw: float, roll: float, pitch: float = 0.0) -> np.ndarray:
+    """The roll stage's orientation in the world, ``Rz(yaw) Rx(pitch) Rz(roll)`` (rad): the chain
+    palm yaw, then the pitch about the palm's x axis, then the roll about the tool axis. At pitch 0
+    it is computed as ``Rz(yaw + roll)``, the pitch-free wrist's own expression. The one wrist
+    rotation of the Studio: the primitives, the plan's TCP and the search all use it."""
+    if pitch == 0.0:
+        return rot_z(yaw + roll)
+    return rot_z(yaw) @ rot_x(pitch) @ rot_z(roll)
+
+
+def world_tcp(scene: StudioScene, data: mujoco.MjData, point: ArrayLike | None = None) -> np.ndarray:
+    """The active head's TCP in the world now (m): ``palm + Rz(yaw) Rx(pitch) Rz(roll) tcp``.
+
+    ``tcp`` is the head's ``tcp_wrist``, or ``point`` (any point in the same wrist frame, at
+    pitch and roll 0). It reads the wrist joints in ``data.qpos`` only, so it needs no forward
+    kinematics; it equals MuJoCo's own chain to rounding (a contract test checks it).
+    """
+    q = data.qpos
+    x, y, z, yaw = (float(q[a]) for a in scene.ids.palm_qpos)
+    r = wrist_rotation(yaw, float(q[scene.ids.roll_qpos]), float(q[scene.ids.pitch_qpos]))
+    p = scene.active.tcp_wrist if point is None else point
+    return np.array([x, y, z]) + r @ np.asarray(p, dtype=np.float64)
 
 
 # --------------------------------------------------------------------------- family builds
@@ -657,7 +736,7 @@ def build_studio_scene(
 ) -> StudioScene:
     """Author, check and compile the scene for ``setup`` with ``tool`` active (module docstring).
 
-    The control vector is the five wrist servos (x, y, z, yaw, roll), then every head's
+    The control vector is the six wrist servos (x, y, z, yaw, roll, pitch), then every head's
     actuators in head order, then the objects' passive actuators. ``edit`` (tests only) may
     change the authored spec before compiling. Raises :class:`~rtt.effectors.types.InvalidEffector`
     if a family cannot build its tool for its part, :class:`~rtt.studio.templates.TemplateUnavailable`
@@ -730,17 +809,19 @@ def build_studio_scene(
     def bid(n: str) -> int:
         return model.body(n).id
 
-    palm_id, roll_id, flange_id = (bid(n) for n in WRIST_BODIES)
-    wrist_acts = np.array([model.actuator(n).id for n in (*PALM_JOINTS, ROLL_ACTUATOR)], dtype=np.int64)
+    palm_id, pitch_id, roll_id, flange_id = (bid(n) for n in WRIST_BODIES)
+    wrist_acts = np.array(
+        [model.actuator(n).id for n in (*PALM_JOINTS, ROLL_ACTUATOR, PITCH_ACTUATOR)], dtype=np.int64
+    )
     if list(wrist_acts) != list(range(len(WRIST_JOINTS))):
-        raise ContractError("the compiled actuator order does not start with the five wrist servos")
+        raise ContractError("the compiled actuator order does not start with the six wrist servos")
     eff = {
         b
         for b in range(model.nbody)
         if (mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, b) or "").startswith(NAME_PREFIX)
     }
     owners = {name: {model.body(b).id for b in h.bodies} for name, h in handles.items()}
-    problems = _check_compiled(model, eff, {palm_id, roll_id, flange_id}, owners)
+    problems = _check_compiled(model, eff, {palm_id, pitch_id, roll_id, flange_id}, owners)
     if problems:
         raise ContractError("the Studio scene contract is broken: " + "; ".join(problems))
 
@@ -788,7 +869,7 @@ def build_studio_scene(
     )
     group = np.full(model.ngeom, GROUP_OTHER, dtype=np.int8)
     group[model.body_weldid[model.geom_bodyid] == 0] = GROUP_ENV
-    group[np.isin(model.geom_bodyid, [palm_id, roll_id, flange_id])] = GROUP_PALM
+    group[np.isin(model.geom_bodyid, [palm_id, pitch_id, roll_id, flange_id])] = GROUP_PALM
     group[is_eff] = GROUP_FINGER_LEFT
     moving_obj = obj_geom_ids[model.body_weldid[model.geom_bodyid[obj_geom_ids]] != 0]
     group[moving_obj] = GROUP_OBJECT
@@ -796,9 +877,12 @@ def build_studio_scene(
     idle_acts = [model.actuator(a).id for h in heads if not h.active for a in h.actuators]
     ids = StudioSceneIds(
         palm_body=palm_id,
+        pitch_body=pitch_id,
         roll_body=roll_id,
         flange_body=flange_id,
         palm_qpos=np.array([model.jnt_qposadr[model.joint(n).id] for n in PALM_JOINTS]),
+        pitch_qpos=int(model.jnt_qposadr[model.joint(PITCH_JOINT).id]),
+        pitch_dof=int(model.jnt_dofadr[model.joint(PITCH_JOINT).id]),
         roll_qpos=int(model.jnt_qposadr[model.joint(ROLL_JOINT).id]),
         roll_dof=int(model.jnt_dofadr[model.joint(ROLL_JOINT).id]),
         wrist_actuators=wrist_acts,
