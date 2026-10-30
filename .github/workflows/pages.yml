@@ -34,7 +34,6 @@ jobs:
     env:
       NEXT_PUBLIC_BASE_PATH: /robot-tool-tournament
       NEXT_PUBLIC_REPO_URL: https://github.com/stray128/robot-tool-tournament
-      NEXT_PUBLIC_RUNNER_URL: https://y73ks47vrxfvytbugtjkrqrryq0caurq.lambda-url.ap-south-1.on.aws
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@v4
@@ -56,12 +55,16 @@ jobs:
         run: pnpm test
 
       - name: Build the static export
+        env:
+          # Only the build needs the hosted runner's address; the unit tests check the panel with it unset.
+          NEXT_PUBLIC_RUNNER_URL: https://y73ks47vrxfvytbugtjkrqrryq0caurq.lambda-url.ap-south-1.on.aws
         run: pnpm build
 
       - name: Check the export
         run: |
           test -f out/index.html
           grep -q '/robot-tool-tournament/_next/' out/index.html
+          grep -rqs 'lambda-url.ap-south-1.on.aws' out/_next/static
           touch out/.nojekyll
 
       - uses: actions/configure-pages@v5
