@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { RunnerState } from "@/components/studio/runner/controller";
 import HostedRunner from "@/components/studio/runner/HostedRunner";
 import { KEY_FIELD_ATTRIBUTES } from "@/components/studio/runner/keyfield";
+import { RUNNER_TRIAL_LIMITS } from "@/lib/runner_limits";
 import { capSentence, MESSAGES, parseHealth } from "@/lib/runner";
 
 import { HEALTH } from "./helpers/runner_mock";
@@ -65,6 +66,13 @@ function panel(state: Partial<RunnerState>): { html: string; text: string } {
     .replace(/\s+/g, " ")
     .trim();
   return { html, text };
+}
+
+/** The text of the fault notice alone (role="alert"), for what a refusal says: the panel's own note about the daily limits is not part of it. */
+function alertText(html: string): string {
+  const notice = /<div role="alert"[^>]*>([\s\S]*?)<\/div>/.exec(html);
+  if (!notice) throw new Error("no fault notice in the markup");
+  return notice[1]!.replace(/<!-- -->/g, "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 }
 
 /** The attributes of the key field, lower-cased, from the markup. */
@@ -196,6 +204,60 @@ describe("the off notice", () => {
   });
 });
 
+describe("the trial's limits are stated up front", () => {
+  const NOTE =
+    "Free trial, with daily limits. Each visitor gets 3 free plans and 2 physics runs a day (up to 30 plans with your own key), from a small shared budget. If you reach a limit, the page says which one and when it resets. Everything here also runs on your own computer, without limits.";
+
+  it("is always on the ready panel, whichever way the visitor chooses to pay, and before anything has been refused", () => {
+    for (const provider of ["nvidia", "tokenfactory", "free"] as const) {
+      const { html, text } = panel(ready({ provider }));
+      expect(text, provider).toContain(NOTE);
+      expect(html, provider).toContain("data-trial-limits");
+    }
+    // still there while planning, after a refusal, and once a run is under way
+    for (const state of [
+      ready({ provider: "free", planPhase: "planning", planStartedAt: NOW }),
+      ready({ planPhase: "error", planFault: { kind: "cap", message: capSentence("free_plans_per_ip_per_day"), retry: null } }),
+      ready({ runPhase: "running", runStartedAt: NOW }),
+    ]) {
+      expect(panel(state).text).toContain(NOTE);
+    }
+  });
+
+  it("takes its numbers from the one place that holds them", () => {
+    const { freePlansPerVisitor: free, keyedPlansPerVisitor: keyed, runsPerVisitor: runs } = RUNNER_TRIAL_LIMITS;
+    expect(panel(ready()).text).toContain(`Each visitor gets ${free} free plans and ${runs} physics runs a day (up to ${keyed} plans with your own key)`);
+  });
+
+  it("comes after the introduction and before the choice of who pays, so it is read first", () => {
+    const { text } = panel(ready());
+    const intro = text.indexOf("Product mode, simulated, verify on hardware.");
+    expect(intro).toBeGreaterThan(-1);
+    expect(text.indexOf(NOTE)).toBeGreaterThan(intro);
+    expect(text.indexOf(NOTE)).toBeLessThan(text.indexOf("Who pays for the planning call"));
+    expect(text.indexOf(NOTE)).toBeLessThan(text.indexOf("Use the free allowance"));
+  });
+
+  it("leaves the whole-site counts and the switch-off line as they were", () => {
+    const { text } = panel(ready());
+    expect(text).toContain("Use the free allowance (3 free plans left today across the site)");
+    expect(text).toContain("Runs on Nebius Serverless Jobs, capped at $2 a day. 9 runs left today across the site.");
+    expect(text).toContain("This hosted service is a limited trial and switches itself off on 15 December 2026.");
+    expect(text).not.toContain("Everything on this page also runs on your own machine.");
+  });
+
+  it("is not shown when the runner is off, where the notice already sends the visitor to their own machine", () => {
+    const { html } = panel({ gate: "off", offReason: "kill_switch", health: parseHealth({ ...HEALTH, open: true, kill_switch: true }) });
+    expect(html).not.toContain("data-trial-limits");
+    expect(html).not.toContain("Free trial, with daily limits");
+  });
+
+  it("follows the writing rules: no em dash or en dash, no raw status code", () => {
+    expect(NOTE).not.toMatch(/—|–| -- /);
+    expect(panel(ready()).text).not.toMatch(/\b(400|401|403|404|413|422|429|500|502|503)\b/);
+  });
+});
+
 describe("the counts beside the buttons are for the whole site", () => {
   it("the free allowance and the run cap line say so", () => {
     const { text } = panel(ready());
@@ -267,12 +329,47 @@ describe("a 503 that is not the runner being off", () => {
   });
 });
 
+describe("a cap that does not reset", () => {
+  const TOTAL = "The hosted runner's total compute budget is used up. It does not reset.";
+
+  it("offers Run it yourself beside the refusal, as the off notice does, with no Try again to repeat it", () => {
+    const { html, text } = panel(ready({ runFault: { kind: "cap", message: TOTAL, retry: null, neverResets: true } }));
+    expect(html).toContain('data-hosted-error="cap"');
+    expect(text).toContain(`${TOTAL} Run it on your own machine: Run it yourself`);
+    expect(html).toMatch(/href="\/docs\/tutorials\/run-it-yourself\/?"/);
+    expect(html).not.toContain("data-hosted-retry");
+  });
+
+  it("the same link on a refused plan", () => {
+    const { html, text } = panel(ready({ planPhase: "error", planFault: { kind: "cap", message: TOTAL, retry: null, neverResets: true } }));
+    expect(text).toContain(`${TOTAL} Run it on your own machine: Run it yourself`);
+    expect(html).toMatch(/href="\/docs\/tutorials\/run-it-yourself\/?"/);
+  });
+
+  it("a cap that resets keeps its words and has no tutorial link", () => {
+    for (const cap of ["free_plans_per_ip_per_day", "keyed_plans_per_ip_per_day", "runs_per_ip_per_day", "spend_per_day_usd"]) {
+      const message = `${capSentence(cap)} It resets at 29 October 2026, 00:00 UTC.`;
+      const { html, text } = panel(ready({ runFault: { kind: "cap", message, retry: null } }));
+      expect(text, cap).toContain(message);
+      expect(html, cap).not.toContain("run-it-yourself");
+    }
+  });
+
+  it("the off notice reads as it did, with the same words before the same link", () => {
+    const { text } = panel(ready({ runFault: { kind: "off", message: MESSAGES.off, retry: null } }));
+    expect(text).toContain("The hosted runner is off. Run it on your own machine: Run it yourself");
+    expect(text).not.toContain("Run it on your own machine: Run it on your own machine");
+  });
+});
+
 describe("a busy runner", () => {
   it("shows the plain message with a Try again, and no daily limit", () => {
     const { html, text } = panel(ready({ planPhase: "error", planFault: { kind: "busy", message: MESSAGES.busy, retry: "plan" } }));
     expect(html).toContain('data-hosted-error="busy"');
     expect(text).toContain("The runner is busy. Try again in a minute.");
-    expect(text).not.toMatch(/daily limit/i);
+    // the notice itself says nothing of a limit (the panel's note above it states the trial's limits, which is not a claim that one was reached)
+    expect(alertText(html)).toBe("The runner is busy. Try again in a minute. Try again Paste your key again; it is forgotten after each request.");
+    expect(alertText(html)).not.toMatch(/daily limit/i);
     expect(html).toContain("data-hosted-retry");
   });
 });

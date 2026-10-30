@@ -71,6 +71,12 @@ const HOSTED_ONLY = {
   "/studio/": ["This public site replays the recorded plans and the recorded test runs", "Plan replays the recorded plan of an example, model calls included. To plan your own words live, use the panel below"],
 };
 const KEY_LINE = "Your key is sent once over HTTPS for this request and is never stored or logged.";
+// The trial's per-visitor limits (lib/runner_limits.ts, checked against src/rtt/runner/config.py by tests/runner_limits.test.ts):
+// in the hosted panel and in the hosted docs section of a runner build, and nowhere in a public one.
+const LIMITS_NOTE =
+  "Free trial, with daily limits. Each visitor gets 3 free plans and 2 physics runs a day (up to 30 plans with your own key), from a small shared budget. If you reach a limit, the page says which one and when it resets. Everything here also runs on your own computer, without limits.";
+const LIMITS_DOCS =
+  "The hosted runner is a free trial with daily limits: each visitor gets 3 free plans and 2 physics runs a day (up to 30 plans with your own key), from a small shared budget. Everything it does also runs on your own computer, without limits.";
 const outDir = path.resolve(values.out);
 const base = values.base.replace(/\/$/, "");
 const index = JSON.parse(readFileSync(path.join(outDir, "data", "studio", "index.json"), "utf8"));
@@ -223,7 +229,7 @@ async function hostedChecks(page, route, text) {
   const docs = route === "/docs/quickstart/" || route === "/docs/tutorials/plan-a-task/";
   if (!HOSTED) {
     if (panel) problems.push("the hosted panel is on the page, but the build has no runner");
-    for (const t of [HOSTED_PANEL, HOSTED_DOC, "Run in physics"]) if (text.includes(t)) problems.push(`shows "${t}", but the build has no runner`);
+    for (const t of [HOSTED_PANEL, HOSTED_DOC, "Run in physics", "Free trial, with daily limits", "free trial with daily limits"]) if (text.includes(t)) problems.push(`shows "${t}", but the build has no runner`);
     if (await page.$('a[href="#hosted"]')) problems.push("the docs list a hosted section, but the build has no runner");
     if (route === "/") {
       const lede = await page.locator("#hero-title + p").innerText();
@@ -238,12 +244,17 @@ async function hostedChecks(page, route, text) {
       for (const t of [HOSTED_PANEL, "Use my NVIDIA API key", "Use my Nebius Token Factory key", "Use the free allowance", KEY_LINE, "Plan live", "Run in physics", "Runs on Nebius Serverless Jobs, capped at $2 a day"]) {
         if (!inner.includes(t)) problems.push(`the hosted panel lacks "${t}"`);
       }
+      if (!inner.replace(/\s+/g, " ").includes(LIMITS_NOTE)) problems.push("the hosted panel does not state the trial's daily limits");
     }
   } else if (panel) problems.push("the hosted panel is on a page that is not the Studio");
   if (docs) {
     const section = await page.$("article#hosted, section#hosted");
     if (!section) problems.push("no hosted section in these docs");
-    else if (!(await section.innerText()).includes(KEY_LINE)) problems.push("the hosted docs section lacks the key privacy line");
+    else {
+      const inner = (await section.innerText()).replace(/\s+/g, " ");
+      if (!inner.includes(KEY_LINE)) problems.push("the hosted docs section lacks the key privacy line");
+      if (!inner.includes(LIMITS_DOCS)) problems.push("the hosted docs section does not state the trial's daily limits");
+    }
     if (!(await page.$('a[href="#hosted"]'))) problems.push('"On this page" has no entry for the hosted section');
   } else if (route.startsWith("/docs/") && text.includes(HOSTED_DOC)) problems.push("a docs page that should not has the hosted section");
   if (route === "/") {

@@ -48,7 +48,7 @@ const planDoc = (expect) => recorded.examples.find((e) => e.expect === expect &&
  *   plan valid|failed|refused|401|429|busy (a 429 with no cap: the hosting layer throttling)|400|drop
  *        | 503 (the kill switch: off) | 503_closed (the auto-off date: off) | 503_free (the free tier is down)
  *        | 503_unconfigured | 503_bare (no words: the hosting layer);
- *   run ok|400|429|busy|drop
+ *   run ok|400|429|429_total (the total compute budget, which has no reset time)|busy|drop
  *        | 503 (the kill switch: off) | 503_closed | 503_job (the simulator could not start a job)
  *        | 503_backend | 503_platform | 503_unconfigured | 503_bare;
  *   poll ok|drop|404; ending done|failed|no_pick.
@@ -205,6 +205,8 @@ export async function startMockRunner({ port = 0, state = defaultState() } = {})
       if (error503(state.run)) return send(res, 503, error503(state.run));
       if (state.run === "busy") return send(res, 429, { message: "Too Many Requests" });
       if (state.run === "429") return send(res, 429, { error: "cap reached: the daily limit on runs per visitor; it resets at " + RESET, cap: "runs_per_ip_per_day", limit: 2, resets_at: RESET });
+      // the runner's own body for the one cap that never resets (rtt.runner.caps.CapRefused)
+      if (state.run === "429_total") return send(res, 429, { error: "cap reached: the runner's total compute budget; it does not reset", cap: "spend_total_usd", limit: 10, resets_at: null });
       let input;
       try {
         input = JSON.parse(body);

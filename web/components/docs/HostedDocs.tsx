@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { DocSection, Note } from "@/components/docs/DocsShell";
 import { PRODUCT_MODE_LABEL } from "@/components/studio/schema";
+import { liveCopy } from "@/lib/live_copy";
 import { KEY_PRIVACY_LINE, RUN_CAP_LINE, runnerConfigured } from "@/lib/runner";
 
 /** The docs section id and title for the hosted runner; the pages list it in their "On this page" only when it is on. */
@@ -13,8 +14,8 @@ export function withHosted<T extends { id: string; title: string }>(sections: re
 }
 
 /**
- * "Plan and run it on this site": the providers, the caps and the key privacy line. It renders
- * nothing unless this build has the hosted runner (NEXT_PUBLIC_RUNNER_URL), so the docs never
+ * "Plan and run it on this site": the providers, the trial's daily limits, the caps and the key privacy line. It
+ * renders nothing unless this build has the hosted runner (NEXT_PUBLIC_RUNNER_URL), so the docs never
  * promise a feature the site does not have.
  */
 export function HostedDocSection({ n, brief = false }: { n: number; brief?: boolean }) {
@@ -46,6 +47,7 @@ export function HostedDocSection({ n, brief = false }: { n: number; brief?: bool
       <Note title="Your key">
         {KEY_PRIVACY_LINE} It stays in the page&apos;s memory only, and it is forgotten after each request unless you untick the box.
       </Note>
+      <p>{liveCopy("trialLimitsDocs")}</p>
       {brief ? (
         <p>
           Press <strong className="text-ink">Plan live</strong>, check the plan in the steps, then press <strong className="text-ink">Run in physics</strong>.{" "}

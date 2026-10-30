@@ -4,12 +4,19 @@
  * runs on your own machine. A build with it swaps in the `hosted` text, which also points to
  * the visitor's own key or the free allowance. Every place that makes this claim reads it from
  * here through `liveCopy`, so the flag is checked in one place and the two wordings sit side by side.
+ *
+ * Two entries (`trialLimitsPanel`, `trialLimitsDocs`) state the trial's per-visitor limits. They belong to
+ * the hosted panel and to the docs section about it, which a build without the runner does not have, so
+ * the public build says nothing there and their `local` text is empty. Their numbers come from
+ * `RUNNER_TRIAL_LIMITS` (lib/runner_limits.ts), which a test checks against the runner's own defaults.
  */
 
+import { countOf } from "./format";
 import { runnerConfigured } from "./runner";
+import { RUNNER_TRIAL_LIMITS } from "./runner_limits";
 
 export interface LiveCopyPair {
-  /** The approved text of the public build. Do not edit it. */
+  /** The approved text of the public build. Do not edit it. Empty where the public build has nothing to say. */
   readonly local: string;
   /** The text of a build that has the hosted runner. */
   readonly hosted: string;
@@ -71,6 +78,20 @@ export const LIVE_COPY = {
   intakeMessage: {
     local: "This public site runs in Explore mode: it has no model to call, so it can only replay the recorded plans of the examples. Pick an example, or build your plan by hand below. To plan your own words, run the Studio locally with its API.",
     hosted: "This public site runs in Explore mode, so Plan can only replay the recorded plans of the examples. Pick an example, or build your plan by hand below. To plan your own words, use your own key or a small free tier in the \u201cPlan and run it live\u201d panel, or run the Studio locally with its API.",
+  },
+  /**
+   * The hosted panel, the note under its introduction: the trial's limits, stated before one is reached so that a refusal is not
+   * taken for a broken page. The panel is only in a runner build, so the public build's text is empty. The numbers are each
+   * visitor's, per day (the counts beside the buttons are for the whole site).
+   */
+  trialLimitsPanel: {
+    local: "",
+    hosted: `Free trial, with daily limits. Each visitor gets ${countOf(RUNNER_TRIAL_LIMITS.freePlansPerVisitor, "free plan")} and ${countOf(RUNNER_TRIAL_LIMITS.runsPerVisitor, "physics run")} a day (up to ${countOf(RUNNER_TRIAL_LIMITS.keyedPlansPerVisitor, "plan")} with your own key), from a small shared budget. If you reach a limit, the page says which one and when it resets. Everything here also runs on your own computer, without limits.`,
+  },
+  /** The docs section "Plan and run it on this site" (quickstart and the plan-a-task tutorial), after the providers: the same facts. The section is only in a runner build. */
+  trialLimitsDocs: {
+    local: "",
+    hosted: `The hosted runner is a free trial with daily limits: each visitor gets ${countOf(RUNNER_TRIAL_LIMITS.freePlansPerVisitor, "free plan")} and ${countOf(RUNNER_TRIAL_LIMITS.runsPerVisitor, "physics run")} a day (up to ${countOf(RUNNER_TRIAL_LIMITS.keyedPlansPerVisitor, "plan")} with your own key), from a small shared budget. Everything it does also runs on your own computer, without limits.`,
   },
 } as const satisfies Record<string, LiveCopyPair>;
 

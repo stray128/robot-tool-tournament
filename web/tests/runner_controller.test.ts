@@ -569,6 +569,27 @@ describe("each error has a plain message", () => {
     expect(c.getSnapshot().runPhase).toBe("idle");
   });
 
+  it("429 on the total budget does not reset: the fault says so, so the panel can point to running it yourself", async () => {
+    const body = { error: "cap reached: the runner's total compute budget; it does not reset", cap: "spend_total_usd", limit: 10, resets_at: null };
+    const { c } = make({ "POST /runs": json(body, 429) });
+    await c.start();
+    await c.run(VALID_PLAN);
+    const s = c.getSnapshot();
+    expect(s.runFault).toEqual<Fault>({ kind: "cap", message: "The hosted runner's total compute budget is used up. It does not reset.", retry: null, neverResets: true });
+    expect(s.runPhase).toBe("idle");
+    // and on a plan, the same
+    const planned = await planWith({ "POST /plan": json(body, 429) });
+    expect(planned.planFault).toEqual<Fault>({ kind: "cap", message: "The hosted runner's total compute budget is used up. It does not reset.", retry: null, neverResets: true });
+  });
+
+  it("429 on a cap that resets carries no such mark", async () => {
+    const { c } = make({ "POST /runs": json({ error: "cap reached", cap: "spend_per_day_usd", limit: 2, resets_at: "2026-10-29T00:00:00Z" }, 429) });
+    await c.start();
+    await c.run(VALID_PLAN);
+    expect(c.getSnapshot().runFault).toEqual<Fault>({ kind: "cap", message: "The hosted runner's compute budget for today is used up. It resets at 29 October 2026, 00:00 UTC.", retry: null });
+    expect(c.getSnapshot().runFault).not.toHaveProperty("neverResets");
+  });
+
   it("503: a runner that says it is off reads as off, with the tutorial to point to, on a plan and on a run", async () => {
     for (const words of [OFF_WORDS, "the hosted runner closed after 2026-12-15; recorded runs still replay"]) {
       const s = await planWith({ "POST /plan": json({ error: words }, 503) });

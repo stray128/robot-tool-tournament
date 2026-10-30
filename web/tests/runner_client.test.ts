@@ -29,6 +29,7 @@ import {
   redact,
   reportLink,
   retryableKind,
+  RUN_YOURSELF_LEAD,
   RunnerError,
   runIdFromHash,
   runnerBase,
@@ -101,6 +102,26 @@ describe("plain error messages", () => {
   it("429 says a cap that never resets does not reset (the total budget has no reset time)", async () => {
     const e = await read(429, { error: "x", cap: "spend_total_usd", limit: 10, resets_at: null });
     expect(e.message).toBe("The hosted runner's total compute budget is used up. It does not reset.");
+  });
+
+  it("429 on the total budget is a cap that does not reset, and no other refusal is", async () => {
+    const total = await read(429, { error: "x", cap: "spend_total_usd", limit: 10, resets_at: null });
+    expect(total.kind).toBe("cap");
+    expect(total.neverResets).toBe(true);
+    // a cap with a reset time, however it is worded, resets
+    for (const cap of ["free_plans_per_day", "free_plans_per_ip_per_day", "keyed_plans_per_ip_per_day", "runs_per_ip_per_day", "spend_per_day_usd", "some_new_cap"]) {
+      expect((await read(429, { cap, resets_at: "2026-10-29T00:00:00Z" })).neverResets, cap).toBe(false);
+    }
+    // the hosting layer's throttle, the 503s and the other statuses are not a cap that does not reset
+    expect((await read(429, {})).neverResets).toBe(false);
+    expect((await read(503, { error: "the runner is switched off for now; recorded runs still replay" })).neverResets).toBe(false);
+    expect((await read(401)).neverResets).toBe(false);
+  });
+
+  it("the off message and the cap that does not reset share the words that lead to the tutorial link", () => {
+    expect(RUN_YOURSELF_LEAD).toBe("Run it on your own machine:");
+    expect(MESSAGES.off).toBe("The hosted runner is off. Run it on your own machine:");
+    expect(MESSAGES.off.endsWith(RUN_YOURSELF_LEAD)).toBe(true);
   });
 
   it("429 reads a cap nested under detail", async () => {

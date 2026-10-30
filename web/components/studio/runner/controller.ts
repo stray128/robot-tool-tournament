@@ -43,6 +43,8 @@ export interface Fault {
   retry: "plan" | "run" | "poll" | null;
   /** The runner's own checks that a refused plan failed, when it listed them. */
   problems?: string[];
+  /** A cap that does not reset was reached (the total compute budget): the page offers Run it yourself beside the message, as it does for "off". */
+  neverResets?: boolean;
 }
 
 export type PlanPhase = "idle" | "planning" | "done" | "error";
@@ -139,7 +141,13 @@ function faultOf(err: unknown, retry: Fault["retry"], key = ""): Fault {
   if (e && typeof e === "object" && typeof e.kind === "string" && typeof e.message === "string") {
     const retryable = retryableKind(e.kind);
     const problems = Array.isArray(e.problems) ? e.problems.map((p) => redact(p, key)) : [];
-    return { kind: e.kind, message: redact(e.message, key), retry: retryable ? retry : null, ...(problems.length ? { problems } : {}) };
+    return {
+      kind: e.kind,
+      message: redact(e.message, key),
+      retry: retryable ? retry : null,
+      ...(problems.length ? { problems } : {}),
+      ...(e.neverResets === true ? { neverResets: true } : {}),
+    };
   }
   return { kind: "server", message: MESSAGES.server, retry };
 }

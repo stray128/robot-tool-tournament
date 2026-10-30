@@ -175,6 +175,8 @@ only on your own machine, or that the site has no backend (home lede and Plan ca
 lede and note, the Studio's Explore mode tip, its Plan box and its custom-text message, the plan-a-task note) say that
 you can also plan live here with your own key or the free allowance. Those sentences live in `lib/live_copy.ts`, each
 as an approved `local` text and a `hosted` text, and are read through `liveCopy()`, the one place that checks the flag.
+Two more entries there state the trial's limits (below); the public build has neither the panel nor the docs section, so their
+`local` text is empty.
 
 | Request | Sent | Used |
 |---|---|---|
@@ -190,7 +192,13 @@ in UTC (it serves through that date). When `open` is there it is the runner's wo
 are 8 s for `/health`, 330 s for a plan and 210 s for submitting a run (a plan the runner has not seen can take two to three
 minutes to be checked before it answers 202), and the panel says so while it waits. A 429 that names a cap says which cap and
 when it resets; a 429 with no `cap` is the hosting layer throttling a burst and reads "The runner is busy. Try again in a
-minute." Every call is made with `redirect: "error"`, so a redirect of `POST /plan` can never carry the key to another address.
+minute." The one cap with no reset time, the total compute budget, reads "It does not reset." and, like the off notice, offers
+the Run it yourself link. Every call is made with `redirect: "error"`, so a redirect of `POST /plan` can never carry the key to another address.
+
+The panel says up front that it is a free trial with daily limits: a note under its introduction (and the same facts in the
+docs section) gives each visitor's numbers, taken from `RUNNER_TRIAL_LIMITS` in `lib/runner_limits.ts`. They are per visitor and
+per UTC day, unlike the counts beside the buttons, which are for the whole site. `tests/runner_limits.test.ts` reads the runner's
+`Caps` in `src/rtt/runner/config.py` and fails if a default there differs from these numbers or a per-visitor cap is missing here.
 
 The key is in the JSON body of one `POST /plan` and nowhere else: it is kept in component memory only, is
 cleared as soon as that request settles unless "Forget the key after each request" is unticked, and is
@@ -208,4 +216,5 @@ node scripts/mock_runner.mjs --port 8765 &   # then: pnpm start
 
 The code is `lib/runner.ts` (the client and the plain error messages), `components/studio/runner/`
 (`controller.ts`: the state machine, tested without a browser; `HostedRunner.tsx`: the panel;
-`keyfield.ts`: the key field's attributes; `handoff.ts`: the seam with the step editor), `components/docs/HostedDocs.tsx` and `lib/live_copy.ts`.
+`keyfield.ts`: the key field's attributes; `handoff.ts`: the seam with the step editor), `components/docs/HostedDocs.tsx`, `lib/live_copy.ts` and
+`lib/runner_limits.ts`.

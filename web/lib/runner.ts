@@ -35,7 +35,8 @@ export const RUN_CAP_LINE = "Runs on Nebius Serverless Jobs, capped at $2 a day"
 /*
  * The counts /health gives are for the whole site, not for this visitor: the free allowance is shared by everyone, and the
  * runs left are how many the day's compute budget can still reserve. The labels say so. Each visitor also has limits of their
- * own, lower ones, which the page reports in words when one is reached (`capSentence`), so a count above zero is not a promise.
+ * own, lower ones, which the panel states before any is reached (`RUNNER_TRIAL_LIMITS`, lib/runner_limits.ts) and the page
+ * reports in words when one is reached (`capSentence`), so a count above zero is not a promise.
  */
 
 /** The free allowance's label, with the plans left across the site today when the runner said how many. */
@@ -137,6 +138,14 @@ export class RunnerError extends Error {
   get retryable(): boolean {
     return retryableKind(this.kind);
   }
+
+  /**
+   * Whether this is a cap that does not reset (the runner's total compute budget: it has no reset time and the message says so).
+   * Waiting does not help, so the page points to running it on your own machine, as it does when the runner is off.
+   */
+  get neverResets(): boolean {
+    return this.kind === "cap" && formatReset(this.resetsAt) === null;
+  }
 }
 
 /** What each of the runner's caps says when it is reached, in plain words (the names are the runner's own). */
@@ -167,10 +176,13 @@ export function formatReset(iso: string | null): string | null {
   return `${date}, ${time} UTC`;
 }
 
+/** The words before the link to the run-it-yourself tutorial: in the off notice, and beside a cap that does not reset. */
+export const RUN_YOURSELF_LEAD = "Run it on your own machine:";
+
 export const MESSAGES = {
   key_missing: "Paste your key first, or use the free allowance.",
   key_rejected: "The provider rejected that key.",
-  off: "The hosted runner is off. Run it on your own machine:",
+  off: `The hosted runner is off. ${RUN_YOURSELF_LEAD}`,
   free_unavailable: "The free tier is not available right now. Use your own key, or try later.",
   sim_unavailable: "The simulator could not start a job right now. Nothing was charged; try again in a few minutes.",
   unavailable: "The hosted runner cannot take this request right now. Try again in a few minutes.",

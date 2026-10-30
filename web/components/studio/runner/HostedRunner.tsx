@@ -6,7 +6,8 @@ import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react"
 import { FamilyIcon } from "@/components/story/FamilyIcon";
 import { PRODUCT_MODE_LABEL } from "@/components/studio/schema";
 import { formatDuration } from "@/lib/format";
-import { autoOffPassed, freeAllowanceLabel, KEY_PRIVACY_LINE, type PlanReply, type Provider, reportLink, RUN_CAP_LINE, runsLeftLine, type RunSummary, type SetupBrief } from "@/lib/runner";
+import { liveCopy } from "@/lib/live_copy";
+import { autoOffPassed, freeAllowanceLabel, KEY_PRIVACY_LINE, type PlanReply, type Provider, reportLink, RUN_CAP_LINE, RUN_YOURSELF_LEAD, runsLeftLine, type RunSummary, type SetupBrief } from "@/lib/runner";
 
 import { type Fault, RunnerController, type RunnerState } from "./controller";
 import { KEY_FIELD_ATTRIBUTES } from "./keyfield";
@@ -67,10 +68,14 @@ function FaultNotice({ fault, onRetry, retryDisabled, hint }: { fault: Fault; on
     <div role="alert" className="mt-3 border-l-2 border-fail pl-3 text-sm" data-hosted-error={fault.kind}>
       <p className="text-ink">
         {fault.message}{" "}
-        {fault.kind === "off" ? (
-          <Link className="link" href={RUN_YOURSELF}>
-            Run it yourself
-          </Link>
+        {fault.kind === "off" || fault.neverResets ? (
+          <>
+            {/* the off message already ends with these words; a cap that does not reset says only that it does not */}
+            {fault.kind === "off" ? null : `${RUN_YOURSELF_LEAD} `}
+            <Link className="link" href={RUN_YOURSELF}>
+              Run it yourself
+            </Link>
+          </>
         ) : null}
       </p>
       {fault.problems?.length ? (
@@ -358,6 +363,11 @@ export default function HostedRunner({
         </p>
       ) : (
         <>
+          {/* the panel is only mounted in a runner build, so it always reads the hosted text (the public build's is empty) */}
+          <p className="prose-measure mt-4 border-l-2 border-accent pl-3 text-sm text-ink" data-trial-limits>
+            {liveCopy("trialLimitsPanel", true)}
+          </p>
+
           <div className="mt-5 grid gap-6 lg:grid-cols-2">
             <fieldset className="min-w-0">
               <legend className="text-xs text-ink-3">Who pays for the planning call</legend>
@@ -501,9 +511,8 @@ export default function HostedRunner({
       {s.health?.autoOff ? (
         <p className="mt-5 text-xs text-ink-3" data-hosted-auto-off>
           {autoOffPassed(s.health.autoOff, now)
-            ? `This hosted service was a limited trial and switched itself off on ${formatOff(s.health.autoOff)}.`
-            : `This hosted service is a limited trial and switches itself off on ${formatOff(s.health.autoOff)}.`}{" "}
-          Everything on this page also runs on your own machine.
+            ? `This hosted service was a limited trial and switched itself off on ${formatOff(s.health.autoOff)}. Everything on this page also runs on your own machine.`
+            : `This hosted service is a limited trial and switches itself off on ${formatOff(s.health.autoOff)}.`}
         </p>
       ) : null}
     </section>

@@ -48,6 +48,9 @@ const APPROVED: Record<LiveCopyKey, string> = {
   intakeBox: "This static site has no backend: Plan replays the recorded live plan of an example, model calls included.",
   intakeMessage:
     "This public site runs in Explore mode: it has no model to call, so it can only replay the recorded plans of the examples. Pick an example, or build your plan by hand below. To plan your own words, run the Studio locally with its API.",
+  // the public build has no panel and no hosted docs section, so it says nothing about the trial's limits
+  trialLimitsPanel: "",
+  trialLimitsDocs: "",
 };
 
 /** The variants for a build with the runner. The first three are the wording the brief set. */
@@ -66,6 +69,10 @@ const HOSTED: Record<LiveCopyKey, string> = {
   intakeBox: "Plan replays the recorded plan of an example, model calls included. To plan your own words live, use the panel below.",
   intakeMessage:
     "This public site runs in Explore mode, so Plan can only replay the recorded plans of the examples. Pick an example, or build your plan by hand below. To plan your own words, use your own key or a small free tier in the “Plan and run it live” panel, or run the Studio locally with its API.",
+  trialLimitsPanel:
+    "Free trial, with daily limits. Each visitor gets 3 free plans and 2 physics runs a day (up to 30 plans with your own key), from a small shared budget. If you reach a limit, the page says which one and when it resets. Everything here also runs on your own computer, without limits.",
+  trialLimitsDocs:
+    "The hosted runner is a free trial with daily limits: each visitor gets 3 free plans and 2 physics runs a day (up to 30 plans with your own key), from a small shared budget. Everything it does also runs on your own computer, without limits.",
 };
 
 /** The quickstart lede's middle sentence, the same in both builds. */
@@ -237,6 +244,21 @@ describe("the docs", () => {
     expect(text).toMatch(new RegExp(`${escape(HOSTED.planTaskNote)}<a [^>]*>Run it yourself</a>\\), or press`));
     expect(text).not.toContain("The public site has no server");
   });
+
+  it("the trial's limits are in the hosted docs section of both pages with the runner, and on neither without it", () => {
+    for (const page of [quickstart, planATask]) {
+      vi.stubEnv("NEXT_PUBLIC_RUNNER_URL", RUNNER);
+      const hosted = page();
+      expect(hosted).toContain(`<p>${HOSTED.trialLimitsDocs}</p>`);
+      // in the section that is about the hosted runner (its id), not elsewhere on the page
+      expect(hosted.indexOf('id="hosted"')).toBeGreaterThan(-1);
+      expect(hosted.indexOf(HOSTED.trialLimitsDocs)).toBeGreaterThan(hosted.indexOf('id="hosted"'));
+      vi.stubEnv("NEXT_PUBLIC_RUNNER_URL", "");
+      const publicText = page();
+      expect(publicText).not.toContain(HOSTED.trialLimitsDocs);
+      expect(publicText).not.toMatch(/daily limits|free trial/i);
+    }
+  });
 });
 
 describe("the Studio", () => {
@@ -311,6 +333,7 @@ describe("no sentence is written twice", () => {
       const src = readFileSync(file, "utf8");
       for (const key of KEYS) {
         for (const text of [APPROVED[key], HOSTED[key]]) {
+          if (text === "") continue; // the public build says nothing there; every file "contains" an empty string
           const lead = text.length > 60 ? text.slice(0, 60) : text;
           if (src.includes(lead)) stray.push(`${path.relative(root, file)}: ${key}`);
         }

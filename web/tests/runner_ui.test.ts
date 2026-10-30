@@ -215,6 +215,18 @@ describe("the docs show the hosted runner only when the build has it", () => {
     expect(withHosted(SECTIONS).map((s) => s.id)).toEqual(["a", "hosted"]);
   });
 
+  it("state the trial's daily limits in the full section and in the short form, and only with the runner", () => {
+    const words = (html: string) => html.replace(/<!-- -->/g, "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+    vi.stubEnv("NEXT_PUBLIC_RUNNER_URL", RUNNER);
+    for (const brief of [false, true]) {
+      const text = words(renderToStaticMarkup(createElement(HostedDocSection, { n: 5, brief })));
+      expect(text, `brief ${brief}`).toContain(liveCopy("trialLimitsDocs", true));
+      expect(text, `brief ${brief}`).toContain("each visitor gets 3 free plans and 2 physics runs a day (up to 30 plans with your own key)");
+    }
+    vi.stubEnv("NEXT_PUBLIC_RUNNER_URL", "");
+    for (const brief of [false, true]) expect(renderToStaticMarkup(createElement(HostedDocSection, { n: 5, brief }))).toBe("");
+  });
+
   it("say how long planning and a first submission can take, and what a busy runner says", () => {
     vi.stubEnv("NEXT_PUBLIC_RUNNER_URL", RUNNER);
     const text = render().replace(/<!-- -->/g, "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");

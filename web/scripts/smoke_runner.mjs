@@ -24,7 +24,10 @@
  *     is never "off"), 400 with the runner's problems, a dropped connection with Try again that works; and the
  *     panel's absence when /health fails, its off notice when the kill switch is on;
  *   - the key: it is only ever in the body of POST /plan (not a URL, header, storage, cookie, the console
- *     or the address bar), and the field is empty after the request.
+ *     or the address bar), and the field is empty after the request;
+ *   - the trial's limits: the note "Free trial, with daily limits. ..." is on the panel in every state it is ready in (above the
+ *     choice of who pays, inside the panel and the viewport, so not cut off at 375 px) and is not on the off notice; the runner's
+ *     total-budget refusal ("It does not reset.") also offers Run it yourself, and a refusal that resets does not.
  *
  * Fails on a console error nobody expected, a page error, horizontal scroll, a raw status code or a
  * brand name on screen. The panel's 10 s polling is stepped with the browser's fake clock. Screenshots of
@@ -61,6 +64,9 @@ const TOTE = "Open the hinged lid of the returns tote, put the carton from the b
 const RAW_CODE = /\b(400|401|403|404|413|422|429|500|502|503)\b/;
 const PRODUCT = "Product mode: not part of the pre-registered experiment";
 const PRIVACY = "Your key is sent once over HTTPS for this request and is never stored or logged.";
+const NOTE =
+  "Free trial, with daily limits. Each visitor gets 3 free plans and 2 physics runs a day (up to 30 plans with your own key), from a small shared budget. If you reach a limit, the page says which one and when it resets. Everything here also runs on your own computer, without limits.";
+const TOTAL_BUDGET = "The hosted runner's total compute budget is used up. It does not reset.";
 
 function brandPattern() {
   const src = readFileSync(path.join(webDir, "..", "src", "rtt", "effectors", "types.py"), "utf8");
@@ -153,7 +159,43 @@ async function checkPanel(vp, page, watch, what) {
   const brand = text.match(brandRe);
   if (brand) watch.problems.push(`${what}: names a brand (${brand[1]})`);
   if (/—/.test(text)) watch.problems.push(`${what}: an em dash`);
+  await checkLimitsNote(vp, page, watch, what, text);
   return text;
+}
+
+/**
+ * The trial's limits note: on every ready panel, word for word, visible, inside the panel and the viewport (so not cut off at 375 px) and
+ * above the choice of who pays; not on the off notice, which already sends the visitor to their own machine.
+ */
+async function checkLimitsNote(vp, page, watch, what, text) {
+  const off = (await panelOf(page).locator("[data-hosted-off]").count()) > 0;
+  const notes = panelOf(page).locator("[data-trial-limits]");
+  if (off) {
+    if ((await notes.count()) !== 0 || text.includes("Free trial, with daily limits")) watch.problems.push(`${what}: the limits note is on the off notice`);
+    return;
+  }
+  if ((await notes.count()) !== 1) {
+    watch.problems.push(`${what}: ${await notes.count()} limits notes, expected 1`);
+    return;
+  }
+  const shown = (await notes.innerText()).replace(/\s+/g, " ").trim();
+  if (shown !== NOTE) watch.problems.push(`${what}: the limits note reads "${shown}"`);
+  if (!(await notes.isVisible())) watch.problems.push(`${what}: the limits note is not visible`);
+  const geometry = await page.evaluate(() => {
+    const box = (el) => {
+      const r = el.getBoundingClientRect();
+      return { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
+    };
+    const note = document.querySelector("[data-hosted-runner] [data-trial-limits]");
+    const panel = document.querySelector("[data-hosted-runner]");
+    const choice = document.querySelector("[data-hosted-runner] fieldset");
+    return { note: box(note), panel: box(panel), choice: choice ? box(choice) : null, width: document.documentElement.clientWidth, overflowX: note.scrollWidth > note.clientWidth + 1 };
+  });
+  const { note, panel, choice } = geometry;
+  if (note.left < panel.left - 0.5 || note.right > panel.right + 0.5) watch.problems.push(`${what}: the limits note leaves the panel (${Math.round(note.left)} to ${Math.round(note.right)} px, the panel is ${Math.round(panel.left)} to ${Math.round(panel.right)})`);
+  if (note.left < -0.5 || note.right > geometry.width + 0.5) watch.problems.push(`${what}: the limits note leaves the ${vp.width} px viewport (${Math.round(note.left)} to ${Math.round(note.right)} px)`);
+  if (geometry.overflowX) watch.problems.push(`${what}: the limits note scrolls sideways`);
+  if (choice && note.bottom > choice.top) watch.problems.push(`${what}: the limits note is not above the choice of who pays`);
 }
 
 function expectText(watch, text, needle, what) {
@@ -499,7 +541,10 @@ async function planErrors(vp) {
       const href = await panelOf(page).getByRole("link", { name: "Run it yourself" }).getAttribute("href");
       if (href !== `${base}/docs/tutorials/run-it-yourself/`) watch.problems.push(`the run-it-yourself link is ${href}`);
     }
-    if (c.name === "busy" && /daily limit/i.test(text)) watch.problems.push("a 429 with no cap says a daily limit was reached");
+    // the notice itself, not the panel: the panel's note above it states the trial's daily limits, which is not a claim that one was reached
+    const notice = await panelOf(page).locator(`[data-hosted-error="${c.kind}"]`).innerText();
+    if (c.name === "busy" && /daily limit/i.test(notice)) watch.problems.push("a 429 with no cap says a daily limit was reached");
+    if (c.kind === "cap" && (await panelOf(page).getByRole("link", { name: "Run it yourself" }).count()) !== 0) watch.problems.push("a cap that resets points to the run-it-yourself tutorial");
     if (c.notOff) {
       if (text.includes("The hosted runner is off")) watch.problems.push(`a ${c.name} says the runner is off`);
       if ((await panelOf(page).getByRole("link", { name: "Run it yourself" }).count()) !== 0) watch.problems.push(`a ${c.name} points to the run-it-yourself tutorial as if the runner were off`);
@@ -541,13 +586,27 @@ async function runErrors(vp) {
   await waitIn(page, '[data-hosted-error="cap"]', "the runs cap message", watch);
   expectText(watch, await checkPanel(vp, page, watch, "run error 429"), "You have reached the daily limit on physics runs. It resets at 29 October 2026, 00:00 UTC.", "run error 429");
   await shot(vp, page, "error-run-429");
+  if ((await panelOf(page).getByRole("link", { name: "Run it yourself" }).count()) !== 0) watch.problems.push("run error 429: a cap that resets points to the run-it-yourself tutorial");
+
+  // the total compute budget never resets: it says so, and offers the same link as the off notice, with no Try again that would fail the same way
+  mock.state.run = "429_total";
+  await run.click();
+  await waitIn(page, '[data-hosted-error="cap"]:has-text("total compute budget")', "the total budget message", watch);
+  const total = await checkPanel(vp, page, watch, "run error total budget");
+  expectText(watch, total, `${TOTAL_BUDGET} Run it on your own machine: Run it yourself`, "run error total budget");
+  const totalLinks = panelOf(page).getByRole("link", { name: "Run it yourself" });
+  const totalLink = (await totalLinks.count()) === 1 ? await totalLinks.getAttribute("href") : null;
+  if (totalLink !== `${base}/docs/tutorials/run-it-yourself/`) watch.problems.push(`run error total budget: the run-it-yourself link is ${totalLink}`);
+  if ((await panelOf(page).getByRole("button", { name: "Try again" }).count()) !== 0) watch.problems.push("run error total budget: offers Try again, which would fail the same way");
+  if (total.includes("The hosted runner is off")) watch.problems.push("run error total budget: says the runner is off");
+  await shot(vp, page, "error-run-429-total");
 
   mock.state.run = "busy";
   await run.click();
   await waitIn(page, '[data-hosted-error="busy"]', "the busy message", watch);
   const busy = await checkPanel(vp, page, watch, "run error busy");
   expectText(watch, busy, "The runner is busy. Try again in a minute.", "run error busy");
-  if (/daily limit/i.test(busy)) watch.problems.push("a 429 with no cap on a run says a daily limit was reached");
+  if (/daily limit/i.test(await panelOf(page).locator('[data-hosted-error="busy"]').innerText())) watch.problems.push("a 429 with no cap on a run says a daily limit was reached");
   await shot(vp, page, "error-run-busy");
 
   mock.state.run = "400";
