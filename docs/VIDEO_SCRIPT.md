@@ -145,5 +145,3 @@ pacing can be judged early; the final cut refuses a draft.
 | A nut runner for the clamp | integrator rule R05, `docs/STUDIO_SEARCH.md` section 2 |
 | Ninety-five jobs, sixty-nine of them one tool | the atlas data (`web/public/data/atlas.json`): 69 single, 16 tool change, 10 two-tool head |
 | The quality gate, set-down and all-pairs overlap | `docs/STUDIO.md` section 3.3, `docs/STUDIO_PRIMITIVES.md` sections 3 and 12, `src/rtt/studio/replay_qa.py` |
-</content>
-</invoke>

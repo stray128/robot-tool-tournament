@@ -6,9 +6,6 @@ submits. Every number comes from `docs/USECASE_V1_RESULTS.md`, `docs/RESULTS.md`
 `docs/EFFECTORS.md`, `docs/LIBRARY.md`, `docs/NEBIUS.md`, `docs/FEEDBACK.md` or the site's
 published data, and matches the README.
 
-`{{pending: ...}}` marks a result of this version that does not exist yet. Fill each one from the
-named run, never by estimate, and delete its brackets. The list is at the end of this file.
-
 ## Project name
 
 Effector Lab
@@ -35,7 +32,7 @@ Physical AI
 | Finger experiment results | https://github.com/stray128/robot-tool-tournament/blob/main/docs/RESULTS.md |
 | Pre-registrations (git tags) | https://github.com/stray128/robot-tool-tournament/tree/usecase-v1 and https://github.com/stray128/robot-tool-tournament/tree/prereg-v1 |
 | Platform feedback | https://github.com/stray128/robot-tool-tournament/blob/main/docs/FEEDBACK.md |
-| Demo video (YouTube, under 3 minutes) | {{pending: demo video URL}} |
+| Demo video (YouTube, under 3 minutes) | https://youtu.be/hvM9WCjsHxE |
 
 New during the submission period: the repository's first commit is dated 2026-10-15.
 
@@ -305,11 +302,3 @@ one-time setup in `docs/NEBIUS.md`.
 Paste the section "Feedback for the Devpost field" of `docs/FEEDBACK.md`
 (https://github.com/stray128/robot-tool-tournament/blob/main/docs/FEEDBACK.md). That file is the
 single source, so the two cannot drift.
-
-## Placeholders to fill before submitting
-
-| Placeholder | Filled from |
-|---|---|
-| `{{pending: demo video URL}}` | the YouTube link after upload |
-</content>
-</invoke>

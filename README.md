@@ -4,6 +4,7 @@
 [![Pre-registered: prereg-v1](https://img.shields.io/badge/pre--registered-prereg--v1-2da44e.svg)](https://github.com/stray128/robot-tool-tournament/tree/prereg-v1)
 [![Pre-registered: usecase-v1](https://img.shields.io/badge/pre--registered-usecase--v1-2da44e.svg)](https://github.com/stray128/robot-tool-tournament/tree/usecase-v1)
 [![Live site](https://img.shields.io/badge/live%20site-stray128.github.io-24292f.svg)](https://stray128.github.io/robot-tool-tournament/)
+[![Demo video](https://img.shields.io/badge/demo%20video-YouTube-c4302b.svg)](https://youtu.be/hvM9WCjsHxE)
 
 Effector Lab picks the tools for a robot job before anyone buys one. You describe a multi-step
 job in plain words, such as "open the tote lid, put a carton and a flat pack in, close the lid".
@@ -480,5 +481,3 @@ electrical connectors (Gebauer et al., Production Engineering 19:15-27, 2025,
 doi:10.1007/s11740-024-01287-x); VLMgineer co-designs tools and their use with vision-language
 models and evolutionary search (Gao et al., 2025, arXiv:2507.12644); Text2Robot evolves robot
 designs from text (Ringel et al., 2024, arXiv:2406.19963).
-</content>
-</invoke>
