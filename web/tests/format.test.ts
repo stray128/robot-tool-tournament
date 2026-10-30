@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   capitalizeFirst,
+  countOf,
   formatBytes,
   formatClock,
   formatDuration,
@@ -77,5 +78,18 @@ describe("formatting", () => {
     expect(capitalizeFirst("the straight entrant lifts")).toBe("The straight entrant lifts");
     expect(capitalizeFirst("mu = 0.05")).toBe("Mu = 0.05");
     expect(capitalizeFirst("")).toBe("");
+  });
+
+  it("a count takes its noun in the singular only when it is exactly one", () => {
+    expect(countOf(1, "step")).toBe("1 step");
+    expect(countOf(1, "object")).toBe("1 object");
+    expect(countOf(2, "step")).toBe("2 steps");
+    expect(countOf(4, "object")).toBe("4 objects");
+    expect(countOf(0, "step")).toBe("0 steps");
+    expect(countOf(1, "free plan")).toBe("1 free plan");
+    expect(countOf(18, "free plan")).toBe("18 free plans");
+    expect(countOf(2, "box", "boxes")).toBe("2 boxes");
+    expect(countOf(1, "box", "boxes")).toBe("1 box");
+    expect(countOf(1234, "run")).toBe("1,234 runs");
   });
 });

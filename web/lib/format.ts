@@ -6,6 +6,11 @@ export function formatInt(n: number): string {
   return intFmt.format(n);
 }
 
+/** A count with its noun, the noun in the plural unless the count is exactly one: "1 step", "2 steps", "0 steps". */
+export function countOf(n: number, one: string, many: string = `${one}s`): string {
+  return `${formatInt(n)} ${n === 1 ? one : many}`;
+}
+
 /** Seconds as "0.47 s", "41.2 s", "7 min 41 s" or "2 h 05 min". */
 export function formatDuration(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return "n/a";

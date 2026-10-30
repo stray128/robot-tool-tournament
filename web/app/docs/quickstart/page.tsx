@@ -4,9 +4,11 @@ import Link from "next/link";
 import { KindGlyph } from "@/components/atlas/parts";
 import { CodeBlock } from "@/components/docs/CodeBlock";
 import { DocSection, DocsShell, Note } from "@/components/docs/DocsShell";
+import { HostedDocSection, withHosted } from "@/components/docs/HostedDocs";
 import { PRODUCT_MODE_LABEL } from "@/components/studio/schema";
 import { buildStory, focusOf } from "@/components/studio/story";
 import { kindCounts } from "@/lib/atlas";
+import { liveCopy } from "@/lib/live_copy";
 import { BASE_PATH } from "@/lib/paths";
 import { GITHUB_URL } from "@/lib/site";
 
@@ -43,11 +45,10 @@ export default function QuickstartPage() {
       title="Quickstart"
       lede={
         <p>
-          Everything here runs in your browser: no install, no account, no key. The site replays recorded plans and runs: open a worked example,
-          edit a recorded plan or build one by hand, and find a job like yours. Live planning of new words runs on your own machine.
+          {`${liveCopy("quickstartLedeHead")} The site replays recorded plans and runs: open a worked example, edit a recorded plan or build one by hand, and find a job like yours. ${liveCopy("quickstartLede")}`}
         </p>
       }
-      sections={SECTIONS}
+      sections={withHosted(SECTIONS)}
     >
       <DocSection id="example" n={1} title="Open a worked example">
         <p>
@@ -112,8 +113,8 @@ export default function QuickstartPage() {
           ))}
         </ol>
         <Note title="On this public site">
-          The site has no server, so Plan replays the planner&apos;s recorded run for the examples. To plan new words live, run the Studio on your
-          own machine (step 4). Every result is labelled &ldquo;{PRODUCT_MODE_LABEL}&rdquo;.
+          {`${liveCopy("quickstartNote")} Every result is labelled \u201c`}
+          {PRODUCT_MODE_LABEL}&rdquo;.
         </Note>
         <p>
           <Link className="btn btn-primary text-sm" href="/studio/#plan">
@@ -161,6 +162,8 @@ python -m rtt.studio.search taskspec.json --out runs/studio/my-task --pack`}
           covers Docker, the options and what the run writes.
         </p>
       </DocSection>
+
+      <HostedDocSection n={5} brief />
     </DocsShell>
   );
 }

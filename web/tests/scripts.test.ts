@@ -29,6 +29,7 @@ import {
   sharedPrefix,
 } from "../scripts/import-results.mjs";
 import { syntheticResults } from "../scripts/make-synthetic-results.mjs";
+import { isReportRedirect, MOCK_HOSTS } from "../scripts/runner_env.mjs";
 import { resolveFile } from "../scripts/serve.mjs";
 import { parseResults } from "@/lib/validate";
 
@@ -349,5 +350,35 @@ describe("serve", () => {
     } finally {
       rmSync(base, { recursive: true, force: true });
     }
+  });
+});
+
+describe("the runner smoke's report link", () => {
+  const id = "rmvujuq4e1";
+  const link = (host: string, port = 8787, tail = `/runs/${id}/report`) => `http://${host}:${port}${tail}`;
+
+  it("passes for either name a build may be given for the mock", () => {
+    expect(MOCK_HOSTS).toEqual(["127.0.0.1", "localhost"]);
+    for (const host of MOCK_HOSTS) expect(isReportRedirect(link(host), id, 8787)).toBe(true);
+  });
+
+  it("holds the port, the scheme, the path and the absence of a query exact", () => {
+    for (const host of MOCK_HOSTS) {
+      expect(isReportRedirect(link(host, 8788), id, 8787)).toBe(false); // another port
+      expect(isReportRedirect(link(host).replace("http:", "https:"), id, 8787)).toBe(false);
+      expect(isReportRedirect(link(host, 8787, `/runs/other/report`), id, 8787)).toBe(false); // another run
+      expect(isReportRedirect(link(host, 8787, `/reports/${id}.json?X-Signature=mock`), id, 8787)).toBe(false); // a presigned link
+      expect(isReportRedirect(link(host, 8787, `/runs/${id}/report?x=1`), id, 8787)).toBe(false);
+      expect(isReportRedirect(link(host, 8787, `/runs/${id}/report#top`), id, 8787)).toBe(false);
+    }
+  });
+
+  it("is not satisfied by another host, credentials, or no link at all", () => {
+    expect(isReportRedirect(link("example.org"), id, 8787)).toBe(false);
+    expect(isReportRedirect(link("127.0.0.1.example.org"), id, 8787)).toBe(false);
+    expect(isReportRedirect(`http://user:pw@127.0.0.1:8787/runs/${id}/report`, id, 8787)).toBe(false);
+    expect(isReportRedirect("", id, 8787)).toBe(false);
+    expect(isReportRedirect(null, id, 8787)).toBe(false);
+    expect(isReportRedirect("/runs/rmvujuq4e1/report", id, 8787)).toBe(false); // relative: the panel links the runner's own origin
   });
 });

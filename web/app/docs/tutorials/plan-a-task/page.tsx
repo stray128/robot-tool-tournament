@@ -3,9 +3,11 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { DocSection, DocsShell, Marker, Note } from "@/components/docs/DocsShell";
+import { HostedDocSection, withHosted } from "@/components/docs/HostedDocs";
 import { paramText, PLAN_RESULT_LABELS, TIER_LABELS, TIER_NOTES, type Plan } from "@/components/studio/schema";
 import { stepName } from "@/components/studio/story";
 import { TierBadge } from "@/components/studio/ui";
+import { liveCopy } from "@/lib/live_copy";
 
 import { featuredHero, getStudioHero } from "../../../studio/data";
 
@@ -124,7 +126,7 @@ export default function PlanATaskPage() {
           them, then download the plan to run the search on it.
         </p>
       }
-      sections={SECTIONS}
+      sections={withHosted(SECTIONS)}
     >
       <DocSection id="plan" n={1} title="What a plan is">
         <p>
@@ -190,8 +192,7 @@ export default function PlanATaskPage() {
           </div>
         ) : null}
         <Note title="Explore mode on this site">
-          The public site has no server. Plan replays the recorded run of each example, model calls included, so you see what the planner did. To
-          plan your own words live, run the Studio locally with your own Token Factory key (
+          {liveCopy("planTaskNote")}
           <Link className="link" href="/docs/tutorials/run-it-yourself/">
             Run it yourself
           </Link>
@@ -249,6 +250,8 @@ export default function PlanATaskPage() {
           </Link>
         </div>
       </DocSection>
+
+      <HostedDocSection n={6} />
     </DocsShell>
   );
 }

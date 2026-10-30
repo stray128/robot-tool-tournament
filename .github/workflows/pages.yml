@@ -34,6 +34,7 @@ jobs:
     env:
       NEXT_PUBLIC_BASE_PATH: /robot-tool-tournament
       NEXT_PUBLIC_REPO_URL: https://github.com/stray128/robot-tool-tournament
+      NEXT_PUBLIC_RUNNER_URL: https://y73ks47vrxfvytbugtjkrqrryq0caurq.lambda-url.ap-south-1.on.aws
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@v4

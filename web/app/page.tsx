@@ -2,13 +2,16 @@ import Link from "next/link";
 
 import { HeroAsk } from "@/components/home/HeroAsk";
 import HeroScene from "@/components/home/HeroScene";
+import { homeLede } from "@/components/home/lede";
 import { FamilyIcon } from "@/components/story/FamilyIcon";
 import { humanize } from "@/components/studio/schema";
 import { setupPhrase, stepName } from "@/components/studio/story";
 import { TitleBlock } from "@/components/TitleBlock";
 import { getResults } from "@/lib/data";
 import { toCard } from "@/lib/library";
+import { liveCopy } from "@/lib/live_copy";
 import { BASE_PATH } from "@/lib/paths";
+import { runnerConfigured } from "@/lib/runner";
 import { repoBlob } from "@/lib/site";
 
 import { getLibraryIndex } from "./library/data";
@@ -54,7 +57,7 @@ export default function HomePage() {
       name: "Plan",
       href: "/studio/#plan",
       cta: "Plan a task",
-      text: "Describe the job in plain words, and the planner turns it into objects and steps the simulator can run. Here you replay recorded plans and edit their steps; live planning runs on your own machine.",
+      text: "Describe the job in plain words, and the planner turns it into objects and steps the simulator can run. " + liveCopy("homeCard"),
       fact: h1 ? `${h1.title}: one paragraph, ${h1.plan.steps.length} steps, ${h1.plan.objects.length} objects` : null,
     },
     {
@@ -92,12 +95,11 @@ export default function HomePage() {
           <h1 id="hero-title" className="display text-[clamp(2.3rem,4.6vw,3.75rem)] text-ink">
             Try every tool in physics before you buy one.
           </h1>
-          <p className="prose-measure mt-6 text-lg text-ink-2 sm:text-xl">
-            Describe the job your robot has to do. Effector Lab plans it as steps, tests every end effector it can simulate on every step, and
-            recommends one tool, a tool change or a two-tool head, next to the best single off-the-shelf tool. This site replays recorded plans
-            and runs; live planning runs on your own machine.
-          </p>
-          <HeroAsk examples={heroes.map((h) => ({ href: `/studio/${h.hero}/`, title: h.title, setting: humanize(h.setting) }))} />
+          <p className="prose-measure mt-6 text-lg text-ink-2 sm:text-xl">{homeLede(runnerConfigured())}</p>
+          <HeroAsk
+            examples={heroes.map((h) => ({ href: `/studio/${h.hero}/`, title: h.title, setting: humanize(h.setting) }))}
+            note={liveCopy("heroAsk")}
+          />
         </div>
         {lane && rec ? (
           <HeroScene

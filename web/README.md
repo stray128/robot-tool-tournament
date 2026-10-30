@@ -38,6 +38,9 @@ Run from `web/` with Node 20.9 or newer and pnpm.
 | `node scripts/compress_glb.mjs SPEC.json [--map MAP.json]` | Meshopt-compress the GLBs a spec lists (WebP textures, optional simplification for scans) and add them to `public/assets/` as `<sha256[:16]>.glb` with their manifest entries; Identical output under a different role, licence, credit, change list or source is refused, and nothing is written unless every input passes. `--check` verifies the manifest against the files without any dependency. Compression needs `@gltf-transform/{core,extensions,functions}` and `meshoptimizer` (and `sharp` for textures), from `web/node_modules` or `--modules DIR` |
 | `node scripts/smoke_v2.mjs` | After `pnpm build`: the v2 look in headless Chromium. A v1 bout still plays; the published bout of v2 lanes (`--v2-bout ID`, default the first bout of v2 parts) plays every lane under its own label and replay (design and part checked), with GLB decoding, captions, offset readouts, x-ray and collision toggles, the 300 000-byte payload per lane, credit links and no maker name on the page; then the design views and the credits page. Screenshots go to `.smoke/v2/` |
 | `node scripts/smoke_library.mjs` | After `pnpm build`: the effector library pages in headless Chromium at 1280 px and 375 px: HTTP 200, no console errors, no horizontal scroll, the product-mode banner, no maker name and no URL in the visible text, one 3D viewer per item page, the catalog search filtering cards, and the library section of `/credits/`. Screenshots go to `.smoke/library/` |
+| `node scripts/mock_runner.mjs [--port 8765]` | A tiny mock of the hosted runner's API (health, plan, runs, report; the runner's own body shapes) for the browser smoke tests and for trying the "Plan and run it live" panel by hand. Test data only |
+| `node scripts/smoke_runner.mjs` | After a build with `NEXT_PUBLIC_RUNNER_URL=http://127.0.0.1:8765` (or `http://localhost:8765`): starts the mock and drives the hosted panel at 1440 px and 375 px through plan, run, result, a reload that resumes the run, a run with no recommendation, a failed run and each error, and proves the key is only in the body of `POST /plan`. Screenshots go to `.smoke/runner/` |
+| `node scripts/smoke_site.mjs` | After `pnpm build`: every main route at 1440 px and 375 px. In a build without `NEXT_PUBLIC_RUNNER_URL` it also checks there is no hosted panel, no hosted docs section, the old home lede and no request to another origin; with it set it starts the mock and checks the panel, the docs section and the lede. `smoke_studio.mjs` and `smoke_studio_intake.mjs` start the mock the same way |
 | `pnpm smoke` | After `pnpm build`: open every page in headless Chromium at 1280 px and 375 px; fail on console errors, horizontal scroll, replays that do not load or missing canvases. On `/part` it also drops the example STL (a preview canvas and size readout must appear) and plays the first demo session to its end (an illustrative session must be labelled illustrative, never recorded). Screenshots go to `.smoke/` |
 
 For a GitHub Pages project site, build with `NEXT_PUBLIC_BASE_PATH=/<repo-name>`;
@@ -158,3 +161,51 @@ session and says so; dropped files never leave the browser.
 The passcode goes only to `POST /sessions`, never into a URL. Checked end to end against
 the API in offline mode with synthetic physics: upload, session start, the streamed
 timeline to `session.finished`, and the print pack link.
+
+## Hosted runner (Plan and run it live)
+
+An optional panel on the Studio planner plans a description with Nemotron and tests the plan in physics
+on a hosted runner (the API is in `docs/RUNNER.md`). It is off unless the build has
+`NEXT_PUBLIC_RUNNER_URL=https://<runner origin>` (plain `http` is accepted only for a loopback address,
+so a key never travels in clear text). With it unset, which is how the public site is built, nothing
+changes: no panel, no docs section, the home lede says what it always said, and no request leaves the site.
+With it set, the panel shows only when `GET /health` answers `ok`; the quickstart and the plan-a-task
+tutorial gain a "Plan and run it on this site" section, and the nine sentences that said live planning runs
+only on your own machine, or that the site has no backend (home lede and Plan card, the question box, the quickstart
+lede and note, the Studio's Explore mode tip, its Plan box and its custom-text message, the plan-a-task note) say that
+you can also plan live here with your own key or the free allowance. Those sentences live in `lib/live_copy.ts`, each
+as an approved `local` text and a `hosted` text, and are read through `liveCopy()`, the one place that checks the flag.
+
+| Request | Sent | Used |
+|---|---|---|
+| `GET /health` | | whether to show the panel (`ok`), whether it is off (`kill_switch`, `open`), the plans and runs left today across the site (the panel says "across the site": a visitor's own limits are lower), the auto-off date |
+| `POST /plan` | JSON `{description, provider: nvidia\|tokenfactory\|free, key}` | `status`, `plan` (loaded into the step editor like a replayed plan), `problems`, `calls`, `model` |
+| `POST /runs` | JSON `{plan}` (the editor's plan, edits included) | `run_id` (kept in the URL hash as `#run-<id>`, so a reload resumes), `eta_s` |
+| `GET /runs/{id}` | every 10 s, with backoff, until `done` or `failed` | `status`, `created_at`, `error`, `result` (the summary card) |
+| `GET /runs/{id}/report` | the "Download the full report" link; redirects to a fresh presigned link | the full report JSON |
+
+The runner still answers `/health` with 200 and `ok: true` after its auto-off date, so the panel shows its off notice when
+`kill_switch` is true, or `open` is false, or the runner sends no `open` field (an older one) and `auto_off` is before today
+in UTC (it serves through that date). When `open` is there it is the runner's word, whatever the date says. The time limits
+are 8 s for `/health`, 330 s for a plan and 210 s for submitting a run (a plan the runner has not seen can take two to three
+minutes to be checked before it answers 202), and the panel says so while it waits. A 429 that names a cap says which cap and
+when it resets; a 429 with no `cap` is the hosting layer throttling a burst and reads "The runner is busy. Try again in a
+minute." Every call is made with `redirect: "error"`, so a redirect of `POST /plan` can never carry the key to another address.
+
+The key is in the JSON body of one `POST /plan` and nowhere else: it is kept in component memory only, is
+cleared as soon as that request settles unless "Forget the key after each request" is unticked, and is
+never put in storage, a URL, a header or the console. The key field is a password field, so a screen reader is
+given bullets and the field cannot be copied from; it has autocomplete off (not `new-password`, which makes browsers
+offer to generate a password), no name or id, no autocorrect or spell check, and the opt-out markers of the password
+managers and of Grammarly and LanguageTool (`components/studio/runner/keyfield.ts`). A browser's own password
+manager has no marker and may still offer to save it. A text field drawn as dots was tried and dropped: it exposes the
+typed key to assistive technology. Run it against the mock:
+
+```
+NEXT_PUBLIC_RUNNER_URL=http://127.0.0.1:8765 pnpm build
+node scripts/mock_runner.mjs --port 8765 &   # then: pnpm start
+```
+
+The code is `lib/runner.ts` (the client and the plain error messages), `components/studio/runner/`
+(`controller.ts`: the state machine, tested without a browser; `HostedRunner.tsx`: the panel;
+`keyfield.ts`: the key field's attributes; `handoff.ts`: the seam with the step editor), `components/docs/HostedDocs.tsx` and `lib/live_copy.ts`.

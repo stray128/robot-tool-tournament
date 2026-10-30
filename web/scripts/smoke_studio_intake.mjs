@@ -22,6 +22,7 @@ import { parseArgs } from "node:util";
 
 import { chromium } from "playwright";
 
+import { runnerUrlFromEnv, startMockFromEnv } from "./runner_env.mjs";
 import { startServer } from "./serve.mjs";
 
 const webDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -33,6 +34,7 @@ const { values } = parseArgs({
 });
 
 const LABEL = "Product mode: not part of the pre-registered experiment";
+const HOSTED = runnerUrlFromEnv() !== null;
 const STL = path.join(webDir, "public", "data", "sessions", "parts", "dumbbell-handle.stl");
 
 function brandPattern() {
@@ -69,6 +71,8 @@ async function exercise(page, vp) {
   const steps = await page.locator('article[aria-label^="Step "]').count();
   const objects = await page.locator('article[aria-label^="Object "]').count();
   if (steps !== 4 || objects < 3) problems.push(`tote plan: ${steps} steps, ${objects} objects`);
+  // the header counts in the plural for several, and in the singular for one (see the hand-built plan below)
+  if (!/Plan is valid: \d+ objects, 4 steps/.test(await mainText(page))) problems.push("tote plan: the header does not read \"Plan is valid: N objects, 4 steps\"");
   await page.getByRole("button", { name: "Edit object 1" }).click();
   const width = page.getByLabel("Object 1 width_mm", { exact: true });
   const before = await width.inputValue();
@@ -117,7 +121,11 @@ async function exercise(page, vp) {
   // 4. custom text on the static site
   await page.getByLabel("Use case", { exact: true }).fill("Juggle three balls on the bench.");
   await page.getByRole("button", { name: "Plan", exact: true }).click();
-  await waitText(page, "This public site runs in Explore mode: it has no model to call", problems, "custom text");
+  // a build with the hosted runner (lib/live_copy.ts) says Plan only replays and points to the live panel
+  await waitText(page, HOSTED ? "This public site runs in Explore mode, so Plan can only replay" : "This public site runs in Explore mode: it has no model to call", problems, "custom text");
+  const customText = await mainText(page);
+  if (HOSTED && !customText.includes("Plan and run it live")) problems.push("custom text: a build with the runner does not point to the live panel");
+  if (HOSTED && customText.includes("has no model to call")) problems.push("custom text: a build with the runner still says it has no model to call");
 
   // 5. an STL, then a plan by hand
   await page.setInputFiles('input[type="file"]', STL);
@@ -129,6 +137,10 @@ async function exercise(page, vp) {
   await page.getByRole("combobox", { name: "Add a step" }).selectOption("grasp");
   await page.getByRole("button", { name: "Add a step" }).click();
   await waitText(page, "Plan is valid", problems, "hand-built plan");
+  // one object and one step read in the singular: "1 object, 1 step", never "1 objects" or "1 steps"
+  const built = await mainText(page);
+  if (!/Plan is valid: 1 object, 1 step(?!s)/.test(built)) problems.push(`hand-built plan: the header reads "${built.match(/Plan is valid:[^\n]*/)?.[0]}", not "Plan is valid: 1 object, 1 step"`);
+  if (/\b1 (objects|steps)\b/.test(built)) problems.push('hand-built plan: "1 objects" or "1 steps" on screen');
   return problems;
 }
 
@@ -138,6 +150,8 @@ const widths = [
 ];
 
 mkdirSync(values.shots, { recursive: true });
+// A build with NEXT_PUBLIC_RUNNER_URL asks the runner for /health; answer it. Unset: nothing starts.
+const mock = await startMockFromEnv();
 const server = await startServer({ dir: path.join(webDir, "out"), port: Number(values.port) });
 const origin = `http://127.0.0.1:${server.address().port}`;
 const browser = await chromium.launch();
@@ -170,5 +184,6 @@ for (const vp of widths) {
 
 await browser.close();
 server.close();
+await mock?.close();
 console.log(failures.length ? `${failures.length} intake checks failed` : `intake checks passed at ${widths.length} widths; screenshots in ${values.shots}`);
 process.exit(failures.length ? 1 : 0);

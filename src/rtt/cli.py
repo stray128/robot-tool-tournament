@@ -28,6 +28,8 @@
 * ``rtt part {intake,run,certify,printpack}``: Bring Your Part (:mod:`rtt.part`).
 * ``rtt agent run --stl PART``: one Grasp Engineer session in the terminal (:mod:`rtt.agent`).
 * ``rtt serve``: the Grasp Engineer API on 127.0.0.1 (:mod:`rtt.api`).
+* ``rtt runner serve [--fake]``: the hosted runner's API on 127.0.0.1, against fakes or real
+  keys (:mod:`rtt.runner`, ``docs/RUNNER.md``).
 * ``rtt heldout-real {select,run}``: the Google Scanned Objects held-out set
   (:mod:`rtt.pipeline.heldout_real`); with ``--space freeform-v2``, the v2 scan draw (H2,
   :mod:`rtt.heldout_v2.real`).
@@ -530,6 +532,12 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     return api_main(args.rest, prog="rtt serve")
 
 
+def _cmd_runner(args: argparse.Namespace) -> int:
+    from rtt.runner.local import main as runner_main
+
+    return runner_main(args.rest, prog="rtt runner")
+
+
 def _space_arg(rest: Sequence[str]) -> str | None:
     """The value of ``--space`` (or ``--space=X``) in a pass-through argument list."""
     for i, token in enumerate(rest):
@@ -835,6 +843,7 @@ PASSTHROUGH = {
     "part": (_cmd_part, "Bring Your Part: intake | run | certify | printpack (python -m rtt.part)"),
     "agent": (_cmd_agent, "Grasp Engineer session in the terminal: run --stl PART (python -m rtt.agent)"),
     "serve": (_cmd_serve, "serve the Grasp Engineer API on 127.0.0.1 (python -m rtt.api)"),
+    "runner": (_cmd_runner, "the hosted runner's API on 127.0.0.1: serve [--fake] (python -m rtt.runner)"),
     "heldout-real": (
         _cmd_heldout_real,
         "Google Scanned Objects held-out set: select | run [--space freeform-v2] (rtt.pipeline.heldout_real)",

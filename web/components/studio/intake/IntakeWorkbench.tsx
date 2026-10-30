@@ -4,13 +4,17 @@ import Link from "next/link";
 import { type DragEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { apiBase } from "@/lib/api";
-import { formatBytes, formatInt } from "@/lib/format";
+import { countOf, formatBytes, formatInt } from "@/lib/format";
+import { liveCopy } from "@/lib/live_copy";
+import { type PlanReply, runnerBase } from "@/lib/runner";
 import { PREFILL_KEY } from "@/lib/site";
 import { binaryTriangleCount, checkStlBuffer, checkStlFile, guessUnit, measurePositions, toMillimetres, type Vec3 } from "@/lib/stl";
 
+import HostedRunner from "../runner/HostedRunner";
+import { exportSource, hostedLimit, planFromReply, runDocument } from "../runner/handoff";
 import { planLive, type PlanResultView, type RemoteVerdict, uploadStl, validateRemote } from "./api";
 import StepEditor from "./StepEditor";
-import { addObject, addStep, type Catalog, emptyPlan, exportDocument, type PlanArgs, planArgsOf, taskId, validatePlan } from "./taskspec";
+import { addObject, addStep, type Catalog, emptyPlan, type PlanArgs, taskId, validatePlan } from "./taskspec";
 
 export interface RecordedExample extends PlanResultView {
   case_id: string;
@@ -120,6 +124,8 @@ export default function IntakeWorkbench({
 }) {
   const base = useMemo(() => apiBase(), []);
   const live = base !== null;
+  // The hosted runner (Plan and run it live): null unless this build has NEXT_PUBLIC_RUNNER_URL.
+  const runner = useMemo(() => runnerBase(), []);
   const heroes = recorded.examples.filter((e) => e.hero);
   const others = recorded.examples.filter((e) => !e.hero);
 
@@ -136,6 +142,10 @@ export default function IntakeWorkbench({
   const [uploads, setUploads] = useState<string[]>([]);
   const [id, setId] = useState<string | null>(null);
   const [remote, setRemote] = useState<RemoteVerdict | string | null>(null);
+  /** The plan in the editor came from the hosted planner (and has not been replaced since). */
+  const [hosted, setHosted] = useState(false);
+  /** How many plans have come back from the hosted planner; each one scrolls the editor into view (see the effect below). */
+  const [livePlans, setLivePlans] = useState(0);
   const timers = useRef<number[]>([]);
   const abort = useRef<AbortController | null>(null);
   const editorRef = useRef<HTMLElement | null>(null);
@@ -180,12 +190,33 @@ export default function IntakeWorkbench({
     };
   }, [catalog, verdict]);
 
-  const load = useCallback((result: PlanResultView, ups: string[]) => {
-    setPlan(result.plan ? planArgsOf(result.plan) : null);
+  const load = useCallback((result: Pick<PlanResultView, "plan">, ups: string[]) => {
+    setPlan(planFromReply(result));
     setUploads(ups);
     setEdited(false);
     setRemote(null);
+    setHosted(false);
   }, []);
+
+  /** A plan planned live on the hosted runner loads into the editor exactly as a replayed one does. */
+  function onHostedPlan(reply: PlanReply) {
+    clearTimers();
+    setShown(null);
+    setPhase("idle");
+    setMessage(null);
+    load(reply, []);
+    setHosted(true);
+    editorRef.current?.focus({ preventScroll: true });
+    setLivePlans((n) => n + 1);
+  }
+
+  // The plan a hosted planner sent loads below the panel, off screen. Once the editor has rendered it, bring the editor
+  // into view: smoothly, unless the visitor prefers reduced motion. Only plans from the hosted planner do this; replaying
+  // a recorded plan behaves as it always did.
+  useEffect(() => {
+    if (livePlans === 0) return;
+    editorRef.current?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+  }, [livePlans]);
 
   const pickExample = (caseId: string) => {
     const ex = recorded.examples.find((e) => e.case_id === caseId);
@@ -276,9 +307,7 @@ export default function IntakeWorkbench({
       playRecorded(ex);
       return;
     }
-    setMessage(
-      "This public site runs in Explore mode: it has no model to call, so it can only replay the recorded plans of the examples. Pick an example, or build your plan by hand below. To plan your own words, run the Studio locally with its API.",
-    );
+    setMessage(liveCopy("intakeMessage"));
   }
 
   useEffect(() => {
@@ -313,8 +342,10 @@ export default function IntakeWorkbench({
   const result = shown?.result ?? null;
   const allShown = result ? shown!.revealed >= result.attempts.length : false;
   const uploadExample = others.find((e) => e.uploads.length);
-  const source = edited ? "manual" : shown?.source === "live" ? "nemotron" : "recorded";
-  const exportText = plan && verdict?.status === "valid" ? JSON.stringify(exportDocument(catalog, plan, id, source), null, 2) : null;
+  const source = exportSource({ edited, hosted, shownSource: shown?.source ?? null });
+  const runDoc = plan && verdict?.status === "valid" ? runDocument(catalog, plan, id, source) : null;
+  const exportText = runDoc ? JSON.stringify(runDoc, null, 2) : null;
+  const runLimit = runDoc ? hostedLimit(runDoc, uploads) : null;
   const refusal = plan?.refusal ? plan : null;
 
   return (
@@ -434,7 +465,7 @@ export default function IntakeWorkbench({
                     Local API at <span className="num break-all text-ink">{base}</span>
                   </>
                 ) : (
-                  <>This static site has no backend: Plan replays the recorded live plan of an example, model calls included.</>
+                  liveCopy("intakeBox")
                 )}
               </span>
             </p>
@@ -563,7 +594,10 @@ export default function IntakeWorkbench({
         </section>
       </div>
 
-      <section ref={editorRef} tabIndex={-1} className="mt-14 outline-none" aria-labelledby="edit-title">
+      {runner ? <HostedRunner base={runner} description={text.trim()} runDoc={runDoc} runLimit={runLimit} hasPlan={plan !== null && !refusal} hasStl={stl !== null} onPlanned={onHostedPlan} /> : null}
+
+      {/* A runner build scrolls here when a live plan loads, and clears the sticky header as the panel above does; the build without the runner keeps its markup as it was. */}
+      <section ref={editorRef} tabIndex={-1} className={runner ? "mt-14 scroll-mt-20 outline-none" : "mt-14 outline-none"} aria-labelledby="edit-title">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <h2 id="edit-title" className="heading flex items-baseline gap-3 text-xl">
             <span className="num text-sm text-accent">03</span> Check and edit the steps
@@ -572,7 +606,7 @@ export default function IntakeWorkbench({
             <p className="text-sm" role="status" aria-live="polite">
               {verdict.status === "valid" ? (
                 <span className="text-pass">
-                  Plan is valid: {plan!.objects.length} objects, {plan!.steps.length} steps{id ? <span className="num ml-1 text-xs text-ink-3">task {id.slice(0, 12)}</span> : null}
+                  Plan is valid: {countOf(plan!.objects.length, "object")}, {countOf(plan!.steps.length, "step")}{id ? <span className="num ml-1 text-xs text-ink-3">task {id.slice(0, 12)}</span> : null}
                 </span>
               ) : verdict.status === "refused" ? (
                 <span className="text-pending">A valid refusal</span>

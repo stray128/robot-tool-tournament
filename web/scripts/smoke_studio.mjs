@@ -25,6 +25,7 @@ import { parseArgs } from "node:util";
 
 import { chromium } from "playwright";
 
+import { startMockFromEnv } from "./runner_env.mjs";
 import { startServer } from "./serve.mjs";
 
 const webDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -36,6 +37,7 @@ const { values } = parseArgs({
     out: { type: "string", default: path.join(webDir, "out") },
   },
 });
+const KEY_LINE = "Your key is sent once over HTTPS for this request and is never stored or logged.";
 const LABEL = "Product mode: not part of the pre-registered experiment";
 const outDir = path.resolve(values.out);
 const indexFile = path.join(outDir, "data", "studio", "index.json");
@@ -170,6 +172,8 @@ async function screenshot(page, file) {
 }
 
 mkdirSync(values.shots, { recursive: true });
+// A build with NEXT_PUBLIC_RUNNER_URL asks the runner for /health; answer it. Unset: nothing starts.
+const mock = await startMockFromEnv();
 const server = await startServer({ dir: outDir, port: Number(values.port) });
 const origin = `http://127.0.0.1:${server.address().port}`;
 const browser = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] });
@@ -211,7 +215,8 @@ for (const vp of widths) {
       if (!metrics.banner.includes(LABEL)) problems.push("no product-mode banner, word for word");
       const hit = metrics.text.match(brandRe);
       if (hit) problems.push(`names a brand: ${hit[1]}`);
-      const url = metrics.text.match(/\S*http\S*/i);
+      // The hosted runner's privacy line says "HTTPS" in words; it is not a URL.
+      const url = metrics.text.replace(KEY_LINE, "").match(/\S*http\S*/i);
       if (url) problems.push(`shows a URL as text: ${url[0].slice(0, 60)}`);
     }
     if (route === "/studio/") {
@@ -231,6 +236,7 @@ for (const vp of widths) {
 
 await browser.close();
 server.close();
+await mock?.close();
 console.log(
   failures.length ? `${failures.length} page checks failed` : `all ${routes.length * widths.length} page checks passed; screenshots in ${values.shots}`,
 );

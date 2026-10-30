@@ -26,7 +26,10 @@ Requires Python 3.12 and [uv](https://docs.astral.sh/uv/). The site needs Node 2
 Docker is optional.
 
 **Browse, with nothing installed.** Open the [Studio](https://stray128.github.io/robot-tool-tournament/studio/)
-and pick a job. To plan and test a new job, run the same search on your own computer, as below.
+and pick a job. To plan and test a new job in the browser, open
+[`/studio/new/`](https://stray128.github.io/robot-tool-tournament/studio/new/) with your own NVIDIA
+API key or Nebius Token Factory key, or the small free tier; the physics runs as one capped Nebius
+job. The same search also runs on your own computer, as below.
 
 **Install.**
 

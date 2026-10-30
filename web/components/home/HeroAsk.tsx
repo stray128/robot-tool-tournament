@@ -19,9 +19,11 @@ export interface ExampleChip {
  * this tab's session storage, never in the URL, so it never reaches a server log; when storage is
  * unavailable the page says so and keeps the text here. This static site calls no model: the
  * planner replays the recorded examples, takes a plan built by hand, and points to running the
- * planner on your own machine for new words.
+ * planner on your own machine for new words. The sentence beside the button comes from the page
+ * (liveCopy in lib/live_copy.ts), which says whether a build with the hosted runner also points to
+ * its live panel; it is a prop so this client code stays free of the runner client.
  */
-export function HeroAsk({ examples }: { examples: ExampleChip[] }) {
+export function HeroAsk({ examples, note }: { examples: ExampleChip[]; note: string }) {
   const router = useRouter();
   const [text, setText] = useState("");
   const [hint, setHint] = useState<string | null>(null);
@@ -76,7 +78,7 @@ export function HeroAsk({ examples }: { examples: ExampleChip[] }) {
         />
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-rule px-2 pt-2">
           <span className="text-xs text-ink-3">
-            This site runs no model: it replays recorded plans, and you can build yours by hand. To plan new words,{" "}
+            {note}{" "}
             <Link href="/docs/tutorials/run-it-yourself/" className="text-ink-2 underline underline-offset-2 hover:text-ink">
               run it yourself
             </Link>

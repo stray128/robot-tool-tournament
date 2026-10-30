@@ -9,6 +9,7 @@ import type { Catalog } from "@/components/studio/intake/taskspec";
 import { humanize, PRODUCT_MODE_LABEL } from "@/components/studio/schema";
 import { buildStory } from "@/components/studio/story";
 import { TitleBlock } from "@/components/TitleBlock";
+import { liveCopy } from "@/lib/live_copy";
 
 import { getStudioHero, getStudioIndex } from "./data";
 
@@ -52,7 +53,7 @@ export default function StudioPage() {
         <div className="mt-6 flex flex-wrap items-center gap-2 text-sm">
           <Term
             label="Explore mode"
-            tip="This public site has no backend. It replays the recorded plans and the recorded test runs, and lets you edit and download a plan. To plan and test your own text, run the Studio locally with your own model key."
+            tip={liveCopy("studioTip")}
           >
             <span className="inline-flex items-center gap-1.5 rounded-full border border-rule-strong px-2.5 py-0.5 text-ink-2">
               <span className="size-1.5 rounded-full bg-pass" aria-hidden="true" />
