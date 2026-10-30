@@ -1554,14 +1554,15 @@ def tilted_poses(
     """The pitched engagement poses of ``step`` run by head ``tool`` as (TCP in the world, yaw, roll,
     pitch), or none when its controller keeps the tool straight down: a lid's lip pinched from the
     front (:mod:`rtt.studio.primitives.hook_pull`) along the lid's arc from closed to the pull's
-    goal; a lid pushed shut by carrying it (:mod:`rtt.studio.primitives.push`), pinched at its free
+    goal; a door's bar gripped from the front along the door's arc from closed to the pull's goal,
+    the heading turning with the door; a lid pushed shut by carrying it (:mod:`rtt.studio.primitives.push`), pinched at its free
     edge along its arc from the furthest open angle the controller can take it from (past
     vertical, up to its stop) to closed; a push from the front at its handle on an upright face.
     ``tcp_palm``: the head's TCP in the palm frame with it presented. As the controllers do, a
     tilted approach the palm cannot reach (it sits the tool's length out) is not taken. A segment
     starts at roll 0 and only a twist turns it, so the roll is 0 unless ``rolled`` (an earlier step
-    of the segment turned it): then a pinch's roll is either half turn, a push's every quarter
-    turn."""
+    of the segment turned it): then a pinch's roll is either half turn (a bar grip's either quarter
+    turn), a push's every quarter turn."""
     from types import SimpleNamespace
 
     from rtt.effectors.scene import MOUNT_Z
@@ -1574,6 +1575,14 @@ def tilted_poses(
         rotate,
     )
     from rtt.studio.primitives.hook_pull import (
+        PINCH_PITCH,
+        bar_depth,
+        bar_drop,
+        bar_pinch_fits,
+        bar_points,
+        bar_reach,
+        bar_roll,
+        bar_yaw,
         lip_pinch_fits,
         panel_goal,
         pinch_depth,
@@ -1656,6 +1665,41 @@ def tilted_poses(
             for theta in np.linspace(0.0, goal, n):
                 out.append(
                     (hinge + rotate(tcp0 - hinge, axis, float(theta)), yaw, roll, pitch0 + sense * theta)
+                )
+        return out
+    if (
+        step.primitive is PrimitiveKind.HOOK_PULL
+        and obj.kind is TemplateKind.HINGED_LID
+        and info["orientation"] == 1.0
+        and info["feature"] == 1.0
+        and two_finger(setup.tools[tool])
+        and bar_pinch_fits(*_apertures(setup.tools[tool], task), float(info["grip_m"]))
+    ):
+        # a door's bar gripped from the front: the tool normal to the face, turning with the door
+        axis = np.array([info["axis_x"], info["axis_y"], info["axis_z"]])
+        hinge, handle = obj.site_pos(data, "hinge"), obj.site_pos(data, "handle")
+        n_out = np.array([info["out0_x"], info["out0_y"], info["out0_z"]])  # the door shut
+        goal = panel_goal(info, *_angle_bounds(step))
+        radius = float(np.linalg.norm(np.cross(axis, handle - hinge)))
+        ext = pull_on_extent(SimpleNamespace(step=step, task=task), info, True, goal, goal, radius)
+        probe = _probe(setup.tools[tool], task)
+        grip = float(info["grip_m"])
+        drop = bar_drop(lambda c: footprint(probe, c), float(probe.active.tcp_wrist[2]), tip_drop, grip)
+        depth = bar_depth(info)
+        stand, engaged = bar_points(handle, n_out, float(info["bar_radius_m"]), depth, drop)
+        yaw = bar_yaw(n_out, 0.0)
+        n = max(2, math.ceil(math.degrees(abs(goal)) / TILT_STEP_DEG) + 1)
+        for roll in (bar_roll(0.0), bar_roll(0.0) - math.pi) if rolled else (bar_roll(0.0),):
+            if bar_reach(stand, engaged, n_out, depth, tcp_palm, hinge, axis, yaw, roll, goal + ext):
+                return []  # the controller grips the bar from above instead, straight down
+            for theta in np.linspace(0.0, goal, n):
+                out.append(
+                    (
+                        hinge + rotate(engaged - hinge, axis, float(theta)),
+                        yaw + float(theta) * float(axis[2]),
+                        roll,
+                        PINCH_PITCH,
+                    )
                 )
         return out
     if (

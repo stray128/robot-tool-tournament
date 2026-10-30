@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 
+import { onLeave } from "./leaving";
 import type { PlaybackStore } from "./playback";
 
 /** Seconds the last frame stays on screen before a looping player restarts. */
@@ -11,7 +12,10 @@ export function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-/** Drives the shared clock with requestAnimationFrame while playing and visible. */
+/**
+ * Drives the shared clock with requestAnimationFrame while playing and visible, and pauses it when
+ * the visitor follows a link to another page of the site (components/replay/leaving.ts).
+ */
 export function useClock(store: PlaybackStore, visible: React.RefObject<boolean>) {
   useEffect(() => {
     let raf = 0;
@@ -46,7 +50,13 @@ export function useClock(store: PlaybackStore, visible: React.RefObject<boolean>
       }
     });
     if (store.getState().playing) raf = requestAnimationFrame(frame);
+    // Leaving the page also cancels a loop's pending restart.
+    const stopOnLeave = onLeave(() => {
+      if (restart) clearTimeout(restart);
+      store.getState().pause();
+    });
     return () => {
+      stopOnLeave();
       unsubscribe();
       cancelAnimationFrame(raf);
       if (restart) clearTimeout(restart);

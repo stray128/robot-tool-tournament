@@ -241,15 +241,23 @@ open. The soft arms' horizontal arms are such hooks (131, 151 and 171 mm); gripp
 and the designed sliding hook gripper (whose hooks point inward, 4 mm) have none, reach nothing
 under the lip and fail honestly.
 
+**A door's bar** (studio v2) is gripped from the front only: a two-finger head whose opening fits
+the bar, the tool tilted 90 deg and normal to the face, its closing axis across the bar ("The door
+bar front pinch", section 12). Nothing grips it from above. A tool that does not fit the bar, or
+whose front grip the palm could not follow, is not attempted and the step fails plainly (section 12).
+The Task Engineer's layout fixer moves a door along x into the front grip's reach
+([STUDIO_ENGINEER.md](STUDIO_ENGINEER.md), the door-bar rule).
+
 **Reach** (section 14): a grip checks its engagement, its whole pull and a pull on to a `force_n`
 goal against the palm's travel (+-350 mm less 5 mm), and a hook the same from under the lip, less
 the pinch's 12 mm; a step that would leave it is not attempted and fails `out_of_reach` with a
-plain reason. The retreat after the pull (the grip's 40 mm off the face, the hook's draw back out
-from under the lip) never refuses a step: it stops at the travel less the same margin, then the
-tool rises. The hotel door (handle 330 mm out at its stop) is opened this way: its retreat would
-have put the palm at 355 mm. A tool without a hook lifts nothing, so its pull on to a force goal runs along the lid's
-whole arc and past its stop: that is how the hook of the 240 mm lid at y = 150 mm with a 20 N goal
-commanded the palm to 368.7 mm.
+plain reason. A door bar's front grip checks its draw back as well, less the same 12 mm. The
+retreat after a grip or a hook (the grip's 40 mm off the face, the hook's draw back out from under
+the lip) never refuses a step: it stops at the travel less the same margin, then the tool rises. A
+drawer at the table's edge is opened this way: its full retreat would put the palm at 383 mm. A
+tool without a hook lifts nothing, so its pull on to a force goal runs along the lid's whole arc and
+past its stop: that is how the hook of the 240 mm lid at y = 150 mm with a 20 N goal commanded the
+palm to 368.7 mm.
 
 Observed: the template state after the release, `slip_mm` (largest displacement of the handle
 relative to the tool, in the tool frame, or the panel's for a hooked lip, engaged to release,
@@ -458,6 +466,7 @@ cases (the hero-task limits, section 8) added below the line.
 | hook_pull (S2b) | free 380 x 280 lid by its lip to 90-110 deg at 20 N | 12-segment soft arm | 14/14 | | | 0.44 mm | 24.6 s |
 | hook_pull (studio v2) | the same lid, pinched with the wrist tilted (section 3.2) | two-finger adaptive, pinch | 12/14 (2 constraint exceeded) | | | 0.58 mm | 25.5 s |
 | hook_pull (S2b) | 400 x 300 door by its handle to 80 deg at 30 N, off the home pose | two-finger adaptive, pinch | 14/14 | 25 mm cup | 0/14 (constraint exceeded) | 0.26 mm | 18.2 s |
+| hook_pull (studio v2) | the same door, its bar gripped from the front with the wrist tilted (section 12) | two-finger adaptive, pinch | 14/14 | 25 mm cup | 0/14 (criterion not met: not attempted, not a two-finger gripper) | 0.21 mm | 17.4 s |
 
 The insert step times grew by 1.8 s (16.4 s in S2): every tool on a port now carries the same
 press-home budget (section 4).
@@ -467,7 +476,10 @@ with the set-down (section 3.1). Their step times grew by 1.2, 1.2 and 0.2 s (th
 onto the support); the suction reference was 1/14 under the all-pairs rule before it (its 600 g
 item let go 145 mm above the tote floor, `physics_unreliable`), and is 14/14 again with no flagged
 transient. The lip row of the two-finger adaptive gripper is the pinch (studio v2): it was the
-wrong effector, 0/14 (slip), when it could only hook.
+wrong effector, 0/14 (slip), when it could only hook. The door row's reference grips the bar from
+the front (studio v2, section 12, 2026-10-29): 81.7 to 87.2 deg, 1.3 to 8.0 N; from above it had
+reached 87.3 to 88.6 deg. Nothing grips a door's bar from above now, so the cup, which is not a
+two-finger gripper, is not attempted (`criterion_not_met` in 0.2 s, with the reason).
 
 No MuJoCo reset (`physics_invalid`) in any gate run. Two in-process runs and a spawned worker
 give the same `traj_sha` for every gate task.
@@ -480,7 +492,7 @@ inserts):
 | lid, lip | hook pull to 80 deg | fails (slip) | a straight finger cannot get under a horizontal lip; the 12-segment soft arm hooks under it: 110 deg, slip 6.2 mm (S2b) |
 | lid, handle | hook pull to 80 deg | passes | 110 deg (on its stop), slip 11.7 mm |
 | door, lip | hook pull to 60 deg | passes | 68 deg, slip 0.4 mm (edge pinch) |
-| door, handle | hook pull to 60 deg | passes | 68 deg, slip 0.1 mm |
+| door, handle | hook pull to 60 deg | passes | 66 deg, slip 1.1 mm: the bar gripped from the front (section 12; from above, 68 deg and 0.1 mm) |
 | lid open at 108 deg | push closed (40 N limit) | passes | 0 deg, 8.4 N |
 | door open at 70 deg | push closed (40 N limit) | passes | 0 deg, 32 N |
 | drawer, bar / knob / lip | hook pull to 120 mm | passes | 160 / 132 / 120 mm; slip 7.3 / 0.5 / 33.8 mm |
@@ -832,6 +844,73 @@ A goal the pitch cannot follow within +-90 deg, or a tilted approach that would 
 its travel (+-0.35 m: the palm sits the tool's length out from the lip), falls back to the hook.
 Slip is measured as for a hook, the pinch point in the panel's frame.
 
+**The door bar front pinch** (`hook_pull`, mode `bar`). A door's bar handle (`orientation = door`,
+`feature = handle`: a vertical bar standing off the outer face near the free edge) is gripped from
+the front only. The gripper must be of the lip pinch's class (`two_finger`), with a calibrated open
+aperture that clears the 10 mm bar by 6 mm a side and a shut aperture under it (`bar_fits`). The
+pitch is 90 deg, so the tool is horizontal. The yaw points it at the door along the face normal
+(`bar_yaw`, the lip pinch's yaw with the hinge vertical). The roll goes to the nearest quarter turn
+(`bar_roll`), which lays the closing axis horizontal along the face, across the bar. The wrist
+rises to the transit height and turns there, within the pitch and roll caps. It descends with the
+tips 25 mm out from the bar's front at the bar's mid-height and pre-shapes as closed as still clears
+the bar. Then it moves in along the tool axis, guarded (5 N on any object), until the tips are past
+the bar's front by the bar's depth off the face less 4 mm (26 mm on a 10 mm bar 20 mm off the face),
+so they stop 4 mm short of the face [assumed]. The depth counts how far the tips reach beyond the
+TCP as the fingers close (`bar_depth`, `bar_drop`). It closes (1.0 s plus 0.3 s) and carries the bar
+along the door's arc to the pull's goal. The heading turns with the door, so the tool stays normal
+to the face, no faster than the 180 deg/s turn cap allows, and the wrist yields along the tool axis
+as in the lip pinch. At the goal it opens to the pre-shape, draws back along the tool axis until the
+tips are 30 mm clear of the bar, and rises 60 mm while the pitch turns back to straight down
+[assumed].
+
+The palm sits the tool's length out from the bar along the face normal, and a door that opens toward
+a table edge carries it there. So the grip, the whole pull (a pull on to a force goal included) and
+the draw back must keep the palm 12 mm inside its travel (`bar_reach`). Nothing else engages a
+door's bar, and nothing grips it from above. A tool that does not fit the bar fails the step
+`criterion_not_met` in 0.2 s ("Cannot grip the door's bar from the front: its calibration finds no
+pair of fingers either side of its axis to close across the bar; the step was not attempted"). A
+front grip the palm could not follow fails it `out_of_reach` ("Out of reach: the front grip's pull
+would take the palm to x -454 mm, y 9 mm, past its +-350 mm travel less 12 mm; the step was not
+attempted"). Neither step is attempted. The search's tilted poses make the same reach check
+(`search.tilted_poses`), so a two-tool head's swept-volume check sees the tilt. The Task Engineer's
+layout fixer moves a door that neither reference gripper on a tool changer could grip from the front
+along x until one can ([STUDIO_ENGINEER.md](STUDIO_ENGINEER.md), the door-bar rule).
+
+**Measured** (nominal or seed 0 unless a grid is named; `test_a_door_bar_is_gripped_from_the_front_on_the_14_gate_conditions`,
+`test_a_door_bar_the_front_grip_cannot_reach_or_fit_is_not_attempted`):
+
+| Door | Tool | Result |
+|---|---|---|
+| S2b door, 400 x 300 x 10 mm at (0, 150 mm), 80 deg within 30 N, the 14 gate conditions | two-finger adaptive, pinch | from the front, 14/14: 81.7 to 87.2 deg, 1.3 to 8.0 N, penetration at most 0.21 mm, slip 1.5 to 5.5 mm, 17.4 s; at the grip the closing axis is square to the bar (0.0 deg) and the tool axis within 0.13 deg of the face normal (2.9 deg at worst during the pull), pitch 90 deg |
+| the same door | servo-110 | not attempted, `out_of_reach`: the front grip's draw back would take the palm to x -365 mm (from above it had opened it to 88.0 deg) |
+| the same door | angular-jaw (hobby arm), 25 mm cup | not attempted, `criterion_not_met`: no pair of fingers to close across the bar; not a two-finger gripper |
+| default door, handle, at (0, 80 mm), 60 deg | two-finger adaptive, pinch | from the front: 65.9 deg, slip 1.1 mm (from above before: 67.9 deg, 0.1 mm) |
+| hotel door, 400 x 300 x 20 mm at (-140, 290 mm), where its recorded plan first stood | two-finger adaptive, servo-110 | not attempted, `out_of_reach`: the front grip's pull would take the palm to x -407 and -454 mm (from above they had opened it to 87.9 and 88.1 deg) |
+| the same door | angular-jaw (hobby arm) | not attempted, `criterion_not_met` (from above it had opened it to 89.1 deg) |
+
+At x -140 mm the hotel door is hinged on its left and swings its face toward the table's left edge.
+Gripped from the front, the palms of the eligible grippers (113 to 181 mm from their tips) would
+leave the travel at 63 to 74.5 deg of the 88 deg goal. The layout fixer now moves it to x 90 mm,
+where the 110 mm servo gripper on a tool changer reaches it, and moves the tray out of its swing.
+There the hotel job is done from the front (`STUDIO_ENGINEER.md`, the hotel smoke run).
+
+Letting go, the adaptive gripper's distal links spring straight as the fingers open. They had
+curled round the bar onto the face while holding it, and they strike the face. The door, pulled to
+87.7 deg, swings back to 81.7 deg on seed 4; the 8 deg goal margin covers it. Drawing back while the
+fingers open instead pulled the doors on to 97 to 99.6 deg, which would bring a door with a 90 deg
+stop onto it fast. So the order stays: open, then draw back.
+
+**Unchanged runs.** `traj_sha` before (8620c7a) and after, on the S2 gate (7 primitives, reference
+and wrong tool, 14 conditions each), the lip rows, H1 (8 conditions, 4 steps), the lidded tote, the
+set-down picks, the sliding-door, machine and far-reach template rows, the hotel door (x -140 and
+-170 mm with the adaptive, servo-110 and angular-jaw grippers), the S2b door (the adaptive gripper
+on 14 conditions, three other tools on seed 0) and the default door with a lip and with a handle:
+254 of 276 steps are identical. The 22 that changed are all door-bar runs. 15 are now gripped from
+the front: the S2b door's 14 and the default door's handle. 7 are now not attempted, where the bar
+was gripped from above before: the S2b door with the servo-110, the angular jaw and the cup, and the
+hotel door at x -140 mm with all three grippers. The seventh is the angular jaw at x -170 mm, whose
+step was already not attempted, out of reach; it now fails as a misfit, with the same trajectory.
+
 **The push from the front** (`push`, `approach = front`). A push on a face whose normal is within
 30 deg of horizontal tilts the tool 90 deg, the yaw square to the face (it follows a door as it
 turns), and pushes with the tool's tip on its axis (the lowest point of its calibrated footprint
@@ -1085,7 +1164,10 @@ step was not attempted"), instead of running in vain to a silent `criterion_not_
   goal. **Hook** (a lid's lip): the same from under the lip, with the pinch's 12 mm margin
   (`hook_pull.PINCH_REACH_MARGIN`). The retreat after either (off the handle, or back out from
   under the lip) is not a reason to refuse: it stops at the travel less the margin
-  (`hook_pull._retreat_within`), then the tool rises.
+  (`hook_pull._retreat_within`), then the tool rises. A door bar's front grip (section 12) checks
+  its draw back too, with the same 12 mm (`hook_pull.bar_reach`): where any of its moves would leave
+  the travel the step is not attempted and fails `out_of_reach`, naming the front grip's move ("Out of
+  reach: the front grip's pull would take the palm to ...").
 * **Push**: the tool on the face where each push starts and where it ends.
 
 A step that is not tried keeps its tool as it was for its 0.2 s (`_common.idle_command`): closed

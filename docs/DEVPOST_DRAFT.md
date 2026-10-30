@@ -26,7 +26,7 @@ Physical AI
 | What | URL |
 |---|---|
 | Live site (static, no login, no key) | https://stray128.github.io/robot-tool-tournament/ |
-| The Studio: the six jobs | https://stray128.github.io/robot-tool-tournament/studio/ |
+| The Studio: four tested jobs | https://stray128.github.io/robot-tool-tournament/studio/ |
 | Plan a new job | https://stray128.github.io/robot-tool-tournament/studio/new/ |
 | Use-case atlas (95 researched jobs) | https://stray128.github.io/robot-tool-tournament/atlas/ |
 | Evidence | https://stray128.github.io/robot-tool-tournament/evidence/ |
@@ -99,7 +99,7 @@ STL, the exact tested scene, a bill of materials, a certificate and the licences
 | Solar panel install | lift the 8 kg panel onto its rails, start the clamp nut, tighten it to 6 N m | A tool change, a vacuum area frame, then a 10 mm suction cup, then a nut runner: 7 of 8 runs. |
 | Floor tile setting | lay a 300 mm tile on fresh adhesive, tamp it level | A two-tool head, a vacuum area frame and a 200 mm tamper pad: 8 of 8 runs. |
 | Pipe coupling | push a coupling onto its thread, turn it hand-tight (about 3 N m) | Not shown: replay held back. Its replay failed the quality gate. |
-| Hotel delivery (bench mock-up) | press the call button, open the door, place the parcel | A two-tool head, a 25 mm suction cup for the button and the parcel and an angular-jaw gripper for the door: 8 of 8 runs. The best single tool finishes 0 of 8. |
+| Hotel delivery (bench mock-up) | press the call button, open the door, place the parcel | A tool change, a drawer-pull hook tool for the button, a force-controlled 48 mm parallel gripper that grips the door's handle from the front, and a 25 mm suction cup for the parcel: 8 of 8 runs. The best single tool finishes 0 of 8. |
 
 **The use-case atlas.** 95 jobs people do today, across 13 settings in construction; factories,
 warehouses and retail; and labs, food and services. Each lists its steps and the setup an

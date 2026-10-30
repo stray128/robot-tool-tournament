@@ -3,7 +3,7 @@
  "version": 1,
  "label": "Product mode: not part of the pre-registered experiment",
  "contract": "rtt-effectors/2",
- "code_version": "c09b3ed916d1",
+ "code_version": "ed74b2b84496",
  "heroes": [
   {
    "hero": "h1_tote",
@@ -181,19 +181,39 @@
    "setting": "hospitality",
    "use_case": "Hotel delivery, on a bench mock-up: press the elevator call button on the wall (a 40 mm round button, about 5 N to press, its centre 150 mm up the wall, nothing standing in front of it), then open the room door beside it (a hinged door 300 mm wide and 400 mm tall with a pull handle, hinged on its left) and put the parcel (a 160 x 120 x 80 mm box, 500 g) from the bench into the delivery tray behind the door.",
    "page": "studio/h7_hotel.json",
-   "task_id": "2a0bc4766d10e13a1e62cf0ea4443e4b25f527fd3c7552ed74352a751469d442",
+   "task_id": "dc0ae4f82a5123cc7039f7ac2e35fe3b54399c63dd4443c5cc50cb24c33e3243",
    "n_steps": 3,
    "n_candidates": 53,
    "outcome": "recommended",
-   "headline": "A two-tool head completes the task in 8 of 8 runs; the best single off-the-shelf tool in 0 of 8 runs.",
+   "headline": "A tool-change sequence completes the task in 8 of 8 runs; the best single off-the-shelf tool in 0 of 8 runs.",
    "recommended": {
-    "setup_id": "5f6656e247bdbdf47a8393404d31273e6f9bebff8f948f3b9f79848826be41aa",
-    "kind": "multi_head",
-    "kind_title": "Two-tool head",
-    "label": "Two-tool head: Suction cup + Angular-jaw gripper of",
+    "setup_id": "e38465aad8735559314fe4beca2de13556c1bc614e0c13a4274a9bf2f046b6fc",
+    "kind": "tool_change",
+    "kind_title": "Tool change",
+    "label": "Tool change: Drawer-pull > Force-controlled > Suction",
     "tools": [
      {
       "index": 0,
+      "effector_id": "38850807f92bc307da9f0519004f6c9a30606ed04934014a6791ad01acf0c88b",
+      "display_name": "Drawer-pull hook tool",
+      "family": "catalog_gripper",
+      "family_title": "Industrial gripper",
+      "fidelity": "rigid",
+      "off_the_shelf": true,
+      "caveat": null
+     },
+     {
+      "index": 1,
+      "effector_id": "6d286bacbd7431187a1a4bd5a48d194ea5e59399afb0a9e2227332f4fe006cf7",
+      "display_name": "Force-controlled parallel gripper, 48 mm stroke",
+      "family": "catalog_gripper",
+      "family_title": "Industrial gripper",
+      "fidelity": "rigid",
+      "off_the_shelf": true,
+      "caveat": null
+     },
+     {
+      "index": 2,
       "effector_id": "e72e88518c0ebe7a74ec5db104b671180e9dbb5b51d0b11045814506657f31bf",
       "display_name": "Suction cup, 25 mm bellows",
       "family": "suction",
@@ -201,16 +221,6 @@
       "fidelity": "approximation",
       "off_the_shelf": true,
       "caveat": "Suction cup (approximation): a compliant lip of rigid segments on a bellows spring with a limited tilt; the seal is a geometric test (every lip segment touching the face, part material under 13 rays inside the lip) gating a MuJoCo adhesion actuator capped at vacuum x lip area (at most 60 kPa). The lip must touch the face: no pull across a gap. Not modelled: air flow, leak rate, porosity, vacuum build-up time (the vacuum follows the shared close ramp and is cut the control tick the seal is lost), lip material hysteresis, peel dynamics beyond the contact distribution. The lip's friction is the part's. Treat suction results as a screen, then verify on hardware."
-     },
-     {
-      "index": 1,
-      "effector_id": "7d8ca167a7b3a93e3461ebca357e274ec9c9ca4fa9c2f4e50daa4c0a5e027724",
-      "display_name": "Angular-jaw gripper of an open hobby arm",
-      "family": "catalog_gripper",
-      "family_title": "Industrial gripper",
-      "fidelity": "rigid",
-      "off_the_shelf": true,
-      "caveat": null
      }
     ],
     "completion_rate": 1.0,
@@ -218,7 +228,7 @@
     "n_runs": 8,
     "fidelity": "approximation",
     "stops_at": null,
-    "cycle_time_s": 51.41
+    "cycle_time_s": 63.8
    },
    "best_single": {
     "setup_id": "508890d063e61c7c80a1ee28df51c4e4c638f0256e07f278784c73f82656f495",

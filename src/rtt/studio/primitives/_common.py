@@ -16,8 +16,9 @@
   is at ``palm + Rz(yaw) Rx(pitch) Rz(roll) p`` (:func:`rtt.studio.scene.wrist_rotation`), which
   is ``palm + Rz(yaw + roll) p`` with the tool straight down (pitch 0). Controllers change the
   heading with the yaw and turn objects with the roll (capped at the roll speed limit). The tool
-  stays straight down except where the tilt matters (a lid's lip pinched from the front, a push
-  from the front, :mod:`.hook_pull` and :mod:`.push`); a step that starts tilted turns back to
+  stays straight down except where the tilt matters (a lid's lip pinched from the front, a door's
+  bar gripped from the front, a push from the front, :mod:`.hook_pull` and :mod:`.push`); a step
+  that starts tilted turns back to
   straight down in its first move, within the pitch speed cap (:meth:`Path.to`).
 * **Perception.** Objects are located only through :meth:`StepContext.observe_site` (the true
   site plus the object's hidden aim offset); a controller reads its own wrist (proprioception)
@@ -28,7 +29,8 @@
   in a :class:`Schedule` keyed by the step's context (:func:`schedule`).
 * **Reach.** Every controller checks its planned palm poses against the palm's travel
   (+-350 mm, :data:`rtt.sim.scene.PALM_XY_LIMIT`, less :data:`REACH_MARGIN`; a lid's pinch or hook
-  less :data:`~.hook_pull.PINCH_REACH_MARGIN`) before it commits (:func:`reach_problem`): a step
+  and a door bar's front grip less :data:`~.hook_pull.PINCH_REACH_MARGIN`) before it commits
+  (:func:`reach_problem`): a step
   whose target lies outside is not attempted and fails ``out_of_reach`` with where the palm would
   have to go and a plain reason (:func:`hold_out_of_reach`, :func:`out_of_reach_verdict`).
 * **Letting go.** A controller sets a part down before it lets go of it: the part's lowest point
@@ -74,6 +76,7 @@ __all__ = [
     "Tool",
     "angle_about",
     "box_corners",
+    "closing_low",
     "contacts",
     "criterion_bounds",
     "footprint",
@@ -318,8 +321,7 @@ class Tool:
         through the whole close. Fingers only (else :attr:`tip`)."""
         if self.mechanism != "fingers":
             return self.tip
-        closures = [c for c in (*PRESHAPE_CLOSURES, 0.8, 1.0) if c >= pre - 1e-9]
-        low = min(self.footprint(c).tip_z for c in closures)
+        low = closing_low(self.footprint, pre)
         return np.array([self.tip[0], self.tip[1], min(float(self.tip[2]), low)])
 
     def preshape(self, width: float, clearance: float = PRESHAPE_CLEARANCE) -> float:
@@ -328,6 +330,13 @@ class Tool:
         if self.mechanism != "fingers":
             return 0.0
         return preshape_closure(self.footprint, width, clearance)
+
+
+def closing_low(footprint_at: Callable[[float], Footprint], pre: float) -> float:
+    """The lowest point (wrist z) a head's geoms reach over its calibrated closures from ``pre`` to
+    1 (``footprint_at(closure)``): where :meth:`Tool.closing_tip` puts a closing finger's tip."""
+    closures = [c for c in (*PRESHAPE_CLOSURES, 0.8, 1.0) if c >= pre - 1e-9]
+    return min(footprint_at(c).tip_z for c in closures)
 
 
 def preshape_closure(

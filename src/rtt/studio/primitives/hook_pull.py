@@ -6,8 +6,8 @@ Objects: ``hinged_lid`` (lid or door) and ``drawer``; handle ``handle`` (the tem
 
 1. **Engagement plan.** The engagement point is the observed ``handle`` site. The closing axis
    of the tool (its y) is set across the feature: across a horizontal bar or a lip (along the
-   object's y), along the face for a door's vertical bar, across the knob's neck. The heading
-   is set with the wrist yaw (the roll stays).
+   object's y), across the knob's neck (a door's vertical bar is gripped from the front only,
+   below). The heading is set with the wrist yaw (the roll stays).
 2. **Approach** (``approach``): ``top`` descends onto the feature from above; ``front`` descends
    30 mm out in front of it (away from the hinge or the carcass) and moves in horizontally.
    The tool is open (fingers open, cup vacuum off, cable slack).
@@ -66,12 +66,39 @@ Objects: ``hinged_lid`` (lid or door) and ``drawer``; handle ``handle`` (the tem
   :data:`HOOK_MAX`), raised onto the underside, and carried along the arc with the fingers open. A
   tool without a hook reaches nothing under the lip and fails honestly.
 
+**A door's bar** (``orientation`` door, ``feature`` handle: a vertical bar standing off the outer
+face near the free edge, :func:`door_bar`) is gripped from the front only (mode ``"bar"``, wrist
+pitch), by a two-finger gripper whose open fingers clear the bar by :data:`PINCH_CLEARANCE` a side
+and close tighter than it (:func:`bar_fits`, the lip's rule on the bar). The pitch (:data:`PINCH_PITCH`, 90 deg) lays the
+tool horizontal, the yaw points it at the door along the face normal (:func:`bar_yaw`, as
+:func:`pinch_yaw` with the hinge vertical) and a quarter-turn roll lays its closing axis horizontal
+along the face, across the bar (:func:`bar_roll`), at the bar's mid-height. The wrist rises to the
+transit height and turns there (within the pitch and roll caps), descends with the tips
+:data:`BAR_STANDOFF` out from the bar's front, pre-shapes as closed as still clears the bar and
+moves in along the tool axis, guarded, until the tips are past the bar's front by its depth off the
+face less :data:`PINCH_TIP_MARGIN` (:func:`bar_depth`: they stop that far short of the face; how
+far the tips reach beyond the TCP as the fingers close is :func:`bar_drop`). It closes (1.0 s plus
+0.3 s) and carries the bar along the door's arc to the pull's goal with the heading turning with
+the door, so the tool stays normal to the face, no faster than the wrist's turn cap allows, and
+yields along the tool axis as the lip pinch does. At the goal it opens to the pre-shape, draws back
+along the tool axis until the tips are :data:`BAR_RETRACT` clear of the bar, and rises 60 mm while
+the pitch turns back to straight down. The palm sits the tool's length out from the bar along the
+face normal, so the front grip is made only when the grip, the whole pull (a pull on to a force
+goal included) and the draw back keep it within its travel less :data:`PINCH_REACH_MARGIN`
+(:func:`bar_reach`) and its plan fits a step. Nothing else engages a door's bar: a tool that does
+not fit it fails the step ``criterion_not_met`` in 0.2 s with the reason ("Cannot grip the door's
+bar from the front: ..."), and a front grip the palm cannot follow fails it ``out_of_reach`` ("the
+front grip's pull would take the palm to ..."); neither step is attempted. The Task Engineer's
+layout fixer moves such a door along x into the front grip's reach
+(:func:`rtt.studio.engineer.layout.fix_door_bars`).
+
 Every guarded move stops on contact with any object in the scene, not only the step's.
 
 **Out of reach** (Studio v2): before it commits, a grip checks its engagement, its whole pull (every
 2 deg of an arc) and a pull on to a ``force_n`` at_least goal against the palm's travel
 (:func:`~._common.reach_problem`, +-350 mm less 5 mm), and a hook the same from under the lip
-(less :data:`PINCH_REACH_MARGIN`, the pinch's, on the same lip). The retreat after the pull (the
+(less :data:`PINCH_REACH_MARGIN`, the pinch's, on the same lip). A door bar's front grip checks
+its draw back too (:func:`bar_reach`). The retreat after the pull (the
 grip's :data:`RETRACT_OUT` off the face, the hook's draw back out from under the lip) is never a
 reason to refuse a step: it stops at the palm's travel less the same margin
 (:func:`_retreat_within`), then the tool rises. The free move to a standoff is not checked: a palm
@@ -82,7 +109,8 @@ so its pull on to a force goal runs along the lid's whole arc and past its stop:
 
 **Predicate** (:class:`HookPullPredicate`): ``angle_deg`` or ``travel_mm`` (the template state
 when the step ends, after the release), ``slip_mm`` (the largest displacement of the handle
-relative to the tool, in the tool's frame (the panel's for a pinched or hooked lip), from the end of the
+relative to the tool, in the tool's frame (the panel's for a pinched or hooked lip or a bar gripped
+from the front), from the end of the
 engagement to the release, counted while the tool touches the object or the object lags more
 than 1 deg or 2 mm behind where the tool is taking it: a lid that falls open ahead of the hook
 past vertical has not slipped), ``force_n`` (peak net force of the tool on the object),
@@ -121,6 +149,7 @@ from rtt.studio.primitives._common import (
     Guarded,
     Path,
     Tool,
+    closing_low,
     contacts,
     criterion_bounds,
     force_allowed,
@@ -128,6 +157,7 @@ from rtt.studio.primitives._common import (
     heading_for_axis,
     hold_out_of_reach,
     idle_command,
+    idle_run,
     in_reach,
     move_time,
     observed_state,
@@ -135,12 +165,14 @@ from rtt.studio.primitives._common import (
     out_of_reach_verdict,
     panel_angle,
     panel_normal,
+    preshape_closure,
     press_reach,
     reach_problem,
     rot_z,
     rotate,
     safe_palm_z,
     schedule,
+    scheduled,
     start_pose,
     tool_geoms,
     tool_of,
@@ -155,11 +187,24 @@ from rtt.studio.scene import wrist_rotation
 from rtt.studio.types import MAX_STEP_S, SLIDE_KINDS, PrimitiveKind, TemplateKind
 
 __all__ = [
+    "BAR_RETRACT",
+    "BAR_STANDOFF",
     "PINCH_REACH_MARGIN",
     "HookPullController",
     "HookPullPredicate",
     "Motion",
+    "bar_depth",
+    "bar_drop",
+    "bar_far",
+    "bar_fits",
+    "bar_misfit",
+    "bar_pinch_fits",
+    "bar_points",
+    "bar_reach",
+    "bar_roll",
+    "bar_yaw",
     "command_pinch",
+    "door_bar",
     "lip_pinch_fits",
     "panel_goal",
     "pinch_depth",
@@ -205,6 +250,9 @@ PINCH_AIM_ERROR = 0.002  # m: how far off its observed sites a lid may be (the h
 #: m kept inside the palm's travel on a pinch's path: the wrist's yield along the tool axis and the
 #: aim error, so neither takes it past its travel
 PINCH_REACH_MARGIN = PINCH_COMPLY_MAX + PINCH_AIM_ERROR
+# a door's vertical bar gripped from the front with the wrist tilted (module docstring)
+BAR_STANDOFF = 0.025  # m: the tips stand this far out from the bar's front before going in [assumed]
+BAR_RETRACT = 0.030  # m: drawn back along the tool axis until the tips are this clear of the bar [assumed]
 
 
 def _object_yaw(ctx: StepContext) -> float:
@@ -461,14 +509,12 @@ class HookPullController:
     name: str = "studio_hook_pull"
 
     def plan(self, ctx: StepContext, model: mujoco.MjModel, data: mujoco.MjData) -> StepPlan:
-        step = ctx.step
         tool = tool_of(ctx, ctx.obj.body_ids[-1])
         sch = schedule(ctx)
         sch.tool = tool
         motion = _motion(ctx, model, data)
         handle = ctx.observe_site(data, "handle")
         start = start_pose(ctx)
-        roll = float(start[4])
         info = ctx.obj.handles.info
         if motion.hinged and info["orientation"] == 0.0 and info["feature"] == 0.0:
             why: list[str] = []
@@ -480,6 +526,37 @@ class HookPullController:
             if not why:
                 return hook
             return StepPlan(hook.duration_s, hook.values, f"{hook.note}; not pinched: {why[0]}")
+        if motion.hinged and door_bar(ctx):  # gripped from the front, or not at all
+            misfit = bar_misfit(ctx, tool)
+            if misfit is not None:
+                return _hold_no_front_grip(ctx, start, misfit)
+            why = []
+            far: list[tuple[str, np.ndarray]] = []
+            plan = self._plan_bar(ctx, model, data, tool, motion, handle, start, why, far)
+            if plan is not None:
+                return plan
+            if far:
+                what, pose = far[0]
+                hit = reach_problem(pose, margin=PINCH_REACH_MARGIN)
+                assert hit is not None
+                return hold_out_of_reach(ctx, start, hit, f"the front grip's {what}")
+            return _hold_no_front_grip(ctx, start, why[0])
+        return self._plan_grip(ctx, model, data, tool, motion, handle, start)
+
+    def _plan_grip(
+        self,
+        ctx: StepContext,
+        model: mujoco.MjModel,
+        data: mujoco.MjData,
+        tool: Tool,
+        motion: Motion,
+        handle: np.ndarray,
+        start: np.ndarray,
+    ) -> StepPlan:
+        """The tool straight down, closed across the feature (module docstring, steps 1 to 5)."""
+        step = ctx.step
+        sch = schedule(ctx)
+        roll = float(start[4])
         heading = heading_for_axis(
             _closing_axis(ctx, motion.current), _yaw_offset(ctx, tool), float(start[3] + roll)
         )
@@ -570,6 +647,8 @@ class HookPullController:
             return self._command_hook(t, ctx, run, model, data)
         if run.get("mode") == "pinch":
             return self._command_pinch(t, ctx, run, model, data)
+        if run.get("mode") == "bar":
+            return self._command_bar(t, ctx, run, model, data)
         guard: Guarded = run["guard"]
         if t < guard.t0:
             wrist = run["path"].at(t)
@@ -992,6 +1071,177 @@ class HookPullController:
             sch.values["t_release"] = t
         return float(run["carry_u"])
 
+    # ------------------------------------------------------------------ a door's bar, from the front
+
+    def _plan_bar(
+        self,
+        ctx: StepContext,
+        model: mujoco.MjModel,
+        data: mujoco.MjData,
+        tool: Tool,
+        motion: Motion,
+        handle: np.ndarray,
+        start: np.ndarray,
+        why: list[str],
+        far: list[tuple[str, np.ndarray]] | None = None,
+    ) -> StepPlan | None:
+        """A two-finger tool tilts and grips a door's vertical bar from the front (module docstring);
+        ``None`` when the palm would leave its travel on the grip, the pull or the draw back
+        (:func:`bar_far`: the move and the palm's furthest pose are appended to ``far``), or the plan
+        would not fit a step (:data:`~rtt.studio.types.MAX_STEP_S`); the reason is appended to ``why``
+        and the step is not attempted."""
+        step, info = ctx.step, ctx.obj.handles.info
+        sch = schedule(ctx)
+        wrist = ctx.scene.wrist
+        yaw_now, roll_now, pitch_now = float(start[3]), float(start[4]), float(start[5])
+        n_out = panel_normal(ctx, motion.current)  # the door's outer face now (horizontal)
+        yaw, roll = bar_yaw(n_out, yaw_now), bar_roll(roll_now)
+        grip = float(info["grip_m"])
+        pre_close = tool.preshape(grip, PINCH_CLEARANCE)
+        drop = bar_drop(tool.footprint, float(tool.tcp[2]), tool.tip_drop, grip)
+        d_tip = bar_depth(info)
+        tcp = tool.tcp
+        stand_tcp, engaged_tcp = bar_points(handle, n_out, float(info["bar_radius_m"]), d_tip, drop)
+        stand = wrist_target(stand_tcp, tcp, yaw, roll, PINCH_PITCH)
+        engaged = wrist_target(engaged_tcp, tcp, yaw, roll, PINCH_PITCH)
+        delta = motion.goal - motion.current
+        radius = float(np.linalg.norm(np.cross(motion.axis, handle - motion.point)))
+        speed = float(step.params["speed_mm_s"]) / 1000.0
+        # the heading turns with the door: the pull is no faster than the wrist's turn caps allow
+        on = _pull_on(ctx, motion, delta, radius, speed, math.radians(wrist.pitch_speed_dps) / TURN_MARGIN)
+        ext = on["ext_sense"] * on["ext_cap"] if on["force_goal"] is not None else 0.0
+        out = bar_far(
+            stand_tcp, engaged_tcp, n_out, d_tip, tcp, motion.point, motion.axis, yaw, roll, delta + ext
+        )
+        if out is not None:  # the palm sits the tool's length out from the bar, past its travel
+            why.append(_reach_words(*out))
+            if far is not None:
+                far.append(out)
+            return None
+        path = Path.start(start, wrist.pitch_speed_dps)
+        safe = safe_palm_z(ctx, model, data, tool)
+        if start[2] < safe - 1e-4:
+            up = start.copy()
+            up[2] = safe
+            path.to(up)
+        above = stand.copy()
+        above[2] = max(safe, stand[2])
+        t_turn = max(
+            turn_time(PINCH_PITCH - pitch_now, wrist.pitch_speed_dps),
+            turn_time(roll - roll_now, wrist.roll_speed_max_deg_s),
+        )
+        path.to(above, max(0.4 + 0.3 * abs(yaw - yaw_now), t_turn, move_time(path.last, above)))
+        path.to(stand, max(0.8, move_time(path.last, stand)))
+        guard = Guarded(path.last, engaged, path.end, 1.0 + BUDGET_S["engage_slack"])
+        t_close = guard.end
+        t_pull = t_close + 1.0 + 0.3
+        pull_t = max(0.5, 1.875 * abs(delta) * radius / speed, turn_time(delta, wrist.pitch_speed_dps))
+        t_release = t_pull + pull_t + on["ext_t"]
+        t_back = max(0.6, turn_time(PINCH_PITCH, wrist.pitch_speed_dps))
+        t_end = t_release + RELEASE_S + 0.5 + t_back + 0.3 + BUDGET_S["hook_slack"]
+        if t_end > MAX_STEP_S:
+            why.append(f"the pull would take {t_end:.0f} s, past the {MAX_STEP_S:g} s a step may last")
+            return None
+        sch.engaged = t_pull
+        sch.released = t_release
+        sch.values.update(
+            t_close=t_close, t_release=t_release, pre=pre_close, sense=math.copysign(1.0, delta)
+        )
+        sch.values["slip_point"] = tcp.tolist()  # type: ignore[assignment]
+        run = {
+            "mode": "bar",
+            "path": path,
+            "guard": guard,
+            "motion": motion,
+            "delta": delta,
+            "t_close": t_close,
+            "t_pull": t_pull,
+            "pull_t": pull_t,
+            "t_release": t_release,
+            "yaw": yaw,
+            "roll": roll,
+            "pitch_dps": wrist.pitch_speed_dps,
+            "stand": stand,
+            "d_tip": d_tip,
+            "engaged": None,
+            "back": d_tip + BAR_RETRACT,  # m drawn back after the release (set once the grip is made)
+            "last": None,
+            "ax_off": 0.0,
+            **on,
+        }
+        return StepPlan(
+            duration_s=t_end,
+            values={"run": run, "schedule": sch},
+            note=(
+                f"hook pull: tilt 90 deg and grip the bar from the front, the tips "
+                f"{1000 * d_tip:.0f} mm past it, arc by {delta:.3f}"
+            ),
+        )
+
+    def _command_bar(
+        self, t: float, ctx: StepContext, run: dict[str, Any], model: mujoco.MjModel, data: mujoco.MjData
+    ) -> PrimitiveCommand:
+        sch = schedule(ctx)
+        tool: Tool = sch.tool
+        v = sch.values
+        guard: Guarded = run["guard"]
+        if t < guard.t0:
+            wrist = run["path"].at(t)
+        elif t < run["t_pull"]:
+            pressing = contacts(model, data, tool_geoms(ctx.scene), ctx.scene.ids.object_geoms).normal
+            wrist = guard.at(min(t, guard.end), pressing) if t <= guard.end else guard.at(guard.end, 1e9)
+        elif t < run["t_release"]:
+            if run["engaged"] is None:
+                run["engaged"] = guard.at(guard.end, 1e9)
+                # the tips went in past the bar's front by what the guarded move covered less the
+                # standoff: drawn back by that and BAR_RETRACT, they end BAR_RETRACT clear of it
+                went = float(np.linalg.norm(run["engaged"][:3] - run["stand"][:3]))
+                run["back"] = max(0.0, went - BAR_STANDOFF) + BAR_RETRACT
+            base = run["engaged"]
+            motion: Motion = run["motion"]
+            s = run["delta"] * min_jerk((t - run["t_pull"]) / run["pull_t"])
+            if run["force_goal"] is not None:
+                s += run["ext_sense"] * run["ext"]
+                if _pull_on_step(t, ctx, run, model, data, run["t_pull"] + run["pull_t"]):
+                    run["t_release"] = t  # every goal met: let go now
+                    sch.released = t
+                    v["t_release"] = t
+            point = base[:3] + wrist_rotation(run["yaw"], run["roll"], PINCH_PITCH) @ tool.tcp
+            v["progress"] = motion.current + s  # where the tool is taking the door
+            heading = run["yaw"] + s * float(motion.axis[2])  # the tool turns with the door
+            wrist = wrist_target(motion.carry(point, s), tool.tcp, heading, run["roll"], PINCH_PITCH)
+            run["last"] = wrist
+        else:  # open, draw back along the tool axis clear of the bar, rise as the pitch turns back
+            last = run["last"] if run["last"] is not None else guard.at(guard.end, 1e9)
+            if run.get("t_back_now") is None:  # the turn back from where the pitch is, within the cap
+                run["t_back_now"] = max(0.6, turn_time(float(last[5]), run["pitch_dps"]))
+            t_r = run["t_release"]
+            back_dir = -_tool_axis(last)
+            back = min_jerk(min(1.0, max(0.0, (t - t_r - RELEASE_S) / 0.5)))
+            turn = min_jerk(min(1.0, max(0.0, (t - t_r - RELEASE_S - 0.5) / run["t_back_now"])))
+            wrist = last + offset(*(run["back"] * back * back_dir + np.array([0.0, 0.0, RETRACT * turn])))
+            wrist[5] = float(last[5]) * (1.0 - turn)
+        closure = v["pre"] + (1.0 - v["pre"]) * min(max((t - run["t_close"]) / 1.0, 0.0), 1.0)
+        if t >= run["t_release"]:  # open back to the pre-shape only
+            closure = v["pre"] + (1.0 - v["pre"]) * max(0.0, 1.0 - (t - run["t_release"]) / RELEASE_S)
+        if run["t_close"] <= t < run["t_release"]:  # yield along the tool axis (force feedback)
+            push = float(
+                contacts(model, data, tool_geoms(ctx.scene), ctx.obj.geom_ids).net @ _tool_axis(wrist)
+            )
+            dt = ctx.task.controller.control_period
+            run["ax_off"] = float(
+                np.clip(run["ax_off"] - PINCH_COMPLY * push * dt, -PINCH_COMPLY_MAX, PINCH_COMPLY_MAX)
+            )
+        if run["ax_off"] and t >= run["t_close"]:
+            wrist = wrist + offset(*(run["ax_off"] * _tool_axis(wrist)))
+        phase = Phase.HOLD if t >= run["t_close"] else Phase.DESCEND
+        return PrimitiveCommand(wrist, tool.controls(t, closure, model, data, phase))
+
+
+def _tool_axis(wrist: np.ndarray) -> np.ndarray:
+    """The tool axis (world, from the wrist toward the tip) of the six wrist targets ``wrist``."""
+    return wrist_rotation(float(wrist[3]), float(wrist[4]), float(wrist[5])) @ np.array([0.0, 0.0, -1.0])
+
 
 def plan_pinch(
     ctx: StepContext,
@@ -1085,6 +1335,178 @@ def pinch_fits(ctx: StepContext, tool: Tool) -> bool:
     )
 
 
+# ---------------------------------------------------------------------- a door's bar, from the front
+
+
+def bar_pinch_fits(open_aperture: float | None, shut_aperture: float | None, bar: float) -> bool:
+    """Whether a two-finger tool grips a door's bar ``bar`` m across from the front: as a lid's lip
+    (:func:`lip_pinch_fits`), its open fingers clear the bar by :data:`PINCH_CLEARANCE` a side and
+    they close tighter than it (apertures in m along the closing axis, ``None`` for a tool without
+    a pair of opposed tips)."""
+    return lip_pinch_fits(open_aperture, shut_aperture, bar)
+
+
+def door_bar(ctx: StepContext) -> bool:
+    """Whether the step's object is a door with a bar handle (``orientation`` door, ``feature``
+    handle): its bar is gripped from the front or not at all (module docstring)."""
+    info = ctx.obj.handles.info
+    return ctx.obj.kind is TemplateKind.HINGED_LID and info["orientation"] == 1.0 and info["feature"] == 1.0
+
+
+def bar_misfit(ctx: StepContext, tool: Tool) -> str | None:
+    """Why the step's tool cannot grip its door's bar from the front, in plain words, or ``None`` when
+    it is a :func:`two_finger` gripper whose calibrated apertures fit the bar (:func:`bar_pinch_fits`)."""
+    bar = float(ctx.obj.handles.info["grip_m"])
+    if not two_finger(ctx.head.spec):
+        return "only a two-finger gripper closes across a door's bar, and this tool is not one"
+    open_ap, shut_ap = tool.footprint(0.0).aperture(), tool.footprint(1.0).aperture()
+    if bar_pinch_fits(open_ap, shut_ap, bar):
+        return None
+    if open_ap is None or shut_ap is None:
+        return "its calibration finds no pair of fingers either side of its axis to close across the bar"
+    if open_ap < bar + 2.0 * PINCH_CLEARANCE:
+        return (
+            f"its fingers open {1000 * open_ap:.0f} mm, under the {1000 * bar:.0f} mm bar plus "
+            f"{1000 * PINCH_CLEARANCE:.0f} mm a side"
+        )
+    return f"its fingers close to {1000 * shut_ap:.0f} mm, not under the {1000 * bar:.0f} mm bar"
+
+
+def bar_fits(ctx: StepContext, tool: Tool) -> bool:
+    """Whether the step grips a door's vertical bar from the front: its object is a door with a bar
+    handle (:func:`door_bar`) and its tool fits the bar (:func:`bar_misfit` is ``None``)."""
+    return door_bar(ctx) and bar_misfit(ctx, tool) is None
+
+
+def _hold_no_front_grip(ctx: StepContext, start: np.ndarray, why: str) -> StepPlan:
+    """The plan of a door bar the tool cannot grip from the front (``why``): hold still 0.2 s, the
+    tool as it was (:func:`~._common.idle_run`); its predicate fails it with the reason."""
+    sch = schedule(ctx)
+    sch.engaged = sch.released = sch.reg = math.nan  # nothing is attempted
+    sch.hold = (math.nan, math.nan)
+    sch.values["no_front_grip"] = 1.0
+    sch.values["front_grip_why"] = why  # type: ignore[assignment]
+    note = f"not attempted: cannot grip the door's bar from the front: {why}"
+    return StepPlan(duration_s=0.2, values={"run": idle_run(ctx, start), "schedule": sch}, note=note)
+
+
+def _no_front_grip_verdict(ctx: StepContext, acc: Mapping[str, float]) -> StepVerdict | None:
+    """``criterion_not_met`` with a plain reason for a step planned by :func:`_hold_no_front_grip`."""
+    sch = scheduled(ctx)
+    if sch is None or not sch.values.get("no_front_grip"):
+        return None
+    reason = f"Cannot grip the door's bar from the front: {sch.values['front_grip_why']}; the step was not attempted"
+    return StepVerdict(False, "criterion_not_met", dict(acc), (reason,))
+
+
+def bar_yaw(n_out: np.ndarray, yaw_now: float) -> float:
+    """The wrist yaw of a door bar's front grip, the equivalent nearest ``yaw_now``: at
+    :data:`PINCH_PITCH` the tool points along ``-n_out``, at the door's outer face (``n_out``, its
+    horizontal normal). It is :func:`pinch_yaw`'s with the hinge vertical."""
+    return pinch_yaw(-np.asarray(n_out, dtype=np.float64), np.array([0.0, 0.0, 1.0]), yaw_now)[0]
+
+
+def bar_roll(roll_now: float) -> float:
+    """The wrist roll of a door bar's front grip, the equivalent nearest ``roll_now``: a quarter
+    turn, so with the tool horizontal (:data:`PINCH_PITCH`) its closing axis (the tool's y) lies
+    horizontal along the face, across the vertical bar."""
+    return 0.5 * math.pi + math.pi * round((roll_now - 0.5 * math.pi) / math.pi)
+
+
+def bar_depth(info: Mapping[str, float]) -> float:
+    """How far (m) a door bar's front grip takes the finger tips past the bar's front: the bar's
+    depth off the face (its clearance ``feature_m`` and its diameter) less :data:`PINCH_TIP_MARGIN`,
+    so the tips stop that far short of the door's face."""
+    return float(info["feature_m"]) + 2.0 * float(info["bar_radius_m"]) - PINCH_TIP_MARGIN
+
+
+def bar_drop(footprint_at: Any, tcp_z: float, tip_drop: float, grip: float) -> float:
+    """How far (m) a gripper's finger tips reach beyond its TCP (wrist z ``tcp_z``) along its axis as
+    it closes on a bar ``grip`` m across from its pre-shape: the further of its axis tip
+    (``tip_drop``) and the lowest point its calibrated footprints (``footprint_at(closure)``) reach
+    from the pre-shape to closed (a linkage finger's tip swings out as it closes,
+    :meth:`~._common.Tool.closing_tip`). The controller and the search's tilted poses both use it."""
+    pre = preshape_closure(footprint_at, grip, PINCH_CLEARANCE)
+    return tcp_z - min(tcp_z - tip_drop, closing_low(footprint_at, pre))
+
+
+def bar_points(
+    bar: np.ndarray, n_out: np.ndarray, radius: float, depth: float, drop: float
+) -> tuple[np.ndarray, np.ndarray]:
+    """The TCP (world) of a door bar's front grip standing off and engaged: the tool along
+    ``-n_out`` through the bar's centre ``bar`` (world, at its mid-height), its tips ``drop`` m beyond
+    the TCP; standing off, the tips are :data:`BAR_STANDOFF` out from the bar's front (``radius`` out
+    from its centre), engaged ``depth`` past it (:func:`bar_depth`)."""
+    n = np.asarray(n_out, dtype=np.float64)
+    front = np.asarray(bar, dtype=np.float64) + radius * n
+    return front + (BAR_STANDOFF + drop) * n, front - (depth - drop) * n
+
+
+def bar_reach(
+    stand: np.ndarray,
+    engaged: np.ndarray,
+    n_out: np.ndarray,
+    depth: float,
+    tool_point: np.ndarray,
+    hinge: np.ndarray,
+    axis: np.ndarray,
+    yaw: float,
+    roll: float,
+    arc: float,
+) -> str | None:
+    """Why a door bar's front grip would take the palm out of its travel (:func:`~._common.in_reach`,
+    less :data:`PINCH_REACH_MARGIN`), or ``None``. Checked: the grip (the TCP standing off at
+    ``stand`` and engaged at ``engaged``, :func:`bar_points`, the tool along ``-n_out`` at ``yaw``,
+    ``roll`` and :data:`PINCH_PITCH`), the pull every 2 deg of ``arc`` (rad about the hinge ``axis``,
+    signed; a pull on included) with the heading turning with the door, and the draw back at its end
+    (``depth`` plus :data:`BAR_RETRACT` along the face normal). ``tool_point``: the TCP in the wrist
+    frame (pitch and roll 0). The palm sits the tool's length out from the bar along the face normal,
+    so a door that swings its face toward a table edge takes it there. The controller and the search's
+    tilted poses both call it, so they agree on which pulls are made from the front."""
+    out = bar_far(stand, engaged, n_out, depth, tool_point, hinge, axis, yaw, roll, arc)
+    return None if out is None else _reach_words(*out)
+
+
+def bar_far(
+    stand: np.ndarray,
+    engaged: np.ndarray,
+    n_out: np.ndarray,
+    depth: float,
+    tool_point: np.ndarray,
+    hinge: np.ndarray,
+    axis: np.ndarray,
+    yaw: float,
+    roll: float,
+    arc: float,
+) -> tuple[str, np.ndarray] | None:
+    """:func:`bar_reach`'s check: the first move (``grip``, ``pull`` or ``draw back``) that would take
+    the palm out of its travel, and the palm's furthest pose on it; ``None`` when it reaches them all."""
+    up = np.asarray(axis, dtype=np.float64)
+
+    def palm(tcp: np.ndarray, heading: float) -> np.ndarray:
+        return tcp - wrist_rotation(heading, roll, PINCH_PITCH) @ tool_point
+
+    n = max(2, math.ceil(abs(math.degrees(arc)) / 2.0) + 1)
+    pulled = [
+        palm(hinge + rotate(engaged - hinge, up, float(s)), yaw + float(s) * float(up[2]))
+        for s in np.linspace(0.0, arc, n)
+    ]
+    back = pulled[-1] + (depth + BAR_RETRACT) * rotate(n_out, up, arc)
+    moves = (("grip", [palm(stand, yaw), palm(engaged, yaw)]), ("pull", pulled), ("draw back", [back]))
+    for what, poses in moves:
+        if not in_reach(*poses, margin=PINCH_REACH_MARGIN):
+            return what, max(poses, key=lambda p: max(abs(float(p[0])), abs(float(p[1]))))
+    return None
+
+
+def _reach_words(what: str, pose: np.ndarray) -> str:
+    return (
+        f"the {what} would take the palm to x {1000 * float(pose[0]):.0f} mm, y "
+        f"{1000 * float(pose[1]):.0f} mm, past its {1000 * PALM_XY_LIMIT:.0f} mm travel less "
+        f"{1000 * PINCH_REACH_MARGIN:.0f} mm"
+    )
+
+
 def _yaw_offset(ctx: StepContext, tool: Tool) -> float:
     """The head's v1 yaw offset (a hand turned to close along its own axis); 0 for cups and arms."""
     if tool.mechanism != "fingers":
@@ -1149,6 +1571,9 @@ class HookPullPredicate:
         far = out_of_reach_verdict(ctx, acc)
         if far is not None:
             return far
+        unfit = _no_front_grip_verdict(ctx, acc)
+        if unfit is not None:
+            return unfit
         out = criteria_verdict(ctx.step, acc)
         if (
             not out.success

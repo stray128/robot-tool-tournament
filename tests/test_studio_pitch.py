@@ -773,3 +773,179 @@ def test_a_path_turns_the_pitch_within_the_scenes_cap() -> None:
         assert path.to(b, 0.1) == pytest.approx(TURN_MARGIN * 1.875 * 0.5 * math.pi / math.radians(dps))
     with pytest.raises(ValueError, match="pitch cap"):
         Path([0.0], [a]).to(b, 0.1)
+
+
+# --------------------------------------------------------------------------- a door's bar gripped from the front
+
+
+def _door(x_mm: float, y_mm: float, thickness_mm: float, *, yaw_deg: float = 0.0) -> TaskSpec:
+    """A 400 mm tall, 300 mm wide door with a bar handle 20 mm off its face, pulled 80 deg open
+    from the front: at (0, 150 mm), 10 mm thick, it is the S2b cabinet door; at (-140, 290 mm),
+    20 mm thick, the hotel hero's room door where its plan stands."""
+    door = ObjectInstance.of(
+        "door",
+        "hinged_lid",
+        "Door",
+        ObjectPose(x_mm, y_mm, yaw_deg),
+        orientation="door",
+        width_mm=400,
+        depth_mm=300,
+        thickness_mm=thickness_mm,
+        max_angle_deg=110 if thickness_mm < 15 else 90,
+        open_torque_nm=0.3,
+        damping_nms=0.05,
+        feature="handle",
+        feature_mm=20,
+    )
+    pull = Step.of(
+        "open_door",
+        "hook_pull",
+        "door",
+        "handle",
+        "Pull the door open by its handle",
+        [SuccessCriterion("angle_deg", at_least=80.0)],
+        params={"speed_mm_s": 80, "approach": "front"},
+    )
+    return TaskSpec("door", "", (door,), (pull,), source="test")
+
+
+def _door_ctx(spec: TaskSpec, tool: Any, task: Any) -> tuple[StepContext, mujoco.MjData]:
+    scene = build_studio_scene(Setup.single(tool, spec.step_ids), spec, 0, task=task)
+    data = mujoco.MjData(scene.model)
+    mujoco.mj_kinematics(scene.model, data)
+    step = spec.steps[0]
+    ctx = StepContext(
+        step=step,
+        task_spec=spec,
+        scene=scene,
+        obj=scene.objects[step.object],
+        target=None,
+        head=scene.active,
+        wrist_start=np.zeros(5),
+        task=task,
+        seed=0,
+    )
+    return ctx, data
+
+
+def _pool() -> dict[str, Any]:
+    from rtt.studio.search import default_candidates
+
+    return {f"{c.spec.model}/{c.spec.primitive}": c.spec for c in default_candidates()}
+
+
+def test_a_door_bar_front_grip_points_the_tool_at_the_face_and_closes_across_the_bar() -> None:
+    """The pose math: at the pinch's 90 deg pitch, the yaw points the tool along the door's inward
+    face normal and the quarter-turn roll lays the closing axis (the tool's y) horizontal along the
+    face, across the vertical bar; turning the yaw with the door keeps the tool normal to the face.
+    The yaw and roll are the equivalents nearest the wrist's."""
+    from rtt.studio.primitives._common import rotate
+    from rtt.studio.primitives.hook_pull import PINCH_PITCH, bar_roll, bar_yaw
+    from rtt.studio.scene import wrist_rotation
+
+    axis = np.array([0.0, 0.0, -1.0])  # a door's hinge: positive opens it clockwise from above
+    up, down = np.array([0.0, 0.0, 1.0]), np.array([0.0, 0.0, -1.0])
+    for door_yaw in (0.0, 30.0, -90.0, 180.0):
+        out0 = _rz(math.radians(door_yaw)) @ np.array([0.0, -1.0, 0.0])
+        for angle in (0.0, 40.0, 85.0):
+            n_out = rotate(out0, axis, math.radians(angle))
+            for yaw_now, roll_now in ((0.0, 0.0), (5.0, 2.0), (-2.0, -3.5)):
+                yaw, roll = bar_yaw(n_out, yaw_now), bar_roll(roll_now)
+                assert abs(yaw - yaw_now) <= math.pi + 1e-9 and abs(roll - roll_now) <= 0.5 * math.pi + 1e-9
+                r = wrist_rotation(yaw, roll, PINCH_PITCH)
+                tool_axis, closing = r @ down, r @ np.array([0.0, 1.0, 0.0])
+                assert np.allclose(tool_axis, -n_out, atol=1e-9), (door_yaw, angle, tool_axis)
+                assert abs(float(closing @ up)) < 1e-9 and abs(float(closing @ n_out)) < 1e-9
+                for s in (0.3, 1.2):  # the heading turns with the door
+                    turned = wrist_rotation(yaw + s * float(axis[2]), roll, PINCH_PITCH) @ down
+                    assert np.allclose(turned, -rotate(n_out, axis, s), atol=1e-9)
+
+
+def test_a_door_bar_front_grip_stops_its_tips_4_mm_off_the_face() -> None:
+    """The tips stand 25 mm out from the bar's front, then go in past it by the bar's depth off
+    the face (its clearance and its diameter) less 4 mm: they stop 4 mm short of the door's face."""
+    from rtt.studio.primitives.hook_pull import BAR_STANDOFF, bar_depth, bar_points
+
+    info = {"feature_m": 0.020, "bar_radius_m": 0.005}
+    depth = bar_depth(info)
+    assert depth == pytest.approx(0.026)
+    n_out = np.array([0.6, -0.8, 0.0])
+    bar = np.array([0.1, 0.2, 0.35])  # the bar's centre at mid-height
+    drop = 0.0125  # the tips beyond the TCP along the tool axis
+    stand, engaged = bar_points(bar, n_out, 0.005, depth, drop)
+    front, face = bar + 0.005 * n_out, bar - 0.025 * n_out
+    for tcp in (stand, engaged):
+        assert np.allclose(np.cross(tcp - bar, n_out), 0.0, atol=1e-12)  # on the bar's normal at mid-height
+    assert float((stand - drop * n_out - front) @ n_out) == pytest.approx(BAR_STANDOFF)
+    assert float((engaged - drop * n_out - face) @ n_out) == pytest.approx(0.004)
+    assert BAR_STANDOFF == pytest.approx(0.025)
+
+
+def test_only_two_finger_grippers_whose_fingers_clear_the_bar_grip_it_from_the_front(task: Any) -> None:
+    """Eligibility, as for a lid's lip: a two-finger gripper whose calibrated open aperture clears
+    the 10 mm bar by 6 mm a side and whose shut aperture is under it. The servo-110 and the adaptive
+    two-finger grippers do; a cup, a three-finger hand and a tool without a pair of fingers about its
+    axis (the angular-jaw gripper's jaws close off its axis) do not; and a lid's bar never does."""
+    from rtt.studio.primitives._common import tool_of
+    from rtt.studio.primitives.hook_pull import bar_fits, bar_pinch_fits
+
+    assert bar_pinch_fits(0.0669, -0.0012, 0.010) and bar_pinch_fits(0.022, 0.0, 0.010)
+    assert not bar_pinch_fits(0.0219, 0.0, 0.010)  # opens less than 6 mm a side
+    assert not bar_pinch_fits(0.040, 0.010, 0.010)  # does not close under the bar
+    assert not bar_pinch_fits(None, None, 0.010)
+    pool = _pool()
+    spec = _door(0.0, 150.0, 10)
+    for key, fits in (
+        ("gripper-2f-servo-110/pinch", True),
+        ("adaptive-2f/pinch", True),
+        ("gripper-angular-jaw-hobby/pinch", False),
+        ("adaptive-3f/pinch", False),
+        ("cup-25mm/seal", False),
+    ):
+        ctx, _ = _door_ctx(spec, pool[key], task)
+        assert bar_fits(ctx, tool_of(ctx)) is fits, key
+    full = _lip_and_flat("handle")
+    lid = TaskSpec("lid", "", (full.objects[0],), (full.steps[0],), source="test")
+    ctx, _ = _door_ctx(lid, pool["gripper-2f-servo-110/pinch"], task)
+    assert not bar_fits(ctx, tool_of(ctx))
+
+
+def test_a_door_bar_front_grip_is_made_only_where_the_palm_reaches_it(task: Any) -> None:
+    """The front grip puts the palm the tool's length out from the bar along the face normal, and
+    a door opened toward a table edge carries it there: the grip, the whole pull (the heading turning
+    with the door) and the draw back are checked against the palm's travel less 12 mm, in the
+    controller and in the search's tilted poses alike. The S2b door at (0, 150 mm) is gripped from the
+    front all the way to its goal (88 deg). The hotel door at x -140 mm is not (by 80 deg the palm
+    would be past -350 mm): that step is not attempted and fails out of reach, and a tool that does not
+    fit the bar is not tried either. Nothing grips a door's bar from above."""
+    import rtt.studio.primitives.hook_pull as hp
+    from rtt.studio.search import tilted_poses
+
+    pool = _pool()
+    cases = (
+        (_door(0.0, 150.0, 10), "adaptive-2f/pinch", "bar"),
+        (_door(0.0, 150.0, 10), "gripper-angular-jaw-hobby/pinch", "unfit"),
+        (_door(-140.0, 290.0, 20), "gripper-2f-servo-110/pinch", "far"),
+        (_door(-140.0, 290.0, 20), "adaptive-2f/pinch", "far"),
+    )
+    for spec, key, want in cases:
+        setup = Setup.single(pool[key], spec.step_ids)
+        ctx, data = _door_ctx(spec, pool[key], task)
+        plan = hp.HookPullController().plan(ctx, ctx.scene.model, data)
+        run = plan.values["run"]
+        poses = tilted_poses(setup, spec.steps[0], 0, ctx.scene, data, task, ctx.scene.active.tcp_wrist)
+        assert bool(poses) is (want == "bar"), (key, plan.note)
+        if want == "bar":
+            assert run.get("mode") == "bar" and "grip the bar from the front" in plan.note, plan.note
+            pitches = {round(math.degrees(p), 6) for _, _, _, p in poses}
+            yaws = [y for _, y, _, _ in poses]
+            assert pitches == {90.0} and math.degrees(yaws[0] - yaws[-1]) == pytest.approx(88.0, abs=0.5)
+            continue
+        assert "idle" in run and plan.duration_s == pytest.approx(0.2), (key, plan.note)  # not attempted
+        values = plan.values["schedule"].values
+        if want == "far":
+            assert values["out_of_reach"] == 1.0 and values["reach_what"] == "the front grip's pull", key
+            assert values["reach_x_mm"] < -338.0 and values["reach_margin_mm"] == pytest.approx(12.0), key
+        else:
+            assert values["no_front_grip"] == 1.0, key
+            assert "no pair of fingers either side of its axis" in values["front_grip_why"], key

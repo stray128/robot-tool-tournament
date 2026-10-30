@@ -215,7 +215,7 @@ fails as "out of reach".
 | [Solar panel install](https://stray128.github.io/robot-tool-tournament/studio/h5_solar/) | lift the panel onto its rails, start the clamp, tighten it to 6 N m | Tool change: vacuum area frame (2 x 3 cups, 600 mm), then a 10 mm suction cup, then a nut runner (13 mm hex socket) | 7 of 8 |
 | [Floor tile setting](https://stray128.github.io/robot-tool-tournament/studio/h6_tile/) | lay the tile on the bed, tamp it level | Two-tool head: vacuum area frame (2 x 2 cups, 300 mm) and a 200 mm tamper pad | 8 of 8 |
 | Pipe coupling | push the coupling onto its thread, turn it hand-tight | Not shown: replay held back (its replay failed the quality gate) | not shown |
-| [Hotel delivery](https://stray128.github.io/robot-tool-tournament/studio/h7_hotel/) | press the call button, open the door, place the parcel | Two-tool head: a 25 mm suction cup (button and parcel) and the angular-jaw gripper of an open hobby arm (door); the best single tool finishes 0 of 8 | 8 of 8 |
+| [Hotel delivery](https://stray128.github.io/robot-tool-tournament/studio/h7_hotel/) | press the call button, open the door, place the parcel | Tool change: a drawer-pull hook tool (button), a force-controlled 48 mm parallel gripper that grips the door's handle from the front (door), and a 25 mm suction cup (parcel); the best single tool finishes 0 of 8 | 8 of 8 |
 
 The v2 benchmark, with held-out conditions for these jobs, comes after this release.
 

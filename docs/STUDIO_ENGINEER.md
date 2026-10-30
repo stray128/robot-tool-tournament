@@ -100,6 +100,23 @@ page before anything runs.
    ("valid after layout fix"). If no spot clears a conflict, or the moves would need more than
    the 10 assumption lines, the layout problems stand. The page shows the moved positions, the
    moves and the assumptions. It has no "Fix layout" button; edited plans are only validated.
+
+   **The door-bar rule** (rule set v2, revision v2-r5, `layout.fix_door_bars`). A door's bar handle
+   is gripped from the front only, the tool normal to the door, which puts the palm the tool's
+   length out from the bar ([STUDIO_PRIMITIVES.md](STUDIO_PRIMITIVES.md) section 12). After the
+   steps above, on a plan that is valid, code checks every door whose bar a step pulls against two
+   reference grippers on the tool changer: the 110 mm servo gripper (preferred) and the two-finger
+   adaptive gripper (TCP 202 and 155 mm below the palm, tips 10 mm past it, measured). If neither
+   front grip stays in the wrist's travel less 12 mm over the engagement, the swing to the pull's
+   goal and the retreat, the door moves along x only (y and yaw kept). It goes to the nearest
+   position on the 10 mm grid that admits the servo gripper, with the other objects moved to clear
+   it by the rules above; failing that, to the one that admits the adaptive gripper. Each move is
+   an assumption line, for example "Moved room_door from (-140, 290) to (90, 290) mm along x so the
+   110 mm servo gripper on a tool changer grips its bar handle from the front through the whole
+   pull". The moved plan is checked again in full. The rule runs after the model's calls, so the
+   recorded requests replay unchanged. A door no position along x admits stays where it is, the
+   notes say why, and its step fails plainly in the simulator. Of the recordings only the hotel
+   job has such a door.
 7. **Status**: `valid`, `refused` (a valid refusal), `invalid`, or `failed` (no usable call:
    transport, unreadable answer, spend cap). `result` says how a plan got there:
    `valid_first_call`, `valid_after_repair`, `valid_after_layout_fix`, `refused` or `failed`.
@@ -384,9 +401,12 @@ that says what exists and that the plan names none of them; never which one wins
 
 **Versions.** A prompt goes with a rule set (`prompts.RULES_OF`): prompt v1 with rule set v1, and
 prompts v2, v2.1, v2.2 and v2.3 with rule set v2. Rule set v2 was revised in place as the heroes were
-recorded (`checks.RULES_REVISION`, now `v2-r4`); a recorded manifest names the revision it was
+recorded (`checks.RULES_REVISION`, now `v2-r5`); a recorded manifest names the revision it was
 verified with (`rules_revision`), and the test suite re-judges every current recorded row, so an edit
-that changes a recorded verdict or problem fails.
+that changes a recorded verdict or problem fails. Revision v2-r5 added the door-bar rule above; it
+changed one recorded row, the hotel job's: its door moved from x -140 to 90 mm and its tray from
+(50, 0) to (-100, -110) mm (new task id `dc0ae4f82a51`). Its manifest row was verified again, and
+every other row of both recordings is unchanged.
 
 * `prompts/v1/` holds the v1 templates and, in `frozen.json`, the catalog sections and the forced
   tool exactly as the v1 code rendered them. `plan_task(..., version="v1")` rebuilds the v1
@@ -473,18 +493,23 @@ came.
 * h5 failed on v2.1 (its repair raised the lift criterion with the lift) and is valid on v2.2, whose
   repair message names `steps[0].params.lift_mm` apart from the criterion.
 * h7's repair was cut off at 5,000 tokens and did not parse; its first plan's problems were layout
-  problems only, and the fixer made that plan valid.
+  problems only, and the fixer made that plan valid. The door-bar rule (v2-r5) then moved its door
+  from x -140 to 90 mm and its tray from (50, 0) to (-100, -110) mm, two more assumption lines.
 
 **Physics smoke runs** (each plan once, nominal condition, an integrator's tools):
 * h1 completes with the 110 mm servo gripper.
 * h5 (v2.2) completes with the 2 x 3 frame and the nut runner: the panel rises 77 mm (100 commanded),
   the clamp seats at 6.0 N m.
 * h6 completes with the 2 x 2 frame plus the tamper: height error 0.48 mm at 29 N.
-* h7 completes with a two-finger gripper (servo-110 or adaptive-85) for the button and the door
-  (pulled to 88 deg) plus a 25 mm cup for the parcel: 120 mm across, wider than any two-finger
-  gripper's opening (58.4 and 58.6 s). The door's handle stops 330 mm out. A hook pull's retreat now
-  stops at the palm's travel (`STUDIO_PRIMITIVES.md` section 14.2); before that, the retreat would
-  have put the palm at x -355 mm, and every tool was refused at the door.
+* h7 completes with a tool change: a two-finger gripper for the button and the door, then a 25 mm
+  cup for the parcel (120 mm across, wider than any two-finger gripper's opening). A door's bar is
+  gripped from the front only (`STUDIO_PRIMITIVES.md` section 12, "The door bar front pinch"). Where
+  the plan first put the door (x -140 mm) no gripper's front grip could follow it, so the layout
+  fixer's door-bar rule moved it to x 90 mm and the tray out of its swing (above). There the servo-110
+  completes in 58.0 s (door 86.5 deg), the force-controlled 48 mm gripper in 57.7 s (86.6 deg) and
+  the two-finger adaptive gripper in 57.2 s (80.2 deg: its fingers knock the door back as they let
+  go). The 85 mm adaptive linkage gripper is not attempted at the door: its front grip's pull would
+  leave the travel.
 * h2 completes with the linkage gripper for the twist (about 533 N of grip), after a 40 mm cup or the
   fin-ray gripper for the insert: 2.99 N m. The frozen v1 H2 plan completes the same way (3.11 N m),
   as v1 did. Every other two-finger gripper and part-shaped jaw slips at 0.3 to 1.5 N m, in v1 too,

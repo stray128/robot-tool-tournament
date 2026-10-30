@@ -83,7 +83,7 @@ from rtt.studio.engineer.checks import (
     nearest_primitive,
 )
 from rtt.studio.engineer.examples import worked_example
-from rtt.studio.engineer.layout import fix_layout, layout_problems
+from rtt.studio.engineer.layout import fix_door_bars, fix_layout, layout_problems
 from rtt.studio.engineer.uploads import UploadInfo
 from rtt.studio.types import (
     CONTRACT_VERSION,
@@ -807,6 +807,35 @@ def _fix_layout(
     return moved, tuple(warnings), lines
 
 
+def _fix_door_bars(
+    spec: TaskSpec, uploads: Sequence[UploadInfo], paths: bool = True
+) -> tuple[TaskSpec, tuple[str, ...], tuple[str, ...]] | str:
+    """The layout fixer's door-bar rule (rule set v2, :func:`~rtt.studio.engineer.layout.fix_door_bars`)
+    on a valid plan: ``(spec, warnings, moves)`` when it moved something and the moved plan passes
+    every check, else a note (empty when no door needed it)."""
+    fixed = fix_door_bars(spec.objects, spec.steps, inside=claimed_inside(spec))
+    if isinstance(fixed, str):
+        return fixed
+    objects, moves = fixed
+    if not moves:
+        return ""
+    lines = tuple(m.text() for m in moves)
+    if len(spec.assumptions) + len(lines) > _MAX_ASSUMPTIONS:
+        return (
+            f"The layout fixer would move {len(lines)} objects so a door's bar is gripped from the front, more "
+            "than the plan's assumptions can list; the door stays where it is."
+        )
+    try:
+        moved = replace(spec, objects=tuple(objects), assumptions=(*spec.assumptions, *lines))
+    except TaskSpecError as exc:
+        return f"The layout fixer's door moves do not construct ({'; '.join(exc.problems)[:200]}); the door stays where it is."
+    ids = [u.upload_id for u in uploads]
+    left, warnings = check_plan(moved, uploads=ids, required_uploads=ids, rules="v2", paths=paths)
+    if left:
+        return "The layout fixer's door moves left other problems; the door stays where it is."
+    return moved, tuple(warnings), lines
+
+
 @dataclass(frozen=True)
 class _Verdict:
     spec: TaskSpec | None
@@ -895,6 +924,24 @@ def plan_task(
             notes.append(
                 f"The layout fixer moved {len(layout_moves)} object{'s' if len(layout_moves) != 1 else ''} in code "
                 "after the repair call; each move is an assumption of the plan."
+            )
+    if (
+        rules == "v2"
+        and final.failure is None
+        and spec is not None
+        and spec.refusal is None
+        and (final.outcome == "valid" or layout_moves)
+    ):
+        doors = _fix_door_bars(spec, uploads, paths)
+        if isinstance(doors, str):
+            if doors:
+                notes.append(doors)
+        else:
+            spec, warnings, more = doors
+            layout_moves = (*layout_moves, *more)
+            notes.append(
+                f"The layout fixer moved {len(more)} object{'s' if len(more) != 1 else ''} in code so a "
+                "two-finger gripper grips the door's bar from the front; each move is an assumption of the plan."
             )
     status: Status
     if final.failure is not None:

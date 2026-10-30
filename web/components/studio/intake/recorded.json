@@ -1130,7 +1130,9 @@
    "layout_moves": [
     "Moved call_button from (0, -200) to (280, 70) mm to bring it within the wrist's reach",
     "Moved room_door from (-200, 0) to (-140, 290) mm to bring it within the wrist's reach",
-    "Moved parcel from (100, -100) to (100, -160) mm to clear the footprint of tray"
+    "Moved parcel from (100, -100) to (100, -160) mm to clear the footprint of tray",
+    "Moved room_door from (-140, 290) to (90, 290) mm along x so the 110 mm servo gripper on a tool changer grips its bar handle from the front through the whole pull",
+    "Moved tray from (50, 0) to (-100, -110) mm to clear the swing of room_door"
    ],
    "attempts": [
     {
@@ -1164,13 +1166,14 @@
    "notes": [
     "Null written as text was read as null (refusal).",
     "The repair call failed (parse_error); the first plan's problems stand.",
-    "The layout fixer moved 3 objects in code after the repair call; each move is an assumption of the plan."
+    "The layout fixer moved 3 objects in code after the repair call; each move is an assumption of the plan.",
+    "The layout fixer moved 2 objects in code so a two-finger gripper grips the door's bar from the front; each move is an assumption of the plan."
    ],
    "uploads": [],
    "plan": {
     "contract": "rtt-effectors/2",
     "label": "Product mode: not part of the pre-registered experiment",
-    "task_id": "2a0bc4766d10e13a1e62cf0ea4443e4b25f527fd3c7552ed74352a751469d442",
+    "task_id": "dc0ae4f82a5123cc7039f7ac2e35fe3b54399c63dd4443c5cc50cb24c33e3243",
     "source": "nemotron",
     "title": "Hotel delivery mock-up",
     "description": "Press the wall-mounted elevator call button, open the hinged room door with a pull handle, then pick the parcel from the bench and place it into the delivery tray behind the door.",
@@ -1209,7 +1212,7 @@
        "width_mm": 400
       },
       "pose": {
-       "x_mm": -140.0,
+       "x_mm": 90.0,
        "y_mm": 290.0,
        "yaw_deg": 0.0
       },
@@ -1245,8 +1248,8 @@
        "width_mm": 150
       },
       "pose": {
-       "x_mm": 50.0,
-       "y_mm": 0.0,
+       "x_mm": -100.0,
+       "y_mm": -110.0,
        "yaw_deg": 0.0
       },
       "ref": null,
@@ -1351,7 +1354,9 @@
      "The delivery tray is a fixed bin positioned behind the door when the door is open.",
      "Moved call_button from (0, -200) to (280, 70) mm to bring it within the wrist's reach",
      "Moved room_door from (-200, 0) to (-140, 290) mm to bring it within the wrist's reach",
-     "Moved parcel from (100, -100) to (100, -160) mm to clear the footprint of tray"
+     "Moved parcel from (100, -100) to (100, -160) mm to clear the footprint of tray",
+     "Moved room_door from (-140, 290) to (90, 290) mm along x so the 110 mm servo gripper on a tool changer grips its bar handle from the front through the whole pull",
+     "Moved tray from (50, 0) to (-100, -110) mm to clear the swing of room_door"
     ],
     "clarifications": [
      {

@@ -12,7 +12,9 @@ state, a full task chains the primitives across a tool change, and the failure m
 from __future__ import annotations
 
 import ast
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pytest
@@ -764,6 +766,109 @@ def test_a_door_pulled_by_its_handle_stays_within_1_mm_of_penetration() -> None:
     out = run_task(job(spec, ("catalog_gripper", "adaptive-2f", "pinch"))).steps[0]
     assert out.success, (out.failure_mode, dict(out.quantities))
     assert out.quantities["penetration_mm"] <= HELD_PENETRATION_MAX_MM
+
+
+@dataclass(frozen=True)
+class _BarWatch:
+    """The hook-pull predicate, also measuring the grip from the wrist's own joints and the door's
+    frame while the tool holds the bar: how far the closing axis (the tool's y) is from square to
+    the bar, how far the tool axis is from the door's inward face normal, and the wrist pitch, at
+    the grip (the first check tick once engaged) and the worst over the pull."""
+
+    primitive: PrimitiveKind = PrimitiveKind.HOOK_PULL
+    name: str = "studio_hook_pull"
+
+    def observe(self, t: float, ctx: Any, model: Any, data: Any, acc: dict[str, float]) -> None:
+        import math
+
+        from rtt.studio.primitives._common import scheduled, wrist_frame
+        from rtt.studio.primitives.hook_pull import HookPullPredicate
+
+        HookPullPredicate().observe(t, ctx, model, data, acc)
+        sch = scheduled(ctx)
+        if sch is None or not sch.active(t):
+            return
+        r = wrist_frame(ctx.scene, data)
+        bar = data.geom_xmat[model.geom(f"obj_{ctx.step.object}_bar").id].reshape(3, 3)[:, 2]  # its axis
+        # the door's outer face is at its panel's local -y: local +y is the inward face normal
+        n_in = data.xmat[model.body(f"obj_{ctx.step.object}_panel").id].reshape(3, 3)[:, 1]
+        closing, tool_axis = r @ np.array([0.0, 1.0, 0.0]), r @ np.array([0.0, 0.0, -1.0])
+        square = math.degrees(math.asin(min(1.0, abs(float(closing @ bar)))))
+        normal = math.degrees(math.acos(max(-1.0, min(1.0, float(tool_axis @ n_in)))))
+        pitch = math.degrees(float(data.qpos[ctx.scene.ids.pitch_qpos]))
+        if "grip_square_deg" not in acc:
+            acc.update(grip_square_deg=square, grip_normal_deg=normal, grip_pitch_deg=pitch)
+        acc["pull_square_deg"] = max(acc.get("pull_square_deg", 0.0), square)
+        acc["pull_normal_deg"] = max(acc.get("pull_normal_deg", 0.0), normal)
+
+    def verdict(self, ctx: Any, acc: Any) -> Any:
+        from rtt.studio.primitives.hook_pull import HookPullPredicate
+
+        return HookPullPredicate().verdict(ctx, acc)
+
+
+def _watched(job: StudioJob) -> TaskResult:
+    """``run_task`` with :class:`_BarWatch` as the hook pull's predicate (in a spawned worker too)."""
+    from rtt.studio.plan import override_primitive
+    from rtt.studio.primitives.hook_pull import HookPullController
+
+    with override_primitive(HookPullController(), _BarWatch()):
+        return run_task(job)
+
+
+def _s2b_door_task() -> TaskSpec:
+    """The S2b cabinet door (section 6's gate row): 400 x 300 x 10 mm at (0, 150 mm), a 10 mm bar
+    20 mm off its face, pulled 80 deg open at 80 mm/s within 30 N."""
+    door = ObjectInstance.of(
+        "door",
+        "hinged_lid",
+        "Cabinet door",
+        ObjectPose(0.0, 150.0, 0.0),
+        orientation="door",
+        width_mm=400,
+        depth_mm=300,
+        thickness_mm=10,
+        max_angle_deg=110,
+        open_torque_nm=0.3,
+        damping_nms=0.05,
+        feature="handle",
+        feature_mm=20,
+    )
+    step = Step.of(
+        "open_door",
+        "hook_pull",
+        "door",
+        "handle",
+        "Grip the handle and pull the door open",
+        [SuccessCriterion("angle_deg", at_least=80.0), SuccessCriterion("force_n", at_most=30.0)],
+        constraints=StepConstraints(max_force_n=30.0),
+        params={"speed_mm_s": 80, "approach": "front"},
+    )
+    return TaskSpec("door", "", (door,), (step,), source="test")
+
+
+def test_a_door_bar_is_gripped_from_the_front_on_the_14_gate_conditions() -> None:
+    """A two-finger gripper grips a door's vertical bar from the front: the wrist pitched 90 deg,
+    the tool normal to the face and its closing axis across the bar, at the bar's mid-height; it
+    pulls the door along its arc with the heading turning with it. The reference two-finger adaptive
+    gripper opens the S2b door to 80 deg within 30 N on all 14 gate conditions, within 1 mm of
+    penetration; at the grip its closing axis is square to the bar and its tool axis on the face
+    normal within 5 deg (both measured from the wrist joints and the door's own frame)."""
+    import multiprocessing as mp
+
+    spec = _s2b_door_task()
+    tool = preset("catalog_gripper", "adaptive-2f", "pinch")
+    conds = gate_conditions(spec)
+    jobs = [StudioJob(Setup.single(tool, spec.step_ids), spec, c) for c in conds]
+    with mp.get_context("spawn").Pool(processes=4) as pool:
+        runs = pool.map(_watched, jobs, chunksize=1)
+    for cid, out in zip([c.condition_id for c in conds], [r.steps[0] for r in runs], strict=True):
+        q = out.quantities
+        assert out.success, (cid, out.failure_mode, dict(q))
+        assert q["angle_deg"] >= 80.0 and q["force_n"] <= 30.0, (cid, dict(q))
+        assert q["penetration_mm"] <= HELD_PENETRATION_MAX_MM, (cid, dict(q))
+        assert q["grip_pitch_deg"] == pytest.approx(90.0, abs=2.0), (cid, dict(q))
+        assert q["grip_square_deg"] <= 5.0 and q["grip_normal_deg"] <= 5.0, (cid, dict(q))
 
 
 def _candidate(name: str) -> EffectorSpec:

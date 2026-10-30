@@ -6,18 +6,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { prefersReducedMotion, useClock } from "@/components/replay/clock";
 import { objectBounds } from "@/components/replay/framing";
 import { loadLane } from "@/components/replay/lanes";
-import { createPlaybackStore } from "@/components/replay/playback";
+import { createPlaybackStore, watchPlayback } from "@/components/replay/playback";
 import { useThemeColors } from "@/components/replay/useThemeColors";
-import { changeText, laneAt, type StudioLane } from "@/components/studio/schema";
+import { type StudioLane } from "@/components/studio/schema";
 import { clayAssets, type LoadedAsset } from "@/lib/assets";
 import { dataUrl } from "@/lib/paths";
 import { type Bounds, isV2, Replay } from "@/lib/replay";
 
-export interface HeroStep {
-  id: string;
-  name: string;
-  description: string;
-}
+import { heroReadout, type HeroStep, sameReadout } from "./heroReadout";
+
+export type { HeroStep } from "./heroReadout";
 
 type State =
   | { status: "loading" }
@@ -67,12 +65,14 @@ export default function HeroScene({
   const visible = useRef(true);
   const root = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<State>({ status: "loading" });
-  const [t, setT] = useState(0);
+  const [readout, setReadout] = useState(() => heroReadout(lane, steps, 0));
   const [playing, setPlaying] = useState(false);
   const [shown, setShown] = useState(false);
   useClock(store, visible);
 
-  useEffect(() => store.subscribe((s) => (setT(s.t), setPlaying(s.playing))), [store]);
+  // React state follows the clock only when the readout or the play state changes, never per frame.
+  useEffect(() => watchPlayback(store, (s) => heroReadout(lane, steps, s.t), setReadout, sameReadout), [store, lane, steps]);
+  useEffect(() => watchPlayback(store, (s) => s.playing, setPlaying), [store]);
 
   // Development only: lets the poster script pause the hero on a chosen frame.
   useEffect(() => {
@@ -128,27 +128,7 @@ export default function HeroScene({
   const bounds = useMemo<Bounds | null>(() => (ready ? objectBounds(ready.replay, ready.assets) : null), [ready]);
   const options = useMemo(() => ({ xray: false, collision: false, clay: ready?.clay ?? new Set<string>(), cut: null }), [ready?.clay]);
 
-  const m = laneAt(lane, t);
-  const n = steps.length;
-  const current = m.kind === "step" ? steps.findIndex((s) => s.id === m.step.step_id) : -1;
-  const done = m.kind === "ended" || (t >= lane.duration_s - 0.05 && lane.completed);
-  const toolOf = (toolIndex: number) => lane.segments.find((s) => s.tool === toolIndex)?.tool_label ?? "";
-
-  let title = "";
-  let detail = "";
-  if (m.kind === "step" && current >= 0) {
-    title = `Step ${current + 1} of ${n}: ${steps[current]!.name}`;
-    detail = `${toolOf(m.step.tool)}. ${steps[current]!.description}`;
-  } else if (m.kind === "change" && m.change === "present") {
-    title = `Head switch to tool ${m.to.tool + 1}`;
-    detail = `${m.to.tool_label}. A fixed ${m.change_s} s tilt of the wrist, not simulated.`;
-  } else if (m.kind === "change") {
-    title = "Changing tool";
-    detail = `To ${m.to.tool_label}. ${changeText(m.change, m.change_s)}.`;
-  } else if (done) {
-    title = lane.completed && lane.cycle_time_s !== null ? `Done in ${lane.cycle_time_s.toFixed(1)} s` : "Stopped";
-    detail = lane.completed ? `${n} of ${n} steps passed on this recorded run.` : "This recorded run did not finish the task.";
-  }
+  const { current, done, moment, title, detail } = readout;
 
   return (
     <figure ref={root} className="relative" data-hero-scene>
@@ -180,7 +160,7 @@ export default function HeroScene({
         </div>
 
         <div className="absolute inset-x-3 bottom-3 flex items-end gap-3">
-          <div className="pointer-events-none min-w-0 flex-1 rounded-md bg-paper/90 px-3 py-2 backdrop-blur-sm" aria-live="off" data-hero-step={current >= 0 ? steps[current]!.id : m.kind}>
+          <div className="pointer-events-none min-w-0 flex-1 rounded-md bg-paper/90 px-3 py-2 backdrop-blur-sm" aria-live="off" data-hero-step={moment}>
             <p className="text-sm font-semibold text-ink">{title || `The recommended ${setup.split(",")[0]}, on the ${useCase.toLowerCase()}`}</p>
             <p className="mt-0.5 line-clamp-2 text-xs text-ink-2">{detail || "Loading the recorded run."}</p>
             <ol className="mt-2 flex gap-1" aria-hidden="true">

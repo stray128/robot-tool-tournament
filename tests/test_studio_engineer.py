@@ -1781,7 +1781,7 @@ FROZEN_HERO_TASK_IDS = {
     "h5_solar": "cfd24f6d1ed0eb6b47202ff99d6aacb9cbc029e0960a0e30d16370f63c5adbcd",
     "h6_tile": "f9553b22ce12fc141c274d5532f25c97083ff5cd41faa49fc1927d9487fbc5a3",
     "h2_coupling": "bbedc596166617a245983eee4ee20f2e7fe0266ace56d1ccb954bf7d316aeb01",
-    "h7_hotel": "2a0bc4766d10e13a1e62cf0ea4443e4b25f527fd3c7552ed74352a751469d442",
+    "h7_hotel": "dc0ae4f82a5123cc7039f7ac2e35fe3b54399c63dd4443c5cc50cb24c33e3243",
 }
 #: The v2 heroes the recorded run failed (each stays recorded as failed).
 FAILED_V2_HEROES = ("h4_cnc",)
@@ -2638,7 +2638,7 @@ def test_every_current_recorded_row_rejudges_to_its_recorded_verdicts() -> None:
     changes any of them fails here; the v2 manifest names the revision it was verified with."""
     from rtt.studio.engineer.checks import RULES_REVISION
 
-    assert RULES_REVISION == {"v1": "v1", "v2": "v2-r4"}
+    assert RULES_REVISION == {"v1": "v1", "v2": "v2-r5"}
     for root in (RECORDED_GATE_V1, RECORDED_GATE):
         m = _manifest(root)
         assert m.get("rules_revision", "v1") == RULES_REVISION[m.get("rules_version", "v1")], root.name
@@ -3110,3 +3110,201 @@ def test_api_validates_edited_plans(api: Any) -> None:
     big = {"plan": {"title": "x" * (300 * 1024)}}
     assert client.post("/studio/validate", json=big).status_code == 413
     assert PRIMITIVES  # the contract is importable next to the router
+
+
+# --------------------------------------------------------------------------- a door's bar, gripped from the front
+
+
+def _bar_door(x: float, y: float = 290.0, *, depth: float = 300.0, yaw: float = 0.0) -> ObjectInstance:
+    """The hotel job's room door: 400 mm tall, a 10 mm bar 20 mm off its face, hinged on its left."""
+    return ObjectInstance.of(
+        "room_door",
+        "hinged_lid",
+        "Room door",
+        ObjectPose(x, y, yaw),
+        orientation="door",
+        feature="handle",
+        feature_mm=20,
+        depth_mm=depth,
+        width_mm=400,
+        thickness_mm=20,
+        max_angle_deg=90,
+        open_torque_nm=0.2,
+        damping_nms=0.05,
+    )
+
+
+def _bar_pull() -> Step:
+    return Step.of(
+        "open_door",
+        "hook_pull",
+        "room_door",
+        "handle",
+        "Pull the door open by its handle",
+        [SuccessCriterion("angle_deg", at_least=80.0)],
+        params={"approach": "front", "speed_mm_s": 50},
+    )
+
+
+def _hotel_scene(door_x: float = -140.0) -> tuple[list[ObjectInstance], list[Step]]:
+    """The hotel job as its recorded plan stood after the first layout fix (the door at x -140 mm)."""
+    button = ObjectInstance.of(
+        "call_button",
+        "spring_button",
+        "Elevator call button",
+        ObjectPose(280.0, 70.0, 0.0),
+        actuation_force_n=5,
+        diameter_mm=40,
+        height_mm=150,
+        mount="wall",
+        proud_mm=1,
+        travel_mm=3,
+    )
+    parcel = ObjectInstance.of(
+        "parcel", "part", "Parcel", ObjectPose(100.0, -160.0, 0.0),
+        mass_g=500, shape="box", size_x_mm=160, size_y_mm=120, size_z_mm=80,
+    )  # fmt: skip
+    tray = ObjectInstance.of(
+        "tray", "bin", "Delivery tray", ObjectPose(50.0, 0.0, 0.0),
+        fixed=True, height_mm=100, length_mm=200, wall_mm=5, width_mm=150,
+    )  # fmt: skip
+    steps = [
+        Step.of(
+            "press_button", "push", "call_button", "button", "Press the call button",
+            [SuccessCriterion("pressed", at_least=1.0)], params={"approach": "front", "speed_mm_s": 20},
+        ),
+        _bar_pull(),
+        Step.of(
+            "place_parcel", "grasp", "parcel", "part", "Place the parcel into the tray",
+            [SuccessCriterion("in_target", at_least=1.0), SuccessCriterion("tilt_deg", at_most=10.0)],
+            target="tray", params={"hold_s": 1, "lift_mm": 150},
+        ),
+    ]  # fmt: skip
+    return [button, _bar_door(door_x), parcel, tray], steps
+
+
+def test_the_fixer_moves_a_door_along_x_into_the_front_grip_of_a_tool_changer_gripper() -> None:
+    """A door's bar is gripped from the front only, the tool normal to the door, which puts the palm
+    the tool's length out from the bar. The hotel door at x -140 mm swings its face toward the table's
+    edge: neither reference gripper on a tool changer could follow it to its 88 deg goal. The fixer
+    moves it along x only (y and yaw kept) to the nearest position where the preferred 110 mm servo
+    gripper's front grip stays in the wrist's travel over the engagement, the swing and the retreat
+    (x 90 mm), and moves the tray out of the door's new swing under the usual clearance rules. Both
+    moves are stated plainly, and the result is the same every time."""
+    from rtt.studio.engineer.layout import BAR_GRIPPERS, bar_grip_reach, fix_door_bars, layout_problems
+
+    objects, steps = _hotel_scene()
+    door = objects[1]
+    assert all(bar_grip_reach(door, steps, g) is not None for g in BAR_GRIPPERS)
+    assert layout_problems(objects, steps) == []  # the clearance and reach rules held before
+    fixed = fix_door_bars(objects, steps)
+    assert not isinstance(fixed, str), fixed
+    moved, moves = fixed
+    new = next(o for o in moved if o.name == "room_door")
+    assert (new.pose.x_mm, new.pose.y_mm, new.pose.yaw_deg) == (90.0, 290.0, 0.0)
+    assert bar_grip_reach(new, steps, BAR_GRIPPERS[0]) is None
+    assert bar_grip_reach(replace(new, pose=ObjectPose(80.0, 290.0, 0.0)), steps, BAR_GRIPPERS[0]) is not None
+    door_move = (
+        "Moved room_door from (-140, 290) to (90, 290) mm along x so the 110 mm servo gripper on a tool changer "
+        "grips its bar handle from the front through the whole pull"
+    )
+    assert [m.text() for m in moves] == [
+        door_move,
+        "Moved tray from (50, 0) to (-100, -110) mm to clear the swing of room_door",
+    ]
+    assert layout_problems(moved, steps) == []
+    again = fix_door_bars(objects, steps)
+    assert not isinstance(again, str)  # deterministic
+    assert again[1] == moves and [o.pose for o in again[0]] == [o.pose for o in moved]
+    # a door the second reference gripper already reaches stays where it is
+    near, _ = _hotel_scene(door_x=50.0)
+    assert fix_door_bars(near, steps) == (near, [])
+
+
+def test_a_door_only_the_adaptive_gripper_can_front_grip_is_placed_for_it_or_left_with_a_reason() -> None:
+    """The fallback order: a 400 mm door at y 200 mm has no position along x where the servo gripper's
+    front grip stays in the travel, so the fixer places it for the two-finger adaptive gripper; a 500 mm
+    door has none for either, and a door turned to face the table's +y or -x edge has none along x:
+    those stay where they are and the fixer says why (the step will fail plainly in the simulator)."""
+    from rtt.studio.engineer.layout import fix_door_bars
+
+    pull = [_bar_pull()]
+    moved, moves = fix_door_bars([_bar_door(-140.0, 200.0, depth=400.0)], pull)  # type: ignore[misc]
+    assert moved[0].pose == ObjectPose(90.0, 200.0, 0.0)
+    door_move = (
+        "Moved room_door from (-140, 200) to (90, 200) mm along x so the two-finger adaptive gripper on a tool "
+        "changer grips its bar handle from the front through the whole pull"
+    )
+    assert [m.text() for m in moves] == [door_move]
+    for door in (
+        _bar_door(-140.0, 200.0, depth=500.0),
+        _bar_door(-140.0, 200.0, yaw=180.0),
+        _bar_door(-140.0, 200.0, yaw=-90.0),
+    ):
+        why = fix_door_bars([door], pull)
+        assert isinstance(why, str) and why.startswith("No position of room_door along x"), why
+
+
+def test_the_door_bar_reference_grippers_are_measured_on_the_tool_changer() -> None:
+    """The fixer's reference grippers (``layout.BAR_GRIPPERS``) are the Studio's own tools on its tool
+    changer: their TCP below the palm and their tips past it match the calibrated tools, and the fixer's
+    reach agrees with the hook pull's controller on the hotel door either side of the servo gripper's
+    first position (x 80 mm: the controller does not attempt it; x 90 mm: it grips the bar from the front)."""
+    import mujoco
+    import numpy as np
+
+    from rtt.sim.task import default_task_v2
+    from rtt.studio.engineer.layout import BAR_GRIPPERS, bar_grip_reach
+    from rtt.studio.plan import StepContext
+    from rtt.studio.primitives._common import tool_of
+    from rtt.studio.primitives.hook_pull import HookPullController, bar_drop
+    from rtt.studio.scene import build_studio_scene
+    from rtt.studio.search import default_candidates
+    from rtt.studio.types import Setup, TaskSpec
+
+    task = default_task_v2()
+    pool = {(c.spec.model, c.spec.primitive): c.spec for c in default_candidates()}
+    cup = pool[("cup-25mm", "seal")]
+    for model, _, tcp_mm, drop_mm in BAR_GRIPPERS:
+        gripper = pool[(model, "pinch")]
+        for x, front in ((80.0, False), (90.0, True)):
+            objects, steps = _hotel_scene(door_x=x)
+            spec = TaskSpec("hotel", "", tuple(objects), tuple(steps), source="test")
+            setup = Setup.tool_change({"press_button": gripper, "open_door": gripper, "place_parcel": cup})
+            tool = next(sg for sg in setup.segments(spec) if "open_door" in sg.step_ids).tool
+            scene = build_studio_scene(setup, spec, tool, task=task)
+            data = mujoco.MjData(scene.model)
+            mujoco.mj_kinematics(scene.model, data)
+            ctx = StepContext(
+                step=steps[1], task_spec=spec, scene=scene, obj=scene.objects["room_door"], target=None,
+                head=scene.active, wrist_start=np.zeros(5), task=task, seed=0,
+            )  # fmt: skip
+            measured = tool_of(ctx)
+            assert -1000.0 * float(measured.tcp[2]) == pytest.approx(tcp_mm, abs=0.1), model
+            drop = bar_drop(measured.footprint, float(measured.tcp[2]), measured.tip_drop, 0.010)
+            assert 1000.0 * drop == pytest.approx(drop_mm, abs=0.1), model
+            if model != BAR_GRIPPERS[0][0]:
+                continue
+            plan = HookPullController().plan(ctx, scene.model, data)
+            assert (plan.values["run"].get("mode") == "bar") is front, (x, plan.note)
+            assert (bar_grip_reach(objects[1], steps, BAR_GRIPPERS[0]) is None) is front, x
+
+
+def test_the_door_bar_rule_leaves_every_recorded_plan_without_a_door_bar_as_it_is() -> None:
+    """The fixer's door-bar rule only moves a door whose bar a step pulls: every recorded plan of
+    both recordings without one replays exactly as recorded (the re-judge test compares every row),
+    and the rule returns its objects unchanged; of the current recording only the hotel job has one."""
+    from rtt.studio.engineer.layout import bar_steps, fix_door_bars
+
+    with_bar = []
+    for root in (RECORDED_GATE, RECORDED_GATE_V1):
+        for case, result in replay_recorded(root):
+            spec = result.spec
+            if spec is None:
+                continue
+            if any(bar_steps(o, spec.steps) for o in spec.objects):
+                with_bar.append((root.name, case.case_id))
+                continue
+            assert fix_door_bars(spec.objects, spec.steps) == (list(spec.objects), []), case.case_id
+    assert ("gate-2026-10-27-v2c", "h7_hotel") in with_bar
+    assert [c for r, c in with_bar if r == "gate-2026-10-27-v2c"] == ["h7_hotel"]

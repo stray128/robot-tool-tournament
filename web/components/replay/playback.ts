@@ -1,8 +1,7 @@
 "use client";
 
-import { createContext, useContext } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { createStore, type StoreApi } from "zustand/vanilla";
-import { useStore } from "zustand";
 
 export type ViewName = "iso" | "front";
 
@@ -81,6 +80,29 @@ export function createPlaybackStore(init: { loop?: boolean; view?: ViewName; loo
   }));
 }
 
+/**
+ * Calls `onChange` with a value derived from the clock now, then again only when that value
+ * changes (by `equal`). For React state that follows the clock: setting state on every animation
+ * frame keeps an urgent render queued all the time, which starves the router's navigation
+ * transitions (a link or router.push can then do nothing for seconds) and re-renders everything
+ * under the component, a 3D canvas included. Returns the unsubscribe function.
+ */
+export function watchPlayback<T>(
+  store: PlaybackStore,
+  select: (s: PlaybackState) => T,
+  onChange: (value: T) => void,
+  equal: (a: T, b: T) => boolean = Object.is,
+): () => void {
+  let last = select(store.getState());
+  onChange(last);
+  return store.subscribe((s) => {
+    const next = select(s);
+    if (equal(last, next)) return;
+    last = next;
+    onChange(next);
+  });
+}
+
 export const PlaybackContext = createContext<PlaybackStore | null>(null);
 
 export function usePlaybackStore(): PlaybackStore {
@@ -89,6 +111,21 @@ export function usePlaybackStore(): PlaybackStore {
   return store;
 }
 
+/**
+ * A value of the shared clock in a component. It follows the store through watchPlayback, not
+ * zustand's useStore: useSyncExternalStore renders every change at the highest priority, so the
+ * clock's `t`, which changes on every animation frame, restarted any navigation in progress, and a
+ * header link clicked while a replay played could take seconds to land. A change made by the
+ * clock's frame is now a default-priority render, which React does not let interrupt a navigation;
+ * a change made by a click (play, seek, view) still renders at once.
+ */
 export function usePlayback<T>(selector: (s: PlaybackState) => T): T {
-  return useStore(usePlaybackStore(), selector);
+  const store = usePlaybackStore();
+  const [value, setValue] = useState(() => selector(store.getState()));
+  const latest = useRef(selector);
+  useEffect(() => {
+    latest.current = selector;
+  });
+  useEffect(() => watchPlayback(store, (s) => latest.current(s), (v) => setValue(() => v)), [store]);
+  return value;
 }

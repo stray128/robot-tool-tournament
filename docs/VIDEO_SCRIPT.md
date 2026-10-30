@@ -1,5 +1,10 @@
 # Effector Lab: video script (v2)
 
+> **An earlier cut.** This is the script of an earlier screen-recorded cut, built with the tools in
+> `scripts/video/`. The film submitted to the hackathon is a different edit; its narration and shots
+> are in [FILM.md](FILM.md). The hotel shot in this table shows the hotel result from before door
+> handles were gripped from the front.
+
 **Length 2:58** (178 s). The hackathon's hard limit is 3:00, and the cut must stay at or under 2:59
 (`max_duration_s` 179 in `scripts/video/shots.json`). **The product is on screen from 0:00 to
 2:51**: 171 s of the site doing its job, then a 7 s end card.

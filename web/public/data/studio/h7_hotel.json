@@ -9,9 +9,9 @@
  "setting": "hospitality",
  "use_case": "Hotel delivery, on a bench mock-up: press the elevator call button on the wall (a 40 mm round button, about 5 N to press, its centre 150 mm up the wall, nothing standing in front of it), then open the room door beside it (a hinged door 300 mm wide and 400 mm tall with a pull handle, hinged on its left) and put the parcel (a 160 x 120 x 80 mm box, 500 g) from the bench into the delivery tray behind the door.",
  "outcome": "recommended",
- "headline": "A two-tool head completes the task in 8 of 8 runs; the best single off-the-shelf tool in 0 of 8 runs.",
+ "headline": "A tool-change sequence completes the task in 8 of 8 runs; the best single off-the-shelf tool in 0 of 8 runs.",
  "plan": {
-  "task_id": "2a0bc4766d10e13a1e62cf0ea4443e4b25f527fd3c7552ed74352a751469d442",
+  "task_id": "dc0ae4f82a5123cc7039f7ac2e35fe3b54399c63dd4443c5cc50cb24c33e3243",
   "title": "Hotel delivery mock-up",
   "description": "Press the wall-mounted elevator call button, open the hinged room door with a pull handle, then pick the parcel from the bench and place it into the delivery tray behind the door.",
   "source": "nemotron",
@@ -21,7 +21,9 @@
   "layout_moves": [
    "Moved call_button from (0, -200) to (280, 70) mm to bring it within the wrist's reach",
    "Moved room_door from (-200, 0) to (-140, 290) mm to bring it within the wrist's reach",
-   "Moved parcel from (100, -100) to (100, -160) mm to clear the footprint of tray"
+   "Moved parcel from (100, -100) to (100, -160) mm to clear the footprint of tray",
+   "Moved room_door from (-140, 290) to (90, 290) mm along x so the 110 mm servo gripper on a tool changer grips its bar handle from the front through the whole pull",
+   "Moved tray from (50, 0) to (-100, -110) mm to clear the swing of room_door"
   ],
   "assumptions": [
    "The door hinge provides negligible resistance (0.2 Nm) and the button requires 5 N to actuate.",
@@ -29,7 +31,9 @@
    "The delivery tray is a fixed bin positioned behind the door when the door is open.",
    "Moved call_button from (0, -200) to (280, 70) mm to bring it within the wrist's reach",
    "Moved room_door from (-200, 0) to (-140, 290) mm to bring it within the wrist's reach",
-   "Moved parcel from (100, -100) to (100, -160) mm to clear the footprint of tray"
+   "Moved parcel from (100, -100) to (100, -160) mm to clear the footprint of tray",
+   "Moved room_door from (-140, 290) to (90, 290) mm along x so the 110 mm servo gripper on a tool changer grips its bar handle from the front through the whole pull",
+   "Moved tray from (50, 0) to (-100, -110) mm to clear the swing of room_door"
   ],
   "clarifications": [
    {
@@ -76,7 +80,7 @@
      "width_mm": 400
     },
     "pose": {
-     "x_mm": -140.0,
+     "x_mm": 90.0,
      "y_mm": 290.0,
      "yaw_deg": 0.0
     },
@@ -114,8 +118,8 @@
      "width_mm": 150
     },
     "pose": {
-     "x_mm": 50.0,
-     "y_mm": 0.0,
+     "x_mm": -100.0,
+     "y_mm": -110.0,
      "yaw_deg": 0.0
     },
     "ref": null
@@ -236,7 +240,7 @@
   "n_screened": 37,
   "n_conditions": 3,
   "runs": 183,
-  "wall_s": 365.3,
+  "wall_s": 113.0,
   "candidates": [
    {
     "effector_id": "1dbebe634ac9859b2c06b6774e3032b79199268851a73c001a0cf4a4da795686",
@@ -1474,37 +1478,6 @@
   ],
   "rows": [
    {
-    "effector_id": "6148cfd23eae2b2e8959cc78a8c2b6ef324c0878a66bd0eee45e4a4105e20cb7",
-    "display_name": "Designed three-finger sliding hook gripper da49",
-    "family_title": "Designed morphology",
-    "fidelity": "rigid",
-    "off_the_shelf": false,
-    "cells": {
-     "press_button": {
-      "state": "run",
-      "rate": 1.0,
-      "n": 3,
-      "successes": 3,
-      "primitive_used": "push",
-      "failure_modes": {},
-      "context": "start"
-     },
-     "open_door": {
-      "state": "run",
-      "rate": 1.0,
-      "n": 3,
-      "successes": 3,
-      "primitive_used": "hook_pull",
-      "failure_modes": {},
-      "context": "carried"
-     },
-     "place_parcel": {
-      "state": "pruned",
-      "reason": "Parcel: too narrow: open, digit 1 (at 90 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 69.3 mm that way, so it needs 74.3 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 2 (at -150 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 100.0 mm that way, so it needs 105.0 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 3 (at -30 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 100.0 mm that way, so it needs 105.0 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too short: the digits reach 60.0 mm below the palm; gripping the probe part (80.0 mm tall) with the lowest point at 12.0 mm needs 78.0 mm to keep the palm 10 mm above the part (longer digits or a higher grip)"
-     }
-    }
-   },
-   {
     "effector_id": "6d286bacbd7431187a1a4bd5a48d194ea5e59399afb0a9e2227332f4fe006cf7",
     "display_name": "Force-controlled parallel gripper, 48 mm stroke",
     "family_title": "Industrial gripper",
@@ -1598,68 +1571,6 @@
     }
    },
    {
-    "effector_id": "52613f2b72143b61b490ddfc05c4e3ed38c49de7005b77f07a5ccbfada0ab476",
-    "display_name": "Two-finger adaptive gripper, pinch",
-    "family_title": "Industrial gripper",
-    "fidelity": "rigid",
-    "off_the_shelf": true,
-    "cells": {
-     "press_button": {
-      "state": "run",
-      "rate": 1.0,
-      "n": 3,
-      "successes": 3,
-      "primitive_used": "push",
-      "failure_modes": {},
-      "context": "start"
-     },
-     "open_door": {
-      "state": "run",
-      "rate": 1.0,
-      "n": 3,
-      "successes": 3,
-      "primitive_used": "hook_pull",
-      "failure_modes": {},
-      "context": "carried"
-     },
-     "place_parcel": {
-      "state": "pruned",
-      "reason": "Parcel: the part is 120.0 mm across the closing axis; the gripper opens 52.0 mm"
-     }
-    }
-   },
-   {
-    "effector_id": "bbb8214caaf4a70aac3e2c08331f0166c12470bf97db57db00dc834a77ff4dd1",
-    "display_name": "Two-finger adaptive gripper, power grasp",
-    "family_title": "Industrial gripper",
-    "fidelity": "rigid",
-    "off_the_shelf": true,
-    "cells": {
-     "press_button": {
-      "state": "run",
-      "rate": 1.0,
-      "n": 3,
-      "successes": 3,
-      "primitive_used": "push",
-      "failure_modes": {},
-      "context": "start"
-     },
-     "open_door": {
-      "state": "run",
-      "rate": 1.0,
-      "n": 3,
-      "successes": 3,
-      "primitive_used": "hook_pull",
-      "failure_modes": {},
-      "context": "carried"
-     },
-     "place_parcel": {
-      "state": "pruned",
-      "reason": "Parcel: the part is 120.0 mm across the closing axis; the gripper opens 52.0 mm"
-     }
-    }
-   },
-   {
     "effector_id": "f7faa3ddd45fee96149330bbf1bc6cd179305044806e9f178ed0735f6f184b80",
     "display_name": "Two-finger adaptive linkage gripper, 85 mm",
     "family_title": "Industrial gripper",
@@ -1722,30 +1633,30 @@
     }
    },
    {
-    "effector_id": "9dbe8879e66bd4a935e6db502db88cdb0ce74390f469ada567cc93eb165b5b58",
-    "display_name": "Three-finger adaptive gripper, pinch",
+    "effector_id": "52613f2b72143b61b490ddfc05c4e3ed38c49de7005b77f07a5ccbfada0ab476",
+    "display_name": "Two-finger adaptive gripper, pinch",
     "family_title": "Industrial gripper",
     "fidelity": "rigid",
     "off_the_shelf": true,
     "cells": {
      "press_button": {
       "state": "run",
-      "rate": 0.3333,
+      "rate": 1.0,
       "n": 3,
-      "successes": 1,
+      "successes": 3,
       "primitive_used": "push",
-      "failure_modes": {
-       "physics_unreliable": 2
-      },
+      "failure_modes": {},
       "context": "start"
      },
      "open_door": {
       "state": "run",
-      "rate": 1.0,
+      "rate": 0.6667,
       "n": 3,
-      "successes": 3,
+      "successes": 2,
       "primitive_used": "hook_pull",
-      "failure_modes": {},
+      "failure_modes": {
+       "criterion_not_met": 1
+      },
       "context": "carried"
      },
      "place_parcel": {
@@ -1755,35 +1666,68 @@
     }
    },
    {
-    "effector_id": "730fd283dd6b7dd046711dfef0b73a64f6a577e2cc7a643ee6affb86f74ed0aa",
-    "display_name": "Three-finger adaptive gripper, power grasp",
+    "effector_id": "bbb8214caaf4a70aac3e2c08331f0166c12470bf97db57db00dc834a77ff4dd1",
+    "display_name": "Two-finger adaptive gripper, power grasp",
     "family_title": "Industrial gripper",
     "fidelity": "rigid",
     "off_the_shelf": true,
     "cells": {
      "press_button": {
       "state": "run",
-      "rate": 0.3333,
+      "rate": 1.0,
       "n": 3,
-      "successes": 1,
+      "successes": 3,
       "primitive_used": "push",
-      "failure_modes": {
-       "physics_unreliable": 2
-      },
+      "failure_modes": {},
       "context": "start"
      },
      "open_door": {
       "state": "run",
-      "rate": 1.0,
+      "rate": 0.6667,
       "n": 3,
-      "successes": 3,
+      "successes": 2,
       "primitive_used": "hook_pull",
-      "failure_modes": {},
+      "failure_modes": {
+       "criterion_not_met": 1
+      },
       "context": "carried"
      },
      "place_parcel": {
       "state": "pruned",
       "reason": "Parcel: the part is 120.0 mm across the closing axis; the gripper opens 52.0 mm"
+     }
+    }
+   },
+   {
+    "effector_id": "9aff5d8ef53e119ab1943eef6d8ba55af4795f806c1a2e111b89c7c0444c770b",
+    "display_name": "Two-finger parallel cobot hand, 80 mm",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "press_button": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.3333,
+      "n": 3,
+      "successes": 1,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "slip": 2
+      },
+      "context": "carried"
+     },
+     "place_parcel": {
+      "state": "pruned",
+      "reason": "Parcel: the part is 120.0 mm across the closing axis; the gripper opens 79.8 mm"
      }
     }
    },
@@ -1814,46 +1758,6 @@
     }
    },
    {
-    "effector_id": "7d8ca167a7b3a93e3461ebca357e274ec9c9ca4fa9c2f4e50daa4c0a5e027724",
-    "display_name": "Angular-jaw gripper of an open hobby arm",
-    "family_title": "Industrial gripper",
-    "fidelity": "rigid",
-    "off_the_shelf": true,
-    "cells": {
-     "press_button": {
-      "state": "run",
-      "rate": 0.0,
-      "n": 3,
-      "successes": 0,
-      "primitive_used": "push",
-      "failure_modes": {
-       "criterion_not_met": 3
-      },
-      "context": "start"
-     },
-     "open_door": {
-      "state": "run",
-      "rate": 1.0,
-      "n": 3,
-      "successes": 3,
-      "primitive_used": "hook_pull",
-      "failure_modes": {},
-      "context": "carried"
-     },
-     "place_parcel": {
-      "state": "run",
-      "rate": 0.0,
-      "n": 3,
-      "successes": 0,
-      "primitive_used": "grasp",
-      "failure_modes": {
-       "criterion_not_met": 3
-      },
-      "context": "carried"
-     }
-    }
-   },
-   {
     "effector_id": "d6e87ec5705a8c93944dfc2db4945e98e2499a9aa761b0cc801420e51d5ec0ad",
     "display_name": "Designed four-finger swinging hook gripper 052c",
     "family_title": "Designed morphology",
@@ -1876,13 +1780,46 @@
       "successes": 0,
       "primitive_used": "hook_pull",
       "failure_modes": {
-       "slip": 3
+       "criterion_not_met": 3
       },
       "context": "carried"
      },
      "place_parcel": {
       "state": "pruned",
       "reason": "Parcel: too narrow: open, digit 1 (at 135 deg on the part) has its inner face 31.5 mm from the centre; the part reaches 100.0 mm that way, so it needs 105.0 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 2 (at -135 deg on the part) has its inner face 31.5 mm from the centre; the part reaches 100.0 mm that way, so it needs 105.0 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 3 (at -45 deg on the part) has its inner face 31.5 mm from the centre; the part reaches 100.0 mm that way, so it needs 105.0 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 4 (at 45 deg on the part) has its inner face 31.5 mm from the centre; the part reaches 100.0 mm that way, so it needs 105.0 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it)"
+     }
+    }
+   },
+   {
+    "effector_id": "6148cfd23eae2b2e8959cc78a8c2b6ef324c0878a66bd0eee45e4a4105e20cb7",
+    "display_name": "Designed three-finger sliding hook gripper da49",
+    "family_title": "Designed morphology",
+    "fidelity": "rigid",
+    "off_the_shelf": false,
+    "cells": {
+     "press_button": {
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "push",
+      "failure_modes": {},
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "place_parcel": {
+      "state": "pruned",
+      "reason": "Parcel: too narrow: open, digit 1 (at 90 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 69.3 mm that way, so it needs 74.3 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 2 (at -150 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 100.0 mm that way, so it needs 105.0 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too narrow: open, digit 3 (at -30 deg on the part) has its inner face 32.0 mm from the centre; the part reaches 100.0 mm that way, so it needs 105.0 mm (3.5 mm placement error + 1.5 mm clearance; the palm radius sets it); too short: the digits reach 60.0 mm below the palm; gripping the probe part (80.0 mm tall) with the lowest point at 12.0 mm needs 78.0 mm to keep the palm 10 mm above the part (longer digits or a higher grip)"
      }
     }
    },
@@ -1972,43 +1909,42 @@
       "successes": 0,
       "primitive_used": "suction",
       "failure_modes": {
-       "dropped": 2,
-       "physics_unreliable": 1
+       "dropped": 3
       },
       "context": "carried"
      }
     }
    },
    {
-    "effector_id": "9aff5d8ef53e119ab1943eef6d8ba55af4795f806c1a2e111b89c7c0444c770b",
-    "display_name": "Two-finger parallel cobot hand, 80 mm",
-    "family_title": "Industrial gripper",
-    "fidelity": "rigid",
+    "effector_id": "a5d7b1667b4f0d6582a36df49b9e600eeedc31f54dc883ddf7803fe113091f1d",
+    "display_name": "Suction cup, 40 mm bellows",
+    "family_title": "Suction cup",
+    "fidelity": "approximation",
     "off_the_shelf": true,
     "cells": {
      "press_button": {
       "state": "run",
-      "rate": 1.0,
-      "n": 3,
-      "successes": 3,
-      "primitive_used": "push",
-      "failure_modes": {},
-      "context": "start"
-     },
-     "open_door": {
-      "state": "run",
       "rate": 0.0,
       "n": 3,
       "successes": 0,
-      "primitive_used": "hook_pull",
+      "primitive_used": "push",
       "failure_modes": {
-       "slip": 3
+       "criterion_not_met": 3
       },
-      "context": "carried"
+      "context": "start"
+     },
+     "open_door": {
+      "state": "pruned",
+      "reason": "a suction cup has no hook or fingers to engage a handle or lip"
      },
      "place_parcel": {
-      "state": "pruned",
-      "reason": "Parcel: the part is 120.0 mm across the closing axis; the gripper opens 79.8 mm"
+      "state": "run",
+      "rate": 1.0,
+      "n": 3,
+      "successes": 3,
+      "primitive_used": "suction",
+      "failure_modes": {},
+      "context": "carried"
      }
     }
    },
@@ -2046,8 +1982,78 @@
     }
    },
    {
-    "effector_id": "19349473603b229ce8676b46cd97598dc1cd5b463f8f801d4455e1a7b01ba3e2",
-    "display_name": "Two-finger parallel gripper, teleop-arm fingers",
+    "effector_id": "9dbe8879e66bd4a935e6db502db88cdb0ce74390f469ada567cc93eb165b5b58",
+    "display_name": "Three-finger adaptive gripper, pinch",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "press_button": {
+      "state": "run",
+      "rate": 0.3333,
+      "n": 3,
+      "successes": 1,
+      "primitive_used": "push",
+      "failure_modes": {
+       "physics_unreliable": 2
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "place_parcel": {
+      "state": "pruned",
+      "reason": "Parcel: the part is 120.0 mm across the closing axis; the gripper opens 52.0 mm"
+     }
+    }
+   },
+   {
+    "effector_id": "730fd283dd6b7dd046711dfef0b73a64f6a577e2cc7a643ee6affb86f74ed0aa",
+    "display_name": "Three-finger adaptive gripper, power grasp",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "press_button": {
+      "state": "run",
+      "rate": 0.3333,
+      "n": 3,
+      "successes": 1,
+      "primitive_used": "push",
+      "failure_modes": {
+       "physics_unreliable": 2
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "place_parcel": {
+      "state": "pruned",
+      "reason": "Parcel: the part is 120.0 mm across the closing axis; the gripper opens 52.0 mm"
+     }
+    }
+   },
+   {
+    "effector_id": "7d8ca167a7b3a93e3461ebca357e274ec9c9ca4fa9c2f4e50daa4c0a5e027724",
+    "display_name": "Angular-jaw gripper of an open hobby arm",
     "family_title": "Industrial gripper",
     "fidelity": "rigid",
     "off_the_shelf": true,
@@ -2065,11 +2071,13 @@
      },
      "open_door": {
       "state": "run",
-      "rate": 1.0,
+      "rate": 0.0,
       "n": 3,
-      "successes": 3,
+      "successes": 0,
       "primitive_used": "hook_pull",
-      "failure_modes": {},
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
       "context": "carried"
      },
      "place_parcel": {
@@ -2082,41 +2090,6 @@
        "criterion_not_met": 3
       },
       "context": "carried"
-     }
-    }
-   },
-   {
-    "effector_id": "79372f1ed2ab4e3a5467c38ed239aa0795a8df3e5ce6af900af10a5a3e252050",
-    "display_name": "Two-finger parallel gripper, fin-ray pads",
-    "family_title": "Industrial gripper",
-    "fidelity": "rigid",
-    "off_the_shelf": true,
-    "cells": {
-     "press_button": {
-      "state": "run",
-      "rate": 0.0,
-      "n": 3,
-      "successes": 0,
-      "primitive_used": "push",
-      "failure_modes": {
-       "physics_unreliable": 3
-      },
-      "context": "start"
-     },
-     "open_door": {
-      "state": "run",
-      "rate": 0.3333,
-      "n": 3,
-      "successes": 1,
-      "primitive_used": "hook_pull",
-      "failure_modes": {
-       "slip": 2
-      },
-      "context": "carried"
-     },
-     "place_parcel": {
-      "state": "pruned",
-      "reason": "Parcel: the part is 120.0 mm across the closing axis; the gripper opens 83.4 mm"
      }
     }
    },
@@ -2145,8 +2118,7 @@
       "successes": 0,
       "primitive_used": "hook_pull",
       "failure_modes": {
-       "physics_unreliable": 1,
-       "slip": 2
+       "criterion_not_met": 3
       },
       "context": "carried"
      },
@@ -2318,7 +2290,7 @@
       "successes": 0,
       "primitive_used": "grasp",
       "failure_modes": {
-       "criterion_not_met": 3
+       "physics_unreliable": 3
       },
       "context": "carried"
      }
@@ -2349,7 +2321,7 @@
       "successes": 0,
       "primitive_used": "hook_pull",
       "failure_modes": {
-       "slip": 3
+       "criterion_not_met": 3
       },
       "context": "carried"
      },
@@ -2451,42 +2423,6 @@
     }
    },
    {
-    "effector_id": "a5d7b1667b4f0d6582a36df49b9e600eeedc31f54dc883ddf7803fe113091f1d",
-    "display_name": "Suction cup, 40 mm bellows",
-    "family_title": "Suction cup",
-    "fidelity": "approximation",
-    "off_the_shelf": true,
-    "cells": {
-     "press_button": {
-      "state": "run",
-      "rate": 0.0,
-      "n": 3,
-      "successes": 0,
-      "primitive_used": "push",
-      "failure_modes": {
-       "criterion_not_met": 3
-      },
-      "context": "start"
-     },
-     "open_door": {
-      "state": "pruned",
-      "reason": "a suction cup has no hook or fingers to engage a handle or lip"
-     },
-     "place_parcel": {
-      "state": "run",
-      "rate": 0.0,
-      "n": 3,
-      "successes": 0,
-      "primitive_used": "suction",
-      "failure_modes": {
-       "dropped": 1,
-       "physics_unreliable": 2
-      },
-      "context": "carried"
-     }
-    }
-   },
-   {
     "effector_id": "e678af7b9e64e5522adab03ac14717d9103435946e5778f8e578c1bc2c7bf710",
     "display_name": "Tamper pad, 200 mm",
     "family_title": "Process tool",
@@ -2571,6 +2507,83 @@
     }
    },
    {
+    "effector_id": "79372f1ed2ab4e3a5467c38ed239aa0795a8df3e5ce6af900af10a5a3e252050",
+    "display_name": "Two-finger parallel gripper, fin-ray pads",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "press_button": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "push",
+      "failure_modes": {
+       "physics_unreliable": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "out_of_reach": 3
+      },
+      "context": "carried"
+     },
+     "place_parcel": {
+      "state": "pruned",
+      "reason": "Parcel: the part is 120.0 mm across the closing axis; the gripper opens 83.4 mm"
+     }
+    }
+   },
+   {
+    "effector_id": "19349473603b229ce8676b46cd97598dc1cd5b463f8f801d4455e1a7b01ba3e2",
+    "display_name": "Two-finger parallel gripper, teleop-arm fingers",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "cells": {
+     "press_button": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "push",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "start"
+     },
+     "open_door": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "hook_pull",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     },
+     "place_parcel": {
+      "state": "run",
+      "rate": 0.0,
+      "n": 3,
+      "successes": 0,
+      "primitive_used": "grasp",
+      "failure_modes": {
+       "criterion_not_met": 3
+      },
+      "context": "carried"
+     }
+    }
+   },
+   {
     "effector_id": "1a3dddd3d68cc0b6df6d003946cc16fb895f371d0001906c7ba2e72d729721ac",
     "display_name": "Vacuum area frame, 2 x 2 cups, 300 mm",
     "family_title": "Vacuum area frame",
@@ -2632,85 +2645,36 @@
   "counts": {
    "single": 3,
    "tool_change": 27,
-   "multi_head": 5,
+   "multi_head": 2,
    "multi_head_geometry_searched": 6
   },
   "rejected": [
    {
     "label": "",
-    "reason": "no bracket layout clears: during place_parcel the idle head 1 or the bracket comes within 5 mm of the table (3 of 24 layouts); during press_button (the wrist tilted 90 deg) the idle head 1 or the bracket comes within 5 mm of room_door (3 of 24 layouts); during press_button the wrist tilted 90 deg swings a head or the bracket 105 mm into the arm's link above the pitch joint (2 of 24 layouts)"
+    "reason": "no bracket layout clears: during press_button (the wrist tilted 90 deg) the idle head 1 or the bracket comes within 5 mm of room_door (19 of 24 layouts); the two heads overlap on the bracket (2 of 24 layouts); a head or an adapter reaches 19 mm above the flange's mounting face within the arm's last link (1 of 24 layouts)"
+   },
+   {
+    "label": "",
+    "reason": "no bracket layout clears: switching to head 1 at the home pose swings the heads through room_door (14 of 24 layouts); the two heads overlap on the bracket (2 of 24 layouts); a head or an adapter reaches 60 mm above the flange's mounting face within the arm's last link (2 of 24 layouts)"
+   },
+   {
+    "label": "",
+    "reason": "no bracket layout clears: during press_button (the wrist tilted 90 deg) the idle head 1 or the bracket comes within 5 mm of room_door (19 of 24 layouts); the two heads overlap on the bracket (2 of 24 layouts); a head or an adapter reaches 23 mm above the flange's mounting face within the arm's last link (1 of 24 layouts)"
+   },
+   {
+    "label": "",
+    "reason": "no bracket layout clears: during press_button (the wrist tilted 90 deg) the idle head 1 or the bracket comes within 5 mm of room_door (19 of 24 layouts); the two heads overlap on the bracket (2 of 24 layouts); a head or an adapter reaches 23 mm above the flange's mounting face within the arm's last link (1 of 24 layouts)"
    }
   ]
  },
  "finalists": [
   {
-   "setup_id": "5f6656e247bdbdf47a8393404d31273e6f9bebff8f948f3b9f79848826be41aa",
-   "kind": "multi_head",
-   "kind_title": "Two-tool head",
-   "label": "Two-tool head: Suction cup + Angular-jaw gripper of",
+   "setup_id": "e38465aad8735559314fe4beca2de13556c1bc614e0c13a4274a9bf2f046b6fc",
+   "kind": "tool_change",
+   "kind_title": "Tool change",
+   "label": "Tool change: Drawer-pull > Force-controlled > Suction",
    "tools": [
-    "Suction cup, 25 mm bellows",
-    "Angular-jaw gripper of an open hobby arm"
-   ],
-   "completion_rate": 1.0,
-   "completed_runs": 8,
-   "n_runs": 8,
-   "fidelity": "approximation",
-   "stops_at": null,
-   "cycle_time_s": 51.41,
-   "roles": [
-    "recommended"
-   ],
-   "eligible": true,
-   "reason": null,
-   "tool_details": [
-    {
-     "index": 0,
-     "effector_id": "e72e88518c0ebe7a74ec5db104b671180e9dbb5b51d0b11045814506657f31bf",
-     "display_name": "Suction cup, 25 mm bellows",
-     "family": "suction",
-     "family_title": "Suction cup",
-     "fidelity": "approximation",
-     "off_the_shelf": true,
-     "caveat": "Suction cup (approximation): a compliant lip of rigid segments on a bellows spring with a limited tilt; the seal is a geometric test (every lip segment touching the face, part material under 13 rays inside the lip) gating a MuJoCo adhesion actuator capped at vacuum x lip area (at most 60 kPa). The lip must touch the face: no pull across a gap. Not modelled: air flow, leak rate, porosity, vacuum build-up time (the vacuum follows the shared close ramp and is cut the control tick the seal is lost), lip material hysteresis, peel dynamics beyond the contact distribution. The lip's friction is the part's. Treat suction results as a screen, then verify on hardware."
-    },
-    {
-     "index": 1,
-     "effector_id": "7d8ca167a7b3a93e3461ebca357e274ec9c9ca4fa9c2f4e50daa4c0a5e027724",
-     "display_name": "Angular-jaw gripper of an open hobby arm",
-     "family": "catalog_gripper",
-     "family_title": "Industrial gripper",
-     "fidelity": "rigid",
-     "off_the_shelf": true,
-     "caveat": null
-    }
-   ],
-   "step_success": {
-    "press_button": 1.0,
-    "open_door": 1.0,
-    "place_parcel": 1.0
-   },
-   "weakest_step": {
-    "step_id": "open_door",
-    "success_rate": 1.0
-   },
-   "complexity": {
-    "n_tools": 2,
-    "n_actuators": 2,
-    "total_mass_kg": 0.369,
-    "n_changes": 2,
-    "bracket": true
-   },
-   "payload_kg": 0.369,
-   "failure_modes": {},
-   "stops_at_detail": {}
-  },
-  {
-   "setup_id": "53b18209194be43baa1838aac441e528d4376c911ec8e9f3f9e5fe3a1d33f515",
-   "kind": "multi_head",
-   "kind_title": "Two-tool head",
-   "label": "Two-tool head: Force-controlled parallel + Suction cup",
-   "tools": [
+    "Drawer-pull hook tool",
     "Force-controlled parallel gripper, 48 mm stroke",
     "Suction cup, 25 mm bellows"
    ],
@@ -2719,72 +2683,9 @@
    "n_runs": 8,
    "fidelity": "approximation",
    "stops_at": null,
-   "cycle_time_s": 52.79,
+   "cycle_time_s": 63.8,
    "roles": [
-    "finalist"
-   ],
-   "eligible": true,
-   "reason": null,
-   "tool_details": [
-    {
-     "index": 0,
-     "effector_id": "6d286bacbd7431187a1a4bd5a48d194ea5e59399afb0a9e2227332f4fe006cf7",
-     "display_name": "Force-controlled parallel gripper, 48 mm stroke",
-     "family": "catalog_gripper",
-     "family_title": "Industrial gripper",
-     "fidelity": "rigid",
-     "off_the_shelf": true,
-     "caveat": null
-    },
-    {
-     "index": 1,
-     "effector_id": "e72e88518c0ebe7a74ec5db104b671180e9dbb5b51d0b11045814506657f31bf",
-     "display_name": "Suction cup, 25 mm bellows",
-     "family": "suction",
-     "family_title": "Suction cup",
-     "fidelity": "approximation",
-     "off_the_shelf": true,
-     "caveat": "Suction cup (approximation): a compliant lip of rigid segments on a bellows spring with a limited tilt; the seal is a geometric test (every lip segment touching the face, part material under 13 rays inside the lip) gating a MuJoCo adhesion actuator capped at vacuum x lip area (at most 60 kPa). The lip must touch the face: no pull across a gap. Not modelled: air flow, leak rate, porosity, vacuum build-up time (the vacuum follows the shared close ramp and is cut the control tick the seal is lost), lip material hysteresis, peel dynamics beyond the contact distribution. The lip's friction is the part's. Treat suction results as a screen, then verify on hardware."
-    }
-   ],
-   "step_success": {
-    "press_button": 1.0,
-    "open_door": 1.0,
-    "place_parcel": 1.0
-   },
-   "weakest_step": {
-    "step_id": "open_door",
-    "success_rate": 1.0
-   },
-   "complexity": {
-    "n_tools": 2,
-    "n_actuators": 2,
-    "total_mass_kg": 0.704,
-    "n_changes": 1,
-    "bracket": true
-   },
-   "payload_kg": 0.704,
-   "failure_modes": {},
-   "stops_at_detail": {}
-  },
-  {
-   "setup_id": "0c5acfc27c64b6db8f5117cbd2605235f6cd616d177efcbbd4c9830d428e3f1c",
-   "kind": "tool_change",
-   "kind_title": "Tool change",
-   "label": "Tool change: Drawer-pull > Angular-jaw > Suction",
-   "tools": [
-    "Drawer-pull hook tool",
-    "Angular-jaw gripper of an open hobby arm",
-    "Suction cup, 25 mm bellows"
-   ],
-   "completion_rate": 1.0,
-   "completed_runs": 8,
-   "n_runs": 8,
-   "fidelity": "approximation",
-   "stops_at": null,
-   "cycle_time_s": 63.04,
-   "roles": [
-    "finalist"
+    "recommended"
    ],
    "eligible": true,
    "reason": null,
@@ -2801,8 +2702,8 @@
     },
     {
      "index": 1,
-     "effector_id": "7d8ca167a7b3a93e3461ebca357e274ec9c9ca4fa9c2f4e50daa4c0a5e027724",
-     "display_name": "Angular-jaw gripper of an open hobby arm",
+     "effector_id": "6d286bacbd7431187a1a4bd5a48d194ea5e59399afb0a9e2227332f4fe006cf7",
+     "display_name": "Force-controlled parallel gripper, 48 mm stroke",
      "family": "catalog_gripper",
      "family_title": "Industrial gripper",
      "fidelity": "rigid",
@@ -2832,13 +2733,157 @@
    "complexity": {
     "n_tools": 3,
     "n_actuators": 2,
-    "total_mass_kg": 0.734,
+    "total_mass_kg": 1.035,
     "n_changes": 2,
     "bracket": false
    },
-   "payload_kg": 0.463,
+   "payload_kg": 0.764,
    "failure_modes": {},
    "stops_at_detail": {}
+  },
+  {
+   "setup_id": "73b2f82be5260478a2a2d7e39378c95d56018a1d201914ee6c7d5aaa6ab249d3",
+   "kind": "multi_head",
+   "kind_title": "Two-tool head",
+   "label": "Two-tool head: Force-controlled parallel + Suction cup",
+   "tools": [
+    "Force-controlled parallel gripper, 48 mm stroke",
+    "Suction cup, 25 mm bellows"
+   ],
+   "completion_rate": 0.0,
+   "completed_runs": 0,
+   "n_runs": 8,
+   "fidelity": "approximation",
+   "stops_at": "open_door",
+   "cycle_time_s": null,
+   "roles": [
+    "finalist"
+   ],
+   "eligible": false,
+   "reason": "never completed the task (stops at open_door in 8/8 runs: out_of_reach 8x)",
+   "tool_details": [
+    {
+     "index": 0,
+     "effector_id": "6d286bacbd7431187a1a4bd5a48d194ea5e59399afb0a9e2227332f4fe006cf7",
+     "display_name": "Force-controlled parallel gripper, 48 mm stroke",
+     "family": "catalog_gripper",
+     "family_title": "Industrial gripper",
+     "fidelity": "rigid",
+     "off_the_shelf": true,
+     "caveat": null
+    },
+    {
+     "index": 1,
+     "effector_id": "e72e88518c0ebe7a74ec5db104b671180e9dbb5b51d0b11045814506657f31bf",
+     "display_name": "Suction cup, 25 mm bellows",
+     "family": "suction",
+     "family_title": "Suction cup",
+     "fidelity": "approximation",
+     "off_the_shelf": true,
+     "caveat": "Suction cup (approximation): a compliant lip of rigid segments on a bellows spring with a limited tilt; the seal is a geometric test (every lip segment touching the face, part material under 13 rays inside the lip) gating a MuJoCo adhesion actuator capped at vacuum x lip area (at most 60 kPa). The lip must touch the face: no pull across a gap. Not modelled: air flow, leak rate, porosity, vacuum build-up time (the vacuum follows the shared close ramp and is cut the control tick the seal is lost), lip material hysteresis, peel dynamics beyond the contact distribution. The lip's friction is the part's. Treat suction results as a screen, then verify on hardware."
+    }
+   ],
+   "step_success": {
+    "press_button": 1.0,
+    "open_door": 0.0,
+    "place_parcel": 0.0
+   },
+   "weakest_step": {
+    "step_id": "open_door",
+    "success_rate": 0.0
+   },
+   "complexity": {
+    "n_tools": 2,
+    "n_actuators": 2,
+    "total_mass_kg": 0.763,
+    "n_changes": 1,
+    "bracket": true
+   },
+   "payload_kg": 0.763,
+   "failure_modes": {
+    "out_of_reach": 8,
+    "not_reached": 8
+   },
+   "stops_at_detail": {
+    "open_door": {
+     "runs": 8,
+     "failure_modes": {
+      "out_of_reach": 8
+     }
+    }
+   }
+  },
+  {
+   "setup_id": "9a5895314d37192ed2f0cbfab2a7ecb61b0662807bb3d4c1a6333d8261425fe1",
+   "kind": "multi_head",
+   "kind_title": "Two-tool head",
+   "label": "Two-tool head: Force-controlled parallel + Suction cup",
+   "tools": [
+    "Force-controlled parallel gripper, 48 mm stroke",
+    "Suction cup, 40 mm bellows"
+   ],
+   "completion_rate": 0.0,
+   "completed_runs": 0,
+   "n_runs": 8,
+   "fidelity": "approximation",
+   "stops_at": "open_door",
+   "cycle_time_s": null,
+   "roles": [
+    "finalist"
+   ],
+   "eligible": false,
+   "reason": "never completed the task (stops at open_door in 8/8 runs: out_of_reach 8x)",
+   "tool_details": [
+    {
+     "index": 0,
+     "effector_id": "6d286bacbd7431187a1a4bd5a48d194ea5e59399afb0a9e2227332f4fe006cf7",
+     "display_name": "Force-controlled parallel gripper, 48 mm stroke",
+     "family": "catalog_gripper",
+     "family_title": "Industrial gripper",
+     "fidelity": "rigid",
+     "off_the_shelf": true,
+     "caveat": null
+    },
+    {
+     "index": 1,
+     "effector_id": "a5d7b1667b4f0d6582a36df49b9e600eeedc31f54dc883ddf7803fe113091f1d",
+     "display_name": "Suction cup, 40 mm bellows",
+     "family": "suction",
+     "family_title": "Suction cup",
+     "fidelity": "approximation",
+     "off_the_shelf": true,
+     "caveat": "Suction cup (approximation): a compliant lip of rigid segments on a bellows spring with a limited tilt; the seal is a geometric test (every lip segment touching the face, part material under 13 rays inside the lip) gating a MuJoCo adhesion actuator capped at vacuum x lip area (at most 60 kPa). The lip must touch the face: no pull across a gap. Not modelled: air flow, leak rate, porosity, vacuum build-up time (the vacuum follows the shared close ramp and is cut the control tick the seal is lost), lip material hysteresis, peel dynamics beyond the contact distribution. The lip's friction is the part's. Treat suction results as a screen, then verify on hardware."
+    }
+   ],
+   "step_success": {
+    "press_button": 1.0,
+    "open_door": 0.0,
+    "place_parcel": 0.0
+   },
+   "weakest_step": {
+    "step_id": "open_door",
+    "success_rate": 0.0
+   },
+   "complexity": {
+    "n_tools": 2,
+    "n_actuators": 2,
+    "total_mass_kg": 0.8,
+    "n_changes": 1,
+    "bracket": true
+   },
+   "payload_kg": 0.8,
+   "failure_modes": {
+    "out_of_reach": 8,
+    "not_reached": 8
+   },
+   "stops_at_detail": {
+    "open_door": {
+     "runs": 8,
+     "failure_modes": {
+      "out_of_reach": 8
+     }
+    }
+   }
   },
   {
    "setup_id": "508890d063e61c7c80a1ee28df51c4e4c638f0256e07f278784c73f82656f495",
@@ -2903,13 +2948,33 @@
   }
  ],
  "recommendation": {
-  "setup_id": "5f6656e247bdbdf47a8393404d31273e6f9bebff8f948f3b9f79848826be41aa",
-  "kind": "multi_head",
-  "kind_title": "Two-tool head",
-  "label": "Two-tool head: Suction cup + Angular-jaw gripper of",
+  "setup_id": "e38465aad8735559314fe4beca2de13556c1bc614e0c13a4274a9bf2f046b6fc",
+  "kind": "tool_change",
+  "kind_title": "Tool change",
+  "label": "Tool change: Drawer-pull > Force-controlled > Suction",
   "tools": [
    {
     "index": 0,
+    "effector_id": "38850807f92bc307da9f0519004f6c9a30606ed04934014a6791ad01acf0c88b",
+    "display_name": "Drawer-pull hook tool",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "caveat": null
+   },
+   {
+    "index": 1,
+    "effector_id": "6d286bacbd7431187a1a4bd5a48d194ea5e59399afb0a9e2227332f4fe006cf7",
+    "display_name": "Force-controlled parallel gripper, 48 mm stroke",
+    "family": "catalog_gripper",
+    "family_title": "Industrial gripper",
+    "fidelity": "rigid",
+    "off_the_shelf": true,
+    "caveat": null
+   },
+   {
+    "index": 2,
     "effector_id": "e72e88518c0ebe7a74ec5db104b671180e9dbb5b51d0b11045814506657f31bf",
     "display_name": "Suction cup, 25 mm bellows",
     "family": "suction",
@@ -2917,16 +2982,6 @@
     "fidelity": "approximation",
     "off_the_shelf": true,
     "caveat": "Suction cup (approximation): a compliant lip of rigid segments on a bellows spring with a limited tilt; the seal is a geometric test (every lip segment touching the face, part material under 13 rays inside the lip) gating a MuJoCo adhesion actuator capped at vacuum x lip area (at most 60 kPa). The lip must touch the face: no pull across a gap. Not modelled: air flow, leak rate, porosity, vacuum build-up time (the vacuum follows the shared close ramp and is cut the control tick the seal is lost), lip material hysteresis, peel dynamics beyond the contact distribution. The lip's friction is the part's. Treat suction results as a screen, then verify on hardware."
-   },
-   {
-    "index": 1,
-    "effector_id": "7d8ca167a7b3a93e3461ebca357e274ec9c9ca4fa9c2f4e50daa4c0a5e027724",
-    "display_name": "Angular-jaw gripper of an open hobby arm",
-    "family": "catalog_gripper",
-    "family_title": "Industrial gripper",
-    "fidelity": "rigid",
-    "off_the_shelf": true,
-    "caveat": null
    }
   ],
   "completion_rate": 1.0,
@@ -2934,27 +2989,17 @@
   "n_runs": 8,
   "fidelity": "approximation",
   "stops_at": null,
-  "cycle_time_s": 51.41,
-  "why": "Ties on completion (100%) and the weakest step, with the shorter cycle (51.4 s against 52.8 s), and is simpler: 369 g against 704 g.",
+  "cycle_time_s": 63.8,
+  "why": "The only setup that completed the task: 100% of the runs, 63.8 s cycle.",
   "caveat": "approximation: verify on hardware",
   "verify_on_hardware": true,
   "geometry": {
-   "mounts": [
-    {
-     "angle_deg": -30.0,
-     "lateral_mm": 0.0,
-     "spin_deg": 0.0,
-     "standoff_mm": 70.0
-    },
-    {
-     "angle_deg": 30.0,
-     "lateral_mm": 0.0,
-     "spin_deg": 0.0,
-     "standoff_mm": 70.0
-    }
-   ],
-   "clearance_mm": 33.49,
-   "present_s": 1.5
+   "changer": {
+    "changeover_s": 7.5,
+    "master_mass_kg": 0.25,
+    "stack_mm": 52.0,
+    "tool_plate_mass_kg": 0.1
+   }
   },
   "steps": [
    {
@@ -2962,20 +3007,18 @@
     "primitive": "push",
     "primitive_used": "push",
     "tool": 0,
-    "tool_label": "Suction cup, 25 mm bellows",
+    "tool_label": "Drawer-pull hook tool",
     "success_rate": 1.0,
-    "fidelity": "approximation",
-    "caveats": [
-     "Suction cup (approximation): a compliant lip of rigid segments on a bellows spring with a limited tilt; the seal is a geometric test (every lip segment touching the face, part material under 13 rays inside the lip) gating a MuJoCo adhesion actuator capped at vacuum x lip area (at most 60 kPa). The lip must touch the face: no pull across a gap. Not modelled: air flow, leak rate, porosity, vacuum build-up time (the vacuum follows the shared close ramp and is cut the control tick the seal is lost), lip material hysteresis, peel dynamics beyond the contact distribution. The lip's friction is the part's. Treat suction results as a screen, then verify on hardware."
-    ],
-    "verify_on_hardware": true
+    "fidelity": "rigid",
+    "caveats": [],
+    "verify_on_hardware": false
    },
    {
     "step_id": "open_door",
     "primitive": "hook_pull",
     "primitive_used": "hook_pull",
     "tool": 1,
-    "tool_label": "Angular-jaw gripper of an open hobby arm",
+    "tool_label": "Force-controlled parallel gripper, 48 mm stroke",
     "success_rate": 1.0,
     "fidelity": "rigid",
     "caveats": [],
@@ -2985,7 +3028,7 @@
     "step_id": "place_parcel",
     "primitive": "grasp",
     "primitive_used": "suction",
-    "tool": 0,
+    "tool": 2,
     "tool_label": "Suction cup, 25 mm bellows",
     "success_rate": 1.0,
     "fidelity": "approximation",
@@ -3002,8 +3045,8 @@
   "versus_best_single": {
    "same_setup": false,
    "completion_delta": 1.0,
-   "cycle_delta_s": 40.786,
-   "extra_tools": 1
+   "cycle_delta_s": 53.173,
+   "extra_tools": 2
   },
   "versus_baseline": null
  },
@@ -3265,30 +3308,30 @@
   {
    "id": "recommended",
    "title": "Recommended",
-   "setup_id": "5f6656e247bdbdf47a8393404d31273e6f9bebff8f948f3b9f79848826be41aa",
-   "kind": "multi_head",
-   "label": "Two-tool head: Suction cup + Angular-jaw gripper of",
+   "setup_id": "e38465aad8735559314fe4beca2de13556c1bc614e0c13a4274a9bf2f046b6fc",
+   "kind": "tool_change",
+   "label": "Tool change: Drawer-pull > Force-controlled > Suction",
    "replay": "studio/replays/h7_hotel/recommended",
    "condition_id": "nominal",
    "seed": 0,
    "condition_text": "nominal placement, seed 0",
-   "traj_sha": "7f1e352e0df5a00aa2737f7006bd3d143865037b56c8bca729ced50c52a7e954",
+   "traj_sha": "84c8e608c583c606558c5721b85244f931a13f62926a8e3921381ec9da8b123e",
    "completed": true,
-   "cycle_time_s": 51.42,
+   "cycle_time_s": 63.798,
    "fps": 100,
-   "n_frames": 333,
-   "duration_s": 51.42,
+   "n_frames": 341,
+   "duration_s": 63.79,
    "quantised": false,
-   "max_error_vs_recording_mm": 0.999,
-   "bytes": 106077,
-   "asset_bytes": 81128,
+   "max_error_vs_recording_mm": 1.0,
+   "bytes": 128810,
+   "asset_bytes": 103940,
    "segments": [
     {
      "index": 0,
      "tool": 0,
-     "tool_label": "Suction cup, 25 mm bellows",
+     "tool_label": "Drawer-pull hook tool",
      "start_s": 0.0,
-     "end_s": 10.474,
+     "end_s": 10.108,
      "change": "none",
      "change_s": 0.0,
      "change_start_s": 0.0,
@@ -3299,25 +3342,25 @@
     {
      "index": 1,
      "tool": 1,
-     "tool_label": "Angular-jaw gripper of an open hobby arm",
-     "start_s": 11.974,
-     "end_s": 35.196,
-     "change": "present",
-     "change_s": 1.5,
-     "change_start_s": 10.474,
+     "tool_label": "Force-controlled parallel gripper, 48 mm stroke",
+     "start_s": 17.608,
+     "end_s": 41.394,
+     "change": "tool_change",
+     "change_s": 7.5,
+     "change_start_s": 10.108,
      "steps": [
       "open_door"
      ]
     },
     {
      "index": 2,
-     "tool": 0,
+     "tool": 2,
      "tool_label": "Suction cup, 25 mm bellows",
-     "start_s": 36.696,
-     "end_s": 51.42,
-     "change": "present",
-     "change_s": 1.5,
-     "change_start_s": 35.196,
+     "start_s": 48.894,
+     "end_s": 63.798,
+     "change": "tool_change",
+     "change_s": 7.5,
+     "change_start_s": 41.394,
      "steps": [
       "place_parcel"
      ]
@@ -3329,13 +3372,13 @@
      "primitive": "push",
      "tool": 0,
      "start_s": 0.0,
-     "duration_s": 10.474,
+     "duration_s": 10.108,
      "success": true,
      "failure_mode": null,
-     "fidelity": "approximation",
+     "fidelity": "rigid",
      "quantities": {
-      "force_n": 10.112,
-      "penetration_mm": 0.571,
+      "force_n": 10.007,
+      "penetration_mm": 0.017,
       "penetration_ms": 0.0,
       "penetration_transient": 0.0,
       "pressed": 1.0,
@@ -3346,36 +3389,36 @@
      "step_id": "open_door",
      "primitive": "hook_pull",
      "tool": 1,
-     "start_s": 11.974,
-     "duration_s": 23.222,
+     "start_s": 17.608,
+     "duration_s": 23.786,
      "success": true,
      "failure_mode": null,
      "fidelity": "rigid",
      "quantities": {
-      "angle_deg": 89.161,
-      "force_n": 151.37,
-      "penetration_mm": 0.288,
+      "angle_deg": 86.546,
+      "force_n": 2.764,
+      "penetration_mm": 0.06,
       "penetration_ms": 0.0,
       "penetration_transient": 0.0,
-      "slip_mm": 0.093
+      "slip_mm": 0.359
      }
     },
     {
      "step_id": "place_parcel",
      "primitive": "grasp",
-     "tool": 0,
-     "start_s": 36.696,
-     "duration_s": 14.724,
+     "tool": 2,
+     "start_s": 48.894,
+     "duration_s": 14.904,
      "success": true,
      "failure_mode": null,
      "fidelity": "approximation",
      "quantities": {
       "engaged": 1.0,
       "force_n": 31.841,
-      "hold_s": 5.73,
+      "hold_s": 5.91,
       "in_target": 1.0,
-      "lift_mm": 441.563,
-      "penetration_mm": 0.148,
+      "lift_mm": 441.471,
+      "penetration_mm": 0.079,
       "penetration_ms": 0.0,
       "penetration_transient": 0.0,
       "tilt_deg": 0.0
@@ -3399,7 +3442,7 @@
    "condition_id": "nominal",
    "seed": 0,
    "condition_text": "nominal placement, seed 0",
-   "traj_sha": "c5a38621d81d47222e63307d240529251c038f2c9c0f35751067084e83824ecf",
+   "traj_sha": "81d2aae2eae53c4e6a36ab99698f38eaa2143fba70693aefd1a8047fec59b424",
    "completed": false,
    "cycle_time_s": 10.626,
    "fps": 100,
@@ -3407,7 +3450,7 @@
    "duration_s": 10.62,
    "quantised": false,
    "max_error_vs_recording_mm": 0.99,
-   "bytes": 16698,
+   "bytes": 16699,
    "asset_bytes": 29920,
    "segments": [
     {
@@ -3454,10 +3497,10 @@
  ],
  "build_pack": {
   "zip": "studio/h7_hotel/build_pack.zip",
-  "bytes": 146526,
-  "sha256": "503489aa84bc00090dfce994e54d751fb8b73643fa5987987cc7b8caa6287a56",
-  "setup_id": "5f6656e247bdbdf47a8393404d31273e6f9bebff8f948f3b9f79848826be41aa",
-  "label": "Two-tool head: Suction cup + Angular-jaw gripper of",
+  "bytes": 231444,
+  "sha256": "fde0b306dbfed1330371d3b1654505c8d6a88e49289aaeb22b23f6949ecf6a10",
+  "setup_id": "e38465aad8735559314fe4beca2de13556c1bc614e0c13a4274a9bf2f046b6fc",
+  "label": "Tool change: Drawer-pull > Force-controlled > Suction",
   "for": "recommended",
   "files": [
    {
@@ -3465,38 +3508,31 @@
     "kind": "notes",
     "format": "md",
     "license": "CC0-1.0",
-    "bytes": 2363
+    "bytes": 2619
    },
    {
     "path": "CREDITS.txt",
     "kind": "licence",
     "format": "txt",
     "license": "CC0-1.0",
-    "bytes": 910
+    "bytes": 991
    },
    {
     "path": "README.txt",
     "kind": "notes",
     "format": "txt",
     "license": "CC0-1.0",
-    "bytes": 1293
+    "bytes": 1901
    },
    {
     "path": "bom.csv",
     "kind": "bom",
     "format": "csv",
     "license": "CC0-1.0",
-    "bytes": 653
+    "bytes": 1232
    },
    {
-    "path": "bracket.stl",
-    "kind": "bracket",
-    "format": "stl",
-    "license": "CC0-1.0",
-    "bytes": 153384
-   },
-   {
-    "path": "cad/tool0_reference.stl",
+    "path": "cad/tool2_reference.stl",
     "kind": "effector_cad",
     "format": "stl",
     "license": "CC0-1.0",
@@ -3507,7 +3543,28 @@
     "kind": "certificate",
     "format": "html",
     "license": "CC0-1.0",
-    "bytes": 13282
+    "bytes": 12839
+   },
+   {
+    "path": "changer_plate_tool0.stl",
+    "kind": "changer_plate",
+    "format": "stl",
+    "license": "CC0-1.0",
+    "bytes": 75284
+   },
+   {
+    "path": "changer_plate_tool1.stl",
+    "kind": "changer_plate",
+    "format": "stl",
+    "license": "CC0-1.0",
+    "bytes": 75284
+   },
+   {
+    "path": "changer_plate_tool2.stl",
+    "kind": "changer_plate",
+    "format": "stl",
+    "license": "CC0-1.0",
+    "bytes": 75284
    },
    {
     "path": "licences/tool1_LICENSE.txt",
@@ -3517,59 +3574,170 @@
     "bytes": 11357
    },
    {
-    "path": "mjcf/meshes/tool1_36981788061f.stl",
+    "path": "mjcf/meshes/tool0_0d7972acc323.stl",
     "kind": "mjcf",
     "format": "stl",
     "license": "Apache-2.0",
-    "bytes": 21984
+    "bytes": 4884
    },
    {
-    "path": "mjcf/meshes/tool1_73a6f1648a70.stl",
+    "path": "mjcf/meshes/tool0_20bc0847ded1.stl",
     "kind": "mjcf",
     "format": "stl",
     "license": "Apache-2.0",
-    "bytes": 684
+    "bytes": 12984
    },
    {
-    "path": "mjcf/meshes/tool1_bd59cb6d1713.stl",
+    "path": "mjcf/meshes/tool0_211e85791563.stl",
     "kind": "mjcf",
     "format": "stl",
     "license": "Apache-2.0",
-    "bytes": 18584
+    "bytes": 13284
    },
    {
-    "path": "mjcf/meshes/tool1_e232d7924468.stl",
+    "path": "mjcf/meshes/tool0_3af3ca58f57d.stl",
     "kind": "mjcf",
     "format": "stl",
     "license": "Apache-2.0",
-    "bytes": 1484
+    "bytes": 6584
    },
    {
-    "path": "mjcf/meshes/tool1_ed74c664d906.stl",
+    "path": "mjcf/meshes/tool0_46c19aa42b81.stl",
     "kind": "mjcf",
     "format": "stl",
     "license": "Apache-2.0",
-    "bytes": 1084
+    "bytes": 6084
+   },
+   {
+    "path": "mjcf/meshes/tool0_54ed8f7695d6.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "Apache-2.0",
+    "bytes": 23884
+   },
+   {
+    "path": "mjcf/meshes/tool0_559a44c38492.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "Apache-2.0",
+    "bytes": 3984
+   },
+   {
+    "path": "mjcf/meshes/tool0_5854e4d4c85f.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "Apache-2.0",
+    "bytes": 3584
+   },
+   {
+    "path": "mjcf/meshes/tool0_7c1d6ed24f48.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "Apache-2.0",
+    "bytes": 4784
+   },
+   {
+    "path": "mjcf/meshes/tool0_7f2bb25a7247.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "Apache-2.0",
+    "bytes": 21384
+   },
+   {
+    "path": "mjcf/meshes/tool0_8788e6e30b26.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "Apache-2.0",
+    "bytes": 5184
+   },
+   {
+    "path": "mjcf/meshes/tool0_9cd5806865ae.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "Apache-2.0",
+    "bytes": 12984
+   },
+   {
+    "path": "mjcf/meshes/tool0_a5e8da967b2e.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "Apache-2.0",
+    "bytes": 6484
+   },
+   {
+    "path": "mjcf/meshes/tool0_eb1723b5e8d3.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "Apache-2.0",
+    "bytes": 23484
+   },
+   {
+    "path": "mjcf/meshes/tool0_f5df3b95608b.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "Apache-2.0",
+    "bytes": 21684
+   },
+   {
+    "path": "mjcf/meshes/tool0_f6206c96d7c7.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "Apache-2.0",
+    "bytes": 14084
+   },
+   {
+    "path": "mjcf/meshes/tool1_21f41404f0c6.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "Apache-2.0",
+    "bytes": 63484
+   },
+   {
+    "path": "mjcf/meshes/tool1_883c98ad0465.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "Apache-2.0",
+    "bytes": 4984
+   },
+   {
+    "path": "mjcf/meshes/tool1_e658e950bc54.stl",
+    "kind": "mjcf",
+    "format": "stl",
+    "license": "Apache-2.0",
+    "bytes": 4984
    },
    {
     "path": "mjcf/setup_tool0.xml",
     "kind": "mjcf",
     "format": "xml",
     "license": "Apache-2.0",
-    "bytes": 19858
+    "bytes": 12991
    },
    {
     "path": "mjcf/setup_tool1.xml",
     "kind": "mjcf",
     "format": "xml",
     "license": "Apache-2.0",
-    "bytes": 19671
+    "bytes": 11536
+   },
+   {
+    "path": "mjcf/setup_tool2.xml",
+    "kind": "mjcf",
+    "format": "xml",
+    "license": "CC0-1.0",
+    "bytes": 12383
    }
   ],
   "links": [
    {
-    "name": "Tool 1: Angular-jaw gripper of an open hobby arm",
-    "url": "https://github.com/google-deepmind/mujoco_menagerie",
+    "name": "Tool 0: Drawer-pull hook tool",
+    "url": "https://github.com/hello-robot/stretch_tool_share",
+    "license": "Apache-2.0",
+    "reason": "the tool's own CAD and documentation are upstream; the pack carries its simulation meshes"
+   },
+   {
+    "name": "Tool 1: Force-controlled parallel gripper, 48 mm stroke",
+    "url": "https://github.com/Source-Robotics/SSG-48-adaptive-electric-gripper",
     "license": "Apache-2.0",
     "reason": "the tool's own CAD and documentation are upstream; the pack carries its simulation meshes"
    }
@@ -3586,9 +3754,9 @@
  "build_pack_note": null,
  "session": null,
  "provenance": {
-  "code_version": "c09b3ed916d1",
-  "report_sha256": "c03c35784e2b23edcb75d8f05ab27c51b263beba7c6aaf97d0b32038ab7e0c7d",
-  "task_id": "2a0bc4766d10e13a1e62cf0ea4443e4b25f527fd3c7552ed74352a751469d442",
+  "code_version": "ed74b2b84496",
+  "report_sha256": "af4f35a2fe7fd168ef77f3e86f7dbaae17119f36d100be41deed22e97b8d603e",
+  "task_id": "dc0ae4f82a5123cc7039f7ac2e35fe3b54399c63dd4443c5cc50cb24c33e3243",
   "controllers": "default",
   "evidence": "accepted",
   "conditions": [
@@ -3755,10 +3923,10 @@
   "fairness_sha": "82b5bcdac3b461e77bc17444036a535a9acb32f29bafd804947228e68090636d",
   "workers": 4,
   "timings": {
-   "screen_s": 365.3,
-   "combine_s": 21.4,
-   "finalists_s": 208.8,
-   "total_s": 597.1
+   "screen_s": 113.0,
+   "combine_s": 7.0,
+   "finalists_s": 45.3,
+   "total_s": 165.7
   },
   "determinism": []
  }

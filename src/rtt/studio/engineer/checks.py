@@ -156,10 +156,13 @@ RULES: Final[tuple[str, ...]] = ("v1", "v2")
 #: counts above the pick's threshold, a call cut off at max_tokens is never judged, and what the plan
 #: puts inside a machine is placed and kept apart there; r3, a hook pull's force limit clears a sliding
 #: door's pull and a part picked inside a machine keeps a gripper's finger room; r4, a claim binds only
-#: what a clause names with the machine, and the repairs of prompt v2.3 name the field to change. A
-#: recorded manifest names the revision it was verified with (``rules_revision``), and the test suite
-#: re-judges every current recorded row: an edit that changes a recorded verdict or problem fails.
-RULES_REVISION: Final[dict[str, str]] = {"v1": "v1", "v2": "v2-r4"}
+#: what a clause names with the machine, and the repairs of prompt v2.3 name the field to change; r5, a
+#: door's bar handle is gripped from the front only, so the layout fixer moves a door whose front grip
+#: would leave the wrist's travel along x into its reach (``layout.fix_door_bars``; only the hotel job's
+#: plan has such a door, and it was re-verified). A recorded manifest names the revision it was
+#: verified with (``rules_revision``), and the test suite re-judges every current recorded row: an edit
+#: that changes a recorded verdict or problem fails.
+RULES_REVISION: Final[dict[str, str]] = {"v1": "v1", "v2": "v2-r5"}
 #: Windows of the Studio v2 quantities (rule set v2) [assumed].
 WINDOW_MIN_V2: Final[dict[str, float]] = {"clamp_torque_nm": 0.2, "gap_mm": 1.0, "height_err_mm": 0.5}
 #: Quantities that only bound how a step went: a step never asks one to reach a value (rule set v2).

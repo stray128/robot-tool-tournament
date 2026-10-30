@@ -66,6 +66,9 @@ from rtt.sim.scene import PALM_XY_LIMIT
 from rtt.studio.types import ObjectInstance, ObjectPose, Step, TemplateKind
 
 __all__ = [
+    "BAR",
+    "BAR_GRIPPERS",
+    "BAR_INSET_MM",
     "CLEARANCE_MM",
     "FINGER_ROOM_MM",
     "FRONT_REACH_MM",
@@ -75,6 +78,9 @@ __all__ = [
     "LayoutMove",
     "Polygon",
     "Region",
+    "bar_grip_reach",
+    "bar_steps",
+    "fix_door_bars",
     "fix_layout",
     "inside_machine",
     "layout_problems",
@@ -136,6 +142,20 @@ FRONT_REACH_MM: Final = 400.0
 #: The layout fixer's search grid and the farthest it moves an object.
 FIX_STEP_MM: Final = 10.0
 FIX_MAX_MM: Final = 850.0
+#: The two-finger grippers a door's bar handle is checked against for the front grip (rule set v2,
+#: :func:`bar_grip_reach`): a door's bar is gripped from the front only, the tool normal to the door,
+#: which puts the palm the tool's length out from the bar. Each as the Studio carries it on its tool
+#: changer, since a job that opens a door often needs another tool (a gripper on a two-tool head's
+#: 50 mm bracket reaches about as far): its model, its name in a plan's words, the TCP's depth below
+#: the palm and how far its finger tips reach past the TCP as they close on the bar (mm) [measured:
+#: ``rtt.studio.primitives._common.tool_of`` on a tool-change scene and
+#: ``rtt.studio.primitives.hook_pull.bar_drop``]. The fixer prefers a position the first admits.
+BAR_GRIPPERS: Final[tuple[tuple[str, str, float, float], ...]] = (
+    ("gripper-2f-servo-110", "the 110 mm servo gripper", 201.9, 10.0),
+    ("adaptive-2f", "the two-finger adaptive gripper", 155.1, 10.0),
+)
+#: A door's bar handle stands this far in from the door's free edge (mm; ``templates.hinged_lid``).
+BAR_INSET_MM: Final = 25.0
 
 
 def _rect(x0: float, y0: float, x1: float, y1: float) -> Polygon:
@@ -667,6 +687,12 @@ class LayoutMove:
             else:
                 why = f"to clear the {self.clears}"
             return f"Moved {what} from {where}, inside {self.inside} under its loading opening, {why}"
+        if self.clears.startswith(BAR + ":"):
+            words = {m: w for m, w, _, _ in BAR_GRIPPERS}[self.clears[len(BAR) + 1 :]]
+            return (
+                f"Moved {what} from {where} along x so {words} on a tool changer grips its bar handle "
+                "from the front through the whole pull"
+            )
         why = "bring it within the wrist's reach" if self.clears == REACH else f"clear the {self.clears}"
         return f"Moved {what} from {where} to {why}"
 
@@ -675,6 +701,9 @@ class LayoutMove:
 REACH: Final = "reach"
 #: ... and of one that put an object the plan says stands inside a machine there.
 INSIDE: Final = "inside"
+#: ... and (``"bar:<model>"``) of one that brought a door's bar within the front grip of a reference
+#: gripper (:data:`BAR_GRIPPERS`, :func:`fix_door_bars`).
+BAR: Final = "bar"
 #: The grid a move within a machine's interior searches (mm, in the machine's frame).
 INNER_STEP_MM: Final = 5.0
 
@@ -711,6 +740,7 @@ def fix_layout(
     steps: Sequence[Step],
     rules: str = "v2",
     inside: Mapping[str, str] | None = None,
+    pinned: Mapping[str, Callable[[ObjectInstance], bool]] | None = None,
 ) -> tuple[list[ObjectInstance], list[LayoutMove]] | None:
     """Objects moved so that every one is within reach (:func:`reach_problem`) and no footprint or
     swing comes within the clearance of another's, and the moves (one per object, bin-with-lid or
@@ -722,14 +752,25 @@ def fix_layout(
     machine: it moves with it, and it is placed and kept apart from the rest of the machine's
     contents inside its interior under the loading opening (a fixture tray, a finished part, a
     blank), on a :data:`INNER_STEP_MM` grid, nearest spot first; when no single move clears two
-    of them, all of them are placed again (step targets first, then bins, then parts)."""
+    of them, all of them are placed again (step targets first, then bins, then parts).
+
+    ``pinned`` (object name to a test of its pose): such an object moves along x only, and only to
+    poses its test accepts (a door the door-bar rule placed, :func:`fix_door_bars`), so the other
+    objects move to clear it."""
     objs = list(objects)
     n = len(objs)
     parent = list(range(n))
     home: dict[int, int] = {}  # what belongs inside a machine -> the machine
 
+    pins = dict(pinned or {})
+
     def out_of_reach(o: ObjectInstance) -> str | None:  # rule set v1 has no reach rules
-        return reach_problem(o) if rules == "v2" else None
+        if rules != "v2":
+            return None
+        why = reach_problem(o)
+        if why is None and o.name in pins and not pins[o.name](o):
+            return "its bar handle leaves the front grip's reach"
+        return why
 
     for j, o in enumerate(objs):
         for i, b in enumerate(objs):
@@ -783,7 +824,10 @@ def fix_layout(
     def spot_for(g: int) -> tuple[float, float] | None:
         ks = members[g]
         others = [k for k in range(n) if group[k] != g]
+        along_x = any(objs[k].name in pins for k in ks)
         for dx, dy in _offsets():
+            if along_x and dy != 0.0:
+                continue  # a pinned door keeps its y
             if any(abs(objs[k].pose.x_mm + dx) > limit or abs(objs[k].pose.y_mm + dy) > limit for k in ks):
                 continue
             if any(out_of_reach(_moved(objs[k], dx, dy)) is not None for k in ks):
@@ -1041,4 +1085,157 @@ def fix_layout(
         for k, (before, clears) in sorted(inner.items())
         if (objs[k].pose.x_mm, objs[k].pose.y_mm) != before
     ]
+    return objs, moves
+
+
+# --------------------------------------------------------------------------- a door's bar, gripped from the front
+
+
+def bar_steps(o: ObjectInstance, steps: Sequence[Step]) -> list[Step]:
+    """The hook pulls on ``o``'s bar when ``o`` is a door with a bar handle (``orientation`` door,
+    ``feature`` handle), else none: such a bar is gripped from the front only."""
+    from rtt.studio.types import PrimitiveKind
+
+    p = o.params
+    if o.kind is not TemplateKind.HINGED_LID or p["orientation"] != "door" or p["feature"] != "handle":
+        return []
+    return [s for s in steps if s.object == o.name and s.primitive is PrimitiveKind.HOOK_PULL]
+
+
+def bar_grip_reach(
+    o: ObjectInstance, steps: Sequence[Step], gripper: tuple[str, str, float, float]
+) -> tuple[str, tuple[float, float]] | None:
+    """Where the front grip of a reference ``gripper`` (:data:`BAR_GRIPPERS`) on the bar of door ``o``
+    would take the palm out of its travel: the move (``grip``, ``pull`` or ``draw back``) and the
+    palm's furthest point on it (table mm); ``None`` when it stays inside over the whole engagement,
+    the swing to the pull's goal (its criterion plus 8 deg, and on into the door's stop to a force
+    goal) and the retreat, or when no step pulls the bar. The door starts shut. It is the controller's
+    own check (``rtt.studio.primitives.hook_pull.bar_far``) on the door's geometry from its params."""
+    import numpy as np
+
+    from rtt.studio.primitives.hook_pull import (
+        bar_depth,
+        bar_far,
+        bar_points,
+        bar_roll,
+        bar_yaw,
+    )
+
+    pulls = bar_steps(o, steps)
+    if not pulls:
+        return None
+    p = o.params
+    d, t, f = (float(p[k]) / 1000.0 for k in ("depth_mm", "thickness_mm", "feature_mm"))
+    r = 0.5 * BAR_DIAMETER_MM / 1000.0
+    a = math.radians(o.pose.yaw_deg)
+    c, s = math.cos(a), math.sin(a)
+
+    def world(x: float, y: float) -> np.ndarray:
+        return np.array([o.pose.x_mm / 1000.0 + c * x - s * y, o.pose.y_mm / 1000.0 + s * x + c * y, 0.0])
+
+    hinge = world(-0.5 * d, 0.0)
+    bar = world(0.5 * d - BAR_INSET_MM / 1000.0, -(0.5 * t + f + r))
+    n_out = np.array([s, -c, 0.0])  # the outer face's normal, door shut
+    axis = np.array([0.0, 0.0, -1.0])  # a door's hinge: opening turns it clockwise from above
+    info = {"max_angle_rad": math.radians(float(p["max_angle_deg"])), "orientation": 1.0}
+    radius = float(np.linalg.norm(np.cross(axis, bar - hinge)))
+    arc = max(_bar_arc(info, step, radius) for step in pulls)
+    depth = bar_depth({"feature_m": f, "bar_radius_m": r})
+    _, _, tcp_mm, drop_mm = gripper
+    stand, engaged = bar_points(bar, n_out, r, depth, drop_mm / 1000.0)
+    tool_point = np.array([0.0, 0.0, -tcp_mm / 1000.0])
+    out = bar_far(
+        stand, engaged, n_out, depth, tool_point, hinge, axis, bar_yaw(n_out, 0.0), bar_roll(0.0), arc
+    )
+    return None if out is None else (out[0], (1000.0 * float(out[1][0]), 1000.0 * float(out[1][1])))
+
+
+def _bar_arc(info: Mapping[str, float], step: Step, radius: float) -> float:
+    """How far (rad) a pull swings a shut door: to its goal (``hook_pull.panel_goal``) and on into its
+    stop by the pull limit when the step asks for a ``force_n`` at_least (``hook_pull.pull_on_extent``)."""
+    from types import SimpleNamespace
+
+    from rtt.sim.task import default_task_v2
+    from rtt.studio.primitives.hook_pull import panel_goal, pull_on_extent
+
+    lo = max(
+        (c.at_least for c in step.success if c.quantity == "angle_deg" and c.at_least is not None),
+        default=None,
+    )
+    hi = min(
+        (c.at_most for c in step.success if c.quantity == "angle_deg" and c.at_most is not None), default=None
+    )
+    goal = panel_goal(info, lo, hi)
+    if not any(c.quantity == "force_n" and c.at_least is not None for c in step.success):
+        return goal
+    view = SimpleNamespace(step=step, task=default_task_v2())
+    return goal + pull_on_extent(view, info, True, goal, goal, radius)
+
+
+def _bar_x(o: ObjectInstance, steps: Sequence[Step], gripper: tuple[str, str, float, float]) -> float | None:
+    """The nearest pose x (on the fixer's grid, along x only, within the pose limits) where the front
+    grip of ``gripper`` on ``o``'s bar stays in the travel and ``o`` itself is within reach."""
+    limit = ObjectPose.LIMIT_MM
+    n = int(2.0 * limit // FIX_STEP_MM) + 1
+    for k in range(n):
+        for dx in (k * FIX_STEP_MM,) if k == 0 else (k * FIX_STEP_MM, -k * FIX_STEP_MM):
+            x = o.pose.x_mm + dx
+            if abs(x) > limit:
+                continue
+            moved = _moved(o, dx, 0.0)
+            if reach_problem(moved) is None and bar_grip_reach(moved, steps, gripper) is None:
+                return x
+    return None
+
+
+def fix_door_bars(
+    objects: Sequence[ObjectInstance],
+    steps: Sequence[Step],
+    inside: Mapping[str, str] | None = None,
+) -> tuple[list[ObjectInstance], list[LayoutMove]] | str:
+    """The layout fixer's door-bar rule (rule set v2): a door whose bar a step pulls, and whose front
+    grip neither reference gripper (:data:`BAR_GRIPPERS`) can make where it stands, is moved along x
+    only (its y and yaw kept) to the nearest position where the first one's front grip stays in the
+    travel over the whole engagement, swing and retreat, when the other objects can be moved to clear
+    it under the usual rules (:func:`fix_layout`, the door pinned to that band); else to the second
+    one's. The moves (the door's, from where it stood, and any the clearing needed), or a plain reason
+    when no position along x does it. Deterministic; a plan without such a door is returned as it is."""
+    objs = list(objects)
+    moves: list[LayoutMove] = []
+    for k in range(len(objs)):
+        door = objs[k]
+        if not bar_steps(door, steps) or any(bar_grip_reach(door, steps, g) is None for g in BAR_GRIPPERS):
+            continue
+        done = False
+        for gripper in BAR_GRIPPERS:
+            x = _bar_x(door, steps, gripper)
+            if x is None:
+                continue
+            trial = list(objs)
+            trial[k] = _moved(door, x - door.pose.x_mm, 0.0)
+
+            def fits(o: ObjectInstance, gripper: tuple[str, str, float, float] = gripper) -> bool:
+                return bar_grip_reach(o, steps, gripper) is None
+
+            fixed = fix_layout(trial, steps, "v2", inside=inside, pinned={door.name: fits})
+            if fixed is None:
+                continue
+            objs, more = fixed
+            end = next(o for o in objs if o.name == door.name)
+            moves.append(
+                LayoutMove(
+                    names=(door.name,),
+                    before=(door.pose.x_mm, door.pose.y_mm),
+                    after=(end.pose.x_mm, end.pose.y_mm),
+                    clears=f"{BAR}:{gripper[0]}",
+                )
+            )
+            moves += [m for m in more if m.names[0] != door.name]
+            done = True
+            break
+        if not done:
+            return (
+                f"No position of {door.name} along x lets a two-finger gripper on a tool changer grip its bar "
+                "handle from the front through the whole pull and clears the other objects; it stays where it is."
+            )
     return objs, moves

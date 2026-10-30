@@ -1312,9 +1312,9 @@ def test_a_pick_or_a_pull_out_of_reach_fails_as_out_of_reach_and_says_why(far_ru
 
 def hotel_door_cases() -> dict[str, tuple[Any, TaskSpec]]:
     """The hotel hero's room door (300 mm deep, a 20 mm handle, hinged on its left, at most 90 deg),
-    pulled 80 deg open from the front at 50 mm/s: where its plan stands (x -140 mm, its handle's
-    front 330 mm out at the stop, inside the Task Engineer's 338 mm) and 30 mm further out, where
-    the pull itself takes the palm past its travel less 5 mm."""
+    pulled 80 deg open from the front at 50 mm/s, where its recorded plan stood before the layout
+    fixer's door rule (x -140 mm) and 30 mm further out: a door's bar is gripped from the front only,
+    and there the front grip's palm would leave its travel."""
 
     def door_at(x_mm: float) -> TaskSpec:
         door = ObjectInstance.of(
@@ -1343,7 +1343,12 @@ def hotel_door_cases() -> dict[str, tuple[Any, TaskSpec]]:
         )
         return _one("door", (door,), pull)
 
-    return {"plan": (gripper(), door_at(-140.0)), "further": (gripper(), door_at(-170.0))}
+    return {
+        "plan": (gripper(), door_at(-140.0)),
+        "further": (gripper(), door_at(-170.0)),
+        "plan_servo": (_preset("catalog_gripper", "gripper-2f-servo-110"), door_at(-140.0)),
+        "plan_angular": (_preset("catalog_gripper", "gripper-angular-jaw-hobby"), door_at(-140.0)),
+    }
 
 
 @pytest.fixture(scope="module")
@@ -1351,17 +1356,81 @@ def hotel_door_runs() -> dict[str, Any]:
     return _runs(hotel_door_cases())
 
 
-def test_a_pull_whose_retreat_alone_meets_the_travel_is_made(hotel_door_runs: dict[str, Any]) -> None:
+def test_a_door_bar_the_front_grip_cannot_reach_or_fit_is_not_attempted(
+    hotel_door_runs: dict[str, Any],
+) -> None:
+    """A door's bar is gripped from the front only. At x -140 mm the hotel door swings its face toward
+    the table's left edge, so the front grip's palm would leave its travel (the two-finger adaptive and
+    the servo-110 grippers alike, and 30 mm further out too): the step is not attempted and fails
+    out_of_reach, saying it is the front grip's pull. The angular-jaw gripper has no calibrated pair of
+    fingers to close across the bar: its step fails criterion_not_met with that reason. Nothing grips
+    the bar from above, and the door stays shut."""
+    for key in ("plan", "plan_servo", "further"):
+        out = hotel_door_runs[key].steps[0]
+        assert not out.success and out.failure_mode == "out_of_reach", (key, _why(hotel_door_runs[key]))
+        assert out.duration_s <= 0.25 and out.quantities["angle_deg"] < 1.0, (key, dict(out.quantities))
+        assert out.quantities["reach_x_mm"] < -338.0, (key, dict(out.quantities))
+        why = [c for c in out.caveats if c.startswith("Out of reach:")]
+        assert why and why[0].startswith("Out of reach: the front grip's pull would take the palm"), (
+            out.caveats
+        )
+        assert "+-350 mm travel less 12 mm" in why[0], why
+    out = hotel_door_runs["plan_angular"].steps[0]
+    assert not out.success and out.failure_mode == "criterion_not_met", _why(hotel_door_runs["plan_angular"])
+    assert out.duration_s <= 0.25 and out.quantities["angle_deg"] < 1.0, dict(out.quantities)
+    why = [c for c in out.caveats if c.startswith("Cannot grip the door's bar from the front:")]
+    assert why and "no pair of fingers either side of its axis" in why[0], out.caveats
+
+
+def edge_drawer_cases() -> dict[str, tuple[Any, TaskSpec]]:
+    """A drawer at the table's -y edge pulled 10 mm open, gripped from above: at y -100 mm its bar handle
+    ends the pull 343 mm out, inside the travel less 5 mm, and the retreat 40 mm off the face would put
+    the palm at 383 mm; 10 mm further out the pull itself leaves the travel."""
+
+    def drawer_at(y_mm: float) -> TaskSpec:
+        drawer = ObjectInstance.of("drawer", "drawer", "Drawer", ObjectPose(0.0, y_mm, 0.0), depth_mm=350)
+        pull = Step.of(
+            "open",
+            "hook_pull",
+            "drawer",
+            "handle",
+            "Pull the drawer open by its bar",
+            [SuccessCriterion("travel_mm", at_least=10.0)],
+            params={"approach": "top", "speed_mm_s": 50},
+        )
+        return _one("drawer", (drawer,), pull)
+
+    return {"edge": (gripper(), drawer_at(-100.0)), "further": (gripper(), drawer_at(-110.0))}
+
+
+@pytest.fixture(scope="module")
+def edge_drawer_runs() -> dict[str, Any]:
+    return _runs(edge_drawer_cases())
+
+
+def test_a_pull_whose_retreat_alone_meets_the_travel_is_made(
+    edge_drawer_runs: dict[str, Any], task: Any
+) -> None:
     """The retreat after a pull (40 mm off the face, then up) is not a reason to refuse a step: it
-    stops at the palm's travel less the margin. The hotel door's retreat would have put the palm at
-    x -355 mm, so every tool was refused before it started; the door is now pulled open. A door whose
-    pull itself leaves the travel is still refused, as the pull."""
-    out = hotel_door_runs["plan"].steps[0]
-    assert out.success and out.quantities["angle_deg"] >= 80.0, _why(hotel_door_runs["plan"])
+    stops at the palm's travel less the margin. The drawer at the table's edge is pulled open although
+    its full retreat would put the palm past its travel (the plan's retreat is shortened to fit); a
+    drawer whose pull itself leaves the travel is still refused, as the pull."""
+    from rtt.studio.primitives.hook_pull import RETRACT_OUT, HookPullController
+
+    out = edge_drawer_runs["edge"].steps[0]
+    assert out.success and out.quantities["travel_mm"] >= 10.0, _why(edge_drawer_runs["edge"])
     assert out.failure_mode is None and not [c for c in out.caveats if c.startswith("Out of reach:")]
-    far = hotel_door_runs["further"].steps[0]
-    assert not far.success and far.failure_mode == "out_of_reach", _why(hotel_door_runs["further"])
-    assert far.quantities["reach_x_mm"] < -345.0 and far.duration_s <= 0.25, dict(far.quantities)
+    tool, spec = edge_drawer_cases()["edge"]
+    scene = build_studio_scene(Setup.single(tool, spec.step_ids), spec, 0, task=task)
+    data = mujoco.MjData(scene.model)
+    mujoco.mj_kinematics(scene.model, data)
+    retreat = (
+        HookPullController().plan(ctx_for(scene, spec, task), scene.model, data).values["run"]["retreat"]
+    )
+    assert 0.0 <= retreat < RETRACT_OUT - 0.01, retreat  # shortened at the travel, not refused
+    far = edge_drawer_runs["further"].steps[0]
+    assert not far.success and far.failure_mode == "out_of_reach", _why(edge_drawer_runs["further"])
+    assert far.quantities["reach_y_mm"] < -345.0 and far.duration_s <= 0.25, dict(far.quantities)
     why = [c for c in far.caveats if c.startswith("Out of reach:")]
     assert why and why[0].startswith("Out of reach: the pull would take the palm"), far.caveats
 

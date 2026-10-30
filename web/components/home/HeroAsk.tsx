@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useState } from "react";
 
+import { announceLeave } from "@/components/replay/leaving";
 import { PREFILL_KEY } from "@/lib/site";
 
 
@@ -38,6 +39,8 @@ export function HeroAsk({ examples }: { examples: ExampleChip[] }) {
       setHint("This browser does not let the page carry your words to the planner. Copy them, then open the planner in the Studio.");
       return;
     }
+    // The hero replay stops first, so its frames do not compete with the navigation.
+    announceLeave();
     router.push("/studio/#plan");
   };
 
