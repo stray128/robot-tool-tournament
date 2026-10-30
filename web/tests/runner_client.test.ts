@@ -3,8 +3,10 @@
  * messages, the reply parsers and the base path. No network: fetch is scripted.
  */
 
+import { readFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -17,6 +19,7 @@ import {
   getRun,
   hashForRun,
   KEY_PRIVACY_LINE,
+  kindOf503,
   MESSAGES,
   offReason,
   parseHealth,
@@ -25,10 +28,12 @@ import {
   postRun,
   redact,
   reportLink,
+  retryableKind,
   RunnerError,
   runIdFromHash,
   runnerBase,
   runnerConfigured,
+  type UnavailableKind,
 } from "@/lib/runner";
 
 import { BASE, HEALTH, json, scriptedFetch, SUMMARY, SUMMARY_NO_PICK, SUMMARY_OBJECTS, VALID_PLAN } from "./helpers/runner_mock";
@@ -149,12 +154,6 @@ describe("plain error messages", () => {
     expect(plain.problems).toEqual([]);
   });
 
-  it("503 says the runner is off and points to the tutorial", async () => {
-    const e = await read(503);
-    expect(e.kind).toBe("off");
-    expect(e.message).toBe("The hosted runner is off. Run it on your own machine:");
-  });
-
   it("never shows a raw status code", async () => {
     for (const status of [400, 401, 404, 413, 422, 429, 500, 502, 503]) {
       const e = await read(status);
@@ -162,12 +161,18 @@ describe("plain error messages", () => {
     }
   });
 
-  it("only a network failure, a server fault or a busy runner can be retried", () => {
+  it("only a network failure, a server fault, a busy runner or a simulator that could not start a job can be retried", () => {
     expect(new RunnerError("network", "x").retryable).toBe(true);
     expect(new RunnerError("server", "x").retryable).toBe(true);
     expect(new RunnerError("busy", "x").retryable).toBe(true);
+    expect(new RunnerError("sim_unavailable", "x").retryable).toBe(true);
+    expect(new RunnerError("unavailable", "x").retryable).toBe(true);
     expect(new RunnerError("key_rejected", "x").retryable).toBe(false);
     expect(new RunnerError("cap", "x").retryable).toBe(false);
+    expect(new RunnerError("off", "x").retryable).toBe(false);
+    expect(new RunnerError("free_unavailable", "x").retryable).toBe(false);
+    expect(retryableKind("sim_unavailable")).toBe(true);
+    expect(retryableKind("not_found")).toBe(false);
   });
 
   it("names caps in plain words", () => {
@@ -175,6 +180,112 @@ describe("plain error messages", () => {
     expect(capSentence("some_cap")).toBe("The some cap limit was reached.");
     expect(formatReset("garbage")).toBeNull();
     expect(formatReset(null)).toBeNull();
+  });
+});
+
+/** What the runner's 503s say (src/rtt/runner/app.py): the first two are the only ones that mean it is off. */
+const OFF_WORDS = ["the runner is switched off for now; recorded runs still replay", "the hosted runner closed after 2026-12-15; recorded runs still replay"];
+const FREE_WORDS = ["the free tier is unavailable right now; try your own key"];
+const SIM_WORDS = [
+  "the simulation backend is unavailable; nothing was reserved, try again later",
+  "the simulation job could not be started; try again later",
+  "the platform refused the simulation job; this did not count against your runs",
+];
+const OTHER_WORDS = [
+  "the runner is not configured (free-tier key)",
+  "runs are not configured on this runner",
+  "the run could not be recorded, so its job was cancelled; try again",
+  "the report link could not be made; try again",
+];
+
+describe("a 503 reads as the runner being off only when the runner says it is off", () => {
+  const read503 = (error?: string) => errorFromResponse(json(error === undefined ? {} : { error }, 503));
+
+  it("the kill switch and the auto-off date read as off, with the tutorial to point to and no retry", async () => {
+    for (const error of OFF_WORDS) {
+      const e = await read503(error);
+      expect(e.kind, error).toBe("off");
+      expect(e.message).toBe("The hosted runner is off. Run it on your own machine:");
+      expect(e.retryable).toBe(false);
+    }
+  });
+
+  it("the free tier being down says so, points to the visitor's own key, and is not retried as it was", async () => {
+    for (const error of FREE_WORDS) {
+      const e = await read503(error);
+      expect(e.kind, error).toBe("free_unavailable");
+      expect(e.message).toBe("The free tier is not available right now. Use your own key, or try later.");
+      expect(e.message).not.toMatch(/\boff\b/i);
+      expect(e.retryable).toBe(false);
+    }
+  });
+
+  it("a simulator that could not start a job says nothing was charged, and can be tried again", async () => {
+    for (const error of SIM_WORDS) {
+      const e = await read503(error);
+      expect(e.kind, error).toBe("sim_unavailable");
+      expect(e.message).toBe("The simulator could not start a job right now. Nothing was charged; try again in a few minutes.");
+      expect(e.message).not.toMatch(/\boff\b/i);
+      expect(e.retryable).toBe(true);
+    }
+  });
+
+  it("any other 503 is plainly unavailable, not off: the runner's other words, a body with no words, and the hosting layer's", async () => {
+    const bodies: Response[] = [
+      ...OTHER_WORDS.map((error) => json({ error }, 503)),
+      json({}, 503),
+      json({ error: "" }, 503),
+      json({ error: 503 }, 503),
+      json({ message: "Service Unavailable" }, 503),
+      json({ detail: "off" }, 503),
+      // not the runner's words (it says "switched off" or "closed after"): only those count as the runner saying it is off
+      json({ error: "the runner is off" }, 503),
+      new Response("", { status: 503 }),
+      new Response("not json", { status: 503 }),
+      new Response("<html>Service Unavailable</html>", { status: 503, headers: { "content-type": "text/html" } }),
+    ];
+    for (const res of bodies) {
+      const e = await errorFromResponse(res);
+      expect(e.kind).toBe("unavailable");
+      expect(e.message).toBe("The hosted runner cannot take this request right now. Try again in a few minutes.");
+      expect(e.message).not.toMatch(/\boff\b/i);
+      expect(e.retryable).toBe(true);
+    }
+  });
+
+  it("reads the words from whichever field a body puts them in, as the runner's own bodies do in `error`", async () => {
+    expect((await errorFromResponse(json({ error: OFF_WORDS[0] }, 503))).kind).toBe("off");
+    expect((await errorFromResponse(json({ message: OFF_WORDS[1] }, 503))).kind).toBe("off");
+    expect((await errorFromResponse(json({ detail: FREE_WORDS[0] }, 503))).kind).toBe("free_unavailable");
+    // a capital letter or the words inside a longer sentence still read the same
+    expect(kindOf503("The Runner Is Switched Off For Now")).toBe("off");
+    expect(kindOf503("503: the simulation job could not be started; try again later")).toBe("sim_unavailable");
+    expect(kindOf503(null)).toBe("unavailable");
+  });
+
+  it("no message of them shows a status code or a phrase of the runner's own", async () => {
+    for (const error of [...OFF_WORDS, ...FREE_WORDS, ...SIM_WORDS, ...OTHER_WORDS]) {
+      const e = await read503(error);
+      expect(e.message, error).not.toMatch(/\b503\b|recorded runs|reserved|platform|backend|HTTP/i);
+    }
+  });
+
+  it("every 503 in the runner's source is one this page has a reading for, and only the two it says are off read as off", () => {
+    const source = readFileSync(path.join(__dirname, "..", "..", "src", "rtt", "runner", "app.py"), "utf8");
+    // `HTTPError(503, "words")` and the same over several lines; an f-string's {fields} are filled with a sample
+    const sites = source.match(/HTTPError\(\s*503\b/g) ?? [];
+    const found = [...source.matchAll(/HTTPError\(\s*503,\s*f?"((?:[^"\\]|\\.)*)"/g)].map((m) => m[1]!.replace(/\{[^}]*\}/g, "2026-12-15"));
+    expect(found, "a 503 with a body this test cannot read").toHaveLength(sites.length);
+    const known: Record<string, UnavailableKind> = {
+      ...Object.fromEntries(OFF_WORDS.map((w) => [w, "off"])),
+      ...Object.fromEntries(FREE_WORDS.map((w) => [w, "free_unavailable"])),
+      ...Object.fromEntries(SIM_WORDS.map((w) => [w, "sim_unavailable"])),
+      ...Object.fromEntries(OTHER_WORDS.map((w) => [w, "unavailable"])),
+    };
+    // a new or reworded 503 fails here until it is read on purpose
+    expect([...new Set(found)].sort()).toEqual(Object.keys(known).sort());
+    for (const words of found) expect(kindOf503(words), words).toBe(known[words]);
+    expect(found.filter((w) => kindOf503(w) === "off")).toHaveLength(OFF_WORDS.length);
   });
 });
 

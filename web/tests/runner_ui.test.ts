@@ -14,7 +14,7 @@ import catalogJson from "@/components/studio/intake/catalog.json";
 import IntakeWorkbench, { type RecordedPlans } from "@/components/studio/intake/IntakeWorkbench";
 import recordedJson from "@/components/studio/intake/recorded.json";
 import { type Catalog, type PlanArgs, planArgsOf, taskId, validatePlan } from "@/components/studio/intake/taskspec";
-import { exportSource, HOSTED_MAX_OBJECTS, HOSTED_MAX_STEPS, hostedLimit, planFromReply, runDocument } from "@/components/studio/runner/handoff";
+import { exportSource, HOSTED_MAX_OBJECTS, HOSTED_MAX_STEPS, hostedLimit, LIVE_SCROLL_AIR_PX, LIVE_SCROLL_EDITOR_PX, liveScrollTarget, planFromReply, runDocument } from "@/components/studio/runner/handoff";
 import HostedRunner from "@/components/studio/runner/HostedRunner";
 import { liveCopy } from "@/lib/live_copy";
 import type { PlanReply } from "@/lib/runner";
@@ -41,16 +41,18 @@ describe("the Studio planner", () => {
     expect(html).toContain("Check and edit the steps");
   });
 
-  it("still shows no panel until /health answers: with the runner the planner differs only in the Plan box sentence that points to the panel and the scroll margin of the step editor", () => {
+  it("still shows no panel until /health answers: with the runner the planner differs only in the Plan box sentence that points to the panel", () => {
     vi.stubEnv("NEXT_PUBLIC_RUNNER_URL", "");
     const without = workbench();
     vi.stubEnv("NEXT_PUBLIC_RUNNER_URL", RUNNER);
     const withRunner = workbench();
     expect(withRunner).not.toBe(without);
-    expect(withRunner.replace(liveCopy("intakeBox", true), liveCopy("intakeBox", false)).replace('class="mt-14 scroll-mt-20 outline-none"', 'class="mt-14 outline-none"')).toBe(without);
-    // the public build keeps the editor's markup as it was
+    expect(withRunner.replace(liveCopy("intakeBox", true), liveCopy("intakeBox", false))).toBe(without);
+    // the editor's markup is the same in both: a live plan scrolls to the panel's Run control or to the editor, which the page's own
+    // scroll padding keeps under the sticky header, so the editor needs no scroll margin of its own (it would double the offset)
     expect(without).toContain('class="mt-14 outline-none"');
-    expect(withRunner).toContain('class="mt-14 scroll-mt-20 outline-none"');
+    expect(withRunner).toContain('class="mt-14 outline-none"');
+    expect(withRunner).not.toContain("scroll-mt-");
   });
 
   it("the panel itself renders nothing before the health check, and when the URL is not usable the page never mounts it", () => {
@@ -113,6 +115,57 @@ describe("a live plan loads into the editor as a replayed one does", () => {
     expect(exportSource({ edited: false, hosted: false, shownSource: "live" })).toBe("nemotron");
     expect(exportSource({ edited: false, hosted: false, shownSource: "recorded" })).toBe("recorded");
     expect(exportSource({ edited: false, hosted: false, shownSource: null })).toBe("recorded");
+  });
+});
+
+describe("where the page scrolls when a live plan has loaded", () => {
+  // Measures are pixels from the top of the viewport, as the page reads them: the sticky header and the air under it reach `clear`.
+  const view = { clear: 80, height: 900 };
+  const room = view.height - view.clear - LIVE_SCROLL_EDITOR_PX;
+
+  it("puts the plan's result at the top when it, the Run control and the start of the editor all fit under the header", () => {
+    // the result 110 px tall, the Run control under it, the editor's heading 210 px under the Run control (1440 px wide)
+    expect(liveScrollTarget({ ...view, result: 300, run: 434, headingBottom: 644 })).toBe("result");
+  });
+
+  it("puts the Run control at the top when the result is too tall to keep it and the editor in view", () => {
+    expect(liveScrollTarget({ ...view, result: 300, run: 300 + room, headingBottom: 300 + room + 210 })).toBe("run");
+  });
+
+  it("keeps the Run control and the editor heading together, whichever part it picks", () => {
+    for (const resultHeight of [40, 110, 300, 600, 900]) {
+      const run = 500 + resultHeight;
+      const headingBottom = run + 210;
+      const target = liveScrollTarget({ ...view, result: 500, run, headingBottom });
+      const top = target === "result" ? 500 : target === "run" ? run : null;
+      expect(top, `result ${resultHeight} px tall`).not.toBeNull();
+      // after the scroll that part sits at `clear`: the heading ends above the bottom edge, with the start of the editor below it
+      expect(view.clear + (headingBottom - top!) + LIVE_SCROLL_EDITOR_PX, `result ${resultHeight} px tall`).toBeLessThanOrEqual(view.height);
+    }
+  });
+
+  it("fits a part exactly when its span to the end of the heading leaves the room the editor needs", () => {
+    expect(liveScrollTarget({ ...view, result: 0, run: 50, headingBottom: room })).toBe("result");
+    expect(liveScrollTarget({ ...view, result: 0, run: 50, headingBottom: room + 1 })).toBe("run");
+  });
+
+  it("goes to the Run control when the panel shows no result, and to the editor when it is on the page without either", () => {
+    expect(liveScrollTarget({ ...view, result: null, run: 400, headingBottom: 610 })).toBe("run");
+    expect(liveScrollTarget({ ...view, result: null, run: null, headingBottom: 610 })).toBe("editor");
+  });
+
+  it("in a window too short for the start of the editor, still keeps the Run control and the heading together", () => {
+    // a phone held sideways, 375 px tall: 295 px under the header; the heading alone fits 210 px under the Run control, the 344 px from the result do not
+    const phone = { clear: 80, height: 375 };
+    expect(liveScrollTarget({ ...phone, result: 300, run: 434, headingBottom: 644 })).toBe("run");
+    // the heading with 16 px of air under it, to the pixel
+    const last = phone.height - phone.clear - LIVE_SCROLL_AIR_PX;
+    expect(liveScrollTarget({ ...phone, result: null, run: 0, headingBottom: last })).toBe("run");
+    expect(liveScrollTarget({ ...phone, result: null, run: 0, headingBottom: last + 1 })).toBe("editor");
+  });
+
+  it("goes to the editor, as before, when a finished run's card keeps the Run control too far above it", () => {
+    expect(liveScrollTarget({ ...view, result: 300, run: 420, headingBottom: 420 + 900 })).toBe("editor");
   });
 });
 

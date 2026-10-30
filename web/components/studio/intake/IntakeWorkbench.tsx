@@ -11,7 +11,7 @@ import { PREFILL_KEY } from "@/lib/site";
 import { binaryTriangleCount, checkStlBuffer, checkStlFile, guessUnit, measurePositions, toMillimetres, type Vec3 } from "@/lib/stl";
 
 import HostedRunner from "../runner/HostedRunner";
-import { exportSource, hostedLimit, planFromReply, runDocument } from "../runner/handoff";
+import { exportSource, hostedLimit, liveScrollTarget, planFromReply, runDocument } from "../runner/handoff";
 import { planLive, type PlanResultView, type RemoteVerdict, uploadStl, validateRemote } from "./api";
 import StepEditor from "./StepEditor";
 import { addObject, addStep, type Catalog, emptyPlan, type PlanArgs, taskId, validatePlan } from "./taskspec";
@@ -210,12 +210,27 @@ export default function IntakeWorkbench({
     setLivePlans((n) => n + 1);
   }
 
-  // The plan a hosted planner sent loads below the panel, off screen. Once the editor has rendered it, bring the editor
-  // into view: smoothly, unless the visitor prefers reduced motion. Only plans from the hosted planner do this; replaying
-  // a recorded plan behaves as it always did.
+  // The plan a hosted planner sent loads below the panel, off screen. Once the editor has rendered it, bring it into view
+  // together with the Run control above it (liveScrollTarget picks the part that goes to the top, under the sticky header):
+  // smoothly, unless the visitor prefers reduced motion. Only plans from the hosted planner do this; replaying a recorded
+  // plan behaves as it always did.
   useEffect(() => {
     if (livePlans === 0) return;
-    editorRef.current?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+    const editor = editorRef.current;
+    if (!editor) return;
+    const result = document.querySelector<HTMLElement>("[data-hosted-plan-status]");
+    const run = document.querySelector<HTMLElement>("[data-run-area]");
+    const heading = editor.querySelector<HTMLElement>("h2") ?? editor;
+    // Whatever the page scrolls to lands below the sticky header by the root's scroll-padding-top (globals.css).
+    const padding = Number.parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop);
+    const target = liveScrollTarget({
+      result: result?.getBoundingClientRect().top ?? null,
+      run: run?.getBoundingClientRect().top ?? null,
+      headingBottom: heading.getBoundingClientRect().bottom,
+      clear: Number.isFinite(padding) ? padding : 80,
+      height: window.innerHeight,
+    });
+    (target === "result" ? result : target === "run" ? run : editor)?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
   }, [livePlans]);
 
   const pickExample = (caseId: string) => {
@@ -596,8 +611,7 @@ export default function IntakeWorkbench({
 
       {runner ? <HostedRunner base={runner} description={text.trim()} runDoc={runDoc} runLimit={runLimit} hasPlan={plan !== null && !refusal} hasStl={stl !== null} onPlanned={onHostedPlan} /> : null}
 
-      {/* A runner build scrolls here when a live plan loads, and clears the sticky header as the panel above does; the build without the runner keeps its markup as it was. */}
-      <section ref={editorRef} tabIndex={-1} className={runner ? "mt-14 scroll-mt-20 outline-none" : "mt-14 outline-none"} aria-labelledby="edit-title">
+      <section ref={editorRef} tabIndex={-1} className="mt-14 outline-none" aria-labelledby="edit-title">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <h2 id="edit-title" className="heading flex items-baseline gap-3 text-xl">
             <span className="num text-sm text-accent">03</span> Check and edit the steps

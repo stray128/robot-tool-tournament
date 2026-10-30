@@ -12,15 +12,17 @@
  * It starts the mock on the port NEXT_PUBLIC_RUNNER_URL names (or --runner-port), serves web/out under
  * --base, and at 1440 x 900 and 375 x 812 drives the panel:
  *
- *   - idle; planning (progress and elapsed seconds); a valid plan loaded into the step editor;
+ *   - idle; planning (progress and elapsed seconds); a valid plan loaded into the step editor, with the page scrolled so the
+ *     Run in physics button and the editor's heading are both fully on screen below the sticky header;
  *     Run in physics, with the run id in the URL hash; running; the result card (recommended setup,
  *     "k of n runs", the best single tool, the step table, the report link, "Simulated, verify on
  *     hardware", the product-mode label); a reload that resumes the run without a new POST;
  *   - a run with no recommendation (the closest setup, a step with no tool); a failed run; a failed plan;
  *     a refused plan; a plan the runner would turn down (an uploaded part), whose Run button says why;
- *   - each error in plain words: 401, 429 (plans and runs), 503 (plan and run), 400 with the runner's
- *     problems, a dropped connection with Try again that works; and the panel's absence when /health
- *     fails, its off notice when the kill switch is on;
+ *   - each error in plain words: 401, 429 (plans and runs), 503 in each of its readings (the runner is off by its kill
+ *     switch or its auto-off date; the free tier is down; the simulator could not start a job; anything else, which
+ *     is never "off"), 400 with the runner's problems, a dropped connection with Try again that works; and the
+ *     panel's absence when /health fails, its off notice when the kill switch is on;
  *   - the key: it is only ever in the body of POST /plan (not a URL, header, storage, cookie, the console
  *     or the address bar), and the field is empty after the request.
  *
@@ -105,9 +107,11 @@ async function shot(vp, page, name, { full = false } = {}) {
     await page.screenshot({ path: file, fullPage: true });
     return;
   }
-  // The sticky site header would cover the top of a tall panel in an element screenshot.
-  await page.addStyleTag({ content: "header.sticky { position: static !important; }" });
+  // The sticky site header would cover the top of a tall panel in an element screenshot, so it is let go for the shot and put
+  // back after it: the checks that measure what sits under the header (expectLivePlanInView) need it in place.
+  const style = await page.addStyleTag({ content: "header.sticky { position: static !important; }" });
   await panelOf(page).screenshot({ path: file });
+  await style.evaluate((el) => el.remove());
 }
 
 /** Open the Studio and wait for the panel (it appears when /health answers). */
@@ -157,23 +161,50 @@ function expectText(watch, text, needle, what) {
 }
 
 /**
- * A plan that came back from the hosted planner loads into the step editor below the panel; the page brings the editor into
- * view (smoothly, but these contexts ask for reduced motion, so at once). Its heading must be on screen, in the upper part of
- * the viewport and below the sticky header, and the page must have scrolled to get it there.
+ * A plan that came back from the hosted planner loads into the step editor below the panel, and the page brings it into view
+ * (smoothly, but these contexts ask for reduced motion, so at once). What the visitor needs on screen is the Run control and the
+ * editor's heading, so both must sit fully inside the viewport and below the sticky header (it must still be sticky here: `shot`
+ * puts it back after each screenshot). The page must have scrolled to get them there, and the editor must hold the focus.
  */
-async function expectEditorInView(vp, page, watch, what, scrollBefore) {
+async function expectLivePlanInView(vp, page, watch, what, scrollBefore) {
   const read = () =>
     page.evaluate(() => {
-      const el = document.querySelector('section[aria-labelledby="edit-title"]');
-      return { top: el ? Math.round(el.getBoundingClientRect().top) : null, y: Math.round(window.scrollY), focused: el !== null && document.activeElement === el };
+      const box = (el) => {
+        if (!el) return null;
+        const r = el.getBoundingClientRect();
+        return { top: Math.round(r.top), bottom: Math.round(r.bottom) };
+      };
+      const editor = document.querySelector('section[aria-labelledby="edit-title"]');
+      const header = document.querySelector("header");
+      return {
+        header: header ? { bottom: Math.round(header.getBoundingClientRect().bottom), position: getComputedStyle(header).position } : null,
+        run: box(document.querySelector("[data-run-physics]")),
+        heading: box(document.getElementById("edit-title")),
+        y: Math.round(window.scrollY),
+        focused: editor !== null && document.activeElement === editor,
+      };
     });
+  // let the scroll settle: the geometry has to stop changing, and the page has had time to act on the plan
   let now = await read();
-  for (let i = 0; i < 40 && !(now.top !== null && now.top >= 0 && now.top < vp.height * 0.4); i++) {
+  for (let i = 0; i < 40; i++) {
     await page.waitForTimeout(100);
-    now = await read();
+    const next = await read();
+    const same = JSON.stringify(next) === JSON.stringify(now);
+    now = next;
+    if (same && i >= 2) break;
   }
-  if (now.top === null || now.top < 0 || now.top >= vp.height * 0.4) watch.problems.push(`${what}: the step editor was not brought into view (its top is at ${now.top}px in a ${vp.height}px viewport)`);
-  else if (now.top < 56) watch.problems.push(`${what}: the step editor was scrolled under the sticky header (its top is at ${now.top}px)`);
+  if (!now.header || now.header.position !== "sticky") {
+    watch.problems.push(`${what}: the site header is not sticky, so what sits under it cannot be checked (${JSON.stringify(now.header)})`);
+    return;
+  }
+  const under = now.header.bottom;
+  const seen = (name, b) => {
+    if (b === null) watch.problems.push(`${what}: ${name} is not on the page`);
+    else if (b.top < under) watch.problems.push(`${what}: ${name} is under the sticky header after the plan loaded (its top is at ${b.top}px, the header ends at ${under}px, in a ${vp.height}px viewport)`);
+    else if (b.bottom > vp.height) watch.problems.push(`${what}: ${name} is below the bottom edge after the plan loaded (its bottom is at ${b.bottom}px of ${vp.height}px)`);
+  };
+  seen("the Run in physics button", now.run);
+  seen("the step editor's heading", now.heading);
   if (scrollBefore !== undefined && now.y === scrollBefore) watch.problems.push(`${what}: the page did not scroll when the plan loaded (scrollY stayed at ${now.y})`);
   if (!now.focused) watch.problems.push(`${what}: the step editor does not hold the focus`);
 }
@@ -268,7 +299,7 @@ async function happyPath(vp) {
   await shot(vp, page, "planning");
   const scrollBeforePlan = await page.evaluate(() => Math.round(window.scrollY));
   await waitIn(page, '[data-hosted-plan-status="valid"]', "valid plan", watch);
-  await expectEditorInView(vp, page, watch, "plan loaded", scrollBeforePlan);
+  await expectLivePlanInView(vp, page, watch, "plan loaded", scrollBeforePlan);
   const loaded = await checkPanel(vp, page, watch, "plan loaded");
   expectText(watch, loaded, "VALID PLAN", "plan loaded");
   const main = await page.locator("main").innerText();
@@ -345,7 +376,7 @@ async function otherOutcomes(vp) {
   await chooseProvider(page, /free allowance/);
   await panelOf(page).getByRole("button", { name: "Plan live" }).click();
   await waitIn(page, '[data-hosted-plan-status="valid"]', "free plan", watch);
-  await expectEditorInView(vp, page, watch, "free plan loaded");
+  await expectLivePlanInView(vp, page, watch, "free plan loaded");
   const body = JSON.parse(mock.state.requests.find((r) => r.url === "/plan")?.body ?? "{}");
   if (body.provider !== "free" || body.key !== null) watch.problems.push(`the free allowance sent ${JSON.stringify({ provider: body.provider, key: body.key })}`);
   await waitIn(page, "text=2 free plans left today across the site", "the plan count falling", watch, 5000);
@@ -444,6 +475,10 @@ async function planErrors(vp) {
     { name: "401", set: { plan: "valid" }, key: "bad-key", allow: /status of 401/, kind: "key_rejected", text: "The provider rejected that key." },
     { name: "429", set: { plan: "429" }, allow: /status of 429/, kind: "cap", text: "You have used your free plans for today. It resets at 29 October 2026, 00:00 UTC." },
     { name: "503", set: { plan: "503" }, allow: /status of 503/, kind: "off", text: "The hosted runner is off. Run it on your own machine:" },
+    { name: "503 closed", set: { plan: "503_closed" }, allow: /status of 503/, kind: "off", text: "The hosted runner is off. Run it on your own machine:" },
+    // a 503 that is not the runner being off says what it is
+    { name: "503 free tier", set: { plan: "503_free" }, allow: /status of 503/, kind: "free_unavailable", text: "The free tier is not available right now. Use your own key, or try later.", notOff: true },
+    { name: "503 bare", set: { plan: "503_bare" }, allow: /status of 503/, kind: "unavailable", text: "The hosted runner cannot take this request right now. Try again in a few minutes.", retry: true, notOff: true },
     // a 429 with no cap is the hosting layer throttling a burst: busy, not a daily limit
     { name: "busy", set: { plan: "busy" }, allow: /status of 429/, kind: "busy", text: "The runner is busy. Try again in a minute.", retry: true },
     { name: "network", set: { plan: "drop" }, allow: /Failed to load resource|ERR_/, kind: "network", text: "Could not reach the hosted runner. Check your connection and try again.", retry: true },
@@ -465,6 +500,11 @@ async function planErrors(vp) {
       if (href !== `${base}/docs/tutorials/run-it-yourself/`) watch.problems.push(`the run-it-yourself link is ${href}`);
     }
     if (c.name === "busy" && /daily limit/i.test(text)) watch.problems.push("a 429 with no cap says a daily limit was reached");
+    if (c.notOff) {
+      if (text.includes("The hosted runner is off")) watch.problems.push(`a ${c.name} says the runner is off`);
+      if ((await panelOf(page).getByRole("link", { name: "Run it yourself" }).count()) !== 0) watch.problems.push(`a ${c.name} points to the run-it-yourself tutorial as if the runner were off`);
+      if (!c.retry && (await panelOf(page).getByRole("button", { name: "Try again" }).count()) !== 0) watch.problems.push(`a ${c.name} offers Try again, which would fail the same way`);
+    }
     if (c.retry) {
       const retry = panelOf(page).getByRole("button", { name: "Try again" });
       if (!(await retry.isVisible())) watch.problems.push(`a ${c.name} failure shows no Try again`);
@@ -524,6 +564,31 @@ async function runErrors(vp) {
   expectText(watch, await checkPanel(vp, page, watch, "run error 503"), "The hosted runner is off. Run it on your own machine:", "run error 503");
   await shot(vp, page, "error-run-503");
 
+  // the runner's other 503s are one job that could not be served, not the runner being off: the simulator could not start a job
+  // (three ways), and anything else
+  for (const [value, kind, text, name] of [
+    ["503_job", "sim_unavailable", "The simulator could not start a job right now. Nothing was charged; try again in a few minutes.", "job not started"],
+    ["503_backend", "sim_unavailable", "The simulator could not start a job right now. Nothing was charged; try again in a few minutes.", "backend unavailable"],
+    ["503_platform", "sim_unavailable", "The simulator could not start a job right now. Nothing was charged; try again in a few minutes.", "platform refused"],
+    ["503_unconfigured", "unavailable", "The hosted runner cannot take this request right now. Try again in a few minutes.", "runs not configured"],
+    ["503_bare", "unavailable", "The hosted runner cannot take this request right now. Try again in a few minutes.", "no words"],
+  ]) {
+    // each is its own POST /runs: the earlier answer's notice (the same kind, the same words) must not be what is read
+    const posts = () => mock.state.requests.filter((r) => r.method === "POST" && r.url === "/runs").length;
+    const before = posts();
+    mock.state.run = value;
+    await run.click();
+    for (let i = 0; i < 50 && posts() === before; i++) await page.waitForTimeout(100);
+    if (posts() !== before + 1) watch.problems.push(`run error 503 ${name}: ${posts() - before} POST /runs, expected 1`);
+    await waitIn(page, `[data-hosted-error="${kind}"]`, `the ${name} message`, watch);
+    const shown = await checkPanel(vp, page, watch, `run error 503 ${name}`);
+    expectText(watch, shown, text, `run error 503 ${name}`);
+    if (shown.includes("The hosted runner is off")) watch.problems.push(`run error 503 ${name}: says the runner is off`);
+    if ((await panelOf(page).getByRole("link", { name: "Run it yourself" }).count()) !== 0) watch.problems.push(`run error 503 ${name}: points to the run-it-yourself tutorial`);
+    if (!(await panelOf(page).getByRole("button", { name: "Try again" }).isVisible())) watch.problems.push(`run error 503 ${name}: no Try again`);
+    if (value === "503_job") await shot(vp, page, "error-run-503-job");
+  }
+
   mock.state.run = "drop";
   await run.click();
   await waitIn(page, '[data-hosted-error="network"]', "the network message", watch);
@@ -532,7 +597,7 @@ async function runErrors(vp) {
   mock.state.run = "ok";
   await panelOf(page).getByRole("button", { name: "Try again" }).click();
   await waitIn(page, '[data-run-status="queued"]', "the run after Try again", watch);
-  await finish(vp, "run errors: 429, busy, 400 with problems, 503, network with Try again", ctx);
+  await finish(vp, "run errors: 429, busy, 400 with problems, 503 (off, job not started, other), network with Try again", ctx);
 }
 
 /** The panel follows /health. */

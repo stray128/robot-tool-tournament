@@ -1,6 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <rect width="24" height="24" fill="#f2f3ef"/>
-  <rect x="2.5" y="3" width="4" height="18" fill="#15181d"/>
-  <rect x="17.5" y="3" width="4" height="18" fill="#2340d8"/>
-  <rect x="8.5" y="9" width="7" height="8" stroke="#15181d" stroke-width="1.5"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <defs>
+    <linearGradient id="f" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffa463"/>
+      <stop offset="0.6" stop-color="#ff7a2e"/>
+      <stop offset="1" stop-color="#c24808"/>
+    </linearGradient>
+  </defs>
+  <rect width="100" height="100" rx="22" fill="#15181c"/>
+  <g transform="translate(6 6) scale(0.88)">
+    <rect x="8" y="14" width="84" height="12" rx="3" fill="#8b96a3"/>
+    <rect x="43" y="2" width="14" height="13" rx="2" fill="#b3bcc7"/>
+    <rect x="37" y="56" width="26" height="26" rx="3" fill="#eceff2"/>
+    <polygon points="23,26 37,26 37,64.5 44,64.5 44,84 23,84" fill="url(#f)"/>
+    <polygon points="63,26 77,26 77,84 56,84 56,64.5 63,64.5" fill="url(#f)"/>
+  </g>
 </svg>

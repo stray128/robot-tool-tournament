@@ -13,7 +13,8 @@
  *   OPTIONS *           CORS preflight (the site is on another origin)
  *
  * Bodies, caps and the result's shape follow docs/RUNNER.md and src/rtt/runner/: errors are
- * {"error": ...}, a 429 names the cap, its limit and when it resets, POST /runs answers 202 with
+ * {"error": ...}, a 429 names the cap, its limit and when it resets, a 503 says in the runner's own
+ * words which of its 503s it is (see ERRORS_503), POST /runs answers 202 with
  * eta_s 480, a result's tools are plain names, `ruled_out` is an object of counts and a step row
  * has no label.
  *
@@ -44,8 +45,13 @@ const planDoc = (expect) => recorded.examples.find((e) => e.expect === expect &&
  * The behaviour switches. Values:
  *   health ok | off (kill switch) | closed (open: false, after the auto-off date) | lapsed (an older runner: no `open` field, an auto-off date in the past)
  *          | legacy (an older runner: no `open` field, an auto-off date in the future) | bad | down | drop;
- *   plan valid|failed|refused|401|429|busy (a 429 with no cap: the hosting layer throttling)|503|400|drop;
- *   run ok|400|429|busy|503|drop; poll ok|drop|404; ending done|failed|no_pick.
+ *   plan valid|failed|refused|401|429|busy (a 429 with no cap: the hosting layer throttling)|400|drop
+ *        | 503 (the kill switch: off) | 503_closed (the auto-off date: off) | 503_free (the free tier is down)
+ *        | 503_unconfigured | 503_bare (no words: the hosting layer);
+ *   run ok|400|429|busy|drop
+ *        | 503 (the kill switch: off) | 503_closed | 503_job (the simulator could not start a job)
+ *        | 503_backend | 503_platform | 503_unconfigured | 503_bare;
+ *   poll ok|drop|404; ending done|failed|no_pick.
  */
 export function defaultState() {
   return {
@@ -64,6 +70,20 @@ export function defaultState() {
 }
 
 const RESET = "2026-10-29T00:00:00Z";
+
+/** The runner's own 503 bodies (src/rtt/runner/app.py), by the switch value that makes the mock send one. Only the first two say it is off. */
+const ERRORS_503 = {
+  503: { error: "the runner is switched off for now; recorded runs still replay" },
+  "503_closed": { error: "the hosted runner closed after 2026-12-15; recorded runs still replay" },
+  "503_free": { error: "the free tier is unavailable right now; try your own key" },
+  "503_job": { error: "the simulation job could not be started; try again later" },
+  "503_backend": { error: "the simulation backend is unavailable; nothing was reserved, try again later" },
+  "503_platform": { error: "the platform refused the simulation job; this did not count against your runs" },
+  "503_unconfigured": { error: "runs are not configured on this runner" },
+  // the hosting layer answers with no words of the runner's
+  "503_bare": {},
+};
+const error503 = (value) => (Object.hasOwn(ERRORS_503, value) ? ERRORS_503[value] : null);
 
 /** The result as the runner builds it (src/rtt/runner/summary.py). */
 function summary(id, origin, { noPick = false } = {}) {
@@ -138,7 +158,7 @@ export async function startMockRunner({ port = 0, state = defaultState() } = {})
     state.requests.push({ method: req.method, url: req.url, headers: { ...req.headers }, body });
 
     if (url.pathname === "/health") {
-      if (state.health === "down") return send(res, 503, { error: "the runner is off" });
+      if (state.health === "down") return send(res, 503, ERRORS_503[503]);
       if (state.health === "drop") return req.socket.destroy();
       // The date is fixed test data. Only the two older-runner values depend on it, and they use dates that are far from today.
       const older = state.health === "lapsed" || state.health === "legacy";
@@ -163,7 +183,7 @@ export async function startMockRunner({ port = 0, state = defaultState() } = {})
         return send(res, 400, { error: "bad json" });
       }
       if (state.plan === "drop") return req.socket.destroy();
-      if (state.plan === "503") return send(res, 503, { error: "the runner is off" });
+      if (error503(state.plan)) return send(res, 503, error503(state.plan));
       if (state.plan === "busy") return send(res, 429, { message: "Too Many Requests" });
       if (state.plan === "429") return send(res, 429, { error: "cap reached: the free planning tier's daily limit per visitor; it resets at " + RESET, cap: "free_plans_per_ip_per_day", limit: 3, resets_at: RESET });
       if (state.plan === "400") return send(res, 400, { error: "description too long" });
@@ -182,7 +202,7 @@ export async function startMockRunner({ port = 0, state = defaultState() } = {})
 
     if (url.pathname === "/runs" && req.method === "POST") {
       if (state.run === "drop") return req.socket.destroy();
-      if (state.run === "503") return send(res, 503, { error: "the runner is off" });
+      if (error503(state.run)) return send(res, 503, error503(state.run));
       if (state.run === "busy") return send(res, 429, { message: "Too Many Requests" });
       if (state.run === "429") return send(res, 429, { error: "cap reached: the daily limit on runs per visitor; it resets at " + RESET, cap: "runs_per_ip_per_day", limit: 2, resets_at: RESET });
       let input;

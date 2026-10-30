@@ -23,6 +23,7 @@ import {
   postPlan,
   postRun,
   redact,
+  retryableKind,
   type RunnerError,
   type RunnerErrorKind,
   type RunnerHealth,
@@ -136,7 +137,7 @@ const initial = (): RunnerState => ({
 function faultOf(err: unknown, retry: Fault["retry"], key = ""): Fault {
   const e = err as Partial<RunnerError> | null;
   if (e && typeof e === "object" && typeof e.kind === "string" && typeof e.message === "string") {
-    const retryable = e.kind === "network" || e.kind === "server" || e.kind === "busy";
+    const retryable = retryableKind(e.kind);
     const problems = Array.isArray(e.problems) ? e.problems.map((p) => redact(p, key)) : [];
     return { kind: e.kind, message: redact(e.message, key), retry: retryable ? retry : null, ...(problems.length ? { problems } : {}) };
   }
@@ -390,7 +391,7 @@ export class RunnerController {
       this.inflight.delete(ac);
       if (epoch !== this.epoch || ac.signal.aborted) return;
       const fault = faultOf(err, "poll");
-      const transient = fault.kind === "network" || fault.kind === "server" || fault.kind === "busy" || fault.kind === "cap" || fault.kind === "bad_reply";
+      const transient = retryableKind(fault.kind) || fault.kind === "cap" || fault.kind === "bad_reply";
       this.failures++;
       if (transient && this.failures < POLL_MAX_FAILURES) {
         this.scheduleTick(id, Math.min(this.pollMs * 1.5 ** this.failures, POLL_MAX_MS));

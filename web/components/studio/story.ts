@@ -517,15 +517,45 @@ function baselineOn(page: HeroPage, step: PlanStep, index: number): StepStory["b
   return null;
 }
 
-/** The setup in words for the answer: "two-tool head, soft arm plus suction cup". */
+/**
+ * A tool's name for a sentence, in lower case: the name the lanes show without the spec after its first comma
+ * ("Force-controlled parallel gripper, 48 mm stroke" is "force-controlled parallel gripper").
+ */
+function toolWords(tool: Pick<ToolBrief, "display_name">): string {
+  return lower(tool.display_name.split(",")[0]!.trim() || tool.display_name);
+}
+
+/** A name with its article: "a suction cup", "an industrial servo parallel gripper", "a one-finger hand". */
+function withArticle(words: string): string {
+  return `${/^[aeiou]/i.test(words) && !/^(?:one|uni|use|eu)/i.test(words) ? "an" : "a"} ${words}`;
+}
+
+/**
+ * The setup in words for the answer, naming its tools by their own names as the lanes do ("a drawer-pull hook tool", not their family,
+ * "industrial gripper", which the hotel's first two tools share):
+ *
+ *   single industrial servo parallel gripper, 110 mm stroke
+ *   two-tool head (a soft arm plus a suction cup)
+ *   tool change (a drawer-pull hook tool, then a force-controlled parallel gripper, then a suction cup)
+ *   two-tool head with two suction cups / tool change between two suction cups   (every tool the same kind)
+ *
+ * A single tool keeps its full name, as the one tool to read about. In a list the spec after the first comma is left out, unless
+ * that would make two of the tools read the same ("a two-finger gripper, then a two-finger gripper"); those keep their full names.
+ * The kind comes first, up to the first comma or bracket, so a caption can quote just that (the home hero does).
+ */
 export function setupPhrase(rec: Pick<Recommendation, "kind" | "tools" | "label">): string {
   if (rec.tools.length === 0) return lower(rec.label);
-  const fams = rec.tools.map((t) => t.family_title ?? t.display_name);
-  const same = fams.every((f) => f === fams[0]);
-  const n = rec.tools.length;
   if (rec.kind === "single") return `single ${lower(rec.tools[0]?.display_name ?? rec.label)}`;
-  if (rec.kind === "multi_head") return same ? `two-tool head with ${numberWord(n)} ${plural(fams[0]!)}` : `two-tool head, ${fams.map(lower).join(" plus ")}`;
-  return same ? `tool change between ${numberWord(n)} ${plural(fams[0]!)}` : `tool change, ${fams.map(lower).join(" then ")}`;
+  const short = rec.tools.map(toolWords);
+  const head = rec.kind === "multi_head" ? "two-tool head" : "tool change";
+  if (short.every((w) => w === short[0])) return `${head} ${rec.kind === "multi_head" ? "with" : "between"} ${numberWord(rec.tools.length)} ${plural(short[0]!)}`;
+  const names = rec.tools.map((t, i) => (short.filter((w) => w === short[i]).length > 1 ? lower(t.display_name) : short[i]!));
+  return `${head} (${names.map(withArticle).join(rec.kind === "multi_head" ? " plus " : ", then ")})`;
+}
+
+/** A phrase with a comma of its own is set off by commas in a sentence ("A single gripper, 110 mm stroke, finishes ..."); commas only inside brackets are not. */
+function inSentence(phrase: string): string {
+  return phrase.replace(/\([^)]*\)/g, "").includes(", ") ? `${phrase},` : phrase;
 }
 
 // ---------------------------------------------------------------- the focus setup
@@ -664,7 +694,7 @@ export function answerSentence(page: HeroPage): string {
     return `No setup finishes this task. ${closest}.`;
   }
   const phrase = setupPhrase(rec);
-  const head = `A ${phrase}${phrase.includes(", ") ? "," : ""} finishes the task in ${rec.completed_runs} of ${rec.n_runs} runs`;
+  const head = `A ${inSentence(phrase)} finishes the task in ${rec.completed_runs} of ${rec.n_runs} runs`;
   if (!base) return `${head}.`;
   if (base.setup_id === rec.setup_id) return `${head}; it is also the best single off-the-shelf tool.`;
   const tail = `the best single off-the-shelf tool finishes ${base.completed_runs} of ${base.n_runs}${base.completed_runs === 0 ? `: ${baselineFailure(page)}` : ""}`;

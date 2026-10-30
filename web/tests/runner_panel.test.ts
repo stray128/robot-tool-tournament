@@ -228,6 +228,45 @@ describe("the counts beside the buttons are for the whole site", () => {
   });
 });
 
+describe("a 503 that is not the runner being off", () => {
+  const OFF = "The hosted runner is off";
+
+  it("the free tier being down says so and points to the visitor's own key, with no tutorial link and no retry", () => {
+    const { html, text } = panel(ready({ planPhase: "error", planFault: { kind: "free_unavailable", message: MESSAGES.free_unavailable, retry: null } }));
+    expect(html).toContain('data-hosted-error="free_unavailable"');
+    expect(text).toContain("The free tier is not available right now. Use your own key, or try later.");
+    expect(text).not.toContain(OFF);
+    expect(html).not.toContain("run-it-yourself");
+    expect(html).not.toContain("data-hosted-retry");
+    // the panel itself is still the working one
+    expect(html).toContain("data-plan-live");
+  });
+
+  it("a simulator that could not start a job says nothing was charged, and offers Try again", () => {
+    const { html, text } = panel(ready({ runFault: { kind: "sim_unavailable", message: MESSAGES.sim_unavailable, retry: "run" } }));
+    expect(html).toContain('data-hosted-error="sim_unavailable"');
+    expect(text).toContain("The simulator could not start a job right now. Nothing was charged; try again in a few minutes.");
+    expect(text).not.toContain(OFF);
+    expect(html).not.toContain("run-it-yourself");
+    expect(html).toContain("data-hosted-retry");
+  });
+
+  it("any other 503 reads plainly as unavailable, with Try again and no claim that the runner is off", () => {
+    const { html, text } = panel(ready({ planPhase: "error", planFault: { kind: "unavailable", message: MESSAGES.unavailable, retry: "plan" } }));
+    expect(html).toContain('data-hosted-error="unavailable"');
+    expect(text).toContain("The hosted runner cannot take this request right now. Try again in a few minutes.");
+    expect(text).not.toContain(OFF);
+    expect(html).toContain("data-hosted-retry");
+  });
+
+  it("a runner that says it is off still gets the tutorial link beside the message", () => {
+    const { html, text } = panel(ready({ runFault: { kind: "off", message: MESSAGES.off, retry: null } }));
+    expect(text).toContain(`${OFF}. Run it on your own machine: Run it yourself`);
+    expect(html).toMatch(/href="\/docs\/tutorials\/run-it-yourself\/?"/);
+    expect(html).not.toContain("data-hosted-retry");
+  });
+});
+
 describe("a busy runner", () => {
   it("shows the plain message with a Try again, and no daily limit", () => {
     const { html, text } = panel(ready({ planPhase: "error", planFault: { kind: "busy", message: MESSAGES.busy, retry: "plan" } }));

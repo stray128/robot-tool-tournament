@@ -12,7 +12,9 @@
  *
  * Errors (bodies are `{"error": "..."}`): 400 (a /runs 400 also has `problems`), 401 (the provider rejected
  * the key), 429 ({cap, limit, resets_at}; resets_at is null for a cap that never resets; a 429 with no `cap` is the
- * hosting layer throttling, so the runner is busy), 503 (the runner is off).
+ * hosting layer throttling, so the runner is busy), 503 (the runner will not take the request; its words say which of
+ * four things that is, see `kindOf503`: it is off, the free tier is down, the simulator could not start a job, or
+ * something else that is not "off").
  * docs/RUNNER.md describes them; the summary's tools may be plain names.
  *
  * The key goes only in the JSON body of POST /plan, over HTTPS. It is never put in a URL, a header,
@@ -97,12 +99,23 @@ export type RunnerErrorKind =
   | "key_rejected"
   | "cap"
   | "off"
+  | "free_unavailable"
+  | "sim_unavailable"
+  | "unavailable"
   | "bad_request"
   | "not_found"
   | "busy"
   | "network"
   | "server"
   | "bad_reply";
+
+/** The kinds a call can be repeated for: the problem is on the way or soon over, and nothing was used up. */
+const RETRYABLE: ReadonlySet<RunnerErrorKind> = new Set(["network", "server", "busy", "sim_unavailable", "unavailable"]);
+
+/** Whether trying the same call again can help. */
+export function retryableKind(kind: RunnerErrorKind): boolean {
+  return RETRYABLE.has(kind);
+}
 
 /** A failed call, with the plain message the page shows. The message never holds a raw status code. */
 export class RunnerError extends Error {
@@ -122,7 +135,7 @@ export class RunnerError extends Error {
 
   /** Whether trying the same call again can help. */
   get retryable(): boolean {
-    return this.kind === "network" || this.kind === "server" || this.kind === "busy";
+    return retryableKind(this.kind);
   }
 }
 
@@ -158,6 +171,9 @@ export const MESSAGES = {
   key_missing: "Paste your key first, or use the free allowance.",
   key_rejected: "The provider rejected that key.",
   off: "The hosted runner is off. Run it on your own machine:",
+  free_unavailable: "The free tier is not available right now. Use your own key, or try later.",
+  sim_unavailable: "The simulator could not start a job right now. Nothing was charged; try again in a few minutes.",
+  unavailable: "The hosted runner cannot take this request right now. Try again in a few minutes.",
   bad_request: "The runner could not use that request. Check the description and the key, then try again.",
   plan_checks: "The runner checked the plan again and found problems:",
   not_found: "The runner has no record of that run. It may be too old, or the link is wrong.",
@@ -183,15 +199,46 @@ async function errorBody(res: Response): Promise<Record<string, unknown>> {
   }
 }
 
+export type UnavailableKind = "off" | "free_unavailable" | "sim_unavailable" | "unavailable";
+
+/**
+ * What each 503 the runner sends says, by its own words (src/rtt/runner/app.py; the body is `{"error": "<words>"}` and has nothing
+ * else to go by). Only the first two mean the runner is off; the rest are one call that could not be served, and are not "off":
+ *
+ *   off               "the runner is switched off for now; recorded runs still replay" (the kill switch)
+ *                     "the hosted runner closed after <date>; recorded runs still replay" (the auto-off date)
+ *   free_unavailable  "the free tier is unavailable right now; try your own key" (the provider refused our own key)
+ *   sim_unavailable   "the simulation backend is unavailable; nothing was reserved, try again later"
+ *                     "the simulation job could not be started; try again later"
+ *                     "the platform refused the simulation job; this did not count against your runs"
+ *   unavailable       anything else: "the runner is not configured (free-tier key)", "runs are not configured on this runner",
+ *                     "the run could not be recorded, so its job was cancelled; try again", and a 503 from the hosting layer.
+ *
+ * tests/runner_client.test.ts reads every `HTTPError(503, ...)` in app.py and checks each one against this list, so a new 503
+ * there cannot be taken for "off" unnoticed.
+ */
+const WORDS_503: readonly (readonly [Exclude<UnavailableKind, "unavailable">, RegExp])[] = [
+  ["off", /\bswitched off\b|\bclosed after\b/i],
+  ["free_unavailable", /\bfree tier is unavailable\b/i],
+  ["sim_unavailable", /\bsimulation backend is unavailable\b|\bsimulation job could not be started\b|\bplatform refused the simulation job\b/i],
+];
+
+/** The kind of a 503, from the words in its body (null or unknown words are "unavailable", never "off"). */
+export function kindOf503(words: string | null): UnavailableKind {
+  const text = words ?? "";
+  return WORDS_503.find(([, re]) => re.test(text))?.[0] ?? "unavailable";
+}
+
 /**
  * An error response as a RunnerError. The runner's bodies are `{"error": ...}`; a 429 also names the
  * cap and when it resets, and a 400 on POST /runs lists the problems. A 429 that names no cap did not come
  * from the runner's own caps but from the hosting layer throttling a burst (a Function URL with reserved
- * concurrency answers that way), so it reads "busy", not "a daily limit". Nothing else is read, and the
- * rest of the body is dropped so the connection is released (an unread body keeps the request open).
+ * concurrency answers that way), so it reads "busy", not "a daily limit". A 503 is read by its words (`kindOf503`):
+ * only a runner that says it is off reads "off". Nothing else is read, and the rest of the body is dropped so the
+ * connection is released (an unread body keeps the request open).
  */
 export async function errorFromResponse(res: Response): Promise<RunnerError> {
-  const reads = res.status === 429 || res.status === 400;
+  const reads = res.status === 429 || res.status === 400 || res.status === 503;
   if (!reads) void res.body?.cancel().catch(() => {});
   const body = reads ? await errorBody(res) : {};
   switch (res.status) {
@@ -204,8 +251,10 @@ export async function errorFromResponse(res: Response): Promise<RunnerError> {
       const resetsAt = str(o.resets_at);
       return new RunnerError("cap", capMessage(cap, resetsAt), cap, resetsAt);
     }
-    case 503:
-      return new RunnerError("off", MESSAGES.off);
+    case 503: {
+      const kind = kindOf503(str(body.error) ?? str(body.message) ?? str(body.detail));
+      return new RunnerError(kind, MESSAGES[kind]);
+    }
     case 404:
       return new RunnerError("not_found", MESSAGES.not_found);
     case 400: {

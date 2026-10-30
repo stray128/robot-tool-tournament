@@ -8,7 +8,7 @@ import { describe, expect, it } from "vitest";
 import { createPlaybackStore, PlaybackContext } from "@/components/replay/playback";
 import { stepActive } from "@/components/story/StoryPlayback";
 import { StoryPage } from "@/components/story/StoryPage";
-import { changeCardAt, parseStudioHero, PRODUCT_MODE_LABEL } from "@/components/studio/schema";
+import { changeCardAt, parseStudioHero, PRODUCT_MODE_LABEL, type Recommendation, type SetupKind } from "@/components/studio/schema";
 import { answerSentence, buildStory, failurePhrase, focusOf, laneName, laneStops, noteLead, ruledOutGroup, setupPhrase, stepNotes, stepVerb } from "@/components/studio/story";
 import { ChangeCardOverlay } from "@/components/studio/StudioLanes";
 
@@ -41,14 +41,14 @@ describe("the returns tote (h1) story, from the exported page", () => {
 
   it("answers first with the recommendation against the best single tool", () => {
     expect(answerSentence(page)).toBe(
-      "A two-tool head, soft arm plus suction cup, finishes the task in 8 of 8 runs; the best single off-the-shelf tool finishes 0 of 8: it can't open the lid.",
+      "A two-tool head (a soft arm plus a suction cup) finishes the task in 8 of 8 runs; the best single off-the-shelf tool finishes 0 of 8: it can't open the lid.",
     );
-    expect(setupPhrase(page.recommendation!)).toBe("two-tool head, soft arm plus suction cup");
+    expect(setupPhrase(page.recommendation!)).toBe("two-tool head (a soft arm plus a suction cup)");
   });
 
   it("says so when the pick is itself the best single off-the-shelf tool", () => {
     const same = { ...page, best_single: { ...page.best_single!, setup_id: page.recommendation!.setup_id } };
-    expect(answerSentence(same)).toBe("A two-tool head, soft arm plus suction cup, finishes the task in 8 of 8 runs; it is also the best single off-the-shelf tool.");
+    expect(answerSentence(same)).toBe("A two-tool head (a soft arm plus a suction cup) finishes the task in 8 of 8 runs; it is also the best single off-the-shelf tool.");
   });
 
   it("counts the lid step from the success matrix", () => {
@@ -95,6 +95,104 @@ describe("the returns tote (h1) story, from the exported page", () => {
   it("phrases failure modes per step", () => {
     const lid = page.plan.steps[0]!;
     expect(failurePhrase("slip", lid, page.plan)).toBe("slipped off the lip");
+  });
+});
+
+describe("a setup in words names its tools, not their families", () => {
+  // every tool is given the same family on purpose: the phrase must come from the tools' own names, as the lanes show them
+  const setup = (kind: SetupKind, ...names: string[]) =>
+    ({ kind, label: `${kind}: ${names.join(" > ")}`, tools: names.map((display_name, index) => ({ index, display_name, family_title: "Industrial gripper" })) }) as unknown as Pick<
+      Recommendation,
+      "kind" | "tools" | "label"
+    >;
+
+  it("lists a tool change's tools in order, each by its name without the spec after the first comma", () => {
+    expect(setupPhrase(setup("tool_change", "Drawer-pull hook tool", "Force-controlled parallel gripper, 48 mm stroke", "Suction cup, 25 mm bellows"))).toBe(
+      "tool change (a drawer-pull hook tool, then a force-controlled parallel gripper, then a suction cup)",
+    );
+  });
+
+  it("joins a two-tool head's tools with plus", () => {
+    expect(setupPhrase(setup("multi_head", "Vacuum area frame, 2 x 2 cups, 300 mm", "Tamper pad, 200 mm"))).toBe("two-tool head (a vacuum area frame plus a tamper pad)");
+    expect(setupPhrase(setup("multi_head", "Soft arm, 12 segments, 140 mm", "Suction cup, 40 mm bellows"))).toBe("two-tool head (a soft arm plus a suction cup)");
+  });
+
+  it("counts instead of listing when every tool is the same kind", () => {
+    expect(setupPhrase(setup("tool_change", "Suction cup, 10 mm bellows", "Suction cup, 25 mm bellows"))).toBe("tool change between two suction cups");
+    expect(setupPhrase(setup("multi_head", "Suction cup, 10 mm bellows", "Suction cup, 25 mm bellows"))).toBe("two-tool head with two suction cups");
+    expect(setupPhrase(setup("tool_change", "Parallel jaw, flat pad: Parcel", "Parallel jaw, stock blade: Parcel", "Parallel jaw, flat pad: Parcel"))).toBe("tool change between three parallel jaws");
+  });
+
+  it("never says the same name twice in a row: tools whose short names collide keep their full names", () => {
+    expect(setupPhrase(setup("tool_change", "Two-finger adaptive gripper, pinch", "Two-finger adaptive gripper, power grasp", "Suction cup, 25 mm bellows"))).toBe(
+      "tool change (a two-finger adaptive gripper, pinch, then a two-finger adaptive gripper, power grasp, then a suction cup)",
+    );
+  });
+
+  it("keeps a name with no spec whole, and puts the right article before each", () => {
+    expect(setupPhrase(setup("tool_change", "Air-actuated mini parallel gripper", "Suction cup, 10 mm bellows", "One-finger test hand", "Servo screwdriver attachment for a hobby arm"))).toBe(
+      "tool change (an air-actuated mini parallel gripper, then a suction cup, then a one-finger test hand, then a servo screwdriver attachment for a hobby arm)",
+    );
+  });
+
+  it("gives a single tool its full name, and a setup with no tools its label", () => {
+    expect(setupPhrase(setup("single", "Industrial servo parallel gripper, 110 mm stroke"))).toBe("single industrial servo parallel gripper, 110 mm stroke");
+    expect(setupPhrase({ kind: "tool_change", label: "Tool change: A > B", tools: [] })).toBe("tool change: A > B");
+  });
+
+  it("starts with the kind, up to the first comma or bracket, which the home hero's caption quotes", () => {
+    const kindOf = (phrase: string) => phrase.split(/\s*[,(]/)[0];
+    expect(kindOf(setupPhrase(setup("single", "Industrial servo parallel gripper, 110 mm stroke")))).toBe("single industrial servo parallel gripper");
+    expect(kindOf(setupPhrase(setup("multi_head", "Soft arm, 12 segments, 140 mm", "Suction cup, 40 mm bellows")))).toBe("two-tool head");
+    expect(kindOf(setupPhrase(setup("tool_change", "Drawer-pull hook tool", "Suction cup, 25 mm bellows")))).toBe("tool change");
+  });
+
+  // the published job pages, as the site serves them
+  const PUBLISHED = path.join(__dirname, "..", "public", "data", "studio");
+  const heroes = (JSON.parse(readFileSync(path.join(PUBLISHED, "index.json"), "utf8")).heroes as { hero: string }[]).map((h) => ({
+    hero: h.hero,
+    page: parseStudioHero(JSON.parse(readFileSync(path.join(PUBLISHED, `${h.hero}.json`), "utf8")), `studio/${h.hero}.json`),
+  }));
+
+  it("reads the hotel page's headline by its three tools, not 'industrial gripper then industrial gripper then suction cup'", () => {
+    const hotel = heroes.find((h) => h.hero === "h7_hotel")!.page;
+    expect(hotel.recommendation!.kind).toBe("tool_change");
+    expect(setupPhrase(hotel.recommendation!)).toBe("tool change (a drawer-pull hook tool, then a force-controlled parallel gripper, then a suction cup)");
+    const answer = answerSentence(hotel);
+    expect(answer).toMatch(
+      /^A tool change \(a drawer-pull hook tool, then a force-controlled parallel gripper, then a suction cup\) finishes the task in \d+ of \d+ runs; the best single off-the-shelf tool finishes \d+ of \d+/,
+    );
+    expect(answer).not.toMatch(/industrial gripper/i);
+    expect(answer).not.toContain("), finishes");
+  });
+
+  it("reads every published page's headline by the names of the tools it picks", () => {
+    expect(heroes.length).toBeGreaterThanOrEqual(4);
+    for (const { hero, page } of heroes) {
+      const rec = page.recommendation;
+      if (!rec) continue;
+      const answer = answerSentence(page);
+      expect(answer, hero).toMatch(/^A (?:single |two-tool head|tool change)/);
+      expect(answer, hero).toContain(" finishes the task in ");
+      // no family title stands in for a tool, and a bracketed list is not followed by a stray comma
+      expect(answer, hero).not.toMatch(/process tool|industrial gripper then|\), finishes/i);
+      if (rec.kind === "single") continue;
+      for (const t of rec.tools) {
+        const own = t.display_name.split(",")[0]!.trim().toLowerCase();
+        expect(answer.toLowerCase(), `${hero}: ${own}`).toContain(own.endsWith("s") ? own.slice(0, -1) : own);
+      }
+    }
+  });
+
+  it("keeps the single-tool headline as it was, with its spec set off by commas", () => {
+    const tote = heroes.find((h) => h.hero === "h1_tote")!.page;
+    expect(tote.recommendation!.kind).toBe("single");
+    expect(answerSentence(tote)).toMatch(/^A single industrial servo parallel gripper, 110 mm stroke, finishes the task in \d+ of \d+ runs/);
+  });
+
+  it("reads the solar page's tool change and the tile page's two-tool head by their tools", () => {
+    expect(setupPhrase(heroes.find((h) => h.hero === "h5_solar")!.page.recommendation!)).toBe("tool change (a vacuum area frame, then a suction cup, then a nut runner)");
+    expect(setupPhrase(heroes.find((h) => h.hero === "h6_tile")!.page.recommendation!)).toBe("two-tool head (a vacuum area frame plus a tamper pad)");
   });
 });
 

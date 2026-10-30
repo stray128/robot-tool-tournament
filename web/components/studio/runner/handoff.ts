@@ -20,6 +20,36 @@ export function exportSource(from: { edited: boolean; hosted: boolean; shownSour
   return from.hosted || from.shownSource === "live" ? "nemotron" : "recorded";
 }
 
+/** What a live plan's scroll first tries to keep on screen under the editor's heading: the start of the first step. */
+export const LIVE_SCROLL_EDITOR_PX = 160;
+
+/** What it keeps under the heading when the first try finds no room (a short window): a little air. */
+export const LIVE_SCROLL_AIR_PX = 16;
+
+/** The part of the page a live plan's scroll puts at the top: the plan's result, the Run control, or the step editor. */
+export type LiveScrollTarget = "result" | "run" | "editor";
+
+/**
+ * Where the page scrolls when a plan from the hosted planner has loaded into the step editor. Three parts sit in one column: the
+ * plan's result, the Run control and, below them, the editor. The page goes to the highest of the first two from which the
+ * editor's heading, with the start of its first step under it, still fits under the sticky header. So the Run control is on
+ * screen with the heading, and the result is on screen too whenever there is room for it. In a window too short for that, the
+ * same choice is made for the heading alone. When not even that fits (a finished run's card sits between the Run control and the
+ * editor) the editor goes to the top, as it always did.
+ *
+ * Every measure is in pixels from the top of the viewport. `result` and `run` are where those parts start (null when the page
+ * has none), `headingBottom` is where the editor's heading ends, `clear` is how far down the viewport the sticky header (and
+ * the air under it) reaches, and `height` is the viewport's height.
+ */
+export function liveScrollTarget(m: { result: number | null; run: number | null; headingBottom: number; clear: number; height: number }): LiveScrollTarget {
+  for (const below of [LIVE_SCROLL_EDITOR_PX, LIVE_SCROLL_AIR_PX]) {
+    const room = m.height - m.clear - below;
+    if (m.result !== null && m.headingBottom - m.result <= room) return "result";
+    if (m.run !== null && m.headingBottom - m.run <= room) return "run";
+  }
+  return "editor";
+}
+
 /** The TaskSpec document POST /runs takes: the plan as the editor holds it now. */
 export function runDocument(catalog: Catalog, plan: PlanArgs, id: string | null, source: string): Record<string, unknown> {
   return exportDocument(catalog, plan, id, source);

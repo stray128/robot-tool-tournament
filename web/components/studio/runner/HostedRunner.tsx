@@ -435,7 +435,7 @@ export default function HostedRunner({
             {s.planReply && s.planPhase === "done" ? <PlanOutcome reply={s.planReply} loaded={s.planReply.plan !== null} /> : null}
           </div>
 
-          <div className="mt-6 border-t border-rule pt-5">
+          <div className="mt-6 border-t border-rule pt-5" data-run-area>
             <div className="flex flex-wrap items-center gap-3">
               <button
                 type="button"

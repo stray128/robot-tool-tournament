@@ -54,7 +54,7 @@ export default function HeroScene({
   lane: StudioLane;
   /** The use case's title, e.g. "Returns tote". */
   useCase: string;
-  /** The setup in words, e.g. "two-tool head, soft arm plus suction cup". */
+  /** The setup in words, e.g. "two-tool head (a soft arm plus a suction cup)": its kind first, up to the first comma or bracket. */
   setup: string;
   steps: HeroStep[];
   posterDark: string;
@@ -161,7 +161,7 @@ export default function HeroScene({
 
         <div className="absolute inset-x-3 bottom-3 flex items-end gap-3">
           <div className="pointer-events-none min-w-0 flex-1 rounded-md bg-paper/90 px-3 py-2 backdrop-blur-sm" aria-live="off" data-hero-step={moment}>
-            <p className="text-sm font-semibold text-ink">{title || `The recommended ${setup.split(",")[0]}, on the ${useCase.toLowerCase()}`}</p>
+            <p className="text-sm font-semibold text-ink">{title || `The recommended ${setup.split(/\s*[,(]/)[0]}, on the ${useCase.toLowerCase()}`}</p>
             <p className="mt-0.5 line-clamp-2 text-xs text-ink-2">{detail || "Loading the recorded run."}</p>
             <ol className="mt-2 flex gap-1" aria-hidden="true">
               {steps.map((s, i) => (

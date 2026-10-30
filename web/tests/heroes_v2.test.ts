@@ -130,7 +130,7 @@ describe("the six story pages", () => {
     expect(words("margin", { completion_delta: 0.125, needed_gain: 0.05, added_pieces: 1 })).toMatch(
       /finishes 12\.5 points more of the runs \(8 of 8 runs against 0 of 8\), more than the 5 points its 1 added piece must earn/,
     );
-    expect(words("step_floor")).toMatch(/It fails a step outright \(open the lid: 0% of runs, under half\), so the two-tool head, soft arm plus suction cup is recommended: 8 of 8 runs against 0 of 8\./);
+    expect(words("step_floor")).toMatch(/It fails a step outright \(open the lid: 0% of runs, under half\), so the two-tool head \(a soft arm plus a suction cup\) is recommended: 8 of 8 runs against 0 of 8\./);
     expect(words("R09")).toMatch(/has a soft arm, and setups with a soft arm rank below every rigid setup \(integrator rule R09\)/);
     expect(words("R10")).toMatch(/dexterous hand .* \(integrator rule R10\)/);
     expect(words("tie", { note: "The same-complexity tie picks A over the baseline B: lighter." })).toContain("The same-complexity tie picks A");

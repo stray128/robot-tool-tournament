@@ -14,6 +14,11 @@ import { BASE, HEALTH, json, leakSpies, leaked, networkError, REFUSAL_PLAN, scri
 const KEY = "nvapi-SECRET-KEY-0123456789";
 const DESCRIPTION = "Open the lid of the tote, put the carton in it, close the lid.";
 
+/** What the runner's 503s say (src/rtt/runner/app.py). Only the first reads as the runner being off. */
+const OFF_WORDS = "the runner is switched off for now; recorded runs still replay";
+const FREE_TIER_DOWN = "the free tier is unavailable right now; try your own key";
+const JOB_NOT_STARTED = "the simulation job could not be started; try again later";
+
 const validReply = { status: "valid", plan: VALID_PLAN, problems: [], calls: 1, cost_usd: 0.01, model: "nemotron-mock" };
 const queued = { run_id: "r1", status: "queued", eta_s: 480 };
 const rec = (status: string, extra: Record<string, unknown> = {}) => ({
@@ -256,7 +261,8 @@ describe("the key stays in memory, once", () => {
     const outcomes: Parameters<typeof scriptedFetch>[0][] = [
       { "POST /plan": json({ detail: "no" }, 401) },
       { "POST /plan": json({ cap: "free_plans_per_ip_per_day", resets_at: "2026-10-29T00:00:00Z" }, 429) },
-      { "POST /plan": json({ detail: "off" }, 503) },
+      { "POST /plan": json({ error: OFF_WORDS }, 503) },
+      { "POST /plan": json({ error: FREE_TIER_DOWN }, 503) },
       { "POST /plan": [networkError()] },
       { "POST /plan": json({ status: "failed", plan: null, problems: ["no"], calls: 2, cost_usd: 0, model: "m" }) },
       { "POST /plan": json({ status: "maybe" }) },
@@ -563,13 +569,70 @@ describe("each error has a plain message", () => {
     expect(c.getSnapshot().runPhase).toBe("idle");
   });
 
-  it("503: the runner is off, with the tutorial to point to", async () => {
-    const s = await planWith({ "POST /plan": json({ detail: "off" }, 503) });
-    expect(s.planFault).toEqual<Fault>({ kind: "off", message: "The hosted runner is off. Run it on your own machine:", retry: null });
-    const { c } = make({ "POST /runs": json({ detail: "off" }, 503) });
+  it("503: a runner that says it is off reads as off, with the tutorial to point to, on a plan and on a run", async () => {
+    for (const words of [OFF_WORDS, "the hosted runner closed after 2026-12-15; recorded runs still replay"]) {
+      const s = await planWith({ "POST /plan": json({ error: words }, 503) });
+      expect(s.planFault, words).toEqual<Fault>({ kind: "off", message: "The hosted runner is off. Run it on your own machine:", retry: null });
+      const { c } = make({ "POST /runs": json({ error: words }, 503) });
+      await c.start();
+      await c.run(VALID_PLAN);
+      expect(c.getSnapshot().runFault, words).toEqual<Fault>({ kind: "off", message: "The hosted runner is off. Run it on your own machine:", retry: null });
+    }
+  });
+
+  it("503 on a plan with the free allowance: the free tier is down, with no retry that would fail the same way", async () => {
+    const { c, fetchImpl } = make({ "POST /plan": json({ error: FREE_TIER_DOWN }, 503) });
+    await c.start();
+    c.setProvider("free");
+    await c.plan(DESCRIPTION);
+    const s = c.getSnapshot();
+    expect(s.planPhase).toBe("error");
+    expect(s.planFault).toEqual<Fault>({ kind: "free_unavailable", message: "The free tier is not available right now. Use your own key, or try later.", retry: null });
+    expect(s.gate).toBe("ready");
+    // the visitor can switch to a key of their own and plan again
+    c.setProvider("nvidia");
+    c.setKey(KEY);
+    expect(c.canPlan(DESCRIPTION)).toBe(true);
+    expect(callsTo(fetchImpl, "POST", "/plan")).toHaveLength(1);
+  });
+
+  it("503 on a run: the simulator could not start a job, nothing was charged, and Try again submits again", async () => {
+    const { c, fetchImpl } = make({ "POST /runs": [json({ error: JOB_NOT_STARTED }, 503), json(queued, 202)] });
     await c.start();
     await c.run(VALID_PLAN);
-    expect(c.getSnapshot().runFault?.kind).toBe("off");
+    expect(c.getSnapshot()).toMatchObject({
+      runPhase: "idle",
+      runId: null,
+      runFault: { kind: "sim_unavailable", message: "The simulator could not start a job right now. Nothing was charged; try again in a few minutes.", retry: "run" },
+    });
+    expect(spies.history.replaceState).not.toHaveBeenCalled();
+    await c.run(VALID_PLAN);
+    expect(c.getSnapshot()).toMatchObject({ runPhase: "queued", runFault: null, runId: "r1" });
+    expect(callsTo(fetchImpl, "POST", "/runs")).toHaveLength(2);
+  });
+
+  it("503 with words that are not about being off reads as unavailable, with a retry, and the panel stays open", async () => {
+    for (const error of ["the runner is not configured (free-tier key)", "runs are not configured on this runner", "the run could not be recorded, so its job was cancelled; try again", ""]) {
+      const { c } = make({ "POST /runs": json(error ? { error } : {}, 503) });
+      await c.start();
+      await c.run(VALID_PLAN);
+      expect(c.getSnapshot().runFault, error).toEqual<Fault>({ kind: "unavailable", message: MESSAGES.unavailable, retry: "run" });
+      expect(c.getSnapshot().gate, error).toBe("ready");
+    }
+    const s = await planWith({ "POST /plan": new Response("<html>Service Unavailable</html>", { status: 503, headers: { "content-type": "text/html" } }) });
+    expect(s.planFault).toEqual<Fault>({ kind: "unavailable", message: MESSAGES.unavailable, retry: "plan" });
+  });
+
+  it("503 while watching a run is a passing trouble: it backs off and keeps going, and never says off", async () => {
+    const { c, fetchImpl } = make({ "POST /runs": json(queued, 202), "GET /runs/r1": [json({}, 503), json({}, 503), json(rec("running"))] });
+    await c.start();
+    await c.run(VALID_PLAN);
+    await vi.advanceTimersByTimeAsync(POLL_MS);
+    expect(callsTo(fetchImpl, "GET", "/runs/r1")).toHaveLength(1);
+    expect(c.getSnapshot().runFault).toBeNull();
+    await vi.advanceTimersByTimeAsync(10 * POLL_MS);
+    expect(c.getSnapshot().runPhase).toBe("running");
+    expect(c.getSnapshot().runFault).toBeNull();
   });
 
   it("400 on a run lists the problems the runner's own checks found", async () => {
